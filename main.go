@@ -3,8 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/banzaicloud/vault-dogsbody/gorm"
+	"github.com/banzaicloud/vault-dogsbody/database"
 	"github.com/banzaicloud/vault-dogsbody/vault"
+	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
@@ -32,7 +33,11 @@ func vaultExample() {
 }
 
 func gormExample() {
-	db, err := gorm.Open("mysql", "my-role@tcp(127.0.0.1:3306)/sparky?charset=utf8&parseTime=True&loc=Local")
+	secretSource, err := database.DynamicSecretDataSource("mysql", "my-role@tcp(127.0.0.1:3306)/sparky?charset=utf8&parseTime=True&loc=Local")
+	if err != nil {
+		panic(err)
+	}
+	db, err := gorm.Open("mysql", secretSource)
 	if err != nil {
 		panic(err)
 	}

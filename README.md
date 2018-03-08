@@ -6,9 +6,9 @@ This repository contains several Go packages for interacting with Hashicorp Vaul
     
     A wrapper for the official Vault client with automatic token renewal, and Kubernetes support.
 
-- gorm
+- database
     
-    A helper for opening `gorm` `DB` connections with database credentials dynamically based on configured Vault roles (instead of `username:password`).
+    A helper for creating database source strings (MySQL/PostgreSQL) with database credentials dynamically based on configured Vault roles (instead of `username:password`).
 
 ## Examples
 

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# This script demonstrates how to setup Vault to be able to run the example code in main.go.
+
 set -euo pipefail
 
 vault secrets enable database
