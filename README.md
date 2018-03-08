@@ -1,6 +1,6 @@
 *Bank Vaults is a thick, tricky, shifty right with a fast and intense tube for experienced surfers only. Think heavy steel doors, secret unlocking combinations and burly guards with smack-down attitude. Usually larger than most spots in the area. Watch out for clean-up sets.*
 
-*Bank Vaults is a wrapper for the official Vault client with automatic token renewal, Kubernetes support, and more ... *
+*Bank Vaults is a wrapper for the official Vault client with automatic token renewal, built in Kubernetes support, dynamic database credential management.*
 
 # bank-vaults
 
