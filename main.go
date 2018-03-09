@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/banzaicloud/vault-dogsbody/database"
-	"github.com/banzaicloud/vault-dogsbody/vault"
+	"github.com/banzaicloud/bank-vaults/database"
+	"github.com/banzaicloud/bank-vaults/vault"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
