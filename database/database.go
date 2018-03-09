@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/banzaicloud/vault-dogsbody/vault"
+	"github.com/banzaicloud/bank-vaults/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
 )
