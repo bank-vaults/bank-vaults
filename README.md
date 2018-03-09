@@ -1,16 +1,14 @@
-*Bank Vaults is a thick, tricky, shifty right with a fast and intense tube for experienced surfers only. Think heavy steel doors, secret unlocking combinations and burly guards with smack-down attitude. Usually larger than most spots in the area. Watch out for clean-up sets.*
+*Bank Vaults is a thick, tricky, shifty right with a fast and intense tube for experienced surfers only, located on Mentawai. Think heavy steel doors, secret unlocking combinations and burly guards with smack-down attitude. Watch out for clean-up sets.*
 
-*Bank Vaults is a wrapper for the official Vault client with automatic token renewal, built in Kubernetes support, dynamic database credential management.*
+*Bank Vaults is a wrapper for the official Vault client with automatic token renewal, built in Kubernetes support, dynamic database credential management and more.*
 
-# bank-vaults
+This repository contains several Go packages for interacting with Vault:
 
-This repository contains several Go packages for interacting with Hashicorp Vault:
-
-- vault
+- Vault
     
     A wrapper for the official Vault client with automatic token renewal, and Kubernetes support.
 
-- database
+- Database
     
     A helper for creating database source strings (MySQL/PostgreSQL) with database credentials dynamically based on configured Vault roles (instead of `username:password`).
 
