@@ -1,193 +1,128 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
 	"flag"
-	"fmt"
 	"io/ioutil"
-	"log"
-	"net/http"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff"
+	"github.com/go-kit/kit/log"
+	vault "github.com/hashicorp/vault/api"
 	fsnotify "gopkg.in/fsnotify.v1"
-	k8s "k8s.io/client-go/rest"
 )
+
+type KeyStorer interface {
+	StoreKey(key string) error
+	GetKeys() ([]string, error)
+}
 
 type config struct {
 	configVolumeDir string
-	ruleVolumeDir   string
-	reloadUrl       string
+	vaultUrl        string
 }
 
-type volumeWatcher struct {
-	client *k8s.RESTClient
-	cfg    config
-	logger log.Logger
+type configurator struct {
+	cfg         config
+	logger      log.Logger
+	vaultClient *vault.Client
+	keyStorer   KeyStorer
 }
 
-func newVolumeWatcher(client *k8s.RESTClient, cfg config, logger log.Logger) *volumeWatcher {
-	return &volumeWatcher{
-		client: client,
-		cfg:    cfg,
-		logger: logger,
+func newConfigurator(cfg config, vaultClient *vault.Client, keyStorer KeyStorer, logger log.Logger) *configurator {
+	return &configurator{
+		cfg:         cfg,
+		vaultClient: vaultClient,
+		keyStorer:   keyStorer,
+		logger:      logger,
 	}
 }
 
-type ConfigMapReference struct {
-	Key string `json:"key"`
-}
-
-type ConfigMapReferenceList struct {
-	Items []*ConfigMapReference `json:"items"`
-}
-
-func (w *volumeWatcher) UpdateRuleFiles() error {
-	file, err := os.Open(filepath.Join(w.cfg.configVolumeDir, "configmaps.json"))
+func (w *configurator) InitVault() (rootToken string, err error) {
+	inited, err := w.vaultClient.Sys().InitStatus()
 	if err != nil {
-		return err
+		return "", err
 	}
-	defer file.Close()
-
-	configMaps := ConfigMapReferenceList{}
-	err = json.NewDecoder(file).Decode(&configMaps)
-	if err != nil {
-		return err
-	}
-
-	tmpdir, err := ioutil.TempDir(w.cfg.ruleVolumeDir, "prometheus-rule-files")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tmpdir)
-
-	for i, cm := range configMaps.Items {
-		err := w.writeRuleConfigMap(tmpdir, i, cm.Key)
-		if err != nil {
-			return err
+	if !inited {
+		initRequest := vault.InitRequest{
+			SecretShares:    5,
+			SecretThreshold: 3,
 		}
-	}
-
-	err = w.placeNewRuleFiles(tmpdir, w.cfg.ruleVolumeDir)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (w *volumeWatcher) placeNewRuleFiles(tmpdir, ruleFileDir string) error {
-	err := os.MkdirAll(ruleFileDir, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	err = w.removeOldRuleFiles(ruleFileDir, tmpdir)
-	if err != nil {
-		return err
-	}
-	d, err := os.Open(tmpdir)
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	names, err := d.Readdirnames(-1)
-	if err != nil {
-		return err
-	}
-	for _, name := range names {
-		err = os.Rename(filepath.Join(tmpdir, name), filepath.Join(ruleFileDir, name))
+		initResponse, err := w.vaultClient.Sys().Init(&initRequest)
 		if err != nil {
-			return err
+			return "", err
 		}
-	}
-	return nil
-}
-
-func (w *volumeWatcher) removeOldRuleFiles(dir string, tmpdir string) error {
-	d, err := os.Open(dir)
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	names, err := d.Readdirnames(-1)
-	if err != nil {
-		return err
-	}
-	for _, name := range names {
-		s := filepath.Join(dir, name)
-		if s != tmpdir {
-			err = os.RemoveAll(s)
+		keys := initResponse.Keys
+		for _, key := range keys {
+			err := w.keyStorer.StoreKey(key)
 			if err != nil {
-				return err
+				return "", err
+			}
+		}
+		rootToken = initResponse.RootToken
+	}
+
+	sealStatusResponse, err := w.vaultClient.Sys().SealStatus()
+	if err != nil {
+		return "", err
+	}
+	if sealStatusResponse.Sealed {
+		w.logger.Log("msg", "Vault is sealed, unsealing it now...")
+		keys, err := w.keyStorer.GetKeys()
+		if err != nil {
+			return "", err
+		}
+		for _, key := range keys {
+			println(key)
+			sealStatusResponse, err := w.vaultClient.Sys().Unseal(key)
+			if err != nil {
+				return "", err
+			}
+			if !sealStatusResponse.Sealed {
+				break
 			}
 		}
 	}
-	return nil
+
+	return "", err
 }
 
-func (w *volumeWatcher) writeRuleConfigMap(rulesDir string, index int, configMap string) error {
-	configMapParts := strings.Split(configMap, "/")
-	if len(configMapParts) != 2 {
-		return fmt.Errorf("Malformatted configmap key: %s. Format must be namespace/name.", configMap)
-	}
-	configMapNamespace := configMapParts[0]
-	configMapName := configMapParts[1]
-
-	cm, err := w.client.CoreV1().GetConfigMap(context.TODO(), configMapName, configMapNamespace)
+func (w *configurator) ApplyPolicies() error {
+	policiesDirectory := w.cfg.configVolumeDir + "/policies"
+	policies, err := ioutil.ReadDir(policiesDirectory)
 	if err != nil {
 		return err
 	}
-
-	dir := filepath.Join(rulesDir, fmt.Sprintf("rules-%d", index))
-	err = os.MkdirAll(dir, os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	for filename, content := range cm.Data {
-		err = w.writeConfigMapFile(filepath.Join(dir, filename), content)
+	for _, policy := range policies {
+		w.logger.Log("msg", "applying file: "+policy.Name())
+		body, err := ioutil.ReadFile(policiesDirectory + "/" + policy.Name())
 		if err != nil {
 			return err
 		}
-	}
-
-	return nil
-}
-
-func (w *volumeWatcher) writeConfigMapFile(filename, content string) error {
-	f, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = f.WriteString(content)
-	return err
-}
-
-func (w *volumeWatcher) ReloadPrometheus() error {
-	req, err := http.NewRequest("POST", w.cfg.reloadUrl, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("Received response code %d, expected 200", resp.StatusCode)
+		err = w.vaultClient.Sys().PutPolicy(policy.Name(), string(body))
+		if err != nil {
+			return err
+		}
+		w.logger.Log("msg", "applyed file: "+policy.Name())
 	}
 	return nil
 }
 
-func (w *volumeWatcher) Refresh() error {
+func (w *configurator) ApplyVaultConfiguration() error {
+	_, err := w.InitVault()
+	if err != nil {
+		return err
+	}
+
+	if err := w.ApplyPolicies(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (w *configurator) Refresh() error {
 	w.logger.Log("msg", "Updating rule files...")
-	err := backoff.RetryNotify(w.UpdateRuleFiles, backoff.NewExponentialBackOff(), func(err error, next time.Duration) {
+	err := backoff.RetryNotify(w.ApplyVaultConfiguration, backoff.NewExponentialBackOff(), func(err error, next time.Duration) {
 		w.logger.Log("msg", "Updating rule files temporarily failed.", "err", err, "next-retry", next)
 	})
 	if err != nil {
@@ -196,21 +131,10 @@ func (w *volumeWatcher) Refresh() error {
 	} else {
 		w.logger.Log("msg", "Rule files updated.")
 	}
-
-	w.logger.Log("msg", "Reloading Prometheus...")
-	err = backoff.RetryNotify(w.ReloadPrometheus, backoff.NewExponentialBackOff(), func(err error, next time.Duration) {
-		w.logger.Log("msg", "Reloading Prometheus temporarily failed.", "err", err, "next-retry", next)
-	})
-	if err != nil {
-		w.logger.Log("msg", "Reloading Prometheus failed.", "err", err)
-		return err
-	} else {
-		log.Log("msg", "Prometheus successfully reloaded.")
-	}
 	return nil
 }
 
-func (w *volumeWatcher) Run() {
+func (w *configurator) Run() {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		w.logger.Log("msg", "Creating a new watcher failed.", "err", err)
@@ -233,14 +157,14 @@ func (w *volumeWatcher) Run() {
 	for {
 		select {
 		case event := <-watcher.Events:
-			if event.Op&fsnotify.Create == fsnotify.Create {
-				if filepath.Base(event.Name) == "..data" {
-					w.logger.Log("msg", "ConfigMap modified.")
-					if err := w.Refresh(); err != nil {
-						w.logger.Log("msg", "Rule files could not be refreshed.", "err", err)
-						os.Exit(1)
-					}
+			if event.Op&fsnotify.Create == fsnotify.Create || event.Op&fsnotify.Write == fsnotify.Write {
+				//if filepath.Base(event.Name) == "..data" {
+				w.logger.Log("msg", "ConfigMap modified.")
+				if err := w.Refresh(); err != nil {
+					w.logger.Log("msg", "Rule files could not be refreshed.", "err", err)
+					os.Exit(1)
 				}
+				//}
 			}
 		case err := <-watcher.Errors:
 			w.logger.Log("err", err)
@@ -249,18 +173,15 @@ func (w *volumeWatcher) Run() {
 }
 
 func main() {
-	cfg := config{}
-	flags := flag.NewFlagSet("prometheus-config-reloader", flag.ExitOnError)
-	flags.StringVar(&cfg.configVolumeDir, "config-volume-dir", "", "The directory to watch for changes to reload Prometheus.")
-	flags.StringVar(&cfg.ruleVolumeDir, "rule-volume-dir", "", "The directory to write rule files to.")
-	flags.StringVar(&cfg.reloadUrl, "reload-url", "", "The URL to call when intending to reload Prometheus.")
-	flags.Parse(os.Args[1:])
+	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stdout))
+	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
+	logger = log.With(logger, "caller", log.DefaultCaller)
 
-	if cfg.ruleVolumeDir == "" {
-		log.Error("Missing directory to write rule files into\n")
-		flag.Usage()
-		os.Exit(1)
-	}
+	cfg := config{}
+	flags := flag.NewFlagSet("vault-configurer", flag.ExitOnError)
+	flags.StringVar(&cfg.configVolumeDir, "config-volume-dir", "./config", "The directory to watch for changes to configure Vault.")
+	flags.StringVar(&cfg.vaultUrl, "vault-url", "http://localhost:8200", "The URL to call when intending to configure Vault.")
+	flags.Parse(os.Args[1:])
 
 	if cfg.configVolumeDir == "" {
 		logger.Log("Missing directory to watch for configuration changes\n")
@@ -268,17 +189,29 @@ func main() {
 		os.Exit(1)
 	}
 
-	if cfg.reloadUrl == "" {
-		logger.Log("Missing URL to call when intending to reload Prometheus\n")
+	if cfg.vaultUrl == "" {
+		logger.Log("Missing URL to call Vault\n")
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	client, err := k8s.InClusterClient()
+	vaultClient, err := vault.NewClient(vault.DefaultConfig())
 	if err != nil {
-		logger.Log("err", err)
-		os.Exit(1)
+		panic("Failed to dial Vault: " + err.Error())
 	}
 
-	newVolumeWatcher(client, cfg, log.With(logger, "component", "volume-watcher")).Run()
+	newConfigurator(cfg, vaultClient, &InMemoryKeyStorer{}, log.With(logger, "component", "volume-watcher")).Run()
+}
+
+type InMemoryKeyStorer struct {
+	keys []string
+}
+
+func (ks *InMemoryKeyStorer) StoreKey(key string) error {
+	ks.keys = append(ks.keys, key)
+	return nil
+}
+
+func (ks *InMemoryKeyStorer) GetKeys() ([]string, error) {
+	return ks.keys, nil
 }
