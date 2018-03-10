@@ -10,7 +10,7 @@ import (
 )
 
 func vaultExample() {
-	client, err := vault.NewClient("~", "")
+	client, err := vault.NewClient("my-role")
 	if err != nil {
 		panic(err)
 	}
