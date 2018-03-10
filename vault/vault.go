@@ -2,6 +2,7 @@ package vault
 
 import (
 	"io/ioutil"
+	"os"
 
 	vaultapi "github.com/hashicorp/vault/api"
 	"k8s.io/client-go/rest"
@@ -15,11 +16,11 @@ type Client struct {
 }
 
 // Creates a new Vault client
-func NewClient(tokenPath, role string) (*Client, error) {
-	return NewClientWithConfig(vaultapi.DefaultConfig(), tokenPath, role)
+func NewClient(role string) (*Client, error) {
+	return NewClientWithConfig(vaultapi.DefaultConfig(), role)
 }
 
-func NewClientWithConfig(config *vaultapi.Config, tokenPath, role string) (*Client, error) {
+func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) {
 	client, err := vaultapi.NewClient(config)
 	if err != nil {
 		return nil, err
@@ -29,7 +30,7 @@ func NewClientWithConfig(config *vaultapi.Config, tokenPath, role string) (*Clie
 
 	if client.Token() == "" {
 
-		token, err := ioutil.ReadFile(tokenPath + "/.vault-token")
+		token, err := ioutil.ReadFile(os.Getenv("HOME") + "/.vault-token")
 
 		if err == nil {
 

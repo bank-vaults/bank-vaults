@@ -2,7 +2,6 @@ package database
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/banzaicloud/bank-vaults/vault"
@@ -35,7 +34,7 @@ func DynamicSecretDataSource(dialect string, source string) (dynamicSecretDataSo
 	vaultRole := sourceParts[0]
 	vaultCredsEndpoint := "database/creds/" + vaultRole
 
-	vaultClient, err := vault.NewClient(os.Getenv("HOME"), vaultRole)
+	vaultClient, err := vault.NewClient(vaultRole)
 
 	if err != nil {
 		err = errors.Wrap(err, "failed to establish vault connection")
