@@ -19,7 +19,7 @@ type KeyStorer interface {
 
 type config struct {
 	configVolumeDir string
-	vaultUrl        string
+	vaultURL        string
 }
 
 type configurator struct {
@@ -27,6 +27,7 @@ type configurator struct {
 	logger      log.Logger
 	vaultClient *vault.Client
 	keyStorer   KeyStorer
+	token       string
 }
 
 func newConfigurator(cfg config, vaultClient *vault.Client, keyStorer KeyStorer, logger log.Logger) *configurator {
@@ -38,45 +39,50 @@ func newConfigurator(cfg config, vaultClient *vault.Client, keyStorer KeyStorer,
 	}
 }
 
-func (w *configurator) InitVault() (rootToken string, err error) {
-	inited, err := w.vaultClient.Sys().InitStatus()
+func (c *configurator) initVault() (err error) {
+	inited, err := c.vaultClient.Sys().InitStatus()
 	if err != nil {
-		return "", err
+		return err
 	}
 	if !inited {
 		initRequest := vault.InitRequest{
 			SecretShares:    5,
 			SecretThreshold: 3,
 		}
-		initResponse, err := w.vaultClient.Sys().Init(&initRequest)
+		initResponse, err := c.vaultClient.Sys().Init(&initRequest)
 		if err != nil {
-			return "", err
+			return err
 		}
 		keys := initResponse.Keys
 		for _, key := range keys {
-			err := w.keyStorer.StoreKey(key)
+			err := c.keyStorer.StoreKey(key)
 			if err != nil {
-				return "", err
+				return err
 			}
 		}
-		rootToken = initResponse.RootToken
+
+		c.logger.Log("msg", "Vault inited")
+
+		// TODO use this client with caution
+		c.vaultClient.SetToken(initResponse.RootToken)
+	} else {
+		c.logger.Log("msg", "Vault is inited, skipping init procedure.")
 	}
 
-	sealStatusResponse, err := w.vaultClient.Sys().SealStatus()
+	sealStatusResponse, err := c.vaultClient.Sys().SealStatus()
 	if err != nil {
-		return "", err
+		return err
 	}
 	if sealStatusResponse.Sealed {
-		w.logger.Log("msg", "Vault is sealed, unsealing it now...")
-		keys, err := w.keyStorer.GetKeys()
+		c.logger.Log("msg", "Vault is sealed, unsealing it now...")
+		keys, err := c.keyStorer.GetKeys()
 		if err != nil {
-			return "", err
+			return err
 		}
 		for _, key := range keys {
-			println(key)
-			sealStatusResponse, err := w.vaultClient.Sys().Unseal(key)
+			sealStatusResponse, err := c.vaultClient.Sys().Unseal(key)
 			if err != nil {
-				return "", err
+				return err
 			}
 			if !sealStatusResponse.Sealed {
 				break
@@ -84,37 +90,40 @@ func (w *configurator) InitVault() (rootToken string, err error) {
 		}
 	}
 
-	return "", err
+	// https: //www.vaultproject.io/docs/concepts/policies.html#root-policy
+	// Use our client here with Kubernetes roles
+	// c.vaultClient =
+
+	return err
 }
 
-func (w *configurator) ApplyPolicies() error {
-	policiesDirectory := w.cfg.configVolumeDir + "/policies"
+func (c *configurator) applyPolicies() error {
+	policiesDirectory := c.cfg.configVolumeDir + "/policies"
 	policies, err := ioutil.ReadDir(policiesDirectory)
 	if err != nil {
 		return err
 	}
 	for _, policy := range policies {
-		w.logger.Log("msg", "applying file: "+policy.Name())
+		c.logger.Log("msg", "applying file: "+policy.Name())
 		body, err := ioutil.ReadFile(policiesDirectory + "/" + policy.Name())
 		if err != nil {
 			return err
 		}
-		err = w.vaultClient.Sys().PutPolicy(policy.Name(), string(body))
+		err = c.vaultClient.Sys().PutPolicy(policy.Name(), string(body))
 		if err != nil {
 			return err
 		}
-		w.logger.Log("msg", "applyed file: "+policy.Name())
+		c.logger.Log("msg", "applyed file: "+policy.Name())
 	}
 	return nil
 }
 
-func (w *configurator) ApplyVaultConfiguration() error {
-	_, err := w.InitVault()
-	if err != nil {
+func (c *configurator) ApplyVaultConfiguration() error {
+	if err := c.initVault(); err != nil {
 		return err
 	}
 
-	if err := w.ApplyPolicies(); err != nil {
+	if err := c.applyPolicies(); err != nil {
 		return err
 	}
 	return nil
@@ -178,9 +187,9 @@ func main() {
 	logger = log.With(logger, "caller", log.DefaultCaller)
 
 	cfg := config{}
-	flags := flag.NewFlagSet("vault-configurer", flag.ExitOnError)
+	flags := flag.NewFlagSet("vault-configurator", flag.ExitOnError)
 	flags.StringVar(&cfg.configVolumeDir, "config-volume-dir", "./config", "The directory to watch for changes to configure Vault.")
-	flags.StringVar(&cfg.vaultUrl, "vault-url", "http://localhost:8200", "The URL to call when intending to configure Vault.")
+	flags.StringVar(&cfg.vaultURL, "vault-url", "http://localhost:8200", "The URL to call when intending to configure Vault.")
 	flags.Parse(os.Args[1:])
 
 	if cfg.configVolumeDir == "" {
@@ -189,7 +198,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if cfg.vaultUrl == "" {
+	if cfg.vaultURL == "" {
 		logger.Log("Missing URL to call Vault\n")
 		flag.Usage()
 		os.Exit(1)
@@ -200,7 +209,7 @@ func main() {
 		panic("Failed to dial Vault: " + err.Error())
 	}
 
-	newConfigurator(cfg, vaultClient, &InMemoryKeyStorer{}, log.With(logger, "component", "volume-watcher")).Run()
+	newConfigurator(cfg, vaultClient, &InMemoryKeyStorer{}, log.With(logger, "component", "configurator")).Run()
 }
 
 type InMemoryKeyStorer struct {
