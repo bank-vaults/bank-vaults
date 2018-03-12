@@ -53,6 +53,13 @@ func DynamicSecretDataSource(dialect string, source string) (dynamicSecretDataSo
 	}
 
 	secretRenewer, err := vaultClient.Vault().NewRenewer(&vaultapi.RenewerInput{Secret: secret})
+
+	if err != nil {
+		vaultClient.Close()
+		err = errors.Wrap(err, "failed to start db credential renewer")
+		return "", err
+	}
+
 	go secretRenewer.Renew()
 
 	username := secret.Data["username"].(string)
