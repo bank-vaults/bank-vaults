@@ -30,6 +30,9 @@ type configurator struct {
 	token       string
 }
 
+const configuratorPolicy = `
+`
+
 func newConfigurator(cfg config, vaultClient *vault.Client, keyStorer KeyStorer, logger log.Logger) *configurator {
 	return &configurator{
 		cfg:         cfg,
@@ -93,6 +96,11 @@ func (c *configurator) initVault() (err error) {
 	// https: //www.vaultproject.io/docs/concepts/policies.html#root-policy
 	// Use our client here with Kubernetes roles
 	// c.vaultClient =
+
+	err = c.vaultClient.Sys().PutPolicy("configurator", configuratorPolicy)
+
+	configuratorRole := map[string]interface{}{}
+	c.vaultClient.Logical().Write("write auth/kubernetes/role/configurator", configuratorRole)
 
 	return err
 }
