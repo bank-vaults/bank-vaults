@@ -69,8 +69,9 @@ and usage of using your command.`,
 					logrus.Infof("checking if vault is sealed...")
 					sealed, err := v.Sealed()
 					if err != nil {
-						logrus.Errorf("error checking if vault is sealed: %s", err.Error())
-						return
+						logrus.Errorf("error checking if vault is sealed: %s, waiting %s before trying again...", err.Error(), unsealConfig.unsealPeriod)
+						time.Sleep(unsealConfig.unsealPeriod)
+						continue
 					}
 
 					// If vault is not sealed, we stop here and wait another unsealPeriod
