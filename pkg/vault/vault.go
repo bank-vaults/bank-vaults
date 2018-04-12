@@ -238,6 +238,8 @@ func (u *vault) Init() error {
 func (u *vault) Configure() error {
 	logrus.Debugf("retrieving key from kms service...")
 	rootToken, err := u.keyStore.Get(u.rootTokenKey())
+	// TODO REMOVE ME
+	rootToken, _ = ioutil.ReadFile(os.Getenv("HOME") + "/.vault-token")
 
 	if err != nil {
 		return fmt.Errorf("unable to get key '%s': %s", u.rootTokenKey(), err.Error())
@@ -252,36 +254,66 @@ func (u *vault) Configure() error {
 		return fmt.Errorf("error listing auth backends vault: %s", err.Error())
 	}
 
-	// TODO add support for more auth backends
-	for _, authBackend := range []string{"kubernetes"} {
+	authMethods := []map[string]interface{}{}
+	err = viper.UnmarshalKey("roles", &authMethods)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling vault auth methods config: %s", err.Error())
+	}
+	for _, authMethod := range authMethods {
+		authMethodType := authMethod["type"].(string)
+
+		path := authMethodType
+		if pathOverwrite, ok := authMethod["path"]; ok {
+			path = pathOverwrite.(string)
+		}
 
 		// Check and skip existing auth mounts
-		if authMount, ok := existingAuths[authBackend+"/"]; ok {
-			if authMount.Type == authBackend {
-				logrus.Debugf("%s auth backend is already configured in vault, skipping...", authBackend)
-				continue
+		exists := false
+		if authMount, ok := existingAuths[path+"/"]; ok {
+			if authMount.Type == authMethodType {
+				logrus.Debugf("%s auth backend is already mounted in vault", authMethodType)
+				exists = true
 			}
 		}
 
-		logrus.Debugf("enabling %s auth backend in vault...", authBackend)
+		if !exists {
+			logrus.Debugf("enabling %s auth backend in vault...", authMethodType)
+			options := api.EnableAuthOptions{
+				Type: authMethodType,
+			}
 
-		options := api.EnableAuthOptions{
-			Type: authBackend,
+			err := u.cl.Sys().EnableAuthWithOptions(path, &options)
+
+			if err != nil {
+				return fmt.Errorf("error enabling %s auth method for vault: %s", authMethodType, err.Error())
+			}
 		}
 
-		err := u.cl.Sys().EnableAuthWithOptions(authBackend, &options)
-
-		if err != nil {
-			return fmt.Errorf("error enabling %s auth for vault: %s", authBackend, err.Error())
+		switch authMethodType {
+		case "kubernetes":
+			err = u.kubernetesAuthConfig(path)
+			if err != nil {
+				return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
+			}
+			roles := authMethod["roles"].([]map[string]interface{})
+			err = u.configureKubernetesRoles(roles)
+			if err != nil {
+				return fmt.Errorf("error configuring kubernetes auth roles for vault: %s", err.Error())
+			}
 		}
 	}
 
-	err = u.kubernetesAuthConfig()
+	err = u.configurePolicies()
 	if err != nil {
-		return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
+		return fmt.Errorf("error configuring policies for vault: %s", err.Error())
 	}
 
-	return u.configurePoliciesAndRoles()
+	err = u.configureSecretEngines()
+	if err != nil {
+		return fmt.Errorf("error configuring secret engines for vault: %s", err.Error())
+	}
+
+	return err
 }
 
 func (u *vault) unsealKeyForID(i int) string {
@@ -296,7 +328,7 @@ func (u *vault) testKey() string {
 	return fmt.Sprint("vault-test")
 }
 
-func (u *vault) kubernetesAuthConfig() error {
+func (u *vault) kubernetesAuthConfig(path string) error {
 	kubernetesCACert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 	if err != nil {
 		return err
@@ -310,11 +342,11 @@ func (u *vault) kubernetesAuthConfig() error {
 		"kubernetes_ca_cert": string(kubernetesCACert),
 		"token_reviewer_jwt": string(tokenReviewerJWT),
 	}
-	_, err = u.cl.Logical().Write("auth/kubernetes/config", config)
+	_, err = u.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
 	return err
 }
 
-func (u *vault) configurePoliciesAndRoles() error {
+func (u *vault) configurePolicies() error {
 	policies := []map[string]string{}
 	err := viper.UnmarshalKey("policies", &policies)
 	if err != nil {
@@ -329,12 +361,10 @@ func (u *vault) configurePoliciesAndRoles() error {
 		}
 	}
 
-	roles := []map[string]interface{}{}
-	err = viper.UnmarshalKey("roles", &roles)
-	if err != nil {
-		return fmt.Errorf("error unmarshalling vault role config: %s", err.Error())
-	}
+	return nil
+}
 
+func (u *vault) configureKubernetesRoles(roles []map[string]interface{}) error {
 	for _, role := range roles {
 		_, err := u.cl.Logical().Write(fmt.Sprint("auth/kubernetes/role/", role["name"]), role)
 
@@ -342,6 +372,124 @@ func (u *vault) configurePoliciesAndRoles() error {
 			return fmt.Errorf("error putting %s role into vault: %s", role["name"], err.Error())
 		}
 	}
+	return nil
+}
+
+func (u *vault) configureSecretEngines() error {
+	secretsEngines := []map[string]interface{}{}
+	err := viper.UnmarshalKey("secrets", &secretsEngines)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling vault secrets config: %s", err.Error())
+	}
+
+	mounts, err := u.cl.Sys().ListMounts()
+	if err != nil {
+		return fmt.Errorf("error reading mounts from vault: %s", err.Error())
+	}
+
+	// Remove the default secret/ engine, until it is removed by default
+	// From https://github.com/hashicorp/vault/blob/master/CHANGELOG.md#0100-april-10th-2018
+	// > Removal of default secret/ mount: In 0.12 we will stop mounting secret/ by default at initialization time (it will still be available in dev mode).
+	defaultSecret := mounts["secret/"]
+	if defaultSecret != nil && defaultSecret.Options["version"] == "2" {
+		secret, err := u.cl.Logical().List("secret")
+		if err != nil {
+			return fmt.Errorf("error listing keys in defaultSecret from vault: %s", err.Error())
+		}
+		if len(secret.Data) == 0 {
+			err = u.cl.Sys().Unmount("secret")
+			if err != nil {
+				return fmt.Errorf("error unmounting defaultSecret from vault: %s", err.Error())
+			}
+		}
+	}
+
+	for _, secrentEngine := range secretsEngines {
+		secretEngineType := secrentEngine["type"].(string)
+
+		path := secretEngineType
+		if pathOverwrite, ok := secrentEngine["path"]; ok {
+			path = pathOverwrite.(string)
+		}
+
+		mounts, err := u.cl.Sys().ListMounts()
+		if err != nil {
+			return fmt.Errorf("error reading mounts from vault: %s", err.Error())
+		}
+		if mounts[path+"/"] == nil {
+			input := api.MountInput{
+				Type:        secretEngineType,
+				Description: getOrDefault(secrentEngine, "description"),
+				PluginName:  getOrDefault(secrentEngine, "plugin_name"),
+				Options:     getOrDefaultMap(secrentEngine, "options"),
+			}
+			err = u.cl.Sys().Mount(path, &input)
+			if err != nil {
+				return fmt.Errorf("error mounting %s into vault: %s", path, err.Error())
+			}
+
+			logrus.Debugln("mounted", secretEngineType, "to", path)
+
+		} else {
+			// input := api.MountConfigInput{}
+			// err = u.cl.Sys().TuneMount(path, input)
+		}
+
+		// Configuration of the Secret Engine in a very generic manner, YAML config file should have the proper format
+		configuration := getOrDefaultMapRaw(secrentEngine, "configuration")
+		for configOption, configData := range configuration {
+			configData := configData.([]interface{})
+			for _, subConfigData := range configData {
+				subConfigData := subConfigData.(map[interface{}]interface{})
+				configPath := fmt.Sprintf("%s/%s/%s", path, configOption, subConfigData["name"])
+				_, err := u.cl.Logical().Write(configPath, toStringMap(subConfigData))
+
+				if err != nil {
+					return fmt.Errorf("error putting %+v -> %s config into vault: %s", configData, configPath, err.Error())
+				}
+			}
+		}
+	}
 
 	return nil
+}
+
+func getOrDefault(m map[string]interface{}, key string) string {
+	value := m[key]
+	if value != nil {
+		return value.(string)
+	}
+	return ""
+}
+
+func getOrDefaultMap(m map[string]interface{}, key string) map[string]string {
+	value := m[key]
+	stringMap := map[string]string{}
+	if value != nil {
+		interfaceMap := value.(map[interface{}]interface{})
+		for key, value := range interfaceMap {
+			stringMap[fmt.Sprint(key)] = fmt.Sprint(value)
+		}
+	}
+	return stringMap
+}
+
+func getOrDefaultMapRaw(m map[string]interface{}, key string) map[string]interface{} {
+	value := m[key]
+	stringMap := map[string]interface{}{}
+	if value != nil {
+		interfaceMap := value.(map[interface{}]interface{})
+		for key, value := range interfaceMap {
+			stringMap[fmt.Sprint(key)] = value
+		}
+	}
+	return stringMap
+}
+
+func toStringMap(m map[interface{}]interface{}) map[string]interface{} {
+	stringMap := map[string]interface{}{}
+	for key, value := range m {
+		stringMap[fmt.Sprint(key)] = value
+	}
+	return stringMap
 }

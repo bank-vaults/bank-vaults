@@ -37,11 +37,11 @@ and usage of using your command.`,
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
 		}
 
+		vaultConfig, err := vaultConfigForConfig(appConfig)
+
 		if err != nil {
 			logrus.Fatalf("error building vault config: %s", err.Error())
 		}
-
-		vaultConfig, err := vaultConfigForConfig(appConfig)
 
 		v, err := vault.New(store, cl, vaultConfig)
 
