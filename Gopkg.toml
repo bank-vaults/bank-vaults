@@ -39,7 +39,7 @@
 
 [[constraint]]
   name = "github.com/hashicorp/vault"
-  version = "0.9.6"
+  version = "0.10.0"
 
 [[constraint]]
   name = "github.com/jinzhu/gorm"
@@ -76,3 +76,4 @@
 [prune]
   go-tests = true
   unused-packages = true
+  non-go = true

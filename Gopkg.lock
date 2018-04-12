@@ -81,12 +81,6 @@
   version = "v3.2.0"
 
 [[projects]]
-  name = "github.com/fatih/structs"
-  packages = ["."]
-  revision = "a720dfa8df582c51dee1b36feabb906bde1588bd"
-  version = "v1.0"
-
-[[projects]]
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
@@ -216,8 +210,8 @@
     "helper/parseutil",
     "helper/strutil"
   ]
-  revision = "7e1fbde40afee241f81ef08700e7987d86fc7242"
-  version = "v0.9.6"
+  revision = "5dd7f25f5c4b541f2da62d70075b6f82771a650d"
+  version = "v0.10.0"
 
 [[projects]]
   branch = "master"
@@ -672,6 +666,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c864b123a53a3cc934c44de8a563d8b8fa4fb115382cbb02c38f80b11b767432"
+  inputs-digest = "736605de1ae63f2109058f3c07bd64e4fb9a75fa920702f23f57350150d7f0c2"
   solver-name = "gps-cdcl"
   solver-version = 1
