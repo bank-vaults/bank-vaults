@@ -31,8 +31,10 @@ secrets:
       config:
         - name: my-mysql
           plugin_name: "mysql-database-plugin"
-          connection_url: "root:example@tcp(127.0.0.1:3306)/"
+          connection_url: "{{username}}:{{password}}@tcp(127.0.0.1:3306)/"
           allowed_roles: [pipeline]
+          username: "${env "ROOT_USERNAME"}"
+          password: "${env "ROOT_PASSWORD"}"
       roles:
         - name: pipeline
           db_name: my-mysql
