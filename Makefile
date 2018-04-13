@@ -1,7 +1,7 @@
 REGISTRY := banzaicloud
 IMAGE_NAME := bank-vaults
 BUILD_TAG := build
-IMAGE_TAGS := canary
+IMAGE_TAGS := $(shell git rev-parse --abbrev-ref HEAD)
 
 BUILD_IMAGE_NAME := golang:1.10
 
