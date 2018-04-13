@@ -10,6 +10,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cast"
 	"github.com/spf13/viper"
 )
 
@@ -238,8 +239,6 @@ func (u *vault) Init() error {
 func (u *vault) Configure() error {
 	logrus.Debugf("retrieving key from kms service...")
 	rootToken, err := u.keyStore.Get(u.rootTokenKey())
-	// TODO REMOVE ME
-	rootToken, _ = ioutil.ReadFile(os.Getenv("HOME") + "/.vault-token")
 
 	if err != nil {
 		return fmt.Errorf("unable to get key '%s': %s", u.rootTokenKey(), err.Error())
@@ -255,7 +254,7 @@ func (u *vault) Configure() error {
 	}
 
 	authMethods := []map[string]interface{}{}
-	err = viper.UnmarshalKey("roles", &authMethods)
+	err = viper.UnmarshalKey("auth", &authMethods)
 	if err != nil {
 		return fmt.Errorf("error unmarshalling vault auth methods config: %s", err.Error())
 	}
@@ -295,7 +294,7 @@ func (u *vault) Configure() error {
 			if err != nil {
 				return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
 			}
-			roles := authMethod["roles"].([]map[string]interface{})
+			roles := authMethod["roles"].([]interface{})
 			err = u.configureKubernetesRoles(roles)
 			if err != nil {
 				return fmt.Errorf("error configuring kubernetes auth roles for vault: %s", err.Error())
@@ -364,8 +363,9 @@ func (u *vault) configurePolicies() error {
 	return nil
 }
 
-func (u *vault) configureKubernetesRoles(roles []map[string]interface{}) error {
-	for _, role := range roles {
+func (u *vault) configureKubernetesRoles(roles []interface{}) error {
+	for _, roleInterface := range roles {
+		role := cast.ToStringMap(roleInterface)
 		_, err := u.cl.Logical().Write(fmt.Sprint("auth/kubernetes/role/", role["name"]), role)
 
 		if err != nil {
@@ -421,7 +421,7 @@ func (u *vault) configureSecretEngines() error {
 				Type:        secretEngineType,
 				Description: getOrDefault(secrentEngine, "description"),
 				PluginName:  getOrDefault(secrentEngine, "plugin_name"),
-				Options:     getOrDefaultMap(secrentEngine, "options"),
+				Options:     getOrDefaultStringMapString(secrentEngine, "options"),
 			}
 			err = u.cl.Sys().Mount(path, &input)
 			if err != nil {
@@ -436,13 +436,13 @@ func (u *vault) configureSecretEngines() error {
 		}
 
 		// Configuration of the Secret Engine in a very generic manner, YAML config file should have the proper format
-		configuration := getOrDefaultMapRaw(secrentEngine, "configuration")
+		configuration := getOrDefaultStringMap(secrentEngine, "configuration")
 		for configOption, configData := range configuration {
 			configData := configData.([]interface{})
 			for _, subConfigData := range configData {
 				subConfigData := subConfigData.(map[interface{}]interface{})
 				configPath := fmt.Sprintf("%s/%s/%s", path, configOption, subConfigData["name"])
-				_, err := u.cl.Logical().Write(configPath, toStringMap(subConfigData))
+				_, err := u.cl.Logical().Write(configPath, cast.ToStringMap(subConfigData))
 
 				if err != nil {
 					return fmt.Errorf("error putting %+v -> %s config into vault: %s", configData, configPath, err.Error())
@@ -462,34 +462,20 @@ func getOrDefault(m map[string]interface{}, key string) string {
 	return ""
 }
 
-func getOrDefaultMap(m map[string]interface{}, key string) map[string]string {
+func getOrDefaultStringMapString(m map[string]interface{}, key string) map[string]string {
 	value := m[key]
 	stringMap := map[string]string{}
 	if value != nil {
-		interfaceMap := value.(map[interface{}]interface{})
-		for key, value := range interfaceMap {
-			stringMap[fmt.Sprint(key)] = fmt.Sprint(value)
-		}
+		return cast.ToStringMapString(value)
 	}
 	return stringMap
 }
 
-func getOrDefaultMapRaw(m map[string]interface{}, key string) map[string]interface{} {
+func getOrDefaultStringMap(m map[string]interface{}, key string) map[string]interface{} {
 	value := m[key]
 	stringMap := map[string]interface{}{}
 	if value != nil {
-		interfaceMap := value.(map[interface{}]interface{})
-		for key, value := range interfaceMap {
-			stringMap[fmt.Sprint(key)] = value
-		}
-	}
-	return stringMap
-}
-
-func toStringMap(m map[interface{}]interface{}) map[string]interface{} {
-	stringMap := map[string]interface{}{}
-	for key, value := range m {
-		stringMap[fmt.Sprint(key)] = value
+		return cast.ToStringMap(value)
 	}
 	return stringMap
 }
