@@ -54,6 +54,10 @@
   version = "1.0.5"
 
 [[constraint]]
+  name = "github.com/spf13/cast"
+  version = "1.2.0"
+
+[[constraint]]
   name = "github.com/spf13/cobra"
   version = "0.0.2"
 
