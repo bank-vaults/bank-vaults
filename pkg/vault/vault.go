@@ -238,13 +238,11 @@ func (u *vault) Init() error {
 
 func (u *vault) Configure() error {
 	logrus.Debugf("retrieving key from kms service...")
-	// rootToken, err := u.keyStore.Get(u.rootTokenKey())
+	rootToken, err := u.keyStore.Get(u.rootTokenKey())
 
-	// if err != nil {
-	// 	return fmt.Errorf("unable to get key '%s': %s", u.rootTokenKey(), err.Error())
-	// }
-
-	rootToken := []byte("eeaac3b1-3628-5dd9-3763-811fd5bb1f41")
+	if err != nil {
+		return fmt.Errorf("unable to get key '%s': %s", u.rootTokenKey(), err.Error())
+	}
 
 	u.cl.SetToken(string(rootToken))
 	defer u.cl.SetToken("")
