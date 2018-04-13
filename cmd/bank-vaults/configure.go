@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"path"
+	"text/template"
 	"time"
 
+	"github.com/Masterminds/sprig"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	"github.com/fsnotify/fsnotify"
 	"github.com/hashicorp/vault/api"
@@ -37,11 +41,11 @@ and usage of using your command.`,
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
 		}
 
+		vaultConfig, err := vaultConfigForConfig(appConfig)
+
 		if err != nil {
 			logrus.Fatalf("error building vault config: %s", err.Error())
 		}
-
-		vaultConfig, err := vaultConfigForConfig(appConfig)
 
 		v, err := vault.New(store, cl, vaultConfig)
 
@@ -49,16 +53,34 @@ and usage of using your command.`,
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
 
+		parseConfiguration := func() {
+			configTemplate := template.Must(
+				template.New(path.Base(vaultConfigFile)).
+					Funcs(sprig.TxtFuncMap()).
+					Delims("${", "}").
+					ParseFiles(vaultConfigFile))
+
+			buffer := bytes.NewBuffer(nil)
+
+			err := configTemplate.Execute(buffer, nil)
+			if err != nil {
+				logrus.Fatalf("error executing vault config template: %s", err.Error())
+			}
+
+			err = viper.ReadConfig(buffer)
+			if err != nil {
+				logrus.Fatalf("error reading vault config file: %s", err.Error())
+			}
+		}
+
 		c := make(chan fsnotify.Event, 1)
 		viper.SetConfigFile(vaultConfigFile)
-		viper.WatchConfig()
 		viper.OnConfigChange(func(e fsnotify.Event) {
+			parseConfiguration()
 			c <- e
 		})
-		err = viper.ReadInConfig()
-		if err != nil {
-			logrus.Fatalf("error reading vault config file: %s", err.Error())
-		}
+		viper.WatchConfig()
+		parseConfiguration()
 
 		c <- fsnotify.Event{Name: "Initial", Op: fsnotify.Create}
 

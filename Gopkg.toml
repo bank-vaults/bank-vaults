@@ -39,11 +39,15 @@
 
 [[constraint]]
   name = "github.com/hashicorp/vault"
-  version = "0.9.6"
+  version = "0.10.0"
 
 [[constraint]]
   name = "github.com/jinzhu/gorm"
   version = "1.9.1"
+
+[[constraint]]
+  name = "github.com/Masterminds/sprig"
+  version = "v2.15.0"
 
 [[constraint]]
   name = "github.com/pkg/errors"
@@ -52,6 +56,10 @@
 [[constraint]]
   name = "github.com/sirupsen/logrus"
   version = "1.0.5"
+
+[[constraint]]
+  name = "github.com/spf13/cast"
+  version = "1.2.0"
 
 [[constraint]]
   name = "github.com/spf13/cobra"
@@ -76,3 +84,4 @@
 [prune]
   go-tests = true
   unused-packages = true
+  non-go = true
