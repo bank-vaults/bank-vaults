@@ -1,0 +1,23 @@
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.10
+      - image: vault:0.10.0
+        environment:
+            SKIP_SETCAP: true
+            VAULT_DEV_ROOT_TOKEN_ID: 227e1cce-6bf7-30bb-2d2a-acc854318caf
+
+    working_directory: /go/src/github.com/banzaicloud/bank-vaults
+    steps:
+      - checkout
+      - run:
+          command:
+              make build
+      - run:
+          name: Run go vet
+          command:
+              make verify
