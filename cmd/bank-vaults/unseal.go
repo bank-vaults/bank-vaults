@@ -10,11 +10,9 @@ import (
 )
 
 const cfgUnsealPeriod = "unseal-period"
-const cfgInit = "init"
 
 type unsealCfg struct {
 	unsealPeriod time.Duration
-	proceedInit  bool
 }
 
 var unsealConfig unsealCfg
@@ -31,7 +29,6 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		appConfig.BindPFlag(cfgUnsealPeriod, cmd.PersistentFlags().Lookup(cfgUnsealPeriod))
 		unsealConfig.unsealPeriod = appConfig.GetDuration(cfgUnsealPeriod)
-		unsealConfig.proceedInit = appConfig.GetBool(cfgInit)
 
 		store, err := kvStoreForConfig(appConfig)
 
@@ -59,19 +56,6 @@ to quickly create a Cobra application.`,
 
 		for {
 			func() {
-				if unsealConfig.proceedInit {
-					initialized, err := cl.Sys().InitStatus()
-					if err != nil {
-						logrus.Errorf("error testing if vault is initialized: %s", err.Error())
-					}
-
-					if !initialized {
-						if err = v.Init(); err != nil {
-							logrus.Fatalf("error initialising vault: %s", err.Error())
-						}
-					}
-				}
-
 				logrus.Infof("checking if vault is sealed...")
 				sealed, err := v.Sealed()
 				if err != nil {
@@ -101,7 +85,6 @@ to quickly create a Cobra application.`,
 
 func init() {
 	unsealCmd.PersistentFlags().Duration(cfgUnsealPeriod, time.Second*30, "How often to attempt to unseal the vault instance")
-	unsealCmd.PersistentFlags().Bool(cfgInit, false, "Initialize vault instantce if not yet initialized")
 
 	rootCmd.AddCommand(unsealCmd)
 }
