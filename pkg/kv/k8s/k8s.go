@@ -1,7 +1,6 @@
 package k8s
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 
@@ -45,10 +44,7 @@ func New(namespace, secret string) (service kv.Service, err error) {
 }
 
 func (g *s3Storage) Set(key string, val []byte) error {
-	secret, err := g.cl.Core().Secrets(g.namespace).Get(g.secret, metav1.GetOptions{})
-
-	b64val := make([]byte, base64.StdEncoding.EncodedLen(len(val)))
-	base64.StdEncoding.Encode(b64val, val)
+	secret, err := g.cl.CoreV1().Secrets(g.namespace).Get(g.secret, metav1.GetOptions{})
 
 	if errors.IsNotFound(err) {
 		secret := &v1.Secret{
@@ -56,12 +52,12 @@ func (g *s3Storage) Set(key string, val []byte) error {
 				Namespace: g.namespace,
 				Name:      g.secret,
 			},
-			Data: map[string][]byte{key: b64val},
+			Data: map[string][]byte{key: val},
 		}
-		secret, err = g.cl.Core().Secrets(g.namespace).Create(secret)
+		secret, err = g.cl.CoreV1().Secrets(g.namespace).Create(secret)
 	} else if err == nil {
-		secret.Data[key] = b64val
-		secret, err = g.cl.Core().Secrets(g.namespace).Update(secret)
+		secret.Data[key] = val
+		secret, err = g.cl.CoreV1().Secrets(g.namespace).Update(secret)
 		//reflect.DeepEqual()
 	} else {
 		return fmt.Errorf("error checking if '%s' secret exists: '%s'", g.secret, err.Error())
@@ -74,7 +70,7 @@ func (g *s3Storage) Set(key string, val []byte) error {
 }
 
 func (g *s3Storage) Get(key string) ([]byte, error) {
-	secret, err := g.cl.Core().Secrets(g.namespace).Get(g.secret, metav1.GetOptions{})
+	secret, err := g.cl.CoreV1().Secrets(g.namespace).Get(g.secret, metav1.GetOptions{})
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -88,7 +84,7 @@ func (g *s3Storage) Get(key string) ([]byte, error) {
 		return nil, kv.NewNotFoundError("key '%s' is not present in secret: %s", key)
 	}
 
-	return base64.StdEncoding.DecodeString(string(val))
+	return val, nil
 }
 
 func (g *s3Storage) Test(key string) error {
