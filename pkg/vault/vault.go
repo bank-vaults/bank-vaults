@@ -14,12 +14,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-// That configures the vault API
-
+// Config holds the configuration of the Vault initialization
 type Config struct {
 	// how many key parts exist
 	SecretShares int
-	// how many of these parts are needed to unseal vault  (secretThreshold <= secretShares)
+	// how many of these parts are needed to unseal Vault (secretThreshold <= secretShares)
 	SecretThreshold int
 
 	// if this root token is set, the dynamic generated will be invalidated and this created instead
@@ -36,6 +35,7 @@ type vault struct {
 	config   *Config
 }
 
+// Interface check
 var _ Vault = &vault{}
 
 // Vault is an interface that can be used to attempt to perform actions against
@@ -123,6 +123,7 @@ func (u *vault) keyStoreSet(key string, val []byte) error {
 	}
 }
 
+// Init initializes Vault if is not initialized already
 func (u *vault) Init() error {
 	initialized, err := u.cl.Sys().InitStatus()
 	if err != nil {

@@ -5,10 +5,10 @@ import (
 
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/awskms"
-	"github.com/banzaicloud/bank-vaults/pkg/kv/cloudkms"
+	"github.com/banzaicloud/bank-vaults/pkg/kv/azurekv"
+	"github.com/banzaicloud/bank-vaults/pkg/kv/gckms"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/gcs"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
-	"github.com/banzaicloud/bank-vaults/pkg/kv/keyvault"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/s3"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	"github.com/spf13/viper"
@@ -38,7 +38,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			return nil, fmt.Errorf("error creating google cloud storage kv store: %s", err.Error())
 		}
 
-		kms, err := cloudkms.New(g,
+		kms, err := gckms.New(g,
 			cfg.GetString(cfgGoogleCloudKMSProject),
 			cfg.GetString(cfgGoogleCloudKMSLocation),
 			cfg.GetString(cfgGoogleCloudKMSKeyRing),
@@ -70,7 +70,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 	}
 
 	if cfg.GetString(cfgMode) == cfgModeValueAzureKeyVault {
-		kms, err := keyvault.New(cfg.GetString(cfgAzureKeyVaultName))
+		kms, err := azurekv.New(cfg.GetString(cfgAzureKeyVaultName))
 		if err != nil {
 			return nil, fmt.Errorf("error creating Azure Key Vault kv store: %s", err.Error())
 		}
