@@ -42,10 +42,6 @@
   version = "0.10.0"
 
 [[constraint]]
-  name = "github.com/jinzhu/gorm"
-  version = "1.9.1"
-
-[[constraint]]
   name = "github.com/Masterminds/sprig"
   version = "v2.15.0"
 
@@ -85,3 +81,11 @@
   go-tests = true
   unused-packages = true
   non-go = true
+
+[[constraint]]
+  name = "github.com/Azure/azure-sdk-for-go"
+  version = "15.2.0"
+
+[[constraint]]
+  name = "github.com/Azure/go-autorest"
+  version = "10.6.0"

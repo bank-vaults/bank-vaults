@@ -5,8 +5,6 @@ import (
 
 	"github.com/banzaicloud/bank-vaults/database"
 	"github.com/banzaicloud/bank-vaults/vault"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 func vaultExample() {
@@ -37,21 +35,10 @@ func gormExample() {
 	if err != nil {
 		panic(err)
 	}
-	db, err := gorm.Open("mysql", secretSource)
-	if err != nil {
-		panic(err)
-	}
-	var user struct {
-		Name  string
-		Email string
-	}
-	err = db.Raw("select * from users").Scan(&user).Error
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("%+v\n", user)
+	fmt.Printf("use this with GORM:\ndb, err := gorm.Open(\"mysql\", \"%s\")", secretSource)
 }
 
 func main() {
+	vaultExample()
 	gormExample()
 }

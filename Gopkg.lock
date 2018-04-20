@@ -21,8 +21,8 @@
     "services/keyvault/2016-10-01/keyvault",
     "version"
   ]
-  revision = "068ec4d616be5b2175509bf1fb3e4c8ea160d5c8"
-  version = "v15.0.1"
+  revision = "060bf9b93ad98bc41813ca23f5328843f6c0e90b"
+  version = "v15.2.0"
 
 [[projects]]
   name = "github.com/Azure/go-autorest"
@@ -115,12 +115,6 @@
   packages = ["."]
   revision = "5e9692864e22d02ac79e2fa499cffb00520b4fea"
   version = "v1.34.0"
-
-[[projects]]
-  name = "github.com/go-sql-driver/mysql"
-  packages = ["."]
-  revision = "a0583e0143b1624142adab07e0e97fe106d99561"
-  version = "v1.3"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -260,21 +254,6 @@
   packages = ["."]
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
-
-[[projects]]
-  name = "github.com/jinzhu/gorm"
-  packages = [
-    ".",
-    "dialects/mysql"
-  ]
-  revision = "6ed508ec6a4ecb3531899a69cbc746ccf65a4166"
-  version = "v1.9.1"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/jinzhu/inflection"
-  packages = ["."]
-  revision = "04140366298a54a039076d798123ffa108fff46c"
 
 [[projects]]
   name = "github.com/jmespath/go-jmespath"
@@ -700,6 +679,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0ab256e43ffb71aaf23d2e77d1041b041654478cefa1feb0d328d3f2b833b79d"
+  inputs-digest = "95b17d6e07d3ca88e54cdacab61f80b02a56ee384f432177e8e18be4b510076f"
   solver-name = "gps-cdcl"
   solver-version = 1
