@@ -1,4 +1,4 @@
-package keyvault
+package azurekv
 
 import (
 	"log"

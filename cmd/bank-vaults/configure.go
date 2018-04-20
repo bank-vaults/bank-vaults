@@ -20,8 +20,9 @@ const cfgVaultConfigFile = "vault-config-file"
 var configureCmd = &cobra.Command{
 	Use:   "configure",
 	Short: "Configures a Hashicorp Vault based on a YAML/JSON configuration file",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command.`,
+	Long: `This configuration is an extension to what is available through the Vault configuration:
+			https://www.vaultproject.io/docs/configuration/index.html. With this it is possible to
+			configure secret engines, auth methods, etc...`,
 	Run: func(cmd *cobra.Command, args []string) {
 		appConfig.BindPFlag(cfgUnsealPeriod, cmd.PersistentFlags().Lookup(cfgUnsealPeriod))
 		appConfig.BindPFlag(cfgVaultConfigFile, cmd.PersistentFlags().Lookup(cfgVaultConfigFile))
