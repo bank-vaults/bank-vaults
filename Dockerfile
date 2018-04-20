@@ -1,7 +1,15 @@
-FROM alpine:3.6
+FROM golang:1.10-alpine as golang
 
-RUN apk add --update ca-certificates
+ADD . /go/src/github.com/banzaicloud/bank-vaults
+WORKDIR /go/src/github.com/banzaicloud/bank-vaults
 
-COPY bank-vaults_linux_amd64 /usr/local/bin/bank-vaults
+RUN go install ./cmd/bank-vaults
+
+
+FROM alpine:3.7
+
+RUN apk add --no-cache ca-certificates
+
+COPY --from=golang /go/bin/bank-vaults /usr/local/bin/bank-vaults
 
 ENTRYPOINT ["/usr/local/bin/bank-vaults"]
