@@ -43,11 +43,7 @@ const cfgK8SSecret = "k8s-secret-name"
 var rootCmd = &cobra.Command{
 	Use:   "bank-vaults",
 	Short: "Automates initialization, unsealing and configuration of Hashicorp Vault.",
-	Long: `This is a CLI tool to help automate the setup and management of Hashicorp Vault.
-
-It will continuously attempt to unseal the target Vault instance, by retrieving
-unseal keys from a Google Cloud KMS keyring.
-`,
+	Long:  `This is a CLI tool to help automate the setup and management of Hashicorp Vault.`,
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.

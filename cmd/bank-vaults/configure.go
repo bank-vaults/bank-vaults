@@ -19,7 +19,7 @@ const cfgVaultConfigFile = "vault-config-file"
 
 var configureCmd = &cobra.Command{
 	Use:   "configure",
-	Short: "Configures a Hashicorp Vault based on a YAML/JSON configuration file",
+	Short: "Configures a Vault based on a YAML/JSON configuration file",
 	Long: `This configuration is an extension to what is available through the Vault configuration:
 			https://www.vaultproject.io/docs/configuration/index.html. With this it is possible to
 			configure secret engines, auth methods, etc...`,
