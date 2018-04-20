@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-type s3Storage struct {
+type k8sStorage struct {
 	cl        *kubernetes.Clientset
 	namespace string
 	secret    string
@@ -38,39 +38,39 @@ func New(namespace, secret string) (service kv.Service, err error) {
 		return nil, fmt.Errorf("error creating k8s client: %s", err.Error())
 	}
 
-	service = &s3Storage{client, namespace, secret}
+	service = &k8sStorage{client, namespace, secret}
 
 	return
 }
 
-func (g *s3Storage) Set(key string, val []byte) error {
-	secret, err := g.cl.CoreV1().Secrets(g.namespace).Get(g.secret, metav1.GetOptions{})
+func (k *k8sStorage) Set(key string, val []byte) error {
+	secret, err := k.cl.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
 
 	if errors.IsNotFound(err) {
 		secret := &v1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: g.namespace,
-				Name:      g.secret,
+				Namespace: k.namespace,
+				Name:      k.secret,
 			},
 			Data: map[string][]byte{key: val},
 		}
-		secret, err = g.cl.CoreV1().Secrets(g.namespace).Create(secret)
+		secret, err = k.cl.CoreV1().Secrets(k.namespace).Create(secret)
 	} else if err == nil {
 		secret.Data[key] = val
-		secret, err = g.cl.CoreV1().Secrets(g.namespace).Update(secret)
+		secret, err = k.cl.CoreV1().Secrets(k.namespace).Update(secret)
 		//reflect.DeepEqual()
 	} else {
-		return fmt.Errorf("error checking if '%s' secret exists: '%s'", g.secret, err.Error())
+		return fmt.Errorf("error checking if '%s' secret exists: '%s'", k.secret, err.Error())
 	}
 
 	if err != nil {
-		return fmt.Errorf("error writing secret key '%s' into secret '%s': '%s'", key, g.secret, err.Error())
+		return fmt.Errorf("error writing secret key '%s' into secret '%s': '%s'", key, k.secret, err.Error())
 	}
 	return nil
 }
 
-func (g *s3Storage) Get(key string) ([]byte, error) {
-	secret, err := g.cl.CoreV1().Secrets(g.namespace).Get(g.secret, metav1.GetOptions{})
+func (k *k8sStorage) Get(key string) ([]byte, error) {
+	secret, err := k.cl.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -87,7 +87,6 @@ func (g *s3Storage) Get(key string) ([]byte, error) {
 	return val, nil
 }
 
-func (g *s3Storage) Test(key string) error {
-	// TODO: Implement me properly
+func (k *k8sStorage) Test(key string) error {
 	return nil
 }

@@ -1,4 +1,4 @@
-package cloudkms
+package gckms
 
 import (
 	"context"
