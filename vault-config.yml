@@ -25,6 +25,10 @@ secrets:
     description: General secrets.
     options:
       version: 1
+  # This plugin generates database credentials dynamically based on configured roles for
+  # the MySQL database.
+  # See https://www.vaultproject.io/docs/secrets/databases/mysql-maria.html for
+  # more information.
   - type: database
     description: Database secret engine.
     configuration:
@@ -33,7 +37,7 @@ secrets:
           plugin_name: "mysql-database-plugin"
           connection_url: "{{username}}:{{password}}@tcp(127.0.0.1:3306)/"
           allowed_roles: [pipeline]
-          username: "${env "ROOT_USERNAME"}"
+          username: "${env "ROOT_USERNAME"}" # Example how to refer to environment variables
           password: "${env "ROOT_PASSWORD"}"
       roles:
         - name: pipeline
