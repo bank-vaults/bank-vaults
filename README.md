@@ -22,7 +22,7 @@
 
 ## The CLI tool
 
-The `bank-vaults` a CLI tool is to help automate the setup and management of Hashicorp Vault.
+The `bank-vaults` CLI tool is to help automate the setup and management of Hashicorp Vault.
 
 Features:
  - Initializes Vault and stores the root token and unseal keys in one of the followings:
@@ -105,7 +105,7 @@ This repository contains several Go packages for interacting with Vault:
 
 ## Helm Chart
 
-We have a fully fladged, production ready [Helm chart](https://github.com/banzaicloud/banzai-charts/tree/master/stable/vault) for Vault using bank-vaults. With the help of this chart you can run a HA Vault instance with automatic initialization, unsealing and external configuration which used to be a tedious manual operation. This chart can be used easily for development purposes as well.
+We have a fully fladged, production ready [Helm chart](https://github.com/banzaicloud/banzai-charts/tree/master/stable/vault) for Vault using `bank-vaults`. With the help of this chart you can run a HA Vault instance with automatic initialization, unsealing and external configuration which used to be a tedious manual operation. This chart can be used easily for development purposes as well.
 
 ## Examples
 
