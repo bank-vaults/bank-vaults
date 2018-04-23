@@ -5,7 +5,7 @@
 
 *Bank Vaults is a wrapper for the official Vault client with automatic token renewal, built in Kubernetes support, dynamic database credential management and more.*
 
---- 
+---
 
 **Bank Vaults** is a core building block of the [Pipeline](https://github.com/banzaicloud/pipeline) PaaS. Some of the usage patterns are highlighted through these blog posts:
 
@@ -98,13 +98,19 @@ This repository contains several Go packages for interacting with Vault:
     *Note: This is currently WIP, we are extracting the code from https://github.com/banzaicloud/pipeline/tree/master/auth*</br>
     A GitHub OAuth2 based authentication system as a Gin Middleware, stores JWT beaerer tokens in Vault.
 
+    ![authn](docs/images/authn-vault-flow.png)
+
 - `vault`
-    
+
     A wrapper for the official Vault client with automatic token renewal, and Kubernetes support.
 
+    ![token](docs/images/token-request-vault-flow.png)
+
 - `database`
-    
+
     A helper for creating database source strings (MySQL/PostgreSQL) with database credentials dynamically based on configured Vault roles (instead of `username:password`).
+
+    ![token](docs/images/vault-mysql.png)
 
 ## Helm Chart
 
