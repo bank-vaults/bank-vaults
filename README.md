@@ -110,7 +110,7 @@ This repository contains several Go packages for interacting with Vault:
 
     A helper for creating database source strings (MySQL/PostgreSQL) with database credentials dynamically based on configured Vault roles (instead of `username:password`).
 
-    ![token](docs/images/vault-mysql.gif)
+    ![token](docs/images/vault-mySQL.gif)
 
 ## Helm Chart
 
