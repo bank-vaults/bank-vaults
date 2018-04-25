@@ -51,12 +51,15 @@ policies:
     rules: path "secret/*" {
              capabilities = ["create", "read", "update", "delete", "list"]
            }
+
+# Allows configuring Auth Methods in Vault (Kubernetes and GitHub is supported now).
+# See https://www.vaultproject.io/docs/auth/index.html for more information.
 auth:
+  # Allows creating roles in Vault which can be used later on for the Kubernetes based
+  # authentication.
+  # See https://www.vaultproject.io/docs/auth/kubernetes.html#creating-a-role for
+  # more information.
   - type: kubernetes
-    # Allows creating roles in Vault which can be used later on for the Kubernetes based
-    # authentication.
-    # See https://www.vaultproject.io/docs/auth/kubernetes.html#creating-a-role for
-    # more information.
     roles:
       # Allow every pod in the default namespace to use the secret kv store
       - name: default
@@ -64,37 +67,46 @@ auth:
         bound_service_account_namespaces: default
         policies: allow_secrets
         ttl: 1h
+
+  # Allows creating team mappings in Vault which can be used later on for the GitHub 
+  # based authentication.
+  # See https://www.vaultproject.io/docs/auth/github.html#configuration for
+  # more information.
   - type: github
-    # Allows creating roles in Vault which can be used later on for the Kubernetes based
-    # authentication.
-    # See https://www.vaultproject.io/docs/auth/kubernetes.html#creating-a-role for
-    # more information.
-    roles:
-      # Allow every pod in the default namespace to use the secret kv store
-      - name: default
-        bound_service_account_names: default
-        bound_service_account_namespaces: default
-        policies: allow_secrets
-        ttl: 1h
+    config:
+      organization: banzaicloud
+    # Map the banzaicloud dev team on GitHub to the dev role in Vault
+    map:
+      teams:
+        - dev:
+            value: dev
+
+# Allows configuring Secrets Engines in Vault (KV, Database and SSH is tested,
+# but the config is free form so probably more is supported).
+# See https://www.vaultproject.io/docs/secrets/index.html for more information.
 secrets:
+  # This plugin stores database credentials dynamically based on configured roles for
+  # the MySQL database.
+  # See https://www.vaultproject.io/docs/secrets/databases/mysql-maria.html for
+  # more information.
   - path: secret
     type: kv
     description: General secrets.
     options:
       version: 1
-  # This plugin generates database credentials dynamically based on configured roles for
-  # the MySQL database.
-  # See https://www.vaultproject.io/docs/secrets/databases/mysql-maria.html for
+
+  # This plugin stores arbitrary secrets within the configured physical storage for Vault.
+  # See https://www.vaultproject.io/docs/secrets/kv/index.html for
   # more information.
   - type: database
-    description: Database secret engine.
+    description: MySQL Database secret engine.
     configuration:
       config:
         - name: my-mysql
           plugin_name: "mysql-database-plugin"
           connection_url: "{{username}}:{{password}}@tcp(127.0.0.1:3306)/"
           allowed_roles: [pipeline]
-          username: "${env "ROOT_USERNAME"}" # Example how to refer to environment variables
+          username: "${env "ROOT_USERNAME"}" # Example how to read environment variables
           password: "${env "ROOT_PASSWORD"}"
       roles:
         - name: pipeline
@@ -102,6 +114,26 @@ secrets:
           creation_statements: "GRANT ALL ON *.* TO '{{name}}'@'%' IDENTIFIED BY '{{password}}';"
           default_ttl: "10m"
           max_ttl: "24h"
+
+  # Create a named Vault role for signing SSH client keys.
+  # See https://www.vaultproject.io/docs/secrets/ssh/signed-ssh-certificates.html#client-key-signing for
+  # more information.
+  - type: ssh
+    path: ssh-client-signer
+    description: SSH Client Key Signing.
+    configuration:
+      config:
+        - name: ca
+          generate_signing_key: "true"
+      roles:
+        - name: my-role
+          allow_user_certificates: "true"
+          allowed_users: "*",
+          default_extensions":
+            - permit-pty: ""
+          key_type: "ca",
+          default_user: "ubuntu",
+          ttl: "24h"
 ```
 
 ## The Go library
