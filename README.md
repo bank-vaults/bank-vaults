@@ -61,6 +61,18 @@ auth:
         bound_service_account_namespaces: default
         policies: allow_secrets
         ttl: 1h
+  - type: github
+    # Allows creating roles in Vault which can be used later on for the Kubernetes based
+    # authentication.
+    # See https://www.vaultproject.io/docs/auth/kubernetes.html#creating-a-role for
+    # more information.
+    roles:
+      # Allow every pod in the default namespace to use the secret kv store
+      - name: default
+        bound_service_account_names: default
+        bound_service_account_namespaces: default
+        policies: allow_secrets
+        ttl: 1h
 secrets:
   - path: secret
     type: kv
