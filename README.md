@@ -24,6 +24,7 @@ We use Vault across our large Kubernetes deployments and all the projects were `
 - [The CLI tool](#the-cli-tool)
 - [The Go library](#the-go-library)
 - [Helm Chart](#helm-chart)
+- [Operator](#operator)
 - [Examples](#examples)
 - [Getting and Installing](#getting-and-installing)
 
@@ -164,6 +165,16 @@ This repository contains several Go packages for interacting with Vault:
 ## Helm Chart
 
 We have a fully fladged, production ready [Helm chart](https://github.com/banzaicloud/banzai-charts/tree/master/stable/vault) for Vault using `bank-vaults`. With the help of this chart you can run a HA Vault instance with automatic initialization, unsealing and external configuration which used to be a tedious manual operation. This chart can be used easily for development purposes as well.
+
+## Operator
+
+We have a Vault operator built on bank-vaults features as:
+
+- TLS support
+- external, API based configuration (secret engines, auth methods, policies) to automatically re/configure a Vault cluster
+- automatic unsealing (AWS, GCE, Azure, Kubernetes Secrets (for dev purposes), Oracle)
+
+>Due to third party/external dependencies we are holding back open sourcing the operator until mid May
 
 ## Examples
 
