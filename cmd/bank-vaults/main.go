@@ -21,6 +21,7 @@ const cfgModeValueAWSKMS3 = "aws-kms-s3"
 const cfgModeValueGoogleCloudKMSGCS = "google-cloud-kms-gcs"
 const cfgModeValueAzureKeyVault = "azure-key-vault"
 const cfgModeValueK8S = "k8s"
+const cfgModeValueDev = "dev"
 
 const cfgGoogleCloudKMSProject = "google-cloud-kms-project"
 const cfgGoogleCloudKMSLocation = "google-cloud-kms-location"
@@ -76,7 +77,7 @@ func init() {
 	configStringVar(
 		cfgMode,
 		cfgModeValueGoogleCloudKMSGCS,
-		fmt.Sprintf("Select the mode to use '%s' => Google Cloud Storage with encryption using Google KMS; '%s' => AWS S3 Object Storage using AWS KMS encryption; '%s' => Azure Key Vault secret", cfgModeValueGoogleCloudKMSGCS, cfgModeValueAWSKMS3, cfgModeValueAzureKeyVault),
+		fmt.Sprintf("Select the mode to use '%s' => Google Cloud Storage with encryption using Google KMS; '%s' => AWS S3 Object Storage using AWS KMS encryption; '%s' => Azure Key Vault secret; '%s' => Kubernetes Secrets; '%s' => Dev (local) mode", cfgModeValueGoogleCloudKMSGCS, cfgModeValueAWSKMS3, cfgModeValueAzureKeyVault, cfgModeValueK8S, cfgModeValueDev),
 	)
 
 	// Secret config

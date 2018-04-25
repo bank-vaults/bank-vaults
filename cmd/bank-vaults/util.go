@@ -6,6 +6,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/awskms"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/azurekv"
+	"github.com/banzaicloud/bank-vaults/pkg/kv/dev"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/gckms"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/gcs"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
@@ -85,6 +86,15 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error creating K8S Secret kv store: %s", err.Error())
+		}
+
+		return k8s, nil
+	}
+
+	if cfg.GetString(cfgMode) == cfgModeValueDev {
+		k8s, err := dev.New()
+		if err != nil {
+			return nil, fmt.Errorf("error creating Dev Secret kv store: %s", err.Error())
 		}
 
 		return k8s, nil

@@ -37,6 +37,7 @@ Features:
     - Azure Key Vault
     - Google Cloud KMS keyring (backed by GCS)
     - Kubernetes Secrets (should be used only for development purposes)
+    - Dev Mode (useful for `vault server -dev` dev mode Vault servers)
  - Automatically unseals Vault with these keys
  - Continiously configures Vault with a YAML/JSON based external configuration (besides the [standard Vault configuration](https://www.vaultproject.io/docs/configuration/index.html))
     - If the configuration is updated Vault will be reconfigured
@@ -76,11 +77,13 @@ auth:
   - type: github
     config:
       organization: banzaicloud
-    # Map the banzaicloud dev team on GitHub to the dev role in Vault
     map:
+      # Map the banzaicloud dev team on GitHub to the dev policy in Vault
       teams:
-        - dev:
-            value: dev
+        dev: dev
+      # Map myself to the root policy in Vault
+      users:
+        bonifaido: root
 
 # Allows configuring Secrets Engines in Vault (KV, Database and SSH is tested,
 # but the config is free form so probably more is supported).
@@ -130,8 +133,6 @@ secrets:
         - name: my-role
           allow_user_certificates: "true"
           allowed_users: "*"
-          default_extensions:
-            - permit-pty: ""
           key_type: "ca"
           default_user: "ubuntu"
           ttl: "24h"
