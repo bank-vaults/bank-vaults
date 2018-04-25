@@ -128,11 +128,11 @@ secrets:
       roles:
         - name: my-role
           allow_user_certificates: "true"
-          allowed_users: "*",
-          default_extensions":
+          allowed_users: "*"
+          default_extensions:
             - permit-pty: ""
-          key_type: "ca",
-          default_user: "ubuntu",
+          key_type: "ca"
+          default_user: "ubuntu"
           ttl: "24h"
 ```
 
