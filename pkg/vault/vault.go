@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
@@ -300,6 +301,17 @@ func (u *vault) Configure() error {
 			if err != nil {
 				return fmt.Errorf("error configuring kubernetes auth roles for vault: %s", err.Error())
 			}
+		case "github":
+			config := cast.ToStringMap(authMethod["config"])
+			err = u.configureGithubConfig(config)
+			if err != nil {
+				return fmt.Errorf("error configuring github auth for vault: %s", err.Error())
+			}
+			mappings := cast.ToStringMap(authMethod["map"])
+			err = u.configureGithubMappings(mappings)
+			if err != nil {
+				return fmt.Errorf("error configuring github mappings for vault: %s", err.Error())
+			}
 		}
 	}
 
@@ -370,7 +382,28 @@ func (u *vault) configureKubernetesRoles(roles []interface{}) error {
 		_, err := u.cl.Logical().Write(fmt.Sprint("auth/kubernetes/role/", role["name"]), role)
 
 		if err != nil {
-			return fmt.Errorf("error putting %s role into vault: %s", role["name"], err.Error())
+			return fmt.Errorf("error putting %s kubernetes role into vault: %s", role["name"], err.Error())
+		}
+	}
+	return nil
+}
+
+func (u *vault) configureGithubConfig(config map[string]interface{}) error {
+	_, err := u.cl.Logical().Write("auth/github/config", config)
+
+	if err != nil {
+		return fmt.Errorf("error putting %s github config into vault: %s", config, err.Error())
+	}
+	return nil
+}
+
+func (u *vault) configureGithubMappings(mappings map[string]interface{}) error {
+	for mappingType, mapping := range mappings {
+		for userOrTeam, policy := range cast.ToStringMapString(mapping) {
+			_, err := u.cl.Logical().Write(fmt.Sprintf("auth/github/map/%s/%s", mappingType, userOrTeam), map[string]interface{}{"value": policy})
+			if err != nil {
+				return fmt.Errorf("error putting %s github mapping into vault: %s", mappingType, err.Error())
+			}
 		}
 	}
 	return nil
@@ -446,6 +479,10 @@ func (u *vault) configureSecretEngines() error {
 				_, err := u.cl.Logical().Write(configPath, cast.ToStringMap(subConfigData))
 
 				if err != nil {
+					if isOverwriteProbihitedError(err) {
+						logrus.Debugln("Can't reconfigure", configPath, "please delete it manually")
+						continue
+					}
 					return fmt.Errorf("error putting %+v -> %s config into vault: %s", configData, configPath, err.Error())
 				}
 			}
@@ -479,4 +516,8 @@ func getOrDefaultStringMap(m map[string]interface{}, key string) map[string]inte
 		return cast.ToStringMap(value)
 	}
 	return stringMap
+}
+
+func isOverwriteProbihitedError(err error) bool {
+	return strings.Contains(err.Error(), "delete them before reconfiguring")
 }
