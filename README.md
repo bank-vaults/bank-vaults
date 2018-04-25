@@ -37,6 +37,7 @@ Features:
     - Azure Key Vault
     - Google Cloud KMS keyring (backed by GCS)
     - Kubernetes Secrets (should be used only for development purposes)
+    - Dev Mode (useful for `vault server -dev` dev mode Vault servers)
  - Automatically unseals Vault with these keys
  - Continiously configures Vault with a YAML/JSON based external configuration (besides the [standard Vault configuration](https://www.vaultproject.io/docs/configuration/index.html))
     - If the configuration is updated Vault will be reconfigured
