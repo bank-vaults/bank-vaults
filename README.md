@@ -4,11 +4,11 @@
 
 *Bank Vaults is a thick, tricky, shifty right with a fast and intense tube for experienced surfers only, located on Mentawai. Think heavy steel doors, secret unlocking combinations and burly guards with smack-down attitude. Watch out for clean-up sets.*
 
-*Bank Vaults is a wrapper for the official Vault client with automatic token renewal, built in Kubernetes support, dynamic database credential management and more.*
+*Bank Vaults is a wrapper for the official Vault client with automatic token renewal, built in Kubernetes support, dynamic database credential management, multiple unseal options, automatic re/configuration and more.*
 
 ---
 
-**Bank Vaults** is a core building block of the [Pipeline](https://github.com/banzaicloud/pipeline) PaaS. Some of the usage patterns are highlighted through these blog posts:
+**Bank Vaults** is a core building block of the **[Pipeline](https://github.com/banzaicloud/pipeline)** PaaS. Some of the usage patterns are highlighted through these blog posts:
 
 **Securing Kubernetes deployments with Vault:**
 - [Authentication and authorization of Pipeline users with OAuth2 and Vault](https://banzaicloud.com/blog/oauth2-vault/)
@@ -16,7 +16,7 @@
 - [Dynamic SSH with Vault and Pipeline](https://banzaicloud.com/blog/vault-dynamic-ssh/)
 - [Secure Kubernetes Deployments with Vault and Pipeline](https://banzaicloud.com/blog/hashicorp-guest-post/)
 
-We use Vault across our large Kubernetes deployments and all the projects were `reinventing` the wheel. We have externalized all the codebase into this project and removed all the [Pipeline](https://github.com/banzaicloud/pipeline) and [Hollowtrees](https://github.com/banzaicloud/hollowtrees) dependencies thus this project can be used independently as a CLI tool to manage Vault, a Golang library to build upon (OAuth2 tokens, K8s auth, Vault operator, dynamic secrets, cloud credential storage, etc) and a collection of scripts to support some advanced features (dynamic SSH, etc). 
+We use Vault across our large Kubernetes deployments and all the projects were `reinventing` the wheel. We have externalized all the codebase into this project and removed all the [Pipeline](https://github.com/banzaicloud/pipeline) and [Hollowtrees](https://github.com/banzaicloud/hollowtrees) dependencies thus this project can be used independently as a CLI tool to manage Vault, a Golang library to build upon (OAuth2 tokens, K8s auth, Vault operator, dynamic secrets, cloud credential storage, etc), Helm chart for a HA cluster, operator and a collection of scripts to support some advanced features (dynamic SSH, etc). 
 
 >We take bank-vaults' security and our users' trust very seriously. If you believe you have found a security issue in bank-vaults, please contact us at security@banzaicloud.com.
 
@@ -28,10 +28,11 @@ We use Vault across our large Kubernetes deployments and all the projects were `
 - [Operator](#operator)
 - [Examples](#examples)
 - [Getting and Installing](#getting-and-installing)
+- [Credits](#credits)
 
 ## The CLI tool
 
-The `bank-vaults` CLI tool is to help automate the setup and management of Hashicorp Vault.
+The `bank-vaults` CLI tool is to help automate the setup and management of HashiCorp Vault.
 
 Features:
  - Initializes Vault and stores the root token and unseal keys in one of the followings:
@@ -186,3 +187,7 @@ Some examples are in `cmd/examples/main.go`
 ```bash
 go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
 ```
+
+## Credits
+
+Kudos to HashiCorp for open sourcing Vault and making secret management easier and more secure. 
