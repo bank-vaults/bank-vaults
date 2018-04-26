@@ -42,7 +42,7 @@ Features:
     - Kubernetes Secrets (should be used only for development purposes)
     - Dev Mode (useful for `vault server -dev` dev mode Vault servers)
  - Automatically unseals Vault with these keys
- - Continiously configures Vault with a YAML/JSON based external configuration (besides the [standard Vault configuration](https://www.vaultproject.io/docs/configuration/index.html))
+ - Continuously configures Vault with a YAML/JSON based external configuration (besides the [standard Vault configuration](https://www.vaultproject.io/docs/configuration/index.html))
     - If the configuration is updated Vault will be reconfigured
     - It supports configuring Vault secret engines, auth methods, and policies
 
@@ -148,7 +148,7 @@ This repository contains several Go packages for interacting with Vault:
 - `auth`
 
     *Note: This is currently WIP, we are extracting the code from https://github.com/banzaicloud/pipeline/tree/master/auth*</br>
-    A GitHub OAuth2 based authentication system as a Gin Middleware, stores JWT beaerer tokens in Vault.
+    A GitHub OAuth2 based authentication system as a Gin Middleware, stores JWT bearer tokens in Vault.
 
     ![authn](docs/images/authn-vault-flow.png)
 
@@ -166,7 +166,7 @@ This repository contains several Go packages for interacting with Vault:
 
 ## Helm Chart
 
-We have a fully fladged, production ready [Helm chart](https://github.com/banzaicloud/banzai-charts/tree/master/stable/vault) for Vault using `bank-vaults`. With the help of this chart you can run a HA Vault instance with automatic initialization, unsealing and external configuration which used to be a tedious manual operation. This chart can be used easily for development purposes as well.
+We have a fully fledged, production ready [Helm chart](https://github.com/banzaicloud/banzai-charts/tree/master/stable/vault) for Vault using `bank-vaults`. With the help of this chart you can run a HA Vault instance with automatic initialization, unsealing and external configuration which used to be a tedious manual operation. This chart can be used easily for development purposes as well.
 
 ## Operator
 
