@@ -2,6 +2,7 @@ package vault
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 
 	vaultapi "github.com/hashicorp/vault/api"
@@ -15,11 +16,12 @@ type Client struct {
 	tokenRenewer *vaultapi.Renewer
 }
 
-// Creates a new Vault client
+// NewClient creates a new Vault client
 func NewClient(role string) (*Client, error) {
 	return NewClientWithConfig(vaultapi.DefaultConfig(), role)
 }
 
+// NewClientWithConfig creates a new Vault client with custom configuration
 func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) {
 	client, err := vaultapi.NewClient(config)
 	if err != nil {
@@ -45,28 +47,59 @@ func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) 
 				return nil, err
 			}
 
-			data := map[string]interface{}{"jwt": k8sconfig.BearerToken, "role": role}
-			secret, err := logical.Write("auth/kubernetes/login", data)
-			if err != nil {
-				return nil, err
-			}
+			initialTokenArrived := make(chan string, 1)
 
-			tokenRenewer, err = client.NewRenewer(&vaultapi.RenewerInput{Secret: secret})
-			if err != nil {
-				return nil, err
-			}
+			go func() {
+				for {
+					data := map[string]interface{}{"jwt": k8sconfig.BearerToken, "role": role}
+					secret, err := logical.Write("auth/kubernetes/login", data)
+					if err != nil {
+						log.Println(err.Error())
+						continue
+					}
 
-			// We never really want to stop this
-			go tokenRenewer.Renew()
+					log.Println("Received new Vault token")
 
-			// Finally set the first token from the response
-			client.SetToken(secret.Auth.ClientToken)
+					// Set the first token from the response
+					client.SetToken(secret.Auth.ClientToken)
+
+					initialTokenArrived <- secret.LeaseID
+
+					// Start the renewing process
+					tokenRenewer, err = client.NewRenewer(&vaultapi.RenewerInput{Secret: secret})
+					if err != nil {
+						log.Println(err.Error())
+						continue
+					}
+
+					go tokenRenewer.Renew()
+
+					runRenewChecker(tokenRenewer)
+				}
+			}()
+
+			<-initialTokenArrived
 		}
 	}
 
 	return &Client{client: client, logical: logical, tokenRenewer: tokenRenewer}, nil
 }
 
+func runRenewChecker(tokenRenewer *vaultapi.Renewer) {
+	for {
+		select {
+		case err := <-tokenRenewer.DoneCh():
+			if err != nil {
+				log.Println("Renew error:", err.Error())
+				return
+			}
+		case renewal := <-tokenRenewer.RenewCh():
+			log.Printf("Successfully renewed at: %s", renewal.RenewedAt)
+		}
+	}
+}
+
+// Vault returns the underlying hashicorp Vault client
 func (client *Client) Vault() *vaultapi.Client {
 	return client.client
 }
@@ -74,6 +107,7 @@ func (client *Client) Vault() *vaultapi.Client {
 // Close stops the token renewing process of this client
 func (client *Client) Close() {
 	if client.tokenRenewer != nil {
+		log.Println("Stopped Vault tokenRenewer")
 		client.tokenRenewer.Stop()
 	}
 }
