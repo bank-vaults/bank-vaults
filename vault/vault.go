@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sync"
 
 	vaultapi "github.com/hashicorp/vault/api"
 	"k8s.io/client-go/rest"
@@ -11,9 +12,11 @@ import (
 
 // Client is a Vault client with Kubernetes support and token automatic renewing
 type Client struct {
+	sync.Mutex
 	client       *vaultapi.Client
 	logical      *vaultapi.Logical
 	tokenRenewer *vaultapi.Renewer
+	closed       bool
 }
 
 // NewClient creates a new Vault client
@@ -53,10 +56,17 @@ func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) 
 
 			go func() {
 				for {
+					client.Lock()
+					if client.closed {
+						client.Unlock()
+						break
+					}
+					client.Unlock()
+
 					data := map[string]interface{}{"jwt": k8sconfig.BearerToken, "role": role}
 					secret, err := logical.Write("auth/kubernetes/login", data)
 					if err != nil {
-						log.Println(err.Error())
+						log.Println("Failed to request new Vault token", err.Error())
 						continue
 					}
 
@@ -70,15 +80,19 @@ func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) 
 					// Start the renewing process
 					tokenRenewer, err = rawClient.NewRenewer(&vaultapi.RenewerInput{Secret: secret})
 					if err != nil {
-						log.Println(err.Error())
+						log.Println("Failed to renew Vault token", err.Error())
 						continue
 					}
+
+					client.Lock()
 					client.tokenRenewer = tokenRenewer
+					client.Unlock()
 
 					go tokenRenewer.Renew()
 
 					runRenewChecker(tokenRenewer)
 				}
+				log.Println("Vault token renewal closed")
 			}()
 
 			<-initialTokenArrived
@@ -93,11 +107,11 @@ func runRenewChecker(tokenRenewer *vaultapi.Renewer) {
 		select {
 		case err := <-tokenRenewer.DoneCh():
 			if err != nil {
-				log.Println("Renew error:", err.Error())
-				return
+				log.Println("Vault token renewal error:", err.Error())
 			}
-		case renewal := <-tokenRenewer.RenewCh():
-			log.Printf("Successfully renewed at: %s", renewal.RenewedAt)
+			return
+		case <-tokenRenewer.RenewCh():
+			log.Printf("Renewed Vault Token")
 		}
 	}
 }
@@ -109,8 +123,10 @@ func (client *Client) Vault() *vaultapi.Client {
 
 // Close stops the token renewing process of this client
 func (client *Client) Close() {
+	client.Lock()
+	defer client.Unlock()
 	if client.tokenRenewer != nil {
-		log.Println("Stopped Vault tokenRenewer")
+		client.closed = true
 		client.tokenRenewer.Stop()
 	}
 }
