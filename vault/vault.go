@@ -2,7 +2,9 @@ package vault
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
+	"sync"
 
 	vaultapi "github.com/hashicorp/vault/api"
 	"k8s.io/client-go/rest"
@@ -10,31 +12,36 @@ import (
 
 // Client is a Vault client with Kubernetes support and token automatic renewing
 type Client struct {
+	sync.Mutex
 	client       *vaultapi.Client
 	logical      *vaultapi.Logical
 	tokenRenewer *vaultapi.Renewer
+	closed       bool
 }
 
-// Creates a new Vault client
+// NewClient creates a new Vault client
 func NewClient(role string) (*Client, error) {
 	return NewClientWithConfig(vaultapi.DefaultConfig(), role)
 }
 
+// NewClientWithConfig creates a new Vault client with custom configuration
 func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) {
-	client, err := vaultapi.NewClient(config)
+	rawClient, err := vaultapi.NewClient(config)
 	if err != nil {
 		return nil, err
 	}
-	logical := client.Logical()
+	logical := rawClient.Logical()
 	var tokenRenewer *vaultapi.Renewer
 
-	if client.Token() == "" {
+	client := &Client{client: rawClient, logical: logical}
+
+	if rawClient.Token() == "" {
 
 		token, err := ioutil.ReadFile(os.Getenv("HOME") + "/.vault-token")
 
 		if err == nil {
 
-			client.SetToken(string(token))
+			rawClient.SetToken(string(token))
 
 		} else {
 			// If VAULT_TOKEN or ~/.vault-token wasn't provided let's suppose
@@ -45,35 +52,81 @@ func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) 
 				return nil, err
 			}
 
-			data := map[string]interface{}{"jwt": k8sconfig.BearerToken, "role": role}
-			secret, err := logical.Write("auth/kubernetes/login", data)
-			if err != nil {
-				return nil, err
-			}
+			initialTokenArrived := make(chan string, 1)
 
-			tokenRenewer, err = client.NewRenewer(&vaultapi.RenewerInput{Secret: secret})
-			if err != nil {
-				return nil, err
-			}
+			go func() {
+				for {
+					client.Lock()
+					if client.closed {
+						client.Unlock()
+						break
+					}
+					client.Unlock()
 
-			// We never really want to stop this
-			go tokenRenewer.Renew()
+					data := map[string]interface{}{"jwt": k8sconfig.BearerToken, "role": role}
+					secret, err := logical.Write("auth/kubernetes/login", data)
+					if err != nil {
+						log.Println("Failed to request new Vault token", err.Error())
+						continue
+					}
 
-			// Finally set the first token from the response
-			client.SetToken(secret.Auth.ClientToken)
+					log.Println("Received new Vault token")
+
+					// Set the first token from the response
+					rawClient.SetToken(secret.Auth.ClientToken)
+
+					initialTokenArrived <- secret.LeaseID
+
+					// Start the renewing process
+					tokenRenewer, err = rawClient.NewRenewer(&vaultapi.RenewerInput{Secret: secret})
+					if err != nil {
+						log.Println("Failed to renew Vault token", err.Error())
+						continue
+					}
+
+					client.Lock()
+					client.tokenRenewer = tokenRenewer
+					client.Unlock()
+
+					go tokenRenewer.Renew()
+
+					runRenewChecker(tokenRenewer)
+				}
+				log.Println("Vault token renewal closed")
+			}()
+
+			<-initialTokenArrived
 		}
 	}
 
-	return &Client{client: client, logical: logical, tokenRenewer: tokenRenewer}, nil
+	return client, nil
 }
 
+func runRenewChecker(tokenRenewer *vaultapi.Renewer) {
+	for {
+		select {
+		case err := <-tokenRenewer.DoneCh():
+			if err != nil {
+				log.Println("Vault token renewal error:", err.Error())
+			}
+			return
+		case <-tokenRenewer.RenewCh():
+			log.Printf("Renewed Vault Token")
+		}
+	}
+}
+
+// Vault returns the underlying hashicorp Vault client
 func (client *Client) Vault() *vaultapi.Client {
 	return client.client
 }
 
 // Close stops the token renewing process of this client
 func (client *Client) Close() {
+	client.Lock()
+	defer client.Unlock()
 	if client.tokenRenewer != nil {
+		client.closed = true
 		client.tokenRenewer.Stop()
 	}
 }
