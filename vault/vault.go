@@ -23,20 +23,22 @@ func NewClient(role string) (*Client, error) {
 
 // NewClientWithConfig creates a new Vault client with custom configuration
 func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) {
-	client, err := vaultapi.NewClient(config)
+	rawClient, err := vaultapi.NewClient(config)
 	if err != nil {
 		return nil, err
 	}
-	logical := client.Logical()
+	logical := rawClient.Logical()
 	var tokenRenewer *vaultapi.Renewer
 
-	if client.Token() == "" {
+	client := &Client{client: rawClient, logical: logical}
+
+	if rawClient.Token() == "" {
 
 		token, err := ioutil.ReadFile(os.Getenv("HOME") + "/.vault-token")
 
 		if err == nil {
 
-			client.SetToken(string(token))
+			rawClient.SetToken(string(token))
 
 		} else {
 			// If VAULT_TOKEN or ~/.vault-token wasn't provided let's suppose
@@ -61,16 +63,17 @@ func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) 
 					log.Println("Received new Vault token")
 
 					// Set the first token from the response
-					client.SetToken(secret.Auth.ClientToken)
+					rawClient.SetToken(secret.Auth.ClientToken)
 
 					initialTokenArrived <- secret.LeaseID
 
 					// Start the renewing process
-					tokenRenewer, err = client.NewRenewer(&vaultapi.RenewerInput{Secret: secret})
+					tokenRenewer, err = rawClient.NewRenewer(&vaultapi.RenewerInput{Secret: secret})
 					if err != nil {
 						log.Println(err.Error())
 						continue
 					}
+					client.tokenRenewer = tokenRenewer
 
 					go tokenRenewer.Renew()
 
@@ -82,7 +85,7 @@ func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) 
 		}
 	}
 
-	return &Client{client: client, logical: logical, tokenRenewer: tokenRenewer}, nil
+	return client, nil
 }
 
 func runRenewChecker(tokenRenewer *vaultapi.Renewer) {
