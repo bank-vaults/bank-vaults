@@ -41,7 +41,7 @@ docker_push: docker_build
 go_verify: go_fmt go_vet go_test
 
 go_build:
-	go build -a -tags netgo -ldflags '-w -X main.version=$(CI_COMMIT_TAG) -X main.commit=$(CI_COMMIT_SHA) -X main.date=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)' ./cmd/bank-vaults
+	go build -a -tags netgo -ldflags '-w -X main.version=$(CI_COMMIT_TAG) -X main.commit=$(CI_COMMIT_SHA) -X main.date=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)' ./cmd/...
 
 go_test:
 	go test $$(go list ./... | grep -v '/vendor/')
