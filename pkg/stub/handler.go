@@ -1,7 +1,6 @@
 package stub
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 
@@ -88,7 +87,7 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 func deploymentForVault(v *v1alpha1.Vault) *appsv1.Deployment {
 	ls := labelsForVault(v.Name)
 	replicas := v.Spec.Size
-	config, _ := json.Marshal(v.Spec.Config)
+	config := v.Spec.ConfigJSON()
 
 	dep := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -120,7 +119,7 @@ func deploymentForVault(v *v1alpha1.Vault) *appsv1.Deployment {
 							}},
 							Env: []v1.EnvVar{{
 								Name:  "VAULT_LOCAL_CONFIG",
-								Value: string(config),
+								Value: config,
 							}},
 							SecurityContext: &v1.SecurityContext{
 								Capabilities: &v1.Capabilities{
