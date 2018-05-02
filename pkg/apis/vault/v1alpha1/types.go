@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"encoding/json"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -24,6 +26,11 @@ type Vault struct {
 type VaultSpec struct {
 	Size   int32                  `json:"size"`
 	Config map[string]interface{} `json:"config"`
+}
+
+func (spec *VaultSpec) ConfigJSON() string {
+	config, _ := json.Marshal(spec.Config)
+	return string(config)
 }
 
 type VaultStatus struct {
