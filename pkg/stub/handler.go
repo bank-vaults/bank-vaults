@@ -133,6 +133,7 @@ func deploymentForVault(v *v1alpha1.Vault) *appsv1.Deployment {
 							Name:    "vault-unsealer",
 							Command: []string{"bank-vaults", "unseal"},
 							Args: []string{
+								"--init",
 								"--mode",
 								"k8s", // TODO This should be dependant on the Vault configuration later on
 								"--k8s-secret-namespace",
@@ -140,6 +141,10 @@ func deploymentForVault(v *v1alpha1.Vault) *appsv1.Deployment {
 								"--k8s-secret-name",
 								v.Name + "-unseal-keys",
 							},
+							Env: []v1.EnvVar{{
+								Name:  "VAULT_ADDR",
+								Value: "http://localhost:8200",
+							}},
 						},
 					},
 				},
