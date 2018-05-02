@@ -1,0 +1,31 @@
+package v1alpha1
+
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type VaultList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []Vault `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type Vault struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+	Spec              VaultSpec   `json:"spec"`
+	Status            VaultStatus `json:"status,omitempty"`
+}
+
+type VaultSpec struct {
+	Size   int32                  `json:"size"`
+	Config map[string]interface{} `json:"config"`
+}
+
+type VaultStatus struct {
+	Nodes []string `json:"nodes"`
+}
