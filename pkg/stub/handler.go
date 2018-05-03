@@ -7,6 +7,7 @@ import (
 
 	"github.com/banzaicloud/bank-vaults/pkg/apis/vault/v1alpha1"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
+	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk/action"
@@ -30,7 +31,7 @@ type Handler struct {
 func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 	switch o := event.Object.(type) {
 	case *v1alpha1.Vault:
-		vault := o
+		v := o
 
 		// Ignore the delete event since the garbage collector will clean up all secondary resources for the CR
 		// All secondary resources must have the CR set as their OwnerReference for this to be the case
@@ -39,7 +40,7 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		}
 
 		// Create the deployment if it doesn't exist
-		dep, err := deploymentForVault(vault)
+		dep, err := deploymentForVault(v)
 		if err != nil {
 			return fmt.Errorf("failed to fabricate deployment: %v", err)
 		}
@@ -53,7 +54,7 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		if err != nil {
 			return fmt.Errorf("failed to get deployment: %v", err)
 		}
-		size := vault.Spec.Size
+		size := v.Spec.Size
 		if *dep.Spec.Replicas != size {
 			dep.Spec.Replicas = &size
 			err = action.Update(dep)
@@ -64,37 +65,37 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 
 		// Update the Vault status with the pod names
 		podList := podList()
-		labelSelector := labels.SelectorFromSet(labelsForVault(vault.Name)).String()
+		labelSelector := labels.SelectorFromSet(labelsForVault(v.Name)).String()
 		listOps := &metav1.ListOptions{LabelSelector: labelSelector}
-		err = query.List(vault.Namespace, podList, query.WithListOptions(listOps))
+		err = query.List(v.Namespace, podList, query.WithListOptions(listOps))
 		if err != nil {
 			return fmt.Errorf("failed to list pods: %v", err)
 		}
 		podNames := getPodNames(podList.Items)
-		if !reflect.DeepEqual(podNames, vault.Status.Nodes) {
-			vault.Status.Nodes = podNames
-			err := action.Update(vault)
+		if !reflect.DeepEqual(podNames, v.Status.Nodes) {
+			v.Status.Nodes = podNames
+			err := action.Update(v)
 			if err != nil {
 				return fmt.Errorf("failed to update vault status: %v", err)
 			}
 		}
 
 		// Create the service if it doesn't exist
-		ser := serviceForVault(vault)
+		ser := serviceForVault(v)
 		err = action.Create(ser)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create service: %v", err)
 		}
 
 		// Create the deployment if it doesn't exist
-		dep = deploymentForConfigurer(vault)
+		dep = deploymentForConfigurer(v)
 		err = action.Create(dep)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create configurer deployment: %v", err)
 		}
 
 		// Create the configmap if it doesn't exist
-		cm := configMapForConfigurer(vault)
+		cm := configMapForConfigurer(v)
 		err = action.Create(cm)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create configurer configmap: %v", err)
@@ -105,8 +106,8 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		if err != nil {
 			return fmt.Errorf("failed to get deployment: %v", err)
 		}
-		if cm.Data["vault-config.yml"] != vault.Spec.ExternalConfig {
-			cm.Data["vault-config.yml"] = vault.Spec.ExternalConfig
+		if cm.Data[vault.DefaultConfigFile] != v.Spec.ExternalConfig {
+			cm.Data[vault.DefaultConfigFile] = v.Spec.ExternalConfig
 			err = action.Update(cm)
 			if err != nil {
 				return fmt.Errorf("failed to update configurer configmap: %v", err)
@@ -303,7 +304,7 @@ func configMapForConfigurer(v *v1alpha1.Vault) *v1.ConfigMap {
 			Namespace: v.Namespace,
 			Labels:    ls,
 		},
-		Data: map[string]string{"vault-config.yml": v.Spec.ExternalConfig},
+		Data: map[string]string{vault.DefaultConfigFile: v.Spec.ExternalConfig},
 	}
 	addOwnerRefToObject(cm, asOwner(v))
 	return cm
