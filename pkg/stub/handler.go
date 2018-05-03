@@ -99,6 +99,20 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create configurer configmap: %v", err)
 		}
+
+		// Ensure the configmap is the same as the spec
+		err = query.Get(cm)
+		if err != nil {
+			return fmt.Errorf("failed to get deployment: %v", err)
+		}
+		if cm.Data["vault-config.yml"] != vault.Spec.ExternalConfig {
+			cm.Data["vault-config.yml"] = vault.Spec.ExternalConfig
+			err = action.Update(cm)
+			if err != nil {
+				return fmt.Errorf("failed to update configurer configmap: %v", err)
+			}
+		}
+
 	}
 	return nil
 }
