@@ -26,11 +26,16 @@ type Vault struct {
 type VaultSpec struct {
 	Size           int32                  `json:"size"`
 	Config         map[string]interface{} `json:"config"`
-	ExternalConfig string                 `json:"externalConfig"`
+	ExternalConfig map[string]interface{} `json:"externalConfig"`
 }
 
 func (spec *VaultSpec) ConfigJSON() string {
 	config, _ := json.Marshal(spec.Config)
+	return string(config)
+}
+
+func (spec *VaultSpec) ExternalConfigJSON() string {
+	config, _ := json.Marshal(spec.ExternalConfig)
 	return string(config)
 }
 

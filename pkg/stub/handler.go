@@ -106,8 +106,10 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		if err != nil {
 			return fmt.Errorf("failed to get deployment: %v", err)
 		}
-		if cm.Data[vault.DefaultConfigFile] != v.Spec.ExternalConfig {
-			cm.Data[vault.DefaultConfigFile] = v.Spec.ExternalConfig
+
+		externalConfig := v.Spec.ExternalConfigJSON()
+		if cm.Data[vault.DefaultConfigFile] != externalConfig {
+			cm.Data[vault.DefaultConfigFile] = externalConfig
 			err = action.Update(cm)
 			if err != nil {
 				return fmt.Errorf("failed to update configurer configmap: %v", err)
@@ -304,7 +306,7 @@ func configMapForConfigurer(v *v1alpha1.Vault) *v1.ConfigMap {
 			Namespace: v.Namespace,
 			Labels:    ls,
 		},
-		Data: map[string]string{vault.DefaultConfigFile: v.Spec.ExternalConfig},
+		Data: map[string]string{vault.DefaultConfigFile: v.Spec.ExternalConfigJSON()},
 	}
 	addOwnerRefToObject(cm, asOwner(v))
 	return cm
