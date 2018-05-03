@@ -1,10 +1,13 @@
 package stub
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 
 	"github.com/banzaicloud/bank-vaults/pkg/apis/vault/v1alpha1"
+	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk/action"
 	"github.com/operator-framework/operator-sdk/pkg/sdk/handler"
@@ -36,8 +39,11 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		}
 
 		// Create the deployment if it doesn't exist
-		dep := deploymentForVault(vault)
-		err := action.Create(dep)
+		dep, err := deploymentForVault(vault)
+		if err != nil {
+			return fmt.Errorf("failed to fabricate deployment: %v", err)
+		}
+		err = action.Create(dep)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create deployment: %v", err)
 		}
@@ -84,10 +90,15 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 }
 
 // deploymentForVault returns a vault Deployment object
-func deploymentForVault(v *v1alpha1.Vault) *appsv1.Deployment {
+func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 	ls := labelsForVault(v.Name)
 	replicas := v.Spec.Size
-	config := v.Spec.ConfigJSON()
+	configJSON := v.Spec.ConfigJSON()
+	owner := asOwner(v)
+	ownerJSON, err := json.Marshal(owner)
+	if err != nil {
+		return nil, err
+	}
 
 	dep := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -119,7 +130,7 @@ func deploymentForVault(v *v1alpha1.Vault) *appsv1.Deployment {
 							}},
 							Env: []v1.EnvVar{{
 								Name:  "VAULT_LOCAL_CONFIG",
-								Value: config,
+								Value: configJSON,
 							}},
 							SecurityContext: &v1.SecurityContext{
 								Capabilities: &v1.Capabilities{
@@ -128,9 +139,10 @@ func deploymentForVault(v *v1alpha1.Vault) *appsv1.Deployment {
 							},
 						},
 						{
-							Image:   "banzaicloud/bank-vaults:master",
-							Name:    "vault-unsealer",
-							Command: []string{"bank-vaults", "unseal"},
+							Image:           "banzaicloud/bank-vaults:operator",
+							ImagePullPolicy: v1.PullIfNotPresent,
+							Name:            "vault-unsealer",
+							Command:         []string{"bank-vaults", "unseal"},
 							Args: []string{
 								"--init",
 								"--mode",
@@ -140,10 +152,16 @@ func deploymentForVault(v *v1alpha1.Vault) *appsv1.Deployment {
 								"--k8s-secret-name",
 								v.Name + "-unseal-keys",
 							},
-							Env: []v1.EnvVar{{
-								Name:  "VAULT_ADDR",
-								Value: "http://localhost:8200",
-							}},
+							Env: []v1.EnvVar{
+								{
+									Name:  api.EnvVaultAddress,
+									Value: "http://localhost:8200",
+								},
+								{
+									Name:  k8s.EnvK8SOwnerReference,
+									Value: string(ownerJSON),
+								},
+							},
 						},
 					},
 				},
@@ -151,7 +169,7 @@ func deploymentForVault(v *v1alpha1.Vault) *appsv1.Deployment {
 		},
 	}
 	addOwnerRefToObject(dep, asOwner(v))
-	return dep
+	return dep, nil
 }
 
 func serviceForVault(v *v1alpha1.Vault) *v1.Service {
