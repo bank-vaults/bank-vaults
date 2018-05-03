@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"path"
+	"path/filepath"
 	"text/template"
 	"time"
 
@@ -76,11 +77,42 @@ var configureCmd = &cobra.Command{
 
 		c := make(chan fsnotify.Event, 1)
 		viper.SetConfigFile(vaultConfigFile)
-		viper.OnConfigChange(func(e fsnotify.Event) {
-			parseConfiguration()
-			c <- e
-		})
-		viper.WatchConfig()
+		go func() {
+			watcher, err := fsnotify.NewWatcher()
+			if err != nil {
+				logrus.Fatal(err)
+			}
+			defer watcher.Close()
+
+			// we have to watch the entire directory to pick up renames/atomic saves in a cross-platform way
+			configFile := filepath.Clean(vaultConfigFile)
+			configDir, _ := filepath.Split(configFile)
+
+			done := make(chan bool)
+			go func() {
+				for {
+					select {
+					case event := <-watcher.Events:
+						// we only care about the config file or the ConfigMap directory (if in Kubernetes)
+						if filepath.Clean(event.Name) == configFile || filepath.Base(event.Name) == "..data" {
+							if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
+								err := viper.ReadInConfig()
+								if err != nil {
+									logrus.Println("error:", err)
+								}
+								parseConfiguration()
+								c <- event
+							}
+						}
+					case err := <-watcher.Errors:
+						logrus.Println("error:", err)
+					}
+				}
+			}()
+
+			watcher.Add(configDir)
+			<-done
+		}()
 		parseConfiguration()
 
 		c <- fsnotify.Event{Name: "Initial", Op: fsnotify.Create}
