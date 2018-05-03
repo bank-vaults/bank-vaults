@@ -85,6 +85,20 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create service: %v", err)
 		}
+
+		// Create the deployment if it doesn't exist
+		dep = deploymentForConfigurer(vault)
+		err = action.Create(dep)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed to create configurer deployment: %v", err)
+		}
+
+		// Create the configmap if it doesn't exist
+		cm := configMapForConfigurer(vault)
+		err = action.Create(cm)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed to create configurer configmap: %v", err)
+		}
 	}
 	return nil
 }
@@ -168,7 +182,7 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 			},
 		},
 	}
-	addOwnerRefToObject(dep, asOwner(v))
+	addOwnerRefToObject(dep, owner)
 	return dep, nil
 }
 
@@ -198,10 +212,99 @@ func serviceForVault(v *v1alpha1.Vault) *v1.Service {
 	return service
 }
 
+func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
+	ls := labelsForVaultConfigurer(v.Name)
+	dep := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v.Name + "-configurer",
+			Namespace: v.Namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: ls,
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: ls,
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Image:           "banzaicloud/bank-vaults:operator",
+							ImagePullPolicy: v1.PullIfNotPresent,
+							Name:            "vault-unsealer",
+							Command:         []string{"bank-vaults", "configure"},
+							Args: []string{
+								"--mode",
+								"k8s", // TODO This should be dependant on the Vault configuration later on
+								"--k8s-secret-namespace",
+								v.Namespace,
+								"--k8s-secret-name",
+								v.Name + "-unseal-keys",
+							},
+							Env: []v1.EnvVar{
+								{
+									Name:  api.EnvVaultAddress,
+									Value: fmt.Sprintf("http://%s:8200", v.Name),
+								},
+							},
+							VolumeMounts: []v1.VolumeMount{
+								{
+									Name:      "config",
+									MountPath: "/config",
+								},
+							},
+							WorkingDir: "/config",
+						},
+					},
+					Volumes: []v1.Volume{{
+						Name: "config",
+						VolumeSource: v1.VolumeSource{
+							ConfigMap: &v1.ConfigMapVolumeSource{
+								LocalObjectReference: v1.LocalObjectReference{Name: v.Name + "-configurer"},
+							},
+						}},
+					},
+				},
+			},
+		},
+	}
+	addOwnerRefToObject(dep, asOwner(v))
+	return dep
+}
+
+func configMapForConfigurer(v *v1alpha1.Vault) *v1.ConfigMap {
+	ls := labelsForVaultConfigurer(v.Name)
+	cm := &v1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v.Name + "-configurer",
+			Namespace: v.Namespace,
+			Labels:    ls,
+		},
+		Data: map[string]string{"vault-config.yml": v.Spec.ExternalConfig},
+	}
+	addOwnerRefToObject(cm, asOwner(v))
+	return cm
+}
+
 // labelsForVault returns the labels for selecting the resources
 // belonging to the given vault CR name.
 func labelsForVault(name string) map[string]string {
 	return map[string]string{"app": "vault", "vault_cr": name}
+}
+
+// labelsForVaultConfigurer returns the labels for selecting the resources
+// belonging to the given vault CR name.
+func labelsForVaultConfigurer(name string) map[string]string {
+	return map[string]string{"app": "vault-configurator", "vault_cr": name}
 }
 
 // addOwnerRefToObject appends the desired OwnerReference to the object
