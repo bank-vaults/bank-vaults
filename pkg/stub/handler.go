@@ -173,16 +173,8 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 							Image:           "banzaicloud/bank-vaults:operator",
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Name:            "bank-vaults",
-							Command:         []string{"bank-vaults", "unseal"},
-							Args: []string{
-								"--init",
-								"--mode",
-								"k8s", // TODO This should depend on the Vault configuration later on
-								"--k8s-secret-namespace",
-								v.Namespace,
-								"--k8s-secret-name",
-								v.Name + "-unseal-keys",
-							},
+							Command:         []string{"bank-vaults", "unseal", "--init"},
+							Args:            v.Spec.UnsealConfig.ToArgs(v),
 							Env: []v1.EnvVar{
 								{
 									Name:  api.EnvVaultAddress,
@@ -265,14 +257,7 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Name:            "bank-vaults",
 							Command:         []string{"bank-vaults", "configure"},
-							Args: []string{
-								"--mode",
-								"k8s", // TODO This should depend on the Vault configuration later on
-								"--k8s-secret-namespace",
-								v.Namespace,
-								"--k8s-secret-name",
-								v.Name + "-unseal-keys",
-							},
+							Args:            v.Spec.UnsealConfig.ToArgs(v),
 							Env: []v1.EnvVar{
 								{
 									Name:  api.EnvVaultAddress,
