@@ -25,6 +25,7 @@ type Vault struct {
 
 type VaultSpec struct {
 	Size           int32                  `json:"size"`
+	Image          string                 `json:"image"`
 	Config         map[string]interface{} `json:"config"`
 	ExternalConfig map[string]interface{} `json:"externalConfig"`
 }

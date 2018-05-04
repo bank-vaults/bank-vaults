@@ -4,6 +4,8 @@ metadata:
   name: "vault"
 spec:
   size: 1
+  image: vault:0.10.1
+
   config:
     storage:
       file:
@@ -13,6 +15,8 @@ spec:
         address: "0.0.0.0:8200"
         tls_disable: true
     ui: true
+
+  # See: https://github.com/banzaicloud/bank-vaults#example-external-vault-configuration for more details.
   externalConfig:
     policies:
     - name: allow_secrets
