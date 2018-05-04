@@ -28,6 +28,7 @@ type VaultSpec struct {
 	Image          string                 `json:"image"`
 	Config         map[string]interface{} `json:"config"`
 	ExternalConfig map[string]interface{} `json:"externalConfig"`
+	UnsealConfig   UnsealConfig           `json:"unsealConfig"`
 }
 
 func (spec *VaultSpec) ConfigJSON() string {
@@ -42,4 +43,28 @@ func (spec *VaultSpec) ExternalConfigJSON() string {
 
 type VaultStatus struct {
 	Nodes []string `json:"nodes"`
+}
+
+type UnsealConfig struct {
+	Kubernetes *KubernetesUnsealConfig `json:"kubernetes"`
+}
+
+func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
+	if usc.Kubernetes != nil {
+		secretNamespace := vault.Namespace
+		if usc.Kubernetes.SecretNamespace != "" {
+			secretNamespace = usc.Kubernetes.SecretNamespace
+		}
+		secretName := vault.Name + "-unseal-keys"
+		if usc.Kubernetes.SecretName != "" {
+			secretName = usc.Kubernetes.SecretName
+		}
+		return []string{"--mode", "k8s", "--k8s-secret-namespace", secretNamespace, "--k8s-secret-name", secretName}
+	}
+	return []string{}
+}
+
+type KubernetesUnsealConfig struct {
+	SecretNamespace string `json:"secretNamespace"`
+	SecretName      string `json:"secretName"`
 }

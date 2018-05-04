@@ -6,6 +6,10 @@ spec:
   size: 1
   image: vault:0.10.1
 
+  unsealConfig:
+    kubernetes:
+      secretNamespace: default
+
   config:
     storage:
       file:
