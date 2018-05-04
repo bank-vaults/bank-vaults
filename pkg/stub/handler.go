@@ -152,7 +152,7 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						{
-							Image: "vault:0.10.1",
+							Image: v.Spec.Image,
 							Name:  "vault",
 							Args:  []string{"server"},
 							Ports: []v1.ContainerPort{{
@@ -172,12 +172,12 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 						{
 							Image:           "banzaicloud/bank-vaults:operator",
 							ImagePullPolicy: v1.PullIfNotPresent,
-							Name:            "vault-unsealer",
+							Name:            "bank-vaults",
 							Command:         []string{"bank-vaults", "unseal"},
 							Args: []string{
 								"--init",
 								"--mode",
-								"k8s", // TODO This should be dependant on the Vault configuration later on
+								"k8s", // TODO This should depend on the Vault configuration later on
 								"--k8s-secret-namespace",
 								v.Namespace,
 								"--k8s-secret-name",
@@ -186,15 +186,25 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 							Env: []v1.EnvVar{
 								{
 									Name:  api.EnvVaultAddress,
-									Value: "http://localhost:8200",
+									Value: "http://127.0.0.1:8200",
 								},
 								{
 									Name:  k8s.EnvK8SOwnerReference,
 									Value: string(ownerJSON),
 								},
 							},
+							VolumeMounts: []v1.VolumeMount{{
+								Name:      "file",
+								MountPath: "/vault/file",
+							}},
 						},
 					},
+					Volumes: []v1.Volume{{
+						Name: "file",
+						VolumeSource: v1.VolumeSource{
+							EmptyDir: &v1.EmptyDirVolumeSource{}, // TODO This should depend on the Vault configuration later on
+						},
+					}},
 				},
 			},
 		},
@@ -253,11 +263,11 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 						{
 							Image:           "banzaicloud/bank-vaults:operator",
 							ImagePullPolicy: v1.PullIfNotPresent,
-							Name:            "vault-unsealer",
+							Name:            "bank-vaults",
 							Command:         []string{"bank-vaults", "configure"},
 							Args: []string{
 								"--mode",
-								"k8s", // TODO This should be dependant on the Vault configuration later on
+								"k8s", // TODO This should depend on the Vault configuration later on
 								"--k8s-secret-namespace",
 								v.Namespace,
 								"--k8s-secret-name",
@@ -269,12 +279,10 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 									Value: fmt.Sprintf("http://%s:8200", v.Name),
 								},
 							},
-							VolumeMounts: []v1.VolumeMount{
-								{
-									Name:      "config",
-									MountPath: "/config",
-								},
-							},
+							VolumeMounts: []v1.VolumeMount{{
+								Name:      "config",
+								MountPath: "/config",
+							}},
 							WorkingDir: "/config",
 						},
 					},
