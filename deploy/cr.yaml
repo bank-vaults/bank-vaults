@@ -6,10 +6,13 @@ spec:
   size: 1
   image: vault:0.10.1
 
+  # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
     kubernetes:
       secretNamespace: default
 
+  # A YAML representation of a final vault config file.
+  # See https://www.vaultproject.io/docs/configuration/ for more information.
   config:
     storage:
       file:
