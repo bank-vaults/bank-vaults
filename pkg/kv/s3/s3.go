@@ -14,7 +14,7 @@ import (
 )
 
 type s3Storage struct {
-	cl     *awss3.S3
+	client *awss3.S3
 	bucket string
 	prefix string
 }
@@ -26,30 +26,30 @@ func New(bucket, prefix string) (kv.Service, error) {
 	return &s3Storage{cl, bucket, prefix}, nil
 }
 
-func (g *s3Storage) Set(key string, val []byte) error {
-	n := objectNameWithPrefix(g.prefix, key)
+func (s3 *s3Storage) Set(key string, val []byte) error {
+	n := objectNameWithPrefix(s3.prefix, key)
 	input := awss3.PutObjectInput{
-		Bucket: aws.String(g.bucket),
+		Bucket: aws.String(s3.bucket),
 		Key:    aws.String(n),
 		Body:   bytes.NewReader(val),
 	}
 
-	if _, err := g.cl.PutObject(&input); err != nil {
-		return fmt.Errorf("error writing key '%s' to s3 bucket '%s': '%s'", n, g.bucket, err.Error())
+	if _, err := s3.client.PutObject(&input); err != nil {
+		return fmt.Errorf("error writing key '%s' to s3 bucket '%s': '%s'", n, s3.bucket, err.Error())
 	}
 
 	return nil
 }
 
-func (g *s3Storage) Get(key string) ([]byte, error) {
-	n := objectNameWithPrefix(g.prefix, key)
+func (s3 *s3Storage) Get(key string) ([]byte, error) {
+	n := objectNameWithPrefix(s3.prefix, key)
 
 	input := awss3.GetObjectInput{
-		Bucket: aws.String(g.bucket),
+		Bucket: aws.String(s3.bucket),
 		Key:    aws.String(n),
 	}
 
-	r, err := g.cl.GetObject(&input)
+	r, err := s3.client.GetObject(&input)
 
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == awss3.ErrCodeNoSuchKey {
