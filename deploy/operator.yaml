@@ -32,3 +32,4 @@ spec:
           command:
           - vault-operator
           imagePullPolicy: IfNotPresent
+      serviceAccountName: vault-operator

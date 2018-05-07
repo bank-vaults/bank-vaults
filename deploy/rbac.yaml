@@ -1,3 +1,10 @@
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: vault-operator
+
+---
+
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
@@ -39,7 +46,7 @@ metadata:
   name: default-account-vault-operator
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: vault-operator
 roleRef:
   kind: Role
   name: vault-operator
