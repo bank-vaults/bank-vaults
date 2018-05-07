@@ -1,0 +1,42 @@
+apiVersion: "vault.banzaicloud.com/v1alpha1"
+kind: "Vault"
+metadata:
+  name: "vault"
+spec:
+  size: 1
+  image: vault:0.10.1
+  bankVaultsImage: banzaicloud/bank-vaults:latest
+
+  # Describe where you would like to store the Vault unseal keys and root token.
+  unsealConfig:
+    kubernetes:
+      secretNamespace: default
+
+  # A YAML representation of a final vault config file.
+  # See https://www.vaultproject.io/docs/configuration/ for more information.
+  config:
+    storage:
+      file:
+        path: "/vault/file"
+    listener:
+      tcp:
+        address: "0.0.0.0:8200"
+        tls_disable: true
+    ui: true
+
+  # See: https://github.com/banzaicloud/bank-vaults#example-external-vault-configuration for more details.
+  externalConfig:
+    policies:
+    - name: allow_secrets
+      rules: path "secret/*" {
+              capabilities = ["create", "read", "update", "delete", "list"]
+            }
+    auth:
+    - type: kubernetes
+      roles:
+        # Allow every pod in the default namespace to use the secret kv store
+        - name: default
+          bound_service_account_names: default
+          bound_service_account_namespaces: default
+          policies: allow_secrets
+          ttl: 1h

@@ -176,7 +176,16 @@ We have a Vault operator built on bank-vaults features as:
 - external, API based configuration (secret engines, auth methods, policies) to automatically re/configure a Vault cluster
 - automatic unsealing (AWS, GCE, Azure, Kubernetes Secrets (for dev purposes), Oracle)
 
->Due to third party/external dependencies we are holding back open sourcing the operator until mid May
+### Deploying the operator
+
+```bash
+kubectl apply -f deploy/rbac.yaml
+kubectl apply -f deploy/operator.yaml
+```
+
+This will createa a Kubernetes [CustomResourceDefinition](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/) called `Vault`.
+
+A documented example of this CRD can be found in [deploy/cr.yaml](deploy/cr.yaml).
 
 ## Examples
 
@@ -186,6 +195,42 @@ Some examples are in `cmd/examples/main.go`
 
 ```bash
 go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
+```
+
+## Cloud permissions
+
+The `bank-vaults` CLI command needs certain cloud permissions to function properly (init, unseal, configuration).
+
+### Google Cloud
+
+The Service Account in which the Pod is running has to have the following IAM Roles:
+
+- Cloud KMS Admin
+- Storage Admin
+
+### Azure
+
+The Access Policy in which the Pod is running has to have the following IAM Roles:
+
+- Key Vault All Key permissions
+- Key Vault All Secret permissions
+
+### AWS
+
+The Instance profile in which the Pod is running has to have the following IAM Policies:
+
+- KMS: `kms:Encrypt, kms:Decrypt`
+- S3:  `s3:GetObject, s3:PutObject`
+
+### Kubernetes
+
+The Service Account in which the Pod is running has to have the following Roles rules:
+
+```yaml
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs:     ["get", "create", "update"]
 ```
 
 ## Credits

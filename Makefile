@@ -1,7 +1,6 @@
 REGISTRY := banzaicloud
 IMAGE_NAME := bank-vaults
-BUILD_TAG := build
-IMAGE_TAGS := $(shell git rev-parse --abbrev-ref HEAD)
+IMAGE_TAG := $(shell git rev-parse --abbrev-ref HEAD)
 
 GOPATH ?= /tmp/go
 
@@ -27,14 +26,10 @@ verify: go_verify
 # Docker targets
 ################
 docker_build:
-	docker build -t $(REGISTRY)/$(IMAGE_NAME):$(BUILD_TAG) .
+	docker build -t $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG) .
 
 docker_push: docker_build
-	set -e; \
-		for tag in $(IMAGE_TAGS); do \
-		docker tag $(REGISTRY)/$(IMAGE_NAME):$(BUILD_TAG) $(REGISTRY)/$(IMAGE_NAME):$${tag} ; \
-		docker push $(REGISTRY)/$(IMAGE_NAME):$${tag}; \
-	done
+	docker push $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 
 # Go targets
 #################
