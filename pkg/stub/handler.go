@@ -9,7 +9,6 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	"github.com/hashicorp/vault/api"
-
 	"github.com/operator-framework/operator-sdk/pkg/sdk/action"
 	"github.com/operator-framework/operator-sdk/pkg/sdk/handler"
 	"github.com/operator-framework/operator-sdk/pkg/sdk/query"
@@ -170,7 +169,7 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 							},
 						},
 						{
-							Image:           "banzaicloud/bank-vaults:operator",
+							Image:           v.Spec.GetBankVaultsImage(),
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Name:            "bank-vaults",
 							Command:         []string{"bank-vaults", "unseal", "--init"},
@@ -253,7 +252,7 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						{
-							Image:           "banzaicloud/bank-vaults:operator",
+							Image:           v.Spec.GetBankVaultsImage(),
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Name:            "bank-vaults",
 							Command:         []string{"bank-vaults", "configure"},
