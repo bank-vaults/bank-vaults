@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -13,14 +14,17 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+const EnvK8SOwnerReference = "K8S_OWNER_REFERENCE"
+
 type k8sStorage struct {
-	cl        *kubernetes.Clientset
-	namespace string
-	secret    string
+	cl             *kubernetes.Clientset
+	namespace      string
+	secret         string
+	ownerReference *metav1.OwnerReference
 }
 
 func New(namespace, secret string) (service kv.Service, err error) {
-	kubeconfig := os.Getenv("KUBECONFIG")
+	kubeconfig := os.Getenv(clientcmd.RecommendedConfigPathEnvVar)
 	var config *rest.Config
 
 	if kubeconfig != "" {
@@ -38,7 +42,17 @@ func New(namespace, secret string) (service kv.Service, err error) {
 		return nil, fmt.Errorf("error creating k8s client: %s", err.Error())
 	}
 
-	service = &k8sStorage{client, namespace, secret}
+	var ownerReference *metav1.OwnerReference
+	ownerReferenceJSON := os.Getenv(EnvK8SOwnerReference)
+	if ownerReferenceJSON != "" {
+		ownerReference = &metav1.OwnerReference{}
+		err := json.Unmarshal([]byte(ownerReferenceJSON), ownerReference)
+		if err != nil {
+			return nil, fmt.Errorf("error unmarhsaling OwnerReference: %s", err.Error())
+		}
+	}
+
+	service = &k8sStorage{client, namespace, secret, ownerReference}
 
 	return
 }
@@ -53,6 +67,9 @@ func (k *k8sStorage) Set(key string, val []byte) error {
 				Name:      k.secret,
 			},
 			Data: map[string][]byte{key: val},
+		}
+		if k.ownerReference != nil {
+			secret.ObjectMeta.SetOwnerReferences([]metav1.OwnerReference{*k.ownerReference})
 		}
 		secret, err = k.cl.CoreV1().Secrets(k.namespace).Create(secret)
 	} else if err == nil {

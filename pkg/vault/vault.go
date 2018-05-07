@@ -15,6 +15,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+const DefaultConfigFile = "vault-config.yml"
+
 // Config holds the configuration of the Vault initialization
 type Config struct {
 	// how many key parts exist
