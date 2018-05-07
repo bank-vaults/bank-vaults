@@ -56,6 +56,8 @@ type VaultStatus struct {
 type UnsealConfig struct {
 	Kubernetes  *KubernetesUnsealConfig  `json:"kubernetes"`
 	GoogleCloud *GoogleCloudUnsealConfig `json:"googleCloud"`
+	Azure       *AzureUnsealConfig       `json:"azure"`
+	AWS         *AWSUnsealConfig         `json:"aws"`
 }
 
 func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
@@ -86,6 +88,21 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			usc.GoogleCloud.StorageBucket,
 		}
 	}
+	if usc.Azure != nil {
+		return []string{"--mode", "azure-key-vault", "--azure-key-vault-name", usc.Azure.KeyVaultName}
+	}
+	if usc.AWS != nil {
+		return []string{
+			"--mode",
+			"aws-kms-s3",
+			"--aws-kms-key-id",
+			usc.AWS.KMSKeyID,
+			"--aws-s3-bucket",
+			usc.AWS.S3Bucket,
+			"--aws-s3-prefix",
+			usc.AWS.S3Prefix,
+		}
+	}
 	return []string{}
 }
 
@@ -100,4 +117,14 @@ type GoogleCloudUnsealConfig struct {
 	KMSLocation   string `json:"kmsLocation"`
 	KMSProject    string `json:"kmsProject"`
 	StorageBucket string `json:"storageBucket"`
+}
+
+type AzureUnsealConfig struct {
+	KeyVaultName string `json:"keyVaultName"`
+}
+
+type AWSUnsealConfig struct {
+	KMSKeyID string `json:"kmsKeyId"`
+	S3Bucket string `json:"s3Bucket"`
+	S3Prefix string `json:"s3Prefix"`
 }
