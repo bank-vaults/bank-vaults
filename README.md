@@ -188,6 +188,42 @@ Some examples are in `cmd/examples/main.go`
 go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
 ```
 
+## Cloud permissions
+
+The `bank-vaults` CLI command needs certain cloud permissions to function properly (init, unseal, configuration).
+
+### Google Cloud
+
+The Service Account in which the Pod is running has to have the following IAM Roles:
+
+- Cloud KMS Admin
+- Storage Admin
+
+### Azure
+
+The Access Policy in which the Pod is running has to have the following IAM Roles:
+
+- Key Vault All Key permissions
+- Key Vault All Secret permissions
+
+### AWS
+
+The Instance profile in which the Pod is running has to have the following IAM Policies:
+
+- KMS: `kms:Encrypt, kms:Decrypt`
+- S3:  `s3:GetObject, s3:PutObject`
+
+### Kubernetes
+
+The Service Account in which the Pod is running has to have the following Roles rules:
+
+```yaml
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs:     ["get", "create", "update"]
+```
+
 ## Credits
 
 Kudos to HashiCorp for open sourcing Vault and making secret management easier and more secure. 
