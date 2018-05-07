@@ -24,11 +24,19 @@ type Vault struct {
 }
 
 type VaultSpec struct {
-	Size           int32                  `json:"size"`
-	Image          string                 `json:"image"`
-	Config         map[string]interface{} `json:"config"`
-	ExternalConfig map[string]interface{} `json:"externalConfig"`
-	UnsealConfig   UnsealConfig           `json:"unsealConfig"`
+	Size            int32                  `json:"size"`
+	Image           string                 `json:"image"`
+	BankVaultsImage string                 `json:"bankVaultsImage"`
+	Config          map[string]interface{} `json:"config"`
+	ExternalConfig  map[string]interface{} `json:"externalConfig"`
+	UnsealConfig    UnsealConfig           `json:"unsealConfig"`
+}
+
+func (spec *VaultSpec) GetBankVaultsImage() string {
+	if spec.BankVaultsImage == "" {
+		return "banzaicloud/bank-vaults:latest"
+	}
+	return spec.BankVaultsImage
 }
 
 func (spec *VaultSpec) ConfigJSON() string {
