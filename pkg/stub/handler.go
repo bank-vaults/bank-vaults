@@ -130,6 +130,8 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 		return nil, err
 	}
 
+	readOnlyRootFilesystem := true
+
 	dep := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -163,6 +165,7 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 								Value: configJSON,
 							}},
 							SecurityContext: &v1.SecurityContext{
+								ReadOnlyRootFilesystem: &readOnlyRootFilesystem,
 								Capabilities: &v1.Capabilities{
 									Add: []v1.Capability{"IPC_LOCK"},
 								},
