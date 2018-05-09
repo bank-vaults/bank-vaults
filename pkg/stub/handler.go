@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	"github.com/banzaicloud/bank-vaults/pkg/apis/vault/v1alpha1"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
@@ -169,6 +171,26 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 								Capabilities: &v1.Capabilities{
 									Add: []v1.Capability{"IPC_LOCK"},
 								},
+							},
+							// This probe makes sure Vault is responsive in a HTTPS manner
+							// See: https://www.vaultproject.io/api/system/init.html
+							LivenessProbe: &v1.Probe{
+								Handler: v1.Handler{
+									HTTPGet: &v1.HTTPGetAction{
+										Scheme: v1.URISchemeHTTPS,
+										Port:   intstr.FromString("vault"),
+										Path:   "/v1/sys/init",
+									}},
+							},
+							// This probe makes sure that only the active Vault instance gets traffic
+							// See: https://www.vaultproject.io/api/system/health.html
+							ReadinessProbe: &v1.Probe{
+								Handler: v1.Handler{
+									HTTPGet: &v1.HTTPGetAction{
+										Scheme: v1.URISchemeHTTPS,
+										Port:   intstr.FromString("vault"),
+										Path:   "/v1/sys/health",
+									}},
 							},
 						},
 						{
