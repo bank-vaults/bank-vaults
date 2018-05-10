@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"reflect"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	"github.com/banzaicloud/bank-vaults/pkg/apis/vault/v1alpha1"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
+	"github.com/banzaicloud/bank-vaults/pkg/tls"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	"github.com/hashicorp/vault/api"
 	"github.com/operator-framework/operator-sdk/pkg/sdk/action"
@@ -36,6 +39,16 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		// All secondary resources must have the CR set as their OwnerReference for this to be the case
 		if event.Deleted {
 			return nil
+		}
+
+		// Create the secret if it doesn't exist
+		sec, err := secretForVault(v)
+		if err != nil {
+			return fmt.Errorf("failed to fabricate secret: %v", err)
+		}
+		err = action.Create(sec)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed to create secret: %v", err)
 		}
 
 		// Create the deployment if it doesn't exist
@@ -119,6 +132,16 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 	return nil
 }
 
+func secretForVault(v *v1alpha1.Vault) (*v1.Secret, error) {
+	secret, err := tls.GenerateSecretForCerts(v.Name, v.Namespace)
+	if err != nil {
+		return nil, err
+	}
+	addOwnerRefToObject(secret, asOwner(v))
+	secret.ObjectMeta.Labels = labelsForVault(v.Name)
+	return secret, nil
+}
+
 // deploymentForVault returns a vault Deployment object
 func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 	ls := labelsForVault(v.Name)
@@ -158,15 +181,50 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 								ContainerPort: 8200,
 								Name:          "vault",
 							}},
-							Env: []v1.EnvVar{{
-								Name:  "VAULT_LOCAL_CONFIG",
-								Value: configJSON,
-							}},
+							Env: []v1.EnvVar{
+								{
+									Name:  "VAULT_LOCAL_CONFIG",
+									Value: configJSON,
+								}, {
+									Name:  api.EnvVaultCACert,
+									Value: "/vault/tls/ca.crt",
+								},
+							},
 							SecurityContext: &v1.SecurityContext{
 								Capabilities: &v1.Capabilities{
 									Add: []v1.Capability{"IPC_LOCK"},
 								},
 							},
+							// This probe makes sure Vault is responsive in a HTTPS manner
+							// See: https://www.vaultproject.io/api/system/init.html
+							LivenessProbe: &v1.Probe{
+								Handler: v1.Handler{
+									HTTPGet: &v1.HTTPGetAction{
+										Scheme: v1.URISchemeHTTPS,
+										Port:   intstr.FromString("vault"),
+										Path:   "/v1/sys/init",
+									}},
+							},
+							// This probe makes sure that only the active Vault instance gets traffic
+							// See: https://www.vaultproject.io/api/system/health.html
+							ReadinessProbe: &v1.Probe{
+								Handler: v1.Handler{
+									HTTPGet: &v1.HTTPGetAction{
+										Scheme: v1.URISchemeHTTPS,
+										Port:   intstr.FromString("vault"),
+										Path:   "/v1/sys/health",
+									}},
+							},
+							VolumeMounts: []v1.VolumeMount{{
+								Name:      "vault-config",
+								MountPath: "/vault/config",
+							}, {
+								Name:      "vault-file",
+								MountPath: "/vault/file",
+							}, {
+								Name:      "vault-tls",
+								MountPath: "/vault/tls",
+							}},
 						},
 						{
 							Image:           v.Spec.GetBankVaultsImage(),
@@ -176,26 +234,41 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 							Args:            v.Spec.UnsealConfig.ToArgs(v),
 							Env: []v1.EnvVar{
 								{
-									Name:  api.EnvVaultAddress,
-									Value: "http://127.0.0.1:8200",
-								},
-								{
 									Name:  k8s.EnvK8SOwnerReference,
 									Value: string(ownerJSON),
+								}, {
+									Name:  api.EnvVaultCACert,
+									Value: "/vault/tls/ca.crt",
 								},
 							},
 							VolumeMounts: []v1.VolumeMount{{
-								Name:      "file",
-								MountPath: "/vault/file",
+								Name:      "vault-tls",
+								MountPath: "/vault/tls",
 							}},
 						},
 					},
-					Volumes: []v1.Volume{{
-						Name: "file",
-						VolumeSource: v1.VolumeSource{
-							EmptyDir: &v1.EmptyDirVolumeSource{}, // TODO This should depend on the Vault configuration later on
+					Volumes: []v1.Volume{
+						{
+							Name: "vault-config",
+							VolumeSource: v1.VolumeSource{
+								EmptyDir: &v1.EmptyDirVolumeSource{},
+							},
 						},
-					}},
+						{
+							Name: "vault-file",
+							VolumeSource: v1.VolumeSource{
+								EmptyDir: &v1.EmptyDirVolumeSource{},
+							},
+						},
+						{
+							Name: "vault-tls",
+							VolumeSource: v1.VolumeSource{
+								Secret: &v1.SecretVolumeSource{
+									SecretName: v.Name + "-tls",
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -260,23 +333,39 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 							Env: []v1.EnvVar{
 								{
 									Name:  api.EnvVaultAddress,
-									Value: fmt.Sprintf("http://%s:8200", v.Name),
+									Value: fmt.Sprintf("https://%s:8200", v.Name),
+								}, {
+									Name:  api.EnvVaultCACert,
+									Value: "/vault/tls/ca.crt",
 								},
 							},
 							VolumeMounts: []v1.VolumeMount{{
 								Name:      "config",
 								MountPath: "/config",
+							}, {
+								Name:      "vault-tls",
+								MountPath: "/vault/tls",
 							}},
 							WorkingDir: "/config",
 						},
 					},
-					Volumes: []v1.Volume{{
-						Name: "config",
-						VolumeSource: v1.VolumeSource{
-							ConfigMap: &v1.ConfigMapVolumeSource{
-								LocalObjectReference: v1.LocalObjectReference{Name: v.Name + "-configurer"},
+					Volumes: []v1.Volume{
+						{
+							Name: "config",
+							VolumeSource: v1.VolumeSource{
+								ConfigMap: &v1.ConfigMapVolumeSource{
+									LocalObjectReference: v1.LocalObjectReference{Name: v.Name + "-configurer"},
+								},
 							},
-						}},
+						},
+						{
+							Name: "vault-tls",
+							VolumeSource: v1.VolumeSource{
+								Secret: &v1.SecretVolumeSource{
+									SecretName: v.Name + "-tls",
+								},
+							},
+						},
 					},
 				},
 			},
