@@ -281,6 +281,8 @@ func (u *vault) Configure() error {
 
 		if !exists {
 			logrus.Debugf("enabling %s auth backend in vault...", authMethodType)
+
+			// https://www.vaultproject.io/api/system/auth.html
 			options := api.EnableAuthOptions{
 				Type: authMethodType,
 			}
@@ -313,6 +315,17 @@ func (u *vault) Configure() error {
 			err = u.configureGithubMappings(mappings)
 			if err != nil {
 				return fmt.Errorf("error configuring github mappings for vault: %s", err.Error())
+			}
+		case "aws":
+			config := cast.ToStringMap(authMethod["config"])
+			err = u.configureAwsConfig(config)
+			if err != nil {
+				return fmt.Errorf("error configuring aws auth for vault: %s", err.Error())
+			}
+			roles := authMethod["roles"].([]interface{})
+			err = u.configureAwsRoles(roles)
+			if err != nil {
+				return fmt.Errorf("error configuring aws auth roles for vault: %s", err.Error())
 			}
 		}
 	}
@@ -391,6 +404,7 @@ func (u *vault) configureKubernetesRoles(roles []interface{}) error {
 }
 
 func (u *vault) configureGithubConfig(config map[string]interface{}) error {
+	// https://www.vaultproject.io/api/auth/github/index.html
 	_, err := u.cl.Logical().Write("auth/github/config", config)
 
 	if err != nil {
@@ -406,6 +420,28 @@ func (u *vault) configureGithubMappings(mappings map[string]interface{}) error {
 			if err != nil {
 				return fmt.Errorf("error putting %s github mapping into vault: %s", mappingType, err.Error())
 			}
+		}
+	}
+	return nil
+}
+
+func (u *vault) configureAwsConfig(config map[string]interface{}) error {
+	// https://www.vaultproject.io/api/auth/aws/index.html
+	_, err := u.cl.Logical().Write("auth/aws/config/client", config)
+
+	if err != nil {
+		return fmt.Errorf("error putting %s aws config into vault: %s", config, err.Error())
+	}
+	return nil
+}
+
+func (u *vault) configureAwsRoles(roles []interface{}) error {
+	for _, roleInterface := range roles {
+		role := cast.ToStringMap(roleInterface)
+		_, err := u.cl.Logical().Write(fmt.Sprint("auth/aws/role/", role["name"]), role)
+
+		if err != nil {
+			return fmt.Errorf("error putting %s aws role into vault: %s", role["name"], err.Error())
 		}
 	}
 	return nil
