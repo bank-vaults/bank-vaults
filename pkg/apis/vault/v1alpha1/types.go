@@ -54,10 +54,10 @@ type VaultStatus struct {
 }
 
 type UnsealConfig struct {
-	Kubernetes  *KubernetesUnsealConfig  `json:"kubernetes"`
-	GoogleCloud *GoogleCloudUnsealConfig `json:"googleCloud"`
-	Azure       *AzureUnsealConfig       `json:"azure"`
-	AWS         *AWSUnsealConfig         `json:"aws"`
+	Kubernetes *KubernetesUnsealConfig `json:"kubernetes"`
+	Google     *GoogleUnsealConfig     `json:"google"`
+	Azure      *AzureUnsealConfig      `json:"azure"`
+	AWS        *AWSUnsealConfig        `json:"aws"`
 }
 
 func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
@@ -72,20 +72,20 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 		}
 		return []string{"--mode", "k8s", "--k8s-secret-namespace", secretNamespace, "--k8s-secret-name", secretName}
 	}
-	if usc.GoogleCloud != nil {
+	if usc.Google != nil {
 		return []string{
 			"--mode",
 			"google-cloud-kms-gcs",
 			"--google-cloud-kms-key-ring",
-			usc.GoogleCloud.KMSKeyRing,
+			usc.Google.KMSKeyRing,
 			"--google-cloud-kms-crypto-key",
-			usc.GoogleCloud.KMSCryptoKey,
+			usc.Google.KMSCryptoKey,
 			"--google-cloud-kms-location",
-			usc.GoogleCloud.KMSLocation,
+			usc.Google.KMSLocation,
 			"--google-cloud-kms-project",
-			usc.GoogleCloud.KMSProject,
+			usc.Google.KMSProject,
 			"--google-cloud-storage-bucket",
-			usc.GoogleCloud.StorageBucket,
+			usc.Google.StorageBucket,
 		}
 	}
 	if usc.Azure != nil {
@@ -111,7 +111,7 @@ type KubernetesUnsealConfig struct {
 	SecretName      string `json:"secretName"`
 }
 
-type GoogleCloudUnsealConfig struct {
+type GoogleUnsealConfig struct {
 	KMSKeyRing    string `json:"kmsKeyRing"`
 	KMSCryptoKey  string `json:"kmsCryptoKey"`
 	KMSLocation   string `json:"kmsLocation"`
