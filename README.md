@@ -223,6 +223,7 @@ The `bank-vaults` CLI command needs certain cloud permissions to function proper
 The Service Account in which the Pod is running has to have the following IAM Roles:
 
 - Cloud KMS Admin
+- Cloud KMS CryptoKey Encrypter/Decrypter
 - Storage Admin
 
 ### Azure
