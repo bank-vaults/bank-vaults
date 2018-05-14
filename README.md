@@ -88,6 +88,23 @@ auth:
       users:
         bonifaido: root
 
+  # Allows creating roles in Vault which can be used later on for AWS 
+  # IAM based authentication.
+  # See https://www.vaultproject.io/docs/auth/aws.html for
+  # more information.
+  - type: aws
+    config:
+      access_key: VKIAJBRHKH6EVTTNXDHA
+      secret_key: vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj
+      iam_server_id_header_value: vault-dev.example.com # consider setting this to the Vault server's DNS name 
+    roles:
+    # Add roles for AWS instances or principals
+    # See https://www.vaultproject.io/api/auth/aws/index.html#create-role
+    - name: dev-role-iam
+      bound_iam_principal_arn: arn:aws:iam::123456789012:role/dev-vault
+      policies: allow_secrets
+      period: 1h
+
 # Allows configuring Secrets Engines in Vault (KV, Database and SSH is tested,
 # but the config is free form so probably more is supported).
 # See https://www.vaultproject.io/docs/secrets/index.html for more information.
