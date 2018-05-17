@@ -5,8 +5,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/banzaicloud/bank-vaults/auth"
 	"github.com/banzaicloud/bank-vaults/database"
 	"github.com/banzaicloud/bank-vaults/vault"
+	"github.com/gin-gonic/gin"
 )
 
 func vaultExample() {
@@ -45,8 +47,20 @@ func gormExample() {
 	log.Printf("use this with GORM:\ndb, err := gorm.Open(\"mysql\", \"%s\")", secretSource)
 }
 
+func authExample() {
+	engine := gin.New()
+	engine.Use(auth.JWTAuth(auth.NewVaultTokenStore(""), "mys3cr3t", nil))
+	engine.Use(gin.Logger(), gin.ErrorLogger())
+	engine.GET("/", func(c *gin.Context) {
+		user := c.Request.Context().Value(auth.CurrentUser)
+		c.JSON(200, gin.H{"claims": user})
+	})
+	engine.Run(":9091")
+}
+
 func main() {
-	os.Setenv("VAULT_ADDR", "http://vault-vault:8200")
-	vaultExample()
-	gormExample()
+	os.Setenv("VAULT_ADDR", "http://localhost:8200")
+	// vaultExample()
+	// gormExample()
+	authExample()
 }
