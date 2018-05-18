@@ -103,3 +103,11 @@
 [[constraint]]
   name = "github.com/Azure/go-autorest"
   version = "10.6.0"
+
+[[constraint]]
+  name = "github.com/dgrijalva/jwt-go"
+  version = "3.2.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/gin-gonic/gin"
