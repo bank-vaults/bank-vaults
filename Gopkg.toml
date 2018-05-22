@@ -111,3 +111,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/gin-gonic/gin"
+
+[[constraint]]
+  name = "github.com/qor/qor"
+  branch = "master"
