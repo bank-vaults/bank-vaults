@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/base32"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -8,6 +10,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/auth"
 	"github.com/banzaicloud/bank-vaults/database"
 	"github.com/banzaicloud/bank-vaults/vault"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 )
 
@@ -48,8 +51,41 @@ func gormExample() {
 }
 
 func authExample() {
+	userID := "1"
+	tokenID := "123"
+	signingKey := "mys3cr3t"
+	signingKeyBase32 := base32.StdEncoding.EncodeToString([]byte(signingKey))
+
+	// Issue a JWT token for the end user
+	claims := &auth.ScopedClaims{
+		StandardClaims: jwt.StandardClaims{
+			IssuedAt:  jwt.TimeFunc().Unix(),
+			ExpiresAt: 0,
+			Subject:   userID,
+			Id:        tokenID,
+		},
+	}
+
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signedToken, err := jwtToken.SignedString([]byte(signingKeyBase32))
+	if err != nil {
+		panic(err)
+	}
+
+	// Use this curl command
+	fmt.Printf("curl -H \"Authorization: Bearer %s\" -v http://localhost:9091/\n\n", signedToken)
+
+	// Create a Vault Token store and insert the mirroring token
+	tokenStore := auth.NewVaultTokenStore("")
+	err = tokenStore.Store(userID, auth.NewToken(tokenID, "my test token"))
+	if err != nil {
+		panic(err)
+	}
+
+	// In the protected application you only need this part:
+	// Start a Gin engine, serving and API protected via the JWT Middleware
 	engine := gin.New()
-	engine.Use(auth.JWTAuth(auth.NewVaultTokenStore(""), "mys3cr3t", nil))
+	engine.Use(auth.JWTAuth(tokenStore, signingKey, nil))
 	engine.Use(gin.Logger(), gin.ErrorLogger())
 	engine.GET("/", func(c *gin.Context) {
 		user := c.Request.Context().Value(auth.CurrentUser)
@@ -58,6 +94,8 @@ func authExample() {
 	engine.Run(":9091")
 }
 
+// REQUIRED to start a Vault 0.9 dev server with:
+// vault server -dev &
 func main() {
 	os.Setenv("VAULT_ADDR", "http://localhost:8200")
 	// vaultExample()
