@@ -165,7 +165,6 @@ This repository contains several Go packages for interacting with Vault:
 
 - `auth`
 
-    *Note: This is currently WIP, we are extracting the code from https://github.com/banzaicloud/pipeline/tree/master/auth*</br>
     A GitHub OAuth2 based authentication system as a Gin Middleware, stores JWT bearer tokens in Vault.
 
     ![authn](docs/images/authn-vault-flow.png)
