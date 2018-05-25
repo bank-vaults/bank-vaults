@@ -21,6 +21,7 @@ type googleKms struct {
 
 var _ kv.Service = &googleKms{}
 
+// New creates a new kv.Service encrypted by Google KMS
 func New(store kv.Service, project, location, keyring, cryptoKey string) (kv.Service, error) {
 	ctx := context.Background()
 	client, err := google.DefaultClient(ctx, cloudkms.CloudPlatformScope)

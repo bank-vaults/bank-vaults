@@ -2,12 +2,14 @@ package kv
 
 import "fmt"
 
+// NotFoundError represents an error when a key is not found
 type NotFoundError struct {
 	msg string // description of error
 }
 
 func (e *NotFoundError) Error() string { return e.msg }
 
+// NewNotFoundError creates a new NotFoundError
 func NewNotFoundError(msg string, args ...interface{}) *NotFoundError {
 	return &NotFoundError{
 		msg: fmt.Sprintf(msg, args...),
