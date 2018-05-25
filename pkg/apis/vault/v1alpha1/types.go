@@ -8,6 +8,7 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// VaultList represents a list of Vault Kubernetes objects
 type VaultList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
@@ -16,6 +17,7 @@ type VaultList struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// Vault represents a Vault Kubernetes object
 type Vault struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -23,6 +25,7 @@ type Vault struct {
 	Status            VaultStatus `json:"status,omitempty"`
 }
 
+// VaultSpec represents the Spec field of a Vault Kubernetes object
 type VaultSpec struct {
 	Size            int32                  `json:"size"`
 	Image           string                 `json:"image"`
@@ -32,6 +35,7 @@ type VaultSpec struct {
 	UnsealConfig    UnsealConfig           `json:"unsealConfig"`
 }
 
+// GetBankVaultsImage returns the bank-vaults image to use
 func (spec *VaultSpec) GetBankVaultsImage() string {
 	if spec.BankVaultsImage == "" {
 		return "banzaicloud/bank-vaults:latest"
@@ -39,20 +43,24 @@ func (spec *VaultSpec) GetBankVaultsImage() string {
 	return spec.BankVaultsImage
 }
 
+// ConfigJSON returns the Config field as a JSON string
 func (spec *VaultSpec) ConfigJSON() string {
 	config, _ := json.Marshal(spec.Config)
 	return string(config)
 }
 
+// ExternalConfigJSON returns the ExternalConfig field as a JSON string
 func (spec *VaultSpec) ExternalConfigJSON() string {
 	config, _ := json.Marshal(spec.ExternalConfig)
 	return string(config)
 }
 
+// VaultStatus represents the Status field of a Vault Kubernetes object
 type VaultStatus struct {
 	Nodes []string `json:"nodes"`
 }
 
+// UnsealConfig represents the UnsealConfig field of a VaultSpec Kubernetes object
 type UnsealConfig struct {
 	Kubernetes *KubernetesUnsealConfig `json:"kubernetes"`
 	Google     *GoogleUnsealConfig     `json:"google"`
@@ -60,6 +68,7 @@ type UnsealConfig struct {
 	AWS        *AWSUnsealConfig        `json:"aws"`
 }
 
+// ToArgs returns the UnsealConfig as and argument array for bank-vaults
 func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 	if usc.Kubernetes != nil {
 		secretNamespace := vault.Namespace
@@ -106,11 +115,13 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 	return []string{}
 }
 
+// KubernetesUnsealConfig holds the parameters for Kubernetes based unsealing
 type KubernetesUnsealConfig struct {
 	SecretNamespace string `json:"secretNamespace"`
 	SecretName      string `json:"secretName"`
 }
 
+// GoogleUnsealConfig holds the parameters for Google KMS based unsealing
 type GoogleUnsealConfig struct {
 	KMSKeyRing    string `json:"kmsKeyRing"`
 	KMSCryptoKey  string `json:"kmsCryptoKey"`
@@ -119,10 +130,12 @@ type GoogleUnsealConfig struct {
 	StorageBucket string `json:"storageBucket"`
 }
 
+// AzureUnsealConfig holds the parameters for Azure Key Vault based unsealing
 type AzureUnsealConfig struct {
 	KeyVaultName string `json:"keyVaultName"`
 }
 
+// AWSUnsealConfig holds the parameters for AWS KMS based unsealing
 type AWSUnsealConfig struct {
 	KMSKeyID string `json:"kmsKeyId"`
 	S3Bucket string `json:"s3Bucket"`

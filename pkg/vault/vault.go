@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// DefaultConfigFile is the name of the default config file
 const DefaultConfigFile = "vault-config.yml"
 
 // Config holds the configuration of the Vault initialization

@@ -14,6 +14,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// EnvK8SOwnerReference holds the environment variable name for passing in K8S owner refs
 const EnvK8SOwnerReference = "K8S_OWNER_REFERENCE"
 
 type k8sStorage struct {
@@ -23,6 +24,7 @@ type k8sStorage struct {
 	ownerReference *metav1.OwnerReference
 }
 
+// New creates a new kv.Service backed by K8S Secrets
 func New(namespace, secret string) (service kv.Service, err error) {
 	kubeconfig := os.Getenv(clientcmd.RecommendedConfigPathEnvVar)
 	var config *rest.Config

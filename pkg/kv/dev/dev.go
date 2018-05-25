@@ -12,6 +12,7 @@ type dev struct {
 	rootToken []byte
 }
 
+// New creates a new kv.Service backed by memory, only the root token is stored, should be used with: vault server -dev
 func New() (service kv.Service, err error) {
 	rootToken, err := ioutil.ReadFile(os.Getenv("HOME") + "/.vault-token")
 

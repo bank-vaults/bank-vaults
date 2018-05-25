@@ -23,13 +23,16 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
+// NewHandler returns a new Vault operator event handler
 func NewHandler() handler.Handler {
 	return &Handler{}
 }
 
+// Handler is a Vault operator event handler
 type Handler struct {
 }
 
+// Handle handles Vault operator events
 func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 	switch o := event.Object.(type) {
 	case *v1alpha1.Vault:

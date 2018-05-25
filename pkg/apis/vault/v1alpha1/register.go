@@ -14,8 +14,10 @@ const (
 )
 
 var (
+	// SchemeBuilder is the SchemeBuilder for the Vault Operator
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
-	AddToScheme   = SchemeBuilder.AddToScheme
+	// AddToScheme is the AddToScheme function of the SchemeBuilder for the Vault Operator
+	AddToScheme = SchemeBuilder.AddToScheme
 	// SchemeGroupVersion is the group version used to register these objects.
 	SchemeGroupVersion = schema.GroupVersion{Group: groupName, Version: version}
 )
