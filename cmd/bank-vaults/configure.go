@@ -152,7 +152,7 @@ var configureCmd = &cobra.Command{
 
 func init() {
 	configureCmd.PersistentFlags().Duration(cfgUnsealPeriod, time.Second*30, "How often to attempt to unseal the Vault instance")
-	configureCmd.PersistentFlags().String(cfgVaultConfigFile, vault.DefaultConfigFile, "The filename of the YAML/JSON Vault configuraton")
+	configureCmd.PersistentFlags().String(cfgVaultConfigFile, vault.DefaultConfigFile, "The filename of the YAML/JSON Vault configuration")
 
 	rootCmd.AddCommand(configureCmd)
 }
