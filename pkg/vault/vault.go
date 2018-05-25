@@ -31,7 +31,7 @@ type Config struct {
 }
 
 // vault is an implementation of the Vault interface that will perform actions
-// against a Vault server, using a provided KMS to retreive
+// against a Vault server, using a provided KMS to retrieve
 type vault struct {
 	keyStore kv.Service
 	cl       *api.Client
