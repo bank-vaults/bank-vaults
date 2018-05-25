@@ -15,6 +15,7 @@ type gcsStorage struct {
 	prefix string
 }
 
+// New creates a new kv.Service backed by Google GCS
 func New(bucket, prefix string) (kv.Service, error) {
 	cl, err := storage.NewClient(context.Background())
 

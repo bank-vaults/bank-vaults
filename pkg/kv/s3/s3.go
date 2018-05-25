@@ -19,6 +19,7 @@ type s3Storage struct {
 	prefix string
 }
 
+// New creates a new kv.Service backed by AWS S3
 func New(bucket, prefix string) (kv.Service, error) {
 	sess := session.New()
 	cl := awss3.New(sess)
@@ -71,7 +72,7 @@ func objectNameWithPrefix(prefix, key string) string {
 	return fmt.Sprintf("%s%s", prefix, key)
 }
 
-func (g *s3Storage) Test(key string) error {
+func (s3 *s3Storage) Test(key string) error {
 	// TODO: Implement me properly
 	return nil
 }

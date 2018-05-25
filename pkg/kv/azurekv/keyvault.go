@@ -19,6 +19,7 @@ type azureKeyVault struct {
 
 var _ kv.Service = &azureKeyVault{}
 
+// New creates a new kv.Service backed by Azure Key Vault
 func New(name string) (kv.Service, error) {
 	keyClient := keyvault.New()
 	authorizer, err := GetKeyvaultAuthorizer()
@@ -32,9 +33,9 @@ func New(name string) (kv.Service, error) {
 	}, nil
 }
 
-func (g *azureKeyVault) Get(key string) ([]byte, error) {
+func (a *azureKeyVault) Get(key string) ([]byte, error) {
 
-	bundle, err := g.client.GetSecret(context.Background(), g.vaultBaseURL, key, "")
+	bundle, err := a.client.GetSecret(context.Background(), a.vaultBaseURL, key, "")
 
 	if err != nil {
 		err := err.(autorest.DetailedError)
@@ -47,19 +48,19 @@ func (g *azureKeyVault) Get(key string) ([]byte, error) {
 	return []byte(*bundle.Value), nil
 }
 
-func (g *azureKeyVault) Set(key string, val []byte) error {
+func (a *azureKeyVault) Set(key string, val []byte) error {
 
 	value := string(val)
 	parameters := keyvault.SecretSetParameters{
 		Value: &value,
 	}
 
-	_, err := g.client.SetSecret(context.Background(), g.vaultBaseURL, key, parameters)
+	_, err := a.client.SetSecret(context.Background(), a.vaultBaseURL, key, parameters)
 
 	return err
 }
 
-func (g *azureKeyVault) Test(key string) error {
+func (a *azureKeyVault) Test(key string) error {
 	// TODO: Implement me properly
 	return nil
 }

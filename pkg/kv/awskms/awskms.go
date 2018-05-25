@@ -18,6 +18,7 @@ type awsKMS struct {
 
 var _ kv.Service = &awsKMS{}
 
+// NewWithSession creates a new kv.Service encrypted by AWS KMS with and existing AWS Session
 func NewWithSession(sess *session.Session, store kv.Service, kmsID string) (kv.Service, error) {
 	if kmsID == "" {
 		return nil, fmt.Errorf("invalid kmsID specified: '%s'", kmsID)
@@ -30,6 +31,7 @@ func NewWithSession(sess *session.Session, store kv.Service, kmsID string) (kv.S
 	}, nil
 }
 
+// New creates a new kv.Service encrypted by AWS KMS
 func New(store kv.Service, kmsID string) (kv.Service, error) {
 	sess, err := session.NewSession()
 	if err != nil {
@@ -82,26 +84,26 @@ func (a *awsKMS) Set(key string, val []byte) error {
 	return a.store.Set(key, cipherText)
 }
 
-func (g *awsKMS) Test(key string) error {
+func (a *awsKMS) Test(key string) error {
 	inputString := "test"
 
-	err := g.store.Test(key)
+	err := a.store.Test(key)
 	if err != nil {
 		return fmt.Errorf("test of backend store failed: %s", err.Error())
 	}
 
-	cipherText, err := g.encrypt([]byte(inputString))
+	cipherText, err := a.encrypt([]byte(inputString))
 	if err != nil {
 		return err
 	}
 
-	plainText, err := g.decrypt(cipherText)
+	plainText, err := a.decrypt(cipherText)
 	if err != nil {
 		return err
 	}
 
 	if string(plainText) != inputString {
-		return fmt.Errorf("encryped and decryped text doesn't match: exp: '%v', act: '%v'", inputString, string(plainText))
+		return fmt.Errorf("encrypted and decryped text doesn't match: exp: '%v', act: '%v'", inputString, string(plainText))
 	}
 
 	return nil
