@@ -194,6 +194,10 @@ We have a Vault operator built on bank-vaults features as:
 - external, API based configuration (secret engines, auth methods, policies) to automatically re/configure a Vault cluster
 - automatic unsealing (AWS, GCE, Azure, Kubernetes Secrets (for dev purposes), Oracle)
 
+The operator flow is the following:
+
+![operator](docs/images/vaultoperator.png)
+
 ### Deploying the operator
 
 ```bash
