@@ -53,6 +53,7 @@ func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) 
 			}
 
 			initialTokenArrived := make(chan string, 1)
+			initialTokenSent := false
 
 			go func() {
 				for {
@@ -75,7 +76,10 @@ func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) 
 					// Set the first token from the response
 					rawClient.SetToken(secret.Auth.ClientToken)
 
-					initialTokenArrived <- secret.LeaseID
+					if !initialTokenSent {
+						initialTokenArrived <- secret.LeaseID
+						initialTokenSent = true
+					}
 
 					// Start the renewing process
 					tokenRenewer, err = rawClient.NewRenewer(&vaultapi.RenewerInput{Secret: secret})
