@@ -20,10 +20,20 @@ jobs:
               curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
               dep ensure
       - run:
-          name: Build
+          name: Build Bank Vaults
           command:
               make build
       - run:
           name: Run go vet
           command:
               make verify
+      - run:
+          name: Install Operator SDK
+          command:
+              go get github.com/operator-framework/operator-sdk/commands/operator-sdk
+      - setup_remote_docker
+      - run:
+          name: Build Vault Operator
+          command: |
+              cd operator
+              operator-sdk build banzaicloud/vault-operator

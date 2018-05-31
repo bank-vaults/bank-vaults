@@ -12,7 +12,7 @@ fi
 BIN_DIR="$(pwd)/tmp/_output/bin"
 mkdir -p ${BIN_DIR}
 PROJECT_NAME="vault-operator"
-REPO_PATH="github.com/banzaicloud/bank-vaults"
+REPO_PATH="github.com/banzaicloud/bank-vaults/operator"
 BUILD_PATH="${REPO_PATH}/cmd/${PROJECT_NAME}"
 echo "building "${PROJECT_NAME}"..."
 GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o ${BIN_DIR}/${PROJECT_NAME} $BUILD_PATH
