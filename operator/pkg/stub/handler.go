@@ -7,7 +7,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/banzaicloud/bank-vaults/pkg/apis/vault/v1alpha1"
+	"github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
 	"github.com/banzaicloud/bank-vaults/pkg/tls"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
