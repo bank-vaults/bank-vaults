@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
+	"github.com/banzaicloud/bank-vaults/pkg/kv/alibabakms"
+	"github.com/banzaicloud/bank-vaults/pkg/kv/alibabaoss"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/awskms"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/azurekv"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/dev"
@@ -64,7 +66,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 
 		kms, err := awskms.New(s3, cfg.GetString(cfgAWSKMSKeyID))
 		if err != nil {
-			return nil, fmt.Errorf("error creating AWS KMS ID kv store: %s", err.Error())
+			return nil, fmt.Errorf("error creating AWS KMS kv store: %s", err.Error())
 		}
 
 		return kms, nil
@@ -74,6 +76,34 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		kms, err := azurekv.New(cfg.GetString(cfgAzureKeyVaultName))
 		if err != nil {
 			return nil, fmt.Errorf("error creating Azure Key Vault kv store: %s", err.Error())
+		}
+
+		return kms, nil
+	}
+
+	if cfg.GetString(cfgMode) == cfgModeValueAlibabaKMSOSS {
+		accessKeyID := cfg.GetString(cfgAlibabaAccessKeyID)
+		accessKeySecret := cfg.GetString(cfgAlibabaAccessKeySecret)
+
+		oss, err := alibabaoss.New(
+			cfg.GetString(cfgAlibabaOSSEndpoint),
+			accessKeyID,
+			accessKeySecret,
+			cfg.GetString(cfgAWSS3Bucket),
+			cfg.GetString(cfgAWSS3Prefix),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error creating Alibaba OSS kv store: %s", err.Error())
+		}
+
+		kms, err := alibabakms.New(
+			cfg.GetString(cfgAlibabaKMSRegion),
+			accessKeyID,
+			accessKeySecret,
+			cfg.GetString(cfgAlibabaKMSKeyID),
+			oss)
+		if err != nil {
+			return nil, fmt.Errorf("error creating Alibaba KMS kv store: %s", err.Error())
 		}
 
 		return kms, nil
