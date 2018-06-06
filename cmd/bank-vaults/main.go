@@ -20,6 +20,7 @@ const cfgMode = "mode"
 const cfgModeValueAWSKMS3 = "aws-kms-s3"
 const cfgModeValueGoogleCloudKMSGCS = "google-cloud-kms-gcs"
 const cfgModeValueAzureKeyVault = "azure-key-vault"
+const cfgModeValueAlibabaKMSOSS = "alibaba-kms-oss"
 const cfgModeValueK8S = "k8s"
 const cfgModeValueDev = "dev"
 
@@ -37,6 +38,14 @@ const cfgAWSS3Bucket = "aws-s3-bucket"
 const cfgAWSS3Prefix = "aws-s3-prefix"
 
 const cfgAzureKeyVaultName = "azure-key-vault-name"
+
+const cfgAlibabaOSSEndpoint = "alibaba-oss-endpoint"
+const cfgAlibabaOSSBucket = "alibaba-oss-bucket"
+const cfgAlibabaOSSPrefix = "alibaba-oss-prefix"
+const cfgAlibabaAccessKeyID = "alibaba-access-key-id"
+const cfgAlibabaAccessKeySecret = "alibaba-access-key-secret"
+const cfgAlibabaKMSRegion = "alibaba-kms-region"
+const cfgAlibabaKMSKeyID = "alibaba-kms-key-id"
 
 const cfgK8SNamespace = "k8s-secret-namespace"
 const cfgK8SSecret = "k8s-secret-name"
@@ -77,7 +86,18 @@ func init() {
 	configStringVar(
 		cfgMode,
 		cfgModeValueGoogleCloudKMSGCS,
-		fmt.Sprintf("Select the mode to use '%s' => Google Cloud Storage with encryption using Google KMS; '%s' => AWS S3 Object Storage using AWS KMS encryption; '%s' => Azure Key Vault secret; '%s' => Kubernetes Secrets; '%s' => Dev (local) mode", cfgModeValueGoogleCloudKMSGCS, cfgModeValueAWSKMS3, cfgModeValueAzureKeyVault, cfgModeValueK8S, cfgModeValueDev),
+		fmt.Sprintf(`Select the mode to use '%s' => Google Cloud Storage with encryption using Google KMS;
+			'%s' => AWS S3 Object Storage using AWS KMS encryption;
+			'%s' => Azure Key Vault secret;
+			'%s' => Alibaba OSS with KMS encryption;
+			'%s' => Kubernetes Secrets;
+			'%s' => Dev (local) mode`,
+			cfgModeValueGoogleCloudKMSGCS,
+			cfgModeValueAWSKMS3,
+			cfgModeValueAzureKeyVault,
+			cfgModeValueAlibabaKMSOSS,
+			cfgModeValueK8S,
+			cfgModeValueDev),
 	)
 
 	// Secret config
@@ -94,7 +114,7 @@ func init() {
 	configStringVar(cfgGoogleCloudStorageBucket, "", "The name of the Google Cloud Storage bucket to store values in")
 	configStringVar(cfgGoogleCloudStoragePrefix, "", "The prefix to use for values store in Google Cloud Storage")
 
-	// AWS KMS Storage flags
+	// AWS KMS flags
 	configStringVar(cfgAWSKMSKeyID, "", "The ID or ARN of the AWS KMS key to encrypt values")
 
 	// AWS S3 Object Storage flags
@@ -103,6 +123,19 @@ func init() {
 
 	// Azure Key Vault flags
 	configStringVar(cfgAzureKeyVaultName, "", "The name of the Azure Key Vault to encrypt and store values in")
+
+	// Alibaba Access Key flags
+	configStringVar(cfgAlibabaAccessKeyID, "", "The Alibaba AccessKeyID to use")
+	configStringVar(cfgAlibabaAccessKeySecret, "", "The Alibaba AccessKeySecret to use")
+
+	// Alibaba KMS flags
+	configStringVar(cfgAlibabaKMSRegion, "", "The region where the Alibaba KMS key relies")
+	configStringVar(cfgAlibabaKMSKeyID, "", "The ID of the Alibaba KMS key to encrypt values")
+
+	// Alibaba Object Storage Service flags
+	configStringVar(cfgAlibabaOSSEndpoint, "", "The name of the Alibaba OSS endpoint to store values in")
+	configStringVar(cfgAlibabaOSSBucket, "", "The name of the Alibaba OSS bucket to store values in")
+	configStringVar(cfgAlibabaOSSPrefix, "", "The prefix to use for values store in Alibaba OSS")
 
 	// K8S Secret Storage flags
 	configStringVar(cfgK8SNamespace, "", "The namespace of the K8S Secret to store values in")
