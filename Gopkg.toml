@@ -115,3 +115,12 @@
 [[constraint]]
   name = "github.com/qor/qor"
   branch = "master"
+
+# Alibaba and AWS SDK are no friends, they can't agree in go-jmespath
+[[override]]
+  name = "github.com/jmespath/go-jmespath"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/aliyun/alibaba-cloud-sdk-go"
+  version = "1.19.1"

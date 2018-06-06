@@ -60,6 +60,7 @@ func (s3 *s3Storage) Get(key string) ([]byte, error) {
 	}
 
 	b, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
 
 	if err != nil {
 		return nil, fmt.Errorf("error reading object with key '%s': %s", n, err.Error())

@@ -51,6 +51,7 @@ func (g *gcsStorage) Get(key string) ([]byte, error) {
 	}
 
 	b, err := ioutil.ReadAll(r)
+	defer r.Close()
 
 	if err != nil {
 		return nil, fmt.Errorf("error reading object with key '%s': %s", n, err.Error())

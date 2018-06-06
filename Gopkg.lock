@@ -62,6 +62,29 @@
   revision = "de5bf2ad457846296e2031421a34e2568e304e35"
 
 [[projects]]
+  name = "github.com/aliyun/alibaba-cloud-sdk-go"
+  packages = [
+    "sdk",
+    "sdk/auth",
+    "sdk/auth/credentials",
+    "sdk/auth/signers",
+    "sdk/endpoints",
+    "sdk/errors",
+    "sdk/requests",
+    "sdk/responses",
+    "sdk/utils",
+    "services/kms"
+  ]
+  revision = "0a4f0b5d1cec8d873e0d26fbf61e1adab7ed098c"
+  version = "1.19.1"
+
+[[projects]]
+  name = "github.com/aliyun/aliyun-oss-go-sdk"
+  packages = ["oss"]
+  revision = "52de7239022ceba47354832fbcc65983aa8d019d"
+  version = "1.8.0"
+
+[[projects]]
   name = "github.com/aokoli/goutils"
   packages = ["."]
   revision = "3391d3790d23d03408670993e957e8f408993c34"
@@ -375,9 +398,10 @@
   revision = "ed742868f2aebdb1c0c437bf4f7257f88834b66f"
 
 [[projects]]
+  branch = "master"
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
-  revision = "0b12d6b5"
+  revision = "c2b33e8439af944379acbdd9c3a5fe0bc44bd8a5"
 
 [[projects]]
   name = "github.com/json-iterator/go"
@@ -503,6 +527,12 @@
   packages = ["."]
   revision = "572520ed46dbddaed19ea3d9541bdd0494163693"
   version = "v0.1"
+
+[[projects]]
+  name = "github.com/satori/go.uuid"
+  packages = ["."]
+  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -890,6 +920,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "19f66f8c9efaec10a02f5b3fc0c7275cb6f852bfd6b1f5a84478ce72db6a1769"
+  inputs-digest = "b3237407111e9e202d78eae2f9aad6c872b2384802ed50e53cde3242a32a1fc3"
   solver-name = "gps-cdcl"
   solver-version = 1
