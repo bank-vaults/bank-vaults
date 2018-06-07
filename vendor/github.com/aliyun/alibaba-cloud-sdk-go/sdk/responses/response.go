@@ -17,11 +17,11 @@ package responses
 import (
 	"bytes"
 	"encoding/xml"
+	"fmt"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors"
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"fmt"
 )
 
 type AcsResponse interface {

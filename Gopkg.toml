@@ -120,3 +120,7 @@
 [[override]]
   name = "github.com/jmespath/go-jmespath"
   branch = "master"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/aliyun/alibaba-cloud-sdk-go"

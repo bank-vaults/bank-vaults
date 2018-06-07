@@ -1,11 +1,11 @@
 package requests
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors"
 	"io"
 	"strings"
-	"bytes"
-	"fmt"
 )
 
 type CommonRequest struct {
@@ -38,7 +38,7 @@ func (request *CommonRequest) String() string {
 
 	resultBuilder := bytes.Buffer{}
 
-	mapOutput := func (m map[string]string) {
+	mapOutput := func(m map[string]string) {
 		if len(m) > 0 {
 			for key, value := range m {
 				resultBuilder.WriteString(key + ": " + value + "\n")
@@ -51,7 +51,7 @@ func (request *CommonRequest) String() string {
 	resultBuilder.WriteString(fmt.Sprintf("%s %s %s/1.1\n", request.Method, request.GetQueries(), strings.ToUpper(request.Scheme)))
 
 	// Headers
-	resultBuilder.WriteString( "Host" + ": " + request.Domain + "\n")
+	resultBuilder.WriteString("Host" + ": " + request.Domain + "\n")
 	mapOutput(request.Headers)
 
 	resultBuilder.WriteString("\n")

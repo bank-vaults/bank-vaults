@@ -24,12 +24,13 @@ func New(regionID, accessKeyID, accessKeySecret, kmsID string, store kv.Service)
 		return nil, err
 	}
 
+	client.GetConfig().Scheme = requests.HTTPS
+
 	return &alibabaKMS{store: store, kmsClient: client, kmsID: kmsID}, nil
 }
 
 func (a *alibabaKMS) decrypt(cipherText []byte) ([]byte, error) {
 	request := kms.CreateDecryptRequest()
-	request.Scheme = requests.HTTPS
 	request.CiphertextBlob = string(cipherText)
 	response, err := a.kmsClient.Decrypt(request)
 	return []byte(response.Plaintext), err
@@ -47,7 +48,6 @@ func (a *alibabaKMS) Get(key string) ([]byte, error) {
 
 func (a *alibabaKMS) encrypt(plainText []byte) ([]byte, error) {
 	request := kms.CreateEncryptRequest()
-	request.Scheme = requests.HTTPS
 	request.KeyId = a.kmsID
 	request.Plaintext = string(plainText)
 	response, err := a.kmsClient.Encrypt(request)
