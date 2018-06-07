@@ -85,6 +85,10 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		accessKeyID := cfg.GetString(cfgAlibabaAccessKeyID)
 		accessKeySecret := cfg.GetString(cfgAlibabaAccessKeySecret)
 
+		if accessKeyID == "" || accessKeySecret == "" {
+			return nil, fmt.Errorf("Alibaba accessKeyID or accessKeySecret can't be empty")
+		}
+
 		oss, err := alibabaoss.New(
 			cfg.GetString(cfgAlibabaOSSEndpoint),
 			accessKeyID,

@@ -86,12 +86,13 @@ func init() {
 	configStringVar(
 		cfgMode,
 		cfgModeValueGoogleCloudKMSGCS,
-		fmt.Sprintf(`Select the mode to use '%s' => Google Cloud Storage with encryption using Google KMS;
-			'%s' => AWS S3 Object Storage using AWS KMS encryption;
-			'%s' => Azure Key Vault secret;
-			'%s' => Alibaba OSS with KMS encryption;
-			'%s' => Kubernetes Secrets;
-			'%s' => Dev (local) mode`,
+		fmt.Sprintf(`Select the mode to use:
+						'%s' => Google Cloud Storage with encryption using Google KMS;
+						'%s' => AWS S3 Object Storage using AWS KMS encryption;
+						'%s' => Azure Key Vault secret;
+						'%s' => Alibaba OSS with KMS encryption;
+						'%s' => Kubernetes Secrets;
+						'%s' => Dev (local) mode`,
 			cfgModeValueGoogleCloudKMSGCS,
 			cfgModeValueAWSKMS3,
 			cfgModeValueAzureKeyVault,
