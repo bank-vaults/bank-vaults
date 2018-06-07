@@ -64,6 +64,7 @@ type VaultStatus struct {
 type UnsealConfig struct {
 	Kubernetes *KubernetesUnsealConfig `json:"kubernetes"`
 	Google     *GoogleUnsealConfig     `json:"google"`
+	Alibaba    *AlibabaUnsealConfig    `json:"alibaba"`
 	Azure      *AzureUnsealConfig      `json:"azure"`
 	AWS        *AWSUnsealConfig        `json:"aws"`
 }
@@ -112,6 +113,22 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			usc.AWS.S3Prefix,
 		}
 	}
+	if usc.Alibaba != nil {
+		return []string{
+			"--mode",
+			"alibaba-kms-oss",
+			"--alibaba-kms-region",
+			usc.Alibaba.KMSRegion,
+			"--alibaba-kms-key-id",
+			usc.Alibaba.KMSKeyID,
+			"--alibaba-oss-endpoint",
+			usc.Alibaba.OSSEndpoint,
+			"--alibaba-oss-bucket",
+			usc.Alibaba.OSSBucket,
+			"--alibaba-oss-prefix",
+			usc.Alibaba.OSSPrefix,
+		}
+	}
 	return []string{}
 }
 
@@ -128,6 +145,16 @@ type GoogleUnsealConfig struct {
 	KMSLocation   string `json:"kmsLocation"`
 	KMSProject    string `json:"kmsProject"`
 	StorageBucket string `json:"storageBucket"`
+}
+
+// AlibabaUnsealConfig holds the parameters for Alibaba Cloud KMS based unsealing
+//  --alibaba-kms-region eu-central-1 --alibaba-kms-key-id 9d8063eb-f9dc-421b-be80-15d195c9f148 --alibaba-oss-endpoint oss-eu-central-1.aliyuncs.com --alibaba-oss-bucket bank-vaults
+type AlibabaUnsealConfig struct {
+	KMSRegion   string `json:"kmsRegion"`
+	KMSKeyID    string `json:"kmsKeyId"`
+	OSSEndpoint string `json:"ossEndpoint"`
+	OSSBucket   string `json:"ossBucket"`
+	OSSPrefix   string `json:"ossPrefix"`
 }
 
 // AzureUnsealConfig holds the parameters for Azure Key Vault based unsealing
