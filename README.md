@@ -41,6 +41,7 @@ Features:
     - AWS KMS keyring (backed by S3)
     - Azure Key Vault
     - Google Cloud KMS keyring (backed by GCS)
+    - Alibaba Cloud KMS (backed by OSS)
     - Kubernetes Secrets (should be used only for development purposes)
     - Dev Mode (useful for `vault server -dev` dev mode Vault servers)
  - Automatically unseals Vault with these keys
@@ -191,7 +192,7 @@ We have a fully fledged, production ready [Helm chart](https://github.com/banzai
 We have a Vault operator built on bank-vaults features as:
 
 - external, API based configuration (secret engines, auth methods, policies) to automatically re/configure a Vault cluster
-- automatic unsealing (AWS, GCE, Azure, Kubernetes Secrets (for dev purposes), Oracle)
+- automatic unsealing (AWS, GCE, Azure, Alibaba, Kubernetes Secrets (for dev purposes), Oracle)
 - TLS support
 
 The operator flow is the following:
@@ -237,6 +238,12 @@ The Service Account in which the Pod is running has to have the following IAM Ro
 - Cloud KMS CryptoKey Encrypter/Decrypter
 - Storage Admin
 
+A CLI example how to run bank-vaults based Vault configuration on Google Cloud:
+
+```bash
+bank-vaults configure --google-cloud-kms-key-ring vault --google-cloud-kms-crypto-key bank-vaults --google-cloud-kms-location global --google-cloud-storage-bucket vault-ha --google-cloud-kms-project continual-flow-276578
+```
+
 ### Azure
 
 The Access Policy in which the Pod is running has to have the following IAM Roles:
@@ -250,6 +257,14 @@ The Instance profile in which the Pod is running has to have the following IAM P
 
 - KMS: `kms:Encrypt, kms:Decrypt`
 - S3:  `s3:GetObject, s3:PutObject`
+
+### Alibaba Cloud
+
+A CLI example how to run bank-vaults based Vault unsealing on Alibaba Cloud:
+
+```bash
+bank-vaults unseal --mode alibaba-kms-oss --alibaba-access-key-id ${ALIBABA_ACCESS_KEY_ID} --alibaba-access-key-secret ${ALIBABA_ACCESS_KEY_SECRET} --alibaba-kms-region eu-central-1 --alibaba-kms-key-id ${ALIBABA_KMS_KEY_UUID} --alibaba-oss-endpoint oss-eu-central-1.aliyuncs.com --alibaba-oss-bucket bank-vaults
+```
 
 ### Kubernetes
 
