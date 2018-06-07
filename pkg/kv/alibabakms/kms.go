@@ -3,6 +3,7 @@ package alibabakms
 import (
 	"fmt"
 
+	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/kms"
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
@@ -23,19 +24,20 @@ func New(regionID, accessKeyID, accessKeySecret, kmsID string, store kv.Service)
 		return nil, err
 	}
 
-	return &alibabaKMS{store: store, kmsClient: client}, nil
+	return &alibabaKMS{store: store, kmsClient: client, kmsID: kmsID}, nil
 }
 
 func (a *alibabaKMS) decrypt(cipherText []byte) ([]byte, error) {
 	request := kms.CreateDecryptRequest()
+	request.Scheme = requests.HTTPS
 	request.CiphertextBlob = string(cipherText)
-	request.EncryptionContext = "Tool:bank-vaults"
 	response, err := a.kmsClient.Decrypt(request)
 	return []byte(response.Plaintext), err
 }
 
 func (a *alibabaKMS) Get(key string) ([]byte, error) {
 	cipherText, err := a.store.Get(key)
+
 	if err != nil {
 		return nil, err
 	}
@@ -45,9 +47,9 @@ func (a *alibabaKMS) Get(key string) ([]byte, error) {
 
 func (a *alibabaKMS) encrypt(plainText []byte) ([]byte, error) {
 	request := kms.CreateEncryptRequest()
+	request.Scheme = requests.HTTPS
 	request.KeyId = a.kmsID
 	request.Plaintext = string(plainText)
-	request.EncryptionContext = "Tool:bank-vaults"
 	response, err := a.kmsClient.Encrypt(request)
 	return []byte(response.CiphertextBlob), err
 }

@@ -11,7 +11,6 @@ import (
 )
 
 var appConfig *viper.Viper
-var cfgFile string
 
 const cfgSecretShares = "secret-shares"
 const cfgSecretThreshold = "secret-threshold"
