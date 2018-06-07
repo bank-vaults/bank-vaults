@@ -53,12 +53,14 @@ func (resolver *LocationResolver) TryResolve(param *ResolveParam) (endpoint stri
 
 	//get from remote
 	getEndpointRequest := requests.NewCommonRequest()
-	getEndpointRequest.Scheme = requests.HTTPS
+
 	getEndpointRequest.Product = "Location"
 	getEndpointRequest.Version = "2015-06-12"
 	getEndpointRequest.ApiName = "DescribeEndpoints"
 	getEndpointRequest.Domain = "location.aliyuncs.com"
 	getEndpointRequest.Method = "GET"
+	getEndpointRequest.Scheme = requests.HTTPS
+
 	getEndpointRequest.QueryParams["Id"] = param.RegionId
 	getEndpointRequest.QueryParams["ServiceCode"] = param.LocationProduct
 	if len(param.LocationEndpointType) > 0 {
