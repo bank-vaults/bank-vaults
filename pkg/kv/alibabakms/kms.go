@@ -27,11 +27,11 @@ func New(regionID, accessKeyID, accessKeySecret, kmsID string, store kv.Service)
 }
 
 func (a *alibabaKMS) decrypt(cipherText []byte) ([]byte, error) {
-	out, err := a.kmsClient.Decrypt(&kms.DecryptRequest{
-		CiphertextBlob:    string(cipherText),
-		EncryptionContext: "Tool:bank-vaults",
-	})
-	return []byte(out.Plaintext), err
+	request := kms.CreateDecryptRequest()
+	request.CiphertextBlob = string(cipherText)
+	request.EncryptionContext = "Tool:bank-vaults"
+	response, err := a.kmsClient.Decrypt(request)
+	return []byte(response.Plaintext), err
 }
 
 func (a *alibabaKMS) Get(key string) ([]byte, error) {
@@ -44,12 +44,12 @@ func (a *alibabaKMS) Get(key string) ([]byte, error) {
 }
 
 func (a *alibabaKMS) encrypt(plainText []byte) ([]byte, error) {
-	out, err := a.kmsClient.Encrypt(&kms.EncryptRequest{
-		KeyId:             a.kmsID,
-		Plaintext:         string(plainText),
-		EncryptionContext: "Tool:bank-vaults",
-	})
-	return []byte(out.CiphertextBlob), err
+	request := kms.CreateEncryptRequest()
+	request.KeyId = a.kmsID
+	request.Plaintext = string(plainText)
+	request.EncryptionContext = "Tool:bank-vaults"
+	response, err := a.kmsClient.Encrypt(request)
+	return []byte(response.CiphertextBlob), err
 }
 
 func (a *alibabaKMS) Set(key string, val []byte) error {
