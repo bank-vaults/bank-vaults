@@ -89,12 +89,18 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			return nil, fmt.Errorf("Alibaba accessKeyID or accessKeySecret can't be empty")
 		}
 
+		bucket := cfg.GetString(cfgAlibabaOSSBucket)
+
+		if bucket == "" {
+			return nil, fmt.Errorf("Alibaba OSS bucket should be specified")
+		}
+
 		oss, err := alibabaoss.New(
 			cfg.GetString(cfgAlibabaOSSEndpoint),
 			accessKeyID,
 			accessKeySecret,
-			cfg.GetString(cfgAWSS3Bucket),
-			cfg.GetString(cfgAWSS3Prefix),
+			bucket,
+			cfg.GetString(cfgAlibabaOSSPrefix),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error creating Alibaba OSS kv store: %s", err.Error())
