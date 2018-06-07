@@ -17,3 +17,5 @@ bank-vaults
 
 # Operator
 operator/tmp/_output/bin/*
+
+.idea
