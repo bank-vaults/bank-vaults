@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/spf13/cast"
+
 	"github.com/banzaicloud/bank-vaults/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 )
@@ -15,9 +17,9 @@ var _ TokenStore = (*vaultTokenStore)(nil)
 
 // Token represents an access token
 type Token struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID        string     `json:"id"`
+	Name      string     `json:"name"`
+	CreatedAt *time.Time `json:"createdAt,omitempty"`
 }
 
 // TokenStore is general interface for storing access tokens
@@ -30,24 +32,25 @@ type TokenStore interface {
 
 // NewToken Creates a new Token instance initialized ID and Name and CreatedAt fields
 func NewToken(id, name string) *Token {
-	createdAt := time.Now()
-	return &Token{ID: id, Name: name, CreatedAt: createdAt}
+	return &Token{ID: id, Name: name}
 }
 
 func parseToken(secret *vaultapi.Secret) (*Token, error) {
 	if secret == nil {
 		return nil, fmt.Errorf("Can't find Secret")
 	}
-	if tokenData, ok := secret.Data["token"]; ok {
+	data := cast.ToStringMap(secret.Data["data"])
+	metadata := cast.ToStringMap(secret.Data["metadata"])
+	if tokenData, ok := data["token"]; ok {
 		tokenData := tokenData.(map[string]interface{})
 		token := &Token{}
 		token.ID = tokenData["id"].(string)
 		token.Name = tokenData["name"].(string)
-		createdAt, err := time.Parse(time.RFC3339, tokenData["createdAt"].(string))
+		createdAt, err := time.Parse(time.RFC3339, metadata["created_time"].(string))
 		if err != nil {
 			return nil, err
 		}
-		token.CreatedAt = createdAt
+		token.CreatedAt = &createdAt
 		return token, nil
 	}
 	return nil, fmt.Errorf("Can't find \"token\" in Secret")
@@ -112,7 +115,7 @@ func (tokenStore *inMemoryTokenStore) List(userID string) ([]*Token, error) {
 	return nil, nil
 }
 
-// Vault based implementation
+// Vault KV Version 2 based implementation
 
 // A TokenStore implementation which stores tokens in Vault
 // For local development:
@@ -133,18 +136,22 @@ func NewVaultTokenStore(role string) TokenStore {
 	return vaultTokenStore{client: client, logical: logical}
 }
 
-func tokenPath(userID, tokenID string) string {
-	return fmt.Sprintf("secret/accesstokens/%s/%s", userID, tokenID)
+func tokenDataPath(userID, tokenID string) string {
+	return fmt.Sprintf("secret/data/accesstokens/%s/%s", userID, tokenID)
+}
+
+func tokenMetadataPath(userID, tokenID string) string {
+	return fmt.Sprintf("secret/metadata/accesstokens/%s/%s", userID, tokenID)
 }
 
 func (tokenStore vaultTokenStore) Store(userID string, token *Token) error {
 	data := map[string]interface{}{"token": token}
-	_, err := tokenStore.logical.Write(tokenPath(userID, token.ID), data)
+	_, err := tokenStore.logical.Write(tokenDataPath(userID, token.ID), vault.NewData(0, data))
 	return err
 }
 
 func (tokenStore vaultTokenStore) Lookup(userID, tokenID string) (*Token, error) {
-	secret, err := tokenStore.logical.Read(tokenPath(userID, tokenID))
+	secret, err := tokenStore.logical.Read(tokenDataPath(userID, tokenID))
 	if err != nil {
 		return nil, err
 	}
@@ -152,12 +159,12 @@ func (tokenStore vaultTokenStore) Lookup(userID, tokenID string) (*Token, error)
 }
 
 func (tokenStore vaultTokenStore) Revoke(userID, tokenID string) error {
-	_, err := tokenStore.logical.Delete(tokenPath(userID, tokenID))
+	_, err := tokenStore.logical.Delete(tokenMetadataPath(userID, tokenID))
 	return err
 }
 
 func (tokenStore vaultTokenStore) List(userID string) ([]*Token, error) {
-	secret, err := tokenStore.logical.List(fmt.Sprintf("secret/accesstokens/%s", userID))
+	secret, err := tokenStore.logical.List(fmt.Sprintf("secret/metadata/accesstokens/%s", userID))
 	if err != nil {
 		return nil, err
 	}
@@ -171,11 +178,7 @@ func (tokenStore vaultTokenStore) List(userID string) ([]*Token, error) {
 	tokens := make([]*Token, len(keys))
 
 	for i, tokenID := range keys {
-		secret, err := tokenStore.logical.Read(tokenPath(userID, tokenID.(string)))
-		if err != nil {
-			return nil, err
-		}
-		token, err := parseToken(secret)
+		token, err := tokenStore.Lookup(userID, tokenID.(string))
 		if err != nil {
 			return nil, err
 		}
