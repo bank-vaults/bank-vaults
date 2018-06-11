@@ -10,6 +10,14 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// NewData is a helper function for Vault KV Version two secret data creation
+func NewData(cas int, data map[string]interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		"options": map[string]interface{}{"cas": cas},
+		"data":    data,
+	}
+}
+
 // Client is a Vault client with Kubernetes support and token automatic renewing
 type Client struct {
 	sync.Mutex
