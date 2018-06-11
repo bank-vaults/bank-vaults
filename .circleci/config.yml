@@ -6,7 +6,7 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.10
-      - image: vault:0.10.0
+      - image: vault:0.10.2
         environment:
             SKIP_SETCAP: true
             VAULT_DEV_ROOT_TOKEN_ID: 227e1cce-6bf7-30bb-2d2a-acc854318caf
@@ -27,6 +27,9 @@ jobs:
           name: Run go vet
           command:
               make verify
+          environment:
+            VAULT_ADDR: http://localhost:8200
+            VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
       - run:
           name: Install Operator SDK
           command:
