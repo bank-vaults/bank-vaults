@@ -59,18 +59,18 @@ auth:
 # but the config is free form so probably more is supported).
 # See https://www.vaultproject.io/docs/secrets/index.html for more information.
 secrets:
-  # This plugin stores database credentials dynamically based on configured roles for
-  # the MySQL database.
-  # See https://www.vaultproject.io/docs/secrets/databases/mysql-maria.html for
+  # This plugin stores arbitrary secrets within the configured physical storage for Vault.
+  # See https://www.vaultproject.io/docs/secrets/kv/index.html for
   # more information.
   - path: secret
     type: kv
     description: General secrets.
     options:
-      version: 1
+      version: 2
 
-  # This plugin stores arbitrary secrets within the configured physical storage for Vault.
-  # See https://www.vaultproject.io/docs/secrets/kv/index.html for
+  # This plugin stores database credentials dynamically based on configured roles for
+  # the MySQL database.
+  # See https://www.vaultproject.io/docs/secrets/databases/mysql-maria.html for
   # more information.
   - type: database
     description: MySQL Database secret engine.
