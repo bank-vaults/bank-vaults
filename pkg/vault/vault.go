@@ -455,28 +455,6 @@ func (u *vault) configureSecretEngines() error {
 		return fmt.Errorf("error unmarshalling vault secrets config: %s", err.Error())
 	}
 
-	mounts, err := u.cl.Sys().ListMounts()
-	if err != nil {
-		return fmt.Errorf("error reading mounts from vault: %s", err.Error())
-	}
-
-	// Remove the default secret/ engine, until it is removed by default
-	// From https://github.com/hashicorp/vault/blob/master/CHANGELOG.md#0100-april-10th-2018
-	// > Removal of default secret/ mount: In 0.12 we will stop mounting secret/ by default at initialization time (it will still be available in dev mode).
-	defaultSecret := mounts["secret/"]
-	if defaultSecret != nil && defaultSecret.Options["version"] == "2" {
-		secret, err := u.cl.Logical().List("secret")
-		if err != nil {
-			return fmt.Errorf("error listing keys in defaultSecret from vault: %s", err.Error())
-		}
-		if len(secret.Data) == 0 {
-			err = u.cl.Sys().Unmount("secret")
-			if err != nil {
-				return fmt.Errorf("error unmounting defaultSecret from vault: %s", err.Error())
-			}
-		}
-	}
-
 	for _, secrentEngine := range secretsEngines {
 		secretEngineType := secrentEngine["type"].(string)
 
