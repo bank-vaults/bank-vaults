@@ -204,8 +204,8 @@ The source code can be found inside the [operator](operator/) directory.
 ### Deploying the operator
 
 ```bash
-kubectl apply -f deploy/rbac.yaml
-kubectl apply -f deploy/operator.yaml
+kubectl apply -f operator/deploy/rbac.yaml
+kubectl apply -f operator/deploy/operator.yaml
 ```
 
 This will createa a Kubernetes [CustomResourceDefinition](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/) called `Vault`.
