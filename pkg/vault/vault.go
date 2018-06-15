@@ -467,6 +467,7 @@ func (u *vault) configureSecretEngines() error {
 		if err != nil {
 			return fmt.Errorf("error reading mounts from vault: %s", err.Error())
 		}
+		fmt.Printf("Already existing mounts: %#v\n", mounts)
 		if mounts[path+"/"] == nil {
 			input := api.MountInput{
 				Type:        secretEngineType,
@@ -474,16 +475,22 @@ func (u *vault) configureSecretEngines() error {
 				PluginName:  getOrDefault(secretEngine, "plugin_name"),
 				Options:     getOrDefaultStringMapString(secretEngine, "options"),
 			}
+			logrus.Infoln("Mounting secret engine with input: %#v\n", input)
 			err = u.cl.Sys().Mount(path, &input)
 			if err != nil {
 				return fmt.Errorf("error mounting %s into vault: %s", path, err.Error())
 			}
 
-			logrus.Debugln("mounted", secretEngineType, "to", path)
+			logrus.Infoln("mounted", secretEngineType, "to", path)
 
 		} else {
-			// input := api.MountConfigInput{}
-			// err = u.cl.Sys().TuneMount(path, input)
+			input := api.MountConfigInput{
+				Options: getOrDefaultStringMapString(secretEngine, "options"),
+			}
+			err = u.cl.Sys().TuneMount(path, input)
+			if err != nil {
+				return fmt.Errorf("error tuning %s in vault: %s", path, err.Error())
+			}
 		}
 
 		// Configuration of the Secret Engine in a very generic manner, YAML config file should have the proper format
