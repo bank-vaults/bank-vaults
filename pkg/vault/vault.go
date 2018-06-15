@@ -455,11 +455,11 @@ func (u *vault) configureSecretEngines() error {
 		return fmt.Errorf("error unmarshalling vault secrets config: %s", err.Error())
 	}
 
-	for _, secrentEngine := range secretsEngines {
-		secretEngineType := secrentEngine["type"].(string)
+	for _, secretEngine := range secretsEngines {
+		secretEngineType := secretEngine["type"].(string)
 
 		path := secretEngineType
-		if pathOverwrite, ok := secrentEngine["path"]; ok {
+		if pathOverwrite, ok := secretEngine["path"]; ok {
 			path = pathOverwrite.(string)
 		}
 
@@ -470,9 +470,9 @@ func (u *vault) configureSecretEngines() error {
 		if mounts[path+"/"] == nil {
 			input := api.MountInput{
 				Type:        secretEngineType,
-				Description: getOrDefault(secrentEngine, "description"),
-				PluginName:  getOrDefault(secrentEngine, "plugin_name"),
-				Options:     getOrDefaultStringMapString(secrentEngine, "options"),
+				Description: getOrDefault(secretEngine, "description"),
+				PluginName:  getOrDefault(secretEngine, "plugin_name"),
+				Options:     getOrDefaultStringMapString(secretEngine, "options"),
 			}
 			err = u.cl.Sys().Mount(path, &input)
 			if err != nil {
@@ -487,7 +487,7 @@ func (u *vault) configureSecretEngines() error {
 		}
 
 		// Configuration of the Secret Engine in a very generic manner, YAML config file should have the proper format
-		configuration := getOrDefaultStringMap(secrentEngine, "configuration")
+		configuration := getOrDefaultStringMap(secretEngine, "configuration")
 		for configOption, configData := range configuration {
 			configData := configData.([]interface{})
 			for _, subConfigData := range configData {
