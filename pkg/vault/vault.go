@@ -172,7 +172,7 @@ func (v *vault) Init() error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("error initialising vault: %s", err.Error())
+		return fmt.Errorf("error initializing vault: %s", err.Error())
 	}
 
 	for i, k := range resp.Keys {
@@ -182,6 +182,8 @@ func (v *vault) Init() error {
 		if err != nil {
 			return fmt.Errorf("error storing unseal key '%s': %s", keyID, err.Error())
 		}
+
+		logrus.WithField("key", keyID).Info("unseal key stored in key store")
 	}
 
 	rootToken := resp.RootToken
