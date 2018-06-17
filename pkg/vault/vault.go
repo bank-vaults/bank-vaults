@@ -140,6 +140,8 @@ func (v *vault) Init() error {
 		return nil
 	}
 
+	logrus.Info("initializing vault")
+
 	// test backend first
 	err = v.keyStore.Test(v.testKey())
 	if err != nil {
