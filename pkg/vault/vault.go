@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -65,8 +66,8 @@ func New(k kv.Service, cl *api.Client, config Config) (Vault, error) {
 	}, nil
 }
 
-func (u *vault) Sealed() (bool, error) {
-	resp, err := u.cl.Sys().SealStatus()
+func (v *vault) Sealed() (bool, error) {
+	resp, err := v.cl.Sys().SealStatus()
 	if err != nil {
 		return false, fmt.Errorf("error checking status: %s", err.Error())
 	}
@@ -77,19 +78,20 @@ func (u *vault) Sealed() (bool, error) {
 // and sending unseal requests to vault. It will return an error if retrieving
 // a key fails, or if the unseal progress is reset to 0 (indicating that a key)
 // was invalid.
-func (u *vault) Unseal() error {
+func (v *vault) Unseal() error {
+	defer runtime.GC()
 	for i := 0; ; i++ {
-		keyID := u.unsealKeyForID(i)
+		keyID := v.unsealKeyForID(i)
 
 		logrus.Debugf("retrieving key from kms service...")
-		k, err := u.keyStore.Get(keyID)
+		k, err := v.keyStore.Get(keyID)
 
 		if err != nil {
 			return fmt.Errorf("unable to get key '%s': %s", keyID, err.Error())
 		}
 
 		logrus.Debugf("sending unseal request to vault...")
-		resp, err := u.cl.Sys().Unseal(string(k))
+		resp, err := v.cl.Sys().Unseal(string(k))
 
 		if err != nil {
 			return fmt.Errorf("fail to send unseal request to vault: %s", err.Error())
@@ -108,18 +110,18 @@ func (u *vault) Unseal() error {
 	}
 }
 
-func (u *vault) keyStoreNotFound(key string) (bool, error) {
-	_, err := u.keyStore.Get(key)
+func (v *vault) keyStoreNotFound(key string) (bool, error) {
+	_, err := v.keyStore.Get(key)
 	if _, ok := err.(*kv.NotFoundError); ok {
 		return true, nil
 	}
 	return false, err
 }
 
-func (u *vault) keyStoreSet(key string, val []byte) error {
-	notFound, err := u.keyStoreNotFound(key)
+func (v *vault) keyStoreSet(key string, val []byte) error {
+	notFound, err := v.keyStoreNotFound(key)
 	if notFound {
-		return u.keyStore.Set(key, val)
+		return v.keyStore.Set(key, val)
 	} else if err == nil {
 		return fmt.Errorf("error setting key '%s': it already exists", key)
 	} else {
@@ -128,8 +130,8 @@ func (u *vault) keyStoreSet(key string, val []byte) error {
 }
 
 // Init initializes Vault if is not initialized already
-func (u *vault) Init() error {
-	initialized, err := u.cl.Sys().InitStatus()
+func (v *vault) Init() error {
+	initialized, err := v.cl.Sys().InitStatus()
 	if err != nil {
 		return fmt.Errorf("error testing if vault is initialized: %s", err.Error())
 	}
@@ -139,24 +141,24 @@ func (u *vault) Init() error {
 	}
 
 	// test backend first
-	err = u.keyStore.Test(u.testKey())
+	err = v.keyStore.Test(v.testKey())
 	if err != nil {
 		return fmt.Errorf("error testing keystore before init: %s", err.Error())
 	}
 
 	// test for an existing keys
 	keys := []string{
-		u.rootTokenKey(),
+		v.rootTokenKey(),
 	}
 
 	// add unseal keys
-	for i := 0; i <= u.config.SecretShares; i++ {
-		keys = append(keys, u.unsealKeyForID(i))
+	for i := 0; i <= v.config.SecretShares; i++ {
+		keys = append(keys, v.unsealKeyForID(i))
 	}
 
 	// test every key
 	for _, key := range keys {
-		notFound, err := u.keyStoreNotFound(key)
+		notFound, err := v.keyStoreNotFound(key)
 		if notFound && err != nil {
 			return fmt.Errorf("error before init: checking key '%s' failed: %s", key, err.Error())
 		} else if !notFound && err == nil {
@@ -164,9 +166,9 @@ func (u *vault) Init() error {
 		}
 	}
 
-	resp, err := u.cl.Sys().Init(&api.InitRequest{
-		SecretShares:    u.config.SecretShares,
-		SecretThreshold: u.config.SecretThreshold,
+	resp, err := v.cl.Sys().Init(&api.InitRequest{
+		SecretShares:    v.config.SecretShares,
+		SecretThreshold: v.config.SecretThreshold,
 	})
 
 	if err != nil {
@@ -174,8 +176,8 @@ func (u *vault) Init() error {
 	}
 
 	for i, k := range resp.Keys {
-		keyID := u.unsealKeyForID(i)
-		err := u.keyStoreSet(keyID, []byte(k))
+		keyID := v.unsealKeyForID(i)
+		err := v.keyStoreSet(keyID, []byte(k))
 
 		if err != nil {
 			return fmt.Errorf("error storing unseal key '%s': %s", keyID, err.Error())
@@ -185,13 +187,13 @@ func (u *vault) Init() error {
 	rootToken := resp.RootToken
 
 	// this sets up a predefined root token
-	if u.config.InitRootToken != "" {
+	if v.config.InitRootToken != "" {
 		logrus.Info("setting up init root token, waiting for vault to be unsealed")
 
 		count := 0
 		wait := time.Second * 2
 		for {
-			sealed, err := u.Sealed()
+			sealed, err := v.Sealed()
 			if !sealed {
 				break
 			}
@@ -206,11 +208,11 @@ func (u *vault) Init() error {
 		}
 
 		// use temporary token
-		u.cl.SetToken(resp.RootToken)
+		v.cl.SetToken(resp.RootToken)
 
 		// setup root token with provided key
-		_, err := u.cl.Auth().Token().CreateOrphan(&api.TokenCreateRequest{
-			ID:          u.config.InitRootToken,
+		_, err := v.cl.Auth().Token().CreateOrphan(&api.TokenCreateRequest{
+			ID:          v.config.InitRootToken,
 			Policies:    []string{"root"},
 			DisplayName: "root-token",
 			NoParent:    true,
@@ -220,39 +222,43 @@ func (u *vault) Init() error {
 		}
 
 		// revoke the temporary token
-		err = u.cl.Auth().Token().RevokeSelf(resp.RootToken)
+		err = v.cl.Auth().Token().RevokeSelf(resp.RootToken)
 		if err != nil {
 			return fmt.Errorf("unable to revoke temporary root token: %s", err.Error())
 		}
 
-		rootToken = u.config.InitRootToken
+		rootToken = v.config.InitRootToken
 	}
 
-	if u.config.StoreRootToken {
-		rootTokenKey := u.rootTokenKey()
-		if err = u.keyStoreSet(rootTokenKey, []byte(resp.RootToken)); err != nil {
+	if v.config.StoreRootToken {
+		rootTokenKey := v.rootTokenKey()
+		if err = v.keyStoreSet(rootTokenKey, []byte(resp.RootToken)); err != nil {
 			return fmt.Errorf("error storing root token '%s' in key'%s'", rootToken, rootTokenKey)
 		}
 		logrus.WithField("key", rootTokenKey).Info("root token stored in key store")
-	} else if u.config.InitRootToken == "" {
+	} else if v.config.InitRootToken == "" {
 		logrus.WithField("root-token", resp.RootToken).Warnf("won't store root token in key store, this token grants full privileges to vault, so keep this secret")
 	}
 
 	return nil
 }
 
-func (u *vault) Configure() error {
+func (v *vault) Configure() error {
 	logrus.Debugf("retrieving key from kms service...")
-	rootToken, err := u.keyStore.Get(u.rootTokenKey())
 
+	rootToken, err := v.keyStore.Get(v.rootTokenKey())
 	if err != nil {
-		return fmt.Errorf("unable to get key '%s': %s", u.rootTokenKey(), err.Error())
+		return fmt.Errorf("unable to get key '%s': %s", v.rootTokenKey(), err.Error())
 	}
 
-	u.cl.SetToken(string(rootToken))
-	defer u.cl.SetToken("")
+	v.cl.SetToken(string(rootToken))
 
-	existingAuths, err := u.cl.Sys().ListAuth()
+	// Clear the token and GC it
+	defer runtime.GC()
+	defer v.cl.SetToken("")
+	defer func() { rootToken = nil }()
+
+	existingAuths, err := v.cl.Sys().ListAuth()
 
 	if err != nil {
 		return fmt.Errorf("error listing auth backends vault: %s", err.Error())
@@ -288,7 +294,7 @@ func (u *vault) Configure() error {
 				Type: authMethodType,
 			}
 
-			err := u.cl.Sys().EnableAuthWithOptions(path, &options)
+			err := v.cl.Sys().EnableAuthWithOptions(path, &options)
 
 			if err != nil {
 				return fmt.Errorf("error enabling %s auth method for vault: %s", authMethodType, err.Error())
@@ -297,46 +303,46 @@ func (u *vault) Configure() error {
 
 		switch authMethodType {
 		case "kubernetes":
-			err = u.kubernetesAuthConfig(path)
+			err = v.kubernetesAuthConfig(path)
 			if err != nil {
 				return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
 			}
 			roles := authMethod["roles"].([]interface{})
-			err = u.configureKubernetesRoles(roles)
+			err = v.configureKubernetesRoles(roles)
 			if err != nil {
 				return fmt.Errorf("error configuring kubernetes auth roles for vault: %s", err.Error())
 			}
 		case "github":
 			config := cast.ToStringMap(authMethod["config"])
-			err = u.configureGithubConfig(config)
+			err = v.configureGithubConfig(config)
 			if err != nil {
 				return fmt.Errorf("error configuring github auth for vault: %s", err.Error())
 			}
 			mappings := cast.ToStringMap(authMethod["map"])
-			err = u.configureGithubMappings(mappings)
+			err = v.configureGithubMappings(mappings)
 			if err != nil {
 				return fmt.Errorf("error configuring github mappings for vault: %s", err.Error())
 			}
 		case "aws":
 			config := cast.ToStringMap(authMethod["config"])
-			err = u.configureAwsConfig(config)
+			err = v.configureAwsConfig(config)
 			if err != nil {
 				return fmt.Errorf("error configuring aws auth for vault: %s", err.Error())
 			}
 			roles := authMethod["roles"].([]interface{})
-			err = u.configureAwsRoles(roles)
+			err = v.configureAwsRoles(roles)
 			if err != nil {
 				return fmt.Errorf("error configuring aws auth roles for vault: %s", err.Error())
 			}
 		}
 	}
 
-	err = u.configurePolicies()
+	err = v.configurePolicies()
 	if err != nil {
 		return fmt.Errorf("error configuring policies for vault: %s", err.Error())
 	}
 
-	err = u.configureSecretEngines()
+	err = v.configureSecretEngines()
 	if err != nil {
 		return fmt.Errorf("error configuring secret engines for vault: %s", err.Error())
 	}
@@ -344,19 +350,19 @@ func (u *vault) Configure() error {
 	return err
 }
 
-func (u *vault) unsealKeyForID(i int) string {
+func (*vault) unsealKeyForID(i int) string {
 	return fmt.Sprint("vault-unseal-", i)
 }
 
-func (u *vault) rootTokenKey() string {
+func (*vault) rootTokenKey() string {
 	return fmt.Sprint("vault-root")
 }
 
-func (u *vault) testKey() string {
+func (*vault) testKey() string {
 	return fmt.Sprint("vault-test")
 }
 
-func (u *vault) kubernetesAuthConfig(path string) error {
+func (v *vault) kubernetesAuthConfig(path string) error {
 	kubernetesCACert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 	if err != nil {
 		return err
@@ -370,11 +376,11 @@ func (u *vault) kubernetesAuthConfig(path string) error {
 		"kubernetes_ca_cert": string(kubernetesCACert),
 		"token_reviewer_jwt": string(tokenReviewerJWT),
 	}
-	_, err = u.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
+	_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
 	return err
 }
 
-func (u *vault) configurePolicies() error {
+func (v *vault) configurePolicies() error {
 	policies := []map[string]string{}
 	err := viper.UnmarshalKey("policies", &policies)
 	if err != nil {
@@ -382,7 +388,7 @@ func (u *vault) configurePolicies() error {
 	}
 
 	for _, policy := range policies {
-		err := u.cl.Sys().PutPolicy(policy["name"], policy["rules"])
+		err := v.cl.Sys().PutPolicy(policy["name"], policy["rules"])
 
 		if err != nil {
 			return fmt.Errorf("error putting %s policy into vault: %s", policy["name"], err.Error())
@@ -392,10 +398,10 @@ func (u *vault) configurePolicies() error {
 	return nil
 }
 
-func (u *vault) configureKubernetesRoles(roles []interface{}) error {
+func (v *vault) configureKubernetesRoles(roles []interface{}) error {
 	for _, roleInterface := range roles {
 		role := cast.ToStringMap(roleInterface)
-		_, err := u.cl.Logical().Write(fmt.Sprint("auth/kubernetes/role/", role["name"]), role)
+		_, err := v.cl.Logical().Write(fmt.Sprint("auth/kubernetes/role/", role["name"]), role)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s kubernetes role into vault: %s", role["name"], err.Error())
@@ -404,9 +410,9 @@ func (u *vault) configureKubernetesRoles(roles []interface{}) error {
 	return nil
 }
 
-func (u *vault) configureGithubConfig(config map[string]interface{}) error {
+func (v *vault) configureGithubConfig(config map[string]interface{}) error {
 	// https://www.vaultproject.io/api/auth/github/index.html
-	_, err := u.cl.Logical().Write("auth/github/config", config)
+	_, err := v.cl.Logical().Write("auth/github/config", config)
 
 	if err != nil {
 		return fmt.Errorf("error putting %s github config into vault: %s", config, err.Error())
@@ -414,10 +420,10 @@ func (u *vault) configureGithubConfig(config map[string]interface{}) error {
 	return nil
 }
 
-func (u *vault) configureGithubMappings(mappings map[string]interface{}) error {
+func (v *vault) configureGithubMappings(mappings map[string]interface{}) error {
 	for mappingType, mapping := range mappings {
 		for userOrTeam, policy := range cast.ToStringMapString(mapping) {
-			_, err := u.cl.Logical().Write(fmt.Sprintf("auth/github/map/%s/%s", mappingType, userOrTeam), map[string]interface{}{"value": policy})
+			_, err := v.cl.Logical().Write(fmt.Sprintf("auth/github/map/%s/%s", mappingType, userOrTeam), map[string]interface{}{"value": policy})
 			if err != nil {
 				return fmt.Errorf("error putting %s github mapping into vault: %s", mappingType, err.Error())
 			}
@@ -426,9 +432,9 @@ func (u *vault) configureGithubMappings(mappings map[string]interface{}) error {
 	return nil
 }
 
-func (u *vault) configureAwsConfig(config map[string]interface{}) error {
+func (v *vault) configureAwsConfig(config map[string]interface{}) error {
 	// https://www.vaultproject.io/api/auth/aws/index.html
-	_, err := u.cl.Logical().Write("auth/aws/config/client", config)
+	_, err := v.cl.Logical().Write("auth/aws/config/client", config)
 
 	if err != nil {
 		return fmt.Errorf("error putting %s aws config into vault: %s", config, err.Error())
@@ -436,10 +442,10 @@ func (u *vault) configureAwsConfig(config map[string]interface{}) error {
 	return nil
 }
 
-func (u *vault) configureAwsRoles(roles []interface{}) error {
+func (v *vault) configureAwsRoles(roles []interface{}) error {
 	for _, roleInterface := range roles {
 		role := cast.ToStringMap(roleInterface)
-		_, err := u.cl.Logical().Write(fmt.Sprint("auth/aws/role/", role["name"]), role)
+		_, err := v.cl.Logical().Write(fmt.Sprint("auth/aws/role/", role["name"]), role)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s aws role into vault: %s", role["name"], err.Error())
@@ -448,7 +454,7 @@ func (u *vault) configureAwsRoles(roles []interface{}) error {
 	return nil
 }
 
-func (u *vault) configureSecretEngines() error {
+func (v *vault) configureSecretEngines() error {
 	secretsEngines := []map[string]interface{}{}
 	err := viper.UnmarshalKey("secrets", &secretsEngines)
 	if err != nil {
@@ -463,7 +469,7 @@ func (u *vault) configureSecretEngines() error {
 			path = pathOverwrite.(string)
 		}
 
-		mounts, err := u.cl.Sys().ListMounts()
+		mounts, err := v.cl.Sys().ListMounts()
 		if err != nil {
 			return fmt.Errorf("error reading mounts from vault: %s", err.Error())
 		}
@@ -476,7 +482,7 @@ func (u *vault) configureSecretEngines() error {
 				Options:     getOrDefaultStringMapString(secretEngine, "options"),
 			}
 			logrus.Infoln("Mounting secret engine with input: %#v\n", input)
-			err = u.cl.Sys().Mount(path, &input)
+			err = v.cl.Sys().Mount(path, &input)
 			if err != nil {
 				return fmt.Errorf("error mounting %s into vault: %s", path, err.Error())
 			}
@@ -487,7 +493,7 @@ func (u *vault) configureSecretEngines() error {
 			input := api.MountConfigInput{
 				Options: getOrDefaultStringMapString(secretEngine, "options"),
 			}
-			err = u.cl.Sys().TuneMount(path, input)
+			err = v.cl.Sys().TuneMount(path, input)
 			if err != nil {
 				return fmt.Errorf("error tuning %s in vault: %s", path, err.Error())
 			}
@@ -500,7 +506,7 @@ func (u *vault) configureSecretEngines() error {
 			for _, subConfigData := range configData {
 				subConfigData := subConfigData.(map[interface{}]interface{})
 				configPath := fmt.Sprintf("%s/%s/%s", path, configOption, subConfigData["name"])
-				_, err := u.cl.Logical().Write(configPath, cast.ToStringMap(subConfigData))
+				_, err := v.cl.Logical().Write(configPath, cast.ToStringMap(subConfigData))
 
 				if err != nil {
 					if isOverwriteProbihitedError(err) {
