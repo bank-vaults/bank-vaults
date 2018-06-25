@@ -18,7 +18,12 @@ jobs:
           name: Run dep ensure
           command: |
               curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-              dep ensure
+              dep ensure -v
+      - run:
+          name: Unwind vendor
+          command: |
+              rm -rf vendor/
+              git reset --hard
       - run:
           name: Build Bank Vaults
           command:
