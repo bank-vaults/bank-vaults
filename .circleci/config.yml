@@ -24,7 +24,7 @@ jobs:
           command:
               make build
       - run:
-          name: Run go vet
+          name: Run verification
           command:
               make verify
           environment:
