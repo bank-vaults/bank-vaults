@@ -36,9 +36,6 @@ func NewToken(id, name string) *Token {
 }
 
 func parseToken(secret *vaultapi.Secret) (*Token, error) {
-	if secret == nil {
-		return nil, fmt.Errorf("Can't find Secret")
-	}
 	data := cast.ToStringMap(secret.Data["data"])
 	metadata := cast.ToStringMap(secret.Data["metadata"])
 	if tokenData, ok := data["token"]; ok {
@@ -162,6 +159,10 @@ func (tokenStore vaultTokenStore) Lookup(userID, tokenID string) (*Token, error)
 	secret, err := tokenStore.logical.Read(tokenDataPath(userID, tokenID))
 	if err != nil {
 		return nil, err
+	}
+	// Token not found
+	if secret == nil {
+		return nil, nil
 	}
 	return parseToken(secret)
 }
