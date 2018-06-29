@@ -1,0 +1,152 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "vault.fullname" . }}
+  labels:
+    app: {{ template "vault.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "vault.name" . }}
+        release: {{ .Release.Name }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+    spec:
+      containers:
+      - name: vault
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["vault", "server", "-config", "/vault/config/config.json"]
+        env:
+          - name: VAULT_CACERT
+            value: /vault/tls/ca.crt
+          - name: VAULT_LOG_LEVEL
+            value: {{ .Values.vault.logLevel }}
+        envFrom:
+        {{- range .Values.vault.customSecrets }}
+        - secretRef:
+            name: {{ .secretName }}
+        {{- end }}
+        ports:
+        - containerPort: {{ .Values.service.port }}
+          name: vault
+        # This probe makes sure Vault is responsive in a HTTPS manner
+        # See: https://www.vaultproject.io/api/system/init.html
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /v1/sys/init
+            port: vault
+        # This probe makes sure that only the active Vault instance gets traffic
+        # See: https://www.vaultproject.io/api/system/health.html
+        readinessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /v1/sys/health
+            port: vault
+        securityContext:
+          readOnlyRootFilesystem: true
+          capabilities:
+            add:
+            - IPC_LOCK
+        volumeMounts:
+        - name: vault-config
+          mountPath: /vault/config/
+        - name: vault-root
+          mountPath: /root/
+        - name: vault-file
+          mountPath: /vault/file
+        - name: vault-tls
+          mountPath: /vault/tls
+        {{- range .Values.vault.customSecrets }}
+        - name: {{ .secretName }}
+          mountPath: {{ .mountPath }}
+        {{- end }}
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+      - name: vault-unsealer
+        image: "{{ .Values.unsealer.image.repository }}:{{ .Values.unsealer.image.tag }}"
+        imagePullPolicy: {{ .Values.unsealer.image.pullPolicy }}
+        command: ["bank-vaults", "unseal", "--init"]
+        args: {{ toJson .Values.unsealer.args }}
+        env:
+          - name: VAULT_CACERT
+            value: /vault/tls/ca.crt
+        envFrom:
+        {{- range .Values.vault.customSecrets }}
+        - secretRef:
+            name: {{ .secretName }}
+        {{- end }}
+        volumeMounts:
+        - name: vault-tls
+          mountPath: /vault/tls
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+      - name: vault-configurer
+        image: "{{ .Values.unsealer.image.repository }}:{{ .Values.unsealer.image.tag }}"
+        imagePullPolicy: {{ .Values.unsealer.image.pullPolicy }}
+        command: ["bank-vaults", "configure"]
+        args: {{ toJson .Values.unsealer.args }}
+        env:
+          - name: VAULT_CACERT
+            value: /vault/tls/ca.crt
+        envFrom:
+        {{- range .Values.vault.customSecrets }}
+        - secretRef:
+            name: {{ .secretName }}
+        {{- end }}
+        workingDir: /config
+        volumeMounts:
+        - name: vault-tls
+          mountPath: /vault/tls
+        - name: vault-config
+          mountPath: /config/
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+      - name: prometheus-statsd-exporter
+        image: "prom/statsd-exporter:latest"
+        imagePullPolicy: IfNotPresent
+        args: ["-statsd.mapping-config=/tmp/statsd-mapping.conf"]
+        ports:
+        - containerPort: 9102
+          name: prometheus
+        volumeMounts:
+        - name: statsd-mapping
+          mountPath: /tmp/
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: {{ template "vault.fullname" . }}
+                  release: {{ .Release.Name | quote }}
+      serviceAccountName: {{ template "vault.fullname" . }}
+      volumes:
+        - name: vault-config
+          secret:
+            secretName: "{{ template "vault.fullname" . }}-config"
+        - name: vault-root
+          emptyDir: {}
+        - name: vault-file
+          emptyDir: {}
+        {{- range .Values.vault.customSecrets }}
+        - name: {{ .secretName }}
+          secret:
+            secretName: {{ .secretName }}
+        {{- end }}
+        - name: vault-tls
+          secret:
+            secretName: "{{ template "vault.fullname" . }}-tls"
+        - name: statsd-mapping
+          configMap:
+            name: "{{ template "vault.fullname" . }}-statsd-mapping"
