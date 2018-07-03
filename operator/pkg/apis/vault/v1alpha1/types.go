@@ -37,8 +37,17 @@ type VaultSpec struct {
 	UnsealConfig    UnsealConfig           `json:"unsealConfig"`
 }
 
-var HAStorageTypes = map[string]bool{"consul": true, "dynamodb": true, "etcd": true, "gcs": true, "spanner": true, "zookeeper": true}
+// HAStorageTypes is the set of storage backends supporting High Availability
+var HAStorageTypes = map[string]bool{
+	"consul":    true,
+	"dynamodb":  true,
+	"etcd":      true,
+	"gcs":       true,
+	"spanner":   true,
+	"zookeeper": true,
+}
 
+// HasHAStorage detects if Vault is configured to use a storage backend which supports High Availability
 func (spec *VaultSpec) HasHAStorage() bool {
 	storageType := spec.GetStorageType()
 	if _, ok := HAStorageTypes[storageType]; ok {
@@ -47,6 +56,7 @@ func (spec *VaultSpec) HasHAStorage() bool {
 	return false
 }
 
+// GetStorage returns Vault's storage stanza
 func (spec *VaultSpec) GetStorage() map[string]interface{} {
 	storage := spec.getStorage()
 	return cast.ToStringMap(storage[spec.GetStorageType()])
@@ -56,11 +66,13 @@ func (spec *VaultSpec) getStorage() map[string]interface{} {
 	return cast.ToStringMap(spec.Config["storage"])
 }
 
+// GetStorageType returns the type of Vault's storage stanza
 func (spec *VaultSpec) GetStorageType() string {
 	storage := spec.getStorage()
 	return reflect.ValueOf(storage).MapKeys()[0].String()
 }
 
+// HasStorageHAEnabled detects if the ha_enabled field is set to true in Vault's storage stanza
 func (spec *VaultSpec) HasStorageHAEnabled() bool {
 	storageType := spec.GetStorageType()
 	storage := spec.getStorage()
