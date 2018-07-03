@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: vault:0.10.1
+  image: vault:0.10.3
   bankVaultsImage: banzaicloud/bank-vaults:master
 
   # Describe where you would like to store the Vault unseal keys and root token.

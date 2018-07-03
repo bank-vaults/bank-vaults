@@ -19,7 +19,7 @@ func printVersion() {
 
 func main() {
 	printVersion()
-	sdk.Watch("vault.banzaicloud.com/v1alpha1", "Vault", "default", 5)
+	sdk.Watch("vault.banzaicloud.com/v1alpha1", "Vault", "", 5)
 	sdk.Handle(stub.NewHandler())
 	sdk.Run(context.TODO())
 }
