@@ -3,14 +3,15 @@ package stub
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"reflect"
-
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
 	"github.com/banzaicloud/bank-vaults/pkg/tls"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
+	etcdV1beta2 "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
+	etcdCRClient "github.com/coreos/etcd-operator/pkg/client"
 	"github.com/hashicorp/vault/api"
 	"github.com/operator-framework/operator-sdk/pkg/sdk/action"
 	"github.com/operator-framework/operator-sdk/pkg/sdk/handler"
@@ -21,6 +22,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // NewHandler returns a new Vault operator event handler
@@ -42,6 +44,22 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		// All secondary resources must have the CR set as their OwnerReference for this to be the case
 		if event.Deleted {
 			return nil
+		}
+
+		// check if we need to create an etcd cluster
+		if v.Spec.GetStorageType() == "etcd" {
+
+			etcdCluster, err := etcdForVault(v)
+			if err != nil {
+				return fmt.Errorf("failed to fabricate etcd cluster: %v", err)
+			}
+
+			etcdK8SApi := etcdCRClient.MustNewInCluster()
+
+			_, err = etcdK8SApi.EtcdV1beta2().EtcdClusters(v.Namespace).Create(etcdCluster)
+			if err != nil && !apierrors.IsAlreadyExists(err) {
+				return fmt.Errorf("failed to create etcd cluster: %v", err)
+			}
 		}
 
 		// Create the secret if it doesn't exist
@@ -149,6 +167,12 @@ func secretForVault(v *v1alpha1.Vault) (*v1.Secret, error) {
 func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 	ls := labelsForVault(v.Name)
 	replicas := v.Spec.Size
+
+	// validate configuration
+	if replicas > 1 && !v.Spec.HasHAStorage() {
+		return nil, fmt.Errorf("More than 1 replicas are not supported without HA storage backend")
+	}
+
 	configJSON := v.Spec.ConfigJSON()
 	owner := asOwner(v)
 	ownerJSON, err := json.Marshal(owner)
@@ -278,6 +302,23 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 	}
 	addOwnerRefToObject(dep, owner)
 	return dep, nil
+}
+
+func etcdForVault(v *v1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
+	storage := v.Spec.GetStorage()
+	etcdAddress := storage["address"].(string)
+	etcdURL, err := url.Parse(etcdAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	etcdCluster := &etcdV1beta2.EtcdCluster{}
+	etcdCluster.Name = etcdURL.Hostname()
+	etcdCluster.Spec.Size = 3
+	etcdCluster.Spec.Version = "3.2.13"
+	addOwnerRefToObject(etcdCluster, asOwner(v))
+
+	return etcdCluster, nil
 }
 
 func serviceForVault(v *v1alpha1.Vault) *v1.Service {

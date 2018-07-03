@@ -2,7 +2,9 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"reflect"
 
+	"github.com/spf13/cast"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -33,6 +35,38 @@ type VaultSpec struct {
 	Config          map[string]interface{} `json:"config"`
 	ExternalConfig  map[string]interface{} `json:"externalConfig"`
 	UnsealConfig    UnsealConfig           `json:"unsealConfig"`
+}
+
+var HAStorageTypes = map[string]bool{"consul": true, "dynamodb": true, "etcd": true, "gcs": true, "spanner": true, "zookeeper": true}
+
+func (spec *VaultSpec) HasHAStorage() bool {
+	storageType := spec.GetStorageType()
+	if _, ok := HAStorageTypes[storageType]; ok {
+		return spec.HasStorageHAEnabled()
+	}
+	return false
+}
+
+func (spec *VaultSpec) GetStorage() map[string]interface{} {
+	storage := spec.getStorage()
+	return cast.ToStringMap(storage[spec.GetStorageType()])
+}
+
+func (spec *VaultSpec) getStorage() map[string]interface{} {
+	return cast.ToStringMap(spec.Config["storage"])
+}
+
+func (spec *VaultSpec) GetStorageType() string {
+	storage := spec.getStorage()
+	return reflect.ValueOf(storage).MapKeys()[0].String()
+}
+
+func (spec *VaultSpec) HasStorageHAEnabled() bool {
+	storageType := spec.GetStorageType()
+	storage := spec.getStorage()
+	storageSpecs := cast.ToStringMap(storage[storageType])
+	// In Consul HA is always enabled
+	return storageType == "consul" || cast.ToBool(storageSpecs["ha_enabled"])
 }
 
 // GetBankVaultsImage returns the bank-vaults image to use
