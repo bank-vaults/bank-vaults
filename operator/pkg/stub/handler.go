@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"strings"
 
 	"github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
 	"github.com/banzaicloud/bank-vaults/pkg/tls"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	etcdV1beta2 "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
-	etcdCRClient "github.com/coreos/etcd-operator/pkg/client"
+	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/operator-framework/operator-sdk/pkg/sdk/action"
 	"github.com/operator-framework/operator-sdk/pkg/sdk/handler"
@@ -54,9 +55,20 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 				return fmt.Errorf("failed to fabricate etcd cluster: %v", err)
 			}
 
-			etcdK8SApi := etcdCRClient.MustNewInCluster()
+			// Create the secret if it doesn't exist
+			sec, err := secretForEtcd(etcdCluster)
+			if err != nil {
+				return fmt.Errorf("failed to fabricate secret for etcd: %v", err)
+			}
 
-			_, err = etcdK8SApi.EtcdV1beta2().EtcdClusters(v.Namespace).Create(etcdCluster)
+			addOwnerRefToObject(sec, asOwner(v))
+
+			err = action.Create(sec)
+			if err != nil && !apierrors.IsAlreadyExists(err) {
+				return fmt.Errorf("failed to create secret for etcd: %v", err)
+			}
+
+			err = action.Create(etcdCluster)
 			if err != nil && !apierrors.IsAlreadyExists(err) {
 				return fmt.Errorf("failed to create etcd cluster: %v", err)
 			}
@@ -65,11 +77,14 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		// Create the secret if it doesn't exist
 		sec, err := secretForVault(v)
 		if err != nil {
-			return fmt.Errorf("failed to fabricate secret: %v", err)
+			return fmt.Errorf("failed to fabricate secret for vault: %v", err)
 		}
+
+		addOwnerRefToObject(sec, asOwner(v))
+
 		err = action.Create(sec)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create secret: %v", err)
+			return fmt.Errorf("failed to create secret for vault: %v", err)
 		}
 
 		// Create the deployment if it doesn't exist
@@ -153,13 +168,65 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 	return nil
 }
 
-func secretForVault(v *v1alpha1.Vault) (*v1.Secret, error) {
-	secret, err := tls.GenerateSecretForCerts(v.Name, v.Namespace)
+func secretForEtcd(e *etcdV1beta2.EtcdCluster) (*v1.Secret, error) {
+	hosts := []string{
+		e.Name,
+		e.Name + "." + e.Namespace,
+		"*." + e.Name + "." + e.Namespace + ".svc",
+		e.Name + "-client." + e.Namespace + ".svc",
+		"localhost",
+	}
+	chain, err := tls.GenerateTLS(strings.Join(hosts, ","), "8760h")
 	if err != nil {
 		return nil, err
 	}
-	addOwnerRefToObject(secret, asOwner(v))
-	secret.ObjectMeta.Labels = labelsForVault(v.Name)
+
+	secret := &v1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+	}
+	secret.Name = e.Name + "-tls"
+	secret.Namespace = e.Namespace
+	secret.Labels = labelsForVault(e.Name)
+	secret.StringData = map[string]string{}
+
+	secret.StringData[etcdutil.CliCAFile] = chain.CACert
+	secret.StringData[etcdutil.CliCertFile] = chain.ClientCert
+	secret.StringData[etcdutil.CliKeyFile] = chain.ClientKey
+
+	secret.StringData["peer-ca.crt"] = chain.CACert
+	secret.StringData["peer.crt"] = chain.PeerCert
+	secret.StringData["peer.key"] = chain.PeerKey
+
+	secret.StringData["server-ca.crt"] = chain.CACert
+	secret.StringData["server.crt"] = chain.ServerCert
+	secret.StringData["server.key"] = chain.ServerKey
+
+	return secret, nil
+}
+
+func secretForVault(om *v1alpha1.Vault) (*v1.Secret, error) {
+	hostsAndIPs := om.Name + "." + om.Namespace + ",127.0.0.1"
+	chain, err := tls.GenerateTLS(hostsAndIPs, "8760h")
+	if err != nil {
+		return nil, err
+	}
+
+	secret := &v1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+	}
+	secret.Name = om.Name + "-tls"
+	secret.Namespace = om.Namespace
+	secret.Labels = labelsForVault(om.Name)
+	secret.StringData = map[string]string{}
+	secret.StringData["ca.crt"] = chain.CACert
+	secret.StringData["server.crt"] = chain.ServerCert
+	secret.StringData["server.key"] = chain.ServerKey
 	return secret, nil
 }
 
@@ -173,6 +240,58 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 		return nil, fmt.Errorf("More than 1 replicas are not supported without HA storage backend")
 	}
 
+	volumes := []v1.Volume{
+		{
+			Name: "vault-config",
+			VolumeSource: v1.VolumeSource{
+				EmptyDir: &v1.EmptyDirVolumeSource{},
+			},
+		},
+		{
+			Name: "vault-file",
+			VolumeSource: v1.VolumeSource{
+				EmptyDir: &v1.EmptyDirVolumeSource{},
+			},
+		},
+		{
+			Name: "vault-tls",
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: v.Name + "-tls",
+				},
+			},
+		},
+	}
+
+	// TODO Configure Vault to wait for etcd in an init container in this case
+	if v.Spec.GetStorageType() == "etcd" {
+
+		// Overwrite Vault config with the generated TLS certificate's settings
+		etcdStorage := v.Spec.GetStorage()
+		etcdStorage["tls_ca_file"] = "/etcd/tls/" + etcdutil.CliCAFile
+		etcdStorage["tls_cert_file"] = "/etcd/tls/" + etcdutil.CliCertFile
+		etcdStorage["tls_key_file"] = "/etcd/tls/" + etcdutil.CliKeyFile
+
+		// Mount the Secret holding the certificate into Vault
+		etcdAddress := etcdStorage["address"].(string)
+		etcdURL, err := url.Parse(etcdAddress)
+		if err != nil {
+			return nil, err
+		}
+		etcdName := etcdURL.Hostname()
+
+		etcdVolume := v1.Volume{
+			Name: "etcd-tls",
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: etcdName + "-tls",
+				},
+			},
+		}
+
+		volumes = append(volumes, etcdVolume)
+	}
+
 	configJSON := v.Spec.ConfigJSON()
 	owner := asOwner(v)
 	ownerJSON, err := json.Marshal(owner)
@@ -180,6 +299,7 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 		return nil, err
 	}
 
+	// TODO check if upgrade strategy is HA
 	dep := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -201,9 +321,10 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						{
-							Image: v.Spec.Image,
-							Name:  "vault",
-							Args:  []string{"server"},
+							Image:           v.Spec.Image,
+							ImagePullPolicy: v1.PullIfNotPresent,
+							Name:            "vault",
+							Args:            []string{"server"},
 							Ports: []v1.ContainerPort{{
 								ContainerPort: 8200,
 								Name:          "vault",
@@ -242,16 +363,22 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 										Path:   "/v1/sys/health",
 									}},
 							},
-							VolumeMounts: []v1.VolumeMount{{
-								Name:      "vault-config",
-								MountPath: "/vault/config",
-							}, {
-								Name:      "vault-file",
-								MountPath: "/vault/file",
-							}, {
-								Name:      "vault-tls",
-								MountPath: "/vault/tls",
-							}},
+							VolumeMounts: []v1.VolumeMount{
+								{
+									Name:      "vault-config",
+									MountPath: "/vault/config",
+								}, {
+									Name:      "vault-file",
+									MountPath: "/vault/file",
+								}, {
+									Name:      "vault-tls",
+									MountPath: "/vault/tls",
+								},
+								{
+									Name:      "etcd-tls",
+									MountPath: "/etcd/tls",
+								},
+							},
 						},
 						{
 							Image:           v.Spec.GetBankVaultsImage(),
@@ -274,28 +401,7 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 							}},
 						},
 					},
-					Volumes: []v1.Volume{
-						{
-							Name: "vault-config",
-							VolumeSource: v1.VolumeSource{
-								EmptyDir: &v1.EmptyDirVolumeSource{},
-							},
-						},
-						{
-							Name: "vault-file",
-							VolumeSource: v1.VolumeSource{
-								EmptyDir: &v1.EmptyDirVolumeSource{},
-							},
-						},
-						{
-							Name: "vault-tls",
-							VolumeSource: v1.VolumeSource{
-								Secret: &v1.SecretVolumeSource{
-									SecretName: v.Name + "-tls",
-								},
-							},
-						},
-					},
+					Volumes: volumes,
 				},
 			},
 		},
@@ -311,11 +417,27 @@ func etcdForVault(v *v1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	etcdName := etcdURL.Hostname()
 	etcdCluster := &etcdV1beta2.EtcdCluster{}
-	etcdCluster.Name = etcdURL.Hostname()
+	etcdCluster.APIVersion = etcdV1beta2.SchemeGroupVersion.String()
+	etcdCluster.Kind = etcdV1beta2.EtcdClusterResourceKind
+	etcdCluster.Name = etcdName
+	etcdCluster.Namespace = v.Namespace
+	etcdCluster.Labels = labelsForVault(v.Name)
 	etcdCluster.Spec.Size = 3
-	etcdCluster.Spec.Version = "3.2.13"
+	// See https://github.com/coreos/etcd-operator/issues/1962#issuecomment-390539621
+	// for more details why we have to pin to 3.1.15
+	etcdCluster.Spec.Version = "3.1.15"
+	etcdCluster.Spec.TLS = &etcdV1beta2.TLSPolicy{
+		Static: &etcdV1beta2.StaticTLS{
+			OperatorSecret: etcdName + "-tls",
+			Member: &etcdV1beta2.MemberSecret{
+				ServerSecret: etcdName + "-tls",
+				PeerSecret:   etcdName + "-tls",
+			},
+		},
+	}
+
 	addOwnerRefToObject(etcdCluster, asOwner(v))
 
 	return etcdCluster, nil
