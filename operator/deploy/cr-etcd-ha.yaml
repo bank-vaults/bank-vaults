@@ -3,7 +3,7 @@ kind: "Vault"
 metadata:
   name: "vault"
 spec:
-  size: 1
+  size: 2
   image: vault:0.10.3
   bankVaultsImage: banzaicloud/bank-vaults:master
 
@@ -17,7 +17,7 @@ spec:
   config:
     storage:
       etcd:
-        address: http://etcd-cluster:2379
+        address: https://etcd-cluster:2379
         ha_enabled: "true"
     listener:
       tcp:

@@ -31,4 +31,4 @@ spec:
           image: banzaicloud/vault-operator
           command:
           - vault-operator
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
