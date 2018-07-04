@@ -14,10 +14,10 @@ spec:
     spec:
       containers:
       - name: etcd-operator
-        image: quay.io/coreos/etcd-operator:v0.8.4
+        image: quay.io/coreos/etcd-operator:v0.9.1
         command:
         - etcd-operator
-        - -cluster-wide
+        # - -cluster-wide
         env:
         - name: MY_POD_NAMESPACE
           valueFrom:
