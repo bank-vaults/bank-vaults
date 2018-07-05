@@ -9,6 +9,11 @@ import (
 	"testing"
 )
 
+const (
+	ServerKey  = "server.key"
+	ServerCert = "server.crt"
+)
+
 func helloServer(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte("This is an example TLS server.\n"))
@@ -20,17 +25,17 @@ func TestGenerateTLS(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = ioutil.WriteFile("server.pem", []byte(cc.ServerKey), 0600)
+	err = ioutil.WriteFile(ServerKey, []byte(cc.ServerKey), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile("server.cert", []byte(cc.ServerCert), 0600)
+	err = ioutil.WriteFile(ServerCert, []byte(cc.ServerCert), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer os.Remove("server.pem")
-	defer os.Remove("server.cert")
+	defer os.Remove(ServerKey)
+	defer os.Remove(ServerCert)
 
 	// Load CA cert
 	caCertPool := x509.NewCertPool()
@@ -52,7 +57,7 @@ func TestGenerateTLS(t *testing.T) {
 
 	http.HandleFunc("/", helloServer)
 
-	go server.ListenAndServeTLS("server.cert", "server.pem")
+	go server.ListenAndServeTLS(ServerCert, ServerKey)
 
 	// Load client cert
 	cert, err := tls.X509KeyPair([]byte(cc.ClientCert), []byte(cc.ClientKey))
