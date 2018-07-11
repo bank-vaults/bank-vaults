@@ -263,6 +263,19 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 		},
 	}
 
+	volumeMounts := []v1.VolumeMount{
+		{
+			Name:      "vault-config",
+			MountPath: "/vault/config",
+		}, {
+			Name:      "vault-file",
+			MountPath: "/vault/file",
+		}, {
+			Name:      "vault-tls",
+			MountPath: "/vault/tls",
+		},
+	}
+
 	// TODO Configure Vault to wait for etcd in an init container in this case
 	if v.Spec.GetStorageType() == "etcd" {
 
@@ -290,6 +303,12 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 		}
 
 		volumes = append(volumes, etcdVolume)
+
+		etcdVolumeMount := v1.VolumeMount{
+			Name:      "etcd-tls",
+			MountPath: "/etcd/tls",
+		}
+		volumeMounts = append(volumeMounts, etcdVolumeMount)
 	}
 
 	configJSON := v.Spec.ConfigJSON()
@@ -363,22 +382,7 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 										Path:   "/v1/sys/health",
 									}},
 							},
-							VolumeMounts: []v1.VolumeMount{
-								{
-									Name:      "vault-config",
-									MountPath: "/vault/config",
-								}, {
-									Name:      "vault-file",
-									MountPath: "/vault/file",
-								}, {
-									Name:      "vault-tls",
-									MountPath: "/vault/tls",
-								},
-								{
-									Name:      "etcd-tls",
-									MountPath: "/etcd/tls",
-								},
-							},
+							VolumeMounts: volumeMounts,
 						},
 						{
 							Image:           v.Spec.GetBankVaultsImage(),
