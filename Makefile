@@ -1,5 +1,6 @@
 REGISTRY := banzaicloud
 IMAGE_NAME := bank-vaults
+IMAGE_NAME_OPERATOR := vault-operator
 IMAGE_TAG := $(shell git rev-parse --abbrev-ref HEAD)
 
 GOPATH ?= /tmp/go
@@ -34,6 +35,12 @@ docker_build:
 
 docker_push: docker_build
 	docker push $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
+  
+docker_build_operator:
+	docker build -t $(REGISTRY)/$(IMAGE_NAME_OPERATOR):$(IMAGE_TAG) -f Dockerfile.operator .
+
+docker_push_operator: docker_build_operator
+	docker push $(REGISTRY)/$(IMAGE_NAME_OPERATOR):$(IMAGE_TAG)
 
 # Go targets
 #################
