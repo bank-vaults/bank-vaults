@@ -35,12 +35,13 @@ type Vault struct {
 
 // VaultSpec represents the Spec field of a Vault Kubernetes object
 type VaultSpec struct {
-	Size            int32                  `json:"size"`
-	Image           string                 `json:"image"`
-	BankVaultsImage string                 `json:"bankVaultsImage"`
-	Config          map[string]interface{} `json:"config"`
-	ExternalConfig  map[string]interface{} `json:"externalConfig"`
-	UnsealConfig    UnsealConfig           `json:"unsealConfig"`
+	Size              int32                  `json:"size"`
+	Image             string                 `json:"image"`
+	BankVaultsImage   string                 `json:"bankVaultsImage"`
+	Config            map[string]interface{} `json:"config"`
+	ExternalConfig    map[string]interface{} `json:"externalConfig"`
+	UnsealConfig      UnsealConfig           `json:"unsealConfig"`
+	CredentialsConfig CredentialsConfig      `json:"credentialsConfig"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
@@ -219,4 +220,11 @@ type AWSUnsealConfig struct {
 	KMSKeyID string `json:"kmsKeyId"`
 	S3Bucket string `json:"s3Bucket"`
 	S3Prefix string `json:"s3Prefix"`
+}
+
+// CredentialsConfig configuration for a credentials file provided as a secret
+type CredentialsConfig struct {
+	Env        string `json:"env"`
+	Path       string `json:"path"`
+	SecretName string `json:"secretName"`
 }
