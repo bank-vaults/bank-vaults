@@ -503,7 +503,7 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 							Env: []v1.EnvVar{
 								{
 									Name:  api.EnvVaultAddress,
-									Value: fmt.Sprintf("https://%s:8200", v.Name),
+									Value: fmt.Sprintf("https://%s.%s:8200", v.Name, v.Namespace),
 								}, {
 									Name:  api.EnvVaultCACert,
 									Value: "/vault/tls/ca.crt",
