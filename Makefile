@@ -1,4 +1,4 @@
-REGISTRY := banzaicloud
+REGISTRY := cosmincojocar
 IMAGE_NAME := bank-vaults
 IMAGE_NAME_OPERATOR := vault-operator
 IMAGE_TAG := $(shell git rev-parse --abbrev-ref HEAD)
