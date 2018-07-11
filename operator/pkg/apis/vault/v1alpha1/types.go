@@ -8,7 +8,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +genclient
+// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:openapi-gen=true
 
 // VaultList represents a list of Vault Kubernetes objects
 type VaultList struct {
@@ -21,8 +24,11 @@ type VaultList struct {
 
 // Vault represents a Vault Kubernetes object
 type Vault struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata"`
+	metav1.TypeMeta `json:",inline"`
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	Spec              VaultSpec   `json:"spec"`
 	Status            VaultStatus `json:"status,omitempty"`
 }
