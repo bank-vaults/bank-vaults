@@ -63,9 +63,11 @@ from one of the followings:
 		for {
 			func() {
 				if unsealConfig.proceedInit {
+					logrus.Infof("initializing vault...")
 					if err = v.Init(); err != nil {
 						logrus.Fatalf("error initializing vault: %s", err.Error())
 					} else {
+						logrus.Infof("vault is already initialized")
 						unsealConfig.proceedInit = false
 					}
 				}
