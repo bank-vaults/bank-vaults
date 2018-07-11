@@ -1,6 +1,7 @@
 package stub
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -18,6 +19,7 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/sdk/handler"
 	"github.com/operator-framework/operator-sdk/pkg/sdk/query"
 	"github.com/operator-framework/operator-sdk/pkg/sdk/types"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -96,6 +98,7 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create deployment: %v", err)
 		}
+		logDeployment(dep)
 
 		// Ensure the deployment size is the same as the spec
 		err = query.Get(dep)
@@ -141,6 +144,7 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create configurer deployment: %v", err)
 		}
+		logDeployment(dep)
 
 		// Create the configmap if it doesn't exist
 		cm := configMapForConfigurer(v)
@@ -165,6 +169,22 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		}
 
 	}
+	return nil
+}
+
+func logDeployment(dep *appsv1.Deployment) error {
+	data, err := json.Marshal(dep)
+	if err != nil {
+		return fmt.Errorf("failed to marshal the deployment object: %v", err)
+	}
+	var prettyData bytes.Buffer
+	err = json.Indent(&prettyData, data, "", "    ")
+	if err != nil {
+		return fmt.Errorf("failed to indent the content: %v", err)
+	}
+
+	logrus.Infoln("Deployed:")
+	logrus.Infof("%s\n", string(prettyData.Bytes()))
 	return nil
 }
 
