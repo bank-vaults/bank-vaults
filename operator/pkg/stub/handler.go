@@ -363,7 +363,7 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 							Image:           v.Spec.Image,
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Name:            "vault",
-							Args:            []string{"server"},
+							Args:            []string{"server", "-log-level=debug"},
 							Ports: []v1.ContainerPort{{
 								ContainerPort: 8200,
 								Name:          "vault",
