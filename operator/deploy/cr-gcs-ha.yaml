@@ -49,3 +49,8 @@ spec:
           bound_service_account_namespaces: default
           policies: allow_secrets
           ttl: 1h
+
+  credentialsConfig:
+    env: GOOGLE_APPLICATION_CREDENTIALS
+    path: /etc/gcp/service-account.json
+    secretName: gcp-sa
