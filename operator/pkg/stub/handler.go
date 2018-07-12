@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -184,7 +185,10 @@ func logDeployment(dep *appsv1.Deployment) error {
 	}
 
 	logrus.Infoln("Deployed:")
-	logrus.Infof("%s\n", string(prettyData.Bytes()))
+	if logrus.GetLevel() >= logrus.InfoLevel {
+		// use println because the logrus formatter is messing up the JSON indet
+		fmt.Println(string(prettyData.Bytes()))
+	}
 	return nil
 }
 
@@ -260,7 +264,7 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 		return nil, fmt.Errorf("More than 1 replicas are not supported without HA storage backend")
 	}
 
-	volumes := []v1.Volume{
+	volumes := withCredentialsVolume(v, []v1.Volume{
 		{
 			Name: "vault-config",
 			VolumeSource: v1.VolumeSource{
@@ -281,9 +285,9 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 				},
 			},
 		},
-	}
+	})
 
-	volumeMounts := []v1.VolumeMount{
+	volumeMounts := withCredentialsVolumeMount(v, []v1.VolumeMount{
 		{
 			Name:      "vault-config",
 			MountPath: "/vault/config",
@@ -294,7 +298,7 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 			Name:      "vault-tls",
 			MountPath: "/vault/tls",
 		},
-	}
+	})
 
 	// TODO Configure Vault to wait for etcd in an init container in this case
 	if v.Spec.GetStorageType() == "etcd" {
@@ -368,7 +372,7 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 								ContainerPort: 8200,
 								Name:          "vault",
 							}},
-							Env: []v1.EnvVar{
+							Env: withCredentialsEnv(v, []v1.EnvVar{
 								{
 									Name:  "VAULT_LOCAL_CONFIG",
 									Value: configJSON,
@@ -376,7 +380,7 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 									Name:  api.EnvVaultCACert,
 									Value: "/vault/tls/ca.crt",
 								},
-							},
+							}),
 							SecurityContext: &v1.SecurityContext{
 								Capabilities: &v1.Capabilities{
 									Add: []v1.Capability{"IPC_LOCK"},
@@ -410,7 +414,7 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 							Name:            "bank-vaults",
 							Command:         []string{"bank-vaults", "unseal", "--init"},
 							Args:            v.Spec.UnsealConfig.ToArgs(v),
-							Env: []v1.EnvVar{
+							Env: withCredentialsEnv(v, []v1.EnvVar{
 								{
 									Name:  k8s.EnvK8SOwnerReference,
 									Value: string(ownerJSON),
@@ -418,11 +422,11 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 									Name:  api.EnvVaultCACert,
 									Value: "/vault/tls/ca.crt",
 								},
-							},
-							VolumeMounts: []v1.VolumeMount{{
+							}),
+							VolumeMounts: withCredentialsVolumeMount(v, []v1.VolumeMount{{
 								Name:      "vault-tls",
 								MountPath: "/vault/tls",
-							}},
+							}}),
 						},
 					},
 					Volumes: volumes,
@@ -432,6 +436,47 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 	}
 	addOwnerRefToObject(dep, owner)
 	return dep, nil
+}
+
+func withCredentialsEnv(v *v1alpha1.Vault, envs []v1.EnvVar) []v1.EnvVar {
+	env := v.Spec.CredentialsConfig.Env
+	path := v.Spec.CredentialsConfig.Path
+	if env != "" {
+		envs = append(envs, v1.EnvVar{
+			Name:  env,
+			Value: path,
+		})
+	}
+	return envs
+}
+
+func withCredentialsVolume(v *v1alpha1.Vault, volumes []v1.Volume) []v1.Volume {
+	secretName := v.Spec.CredentialsConfig.SecretName
+	if secretName != "" {
+		volumes = append(volumes, v1.Volume{
+			Name: secretName,
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: secretName,
+				},
+			},
+		})
+	}
+	return volumes
+}
+
+func withCredentialsVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) []v1.VolumeMount {
+	secretName := v.Spec.CredentialsConfig.SecretName
+	path := v.Spec.CredentialsConfig.Path
+	if secretName != "" {
+		_, file := filepath.Split(path)
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      secretName,
+			MountPath: path,
+			SubPath:   file,
+		})
+	}
+	return volumeMounts
 }
 
 func etcdForVault(v *v1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
@@ -520,7 +565,7 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 							Name:            "bank-vaults",
 							Command:         []string{"bank-vaults", "configure"},
 							Args:            v.Spec.UnsealConfig.ToArgs(v),
-							Env: []v1.EnvVar{
+							Env: withCredentialsEnv(v, []v1.EnvVar{
 								{
 									Name:  api.EnvVaultAddress,
 									Value: fmt.Sprintf("https://%s.%s:8200", v.Name, v.Namespace),
@@ -528,18 +573,18 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 									Name:  api.EnvVaultCACert,
 									Value: "/vault/tls/ca.crt",
 								},
-							},
-							VolumeMounts: []v1.VolumeMount{{
+							}),
+							VolumeMounts: withCredentialsVolumeMount(v, []v1.VolumeMount{{
 								Name:      "config",
 								MountPath: "/config",
 							}, {
 								Name:      "vault-tls",
 								MountPath: "/vault/tls",
-							}},
+							}}),
 							WorkingDir: "/config",
 						},
 					},
-					Volumes: []v1.Volume{
+					Volumes: withCredentialsVolume(v, []v1.Volume{
 						{
 							Name: "config",
 							VolumeSource: v1.VolumeSource{
@@ -556,7 +601,7 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 								},
 							},
 						},
-					},
+					}),
 				},
 			},
 		},
