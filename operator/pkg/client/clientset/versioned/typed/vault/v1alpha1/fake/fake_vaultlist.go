@@ -33,14 +33,14 @@ func (c *FakeVaultLists) Get(name string, options v1.GetOptions) (result *v1alph
 }
 
 // List takes label and field selectors, and returns the list of VaultLists that match those selectors.
-func (c *FakeVaultLists) List(opts v1.ListOptions) (result *v1alpha1.VaultListList, err error) {
+func (c *FakeVaultLists) List(opts v1.ListOptions) (result *v1alpha1.VaultList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(vaultlistsResource, vaultlistsKind, c.ns, opts), &v1alpha1.VaultListList{})
+		Invokes(testing.NewListAction(vaultlistsResource, vaultlistsKind, c.ns, opts), &v1alpha1.VaultList{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.VaultListList), err
+	return obj.(*v1alpha1.VaultList), err
 }
 
 // Watch returns a watch.Interface that watches the requested vaultLists.
@@ -84,7 +84,7 @@ func (c *FakeVaultLists) Delete(name string, options *v1.DeleteOptions) error {
 func (c *FakeVaultLists) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	action := testing.NewDeleteCollectionAction(vaultlistsResource, c.ns, listOptions)
 
-	_, err := c.Fake.Invokes(action, &v1alpha1.VaultListList{})
+	_, err := c.Fake.Invokes(action, &v1alpha1.VaultList{})
 	return err
 }
 
