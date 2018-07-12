@@ -24,10 +24,9 @@ type VaultListInterface interface {
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
 	Get(name string, options v1.GetOptions) (*v1alpha1.VaultList, error)
-	List(opts v1.ListOptions) (*v1alpha1.VaultListList, error)
+	List(opts v1.ListOptions) (*v1alpha1.VaultList, error)
 	Watch(opts v1.ListOptions) (watch.Interface, error)
 	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.VaultList, err error)
-	VaultListExpansion
 }
 
 // vaultLists implements VaultListInterface
@@ -58,8 +57,8 @@ func (c *vaultLists) Get(name string, options v1.GetOptions) (result *v1alpha1.V
 }
 
 // List takes label and field selectors, and returns the list of VaultLists that match those selectors.
-func (c *vaultLists) List(opts v1.ListOptions) (result *v1alpha1.VaultListList, err error) {
-	result = &v1alpha1.VaultListList{}
+func (c *vaultLists) List(opts v1.ListOptions) (result *v1alpha1.VaultList, err error) {
+	result = &v1alpha1.VaultList{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("vaultlists").
@@ -97,7 +96,6 @@ func (c *vaultLists) Update(vaultList *v1alpha1.VaultList) (result *v1alpha1.Vau
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("vaultlists").
-		Name(vaultList.Name).
 		Body(vaultList).
 		Do().
 		Into(result)
