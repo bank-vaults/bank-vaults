@@ -164,6 +164,8 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			usc.AWS.S3Bucket,
 			"--aws-s3-prefix",
 			usc.AWS.S3Prefix,
+			"--aws-s3-region",
+			usc.AWS.S3Region,
 		}
 	}
 	if usc.Alibaba != nil {
@@ -220,6 +222,7 @@ type AWSUnsealConfig struct {
 	KMSKeyID string `json:"kmsKeyId"`
 	S3Bucket string `json:"s3Bucket"`
 	S3Prefix string `json:"s3Prefix"`
+	S3Region string `json:"s3Region"`
 }
 
 // CredentialsConfig configuration for a credentials file provided as a secret
