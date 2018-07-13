@@ -35,6 +35,7 @@ const cfgAWSKMSKeyID = "aws-kms-key-id"
 
 const cfgAWSS3Bucket = "aws-s3-bucket"
 const cfgAWSS3Prefix = "aws-s3-prefix"
+const cfgAWSS3Region = "aws-s3-region"
 
 const cfgAzureKeyVaultName = "azure-key-vault-name"
 
@@ -119,7 +120,8 @@ func init() {
 
 	// AWS S3 Object Storage flags
 	configStringVar(cfgAWSS3Bucket, "", "The name of the AWS S3 bucket to store values in")
-	configStringVar(cfgAWSS3Prefix, "", "The prefix to use for values store in AWS S3")
+	configStringVar(cfgAWSS3Prefix, "", "The prefix to use for storing values in AWS S3")
+	configStringVar(cfgAWSS3Region, "us-east-1", "The region to use for storing values in AWS S3")
 
 	// Azure Key Vault flags
 	configStringVar(cfgAzureKeyVaultName, "", "The name of the Azure Key Vault to encrypt and store values in")

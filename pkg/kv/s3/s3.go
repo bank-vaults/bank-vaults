@@ -20,8 +20,13 @@ type s3Storage struct {
 }
 
 // New creates a new kv.Service backed by AWS S3
-func New(bucket, prefix string) (kv.Service, error) {
-	sess := session.New()
+func New(region, bucket, prefix string) (kv.Service, error) {
+	if region == "" {
+		return nil, fmt.Errorf("region can't be empty")
+	}
+
+	sess := session.Must(session.NewSession(aws.NewConfig().WithRegion(region)))
+
 	cl := awss3.New(sess)
 
 	return &s3Storage{cl, bucket, prefix}, nil
