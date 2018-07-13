@@ -57,14 +57,17 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 
 	if cfg.GetString(cfgMode) == cfgModeValueAWSKMS3 {
 		s3, err := s3.New(
+			cfg.GetString(cfgAWSS3Region),
 			cfg.GetString(cfgAWSS3Bucket),
 			cfg.GetString(cfgAWSS3Prefix),
 		)
+
 		if err != nil {
 			return nil, fmt.Errorf("error creating AWS S3 kv store: %s", err.Error())
 		}
 
 		kms, err := awskms.New(s3, cfg.GetString(cfgAWSKMSKeyID))
+
 		if err != nil {
 			return nil, fmt.Errorf("error creating AWS KMS kv store: %s", err.Error())
 		}
@@ -124,6 +127,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			cfg.GetString(cfgK8SNamespace),
 			cfg.GetString(cfgK8SSecret),
 		)
+
 		if err != nil {
 			return nil, fmt.Errorf("error creating K8S Secret kv store: %s", err.Error())
 		}
