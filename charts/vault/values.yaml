@@ -4,7 +4,7 @@
 replicaCount: 1
 image:
   repository: vault
-  tag: 0.10.2
+  tag: 0.10.3
   pullPolicy: Always
 service:
   name: vault
@@ -129,7 +129,7 @@ vault:
 unsealer:
   image:
     repository: banzaicloud/bank-vaults
-    tag: latest
+    tag: "0.2.4"
     pullPolicy: Always
   args: [
       "--mode",
