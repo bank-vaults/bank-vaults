@@ -90,7 +90,7 @@ auth:
         dev: dev
       # Map myself to the root policy in Vault
       users:
-        bonifaido: root
+        bonifaido: allow_secrets
 
   # Allows creating roles in Vault which can be used later on for AWS 
   # IAM based authentication.
