@@ -85,5 +85,5 @@ ifndef MISSPELL_CMD
 	go get -u github.com/client9/misspell/cmd/misspell
 endif
 
-clean_vendor:
-	find -L ./vendor -type l | xargs rm -rf
+clean-vendor:
+	find ./vendor -type l | xargs rm -rf
