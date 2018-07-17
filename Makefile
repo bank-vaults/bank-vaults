@@ -35,7 +35,7 @@ docker_build:
 
 docker_push: docker_build
 	docker push $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
-  
+
 docker_build_operator:
 	docker build -t $(REGISTRY)/$(IMAGE_NAME_OPERATOR):$(IMAGE_TAG) -f Dockerfile.operator .
 

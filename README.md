@@ -31,6 +31,7 @@ We use Vault across our large Kubernetes deployments and all the projects were `
 - [Operator](#operator)
 - [Examples](#examples)
 - [Getting and Installing](#getting-and-installing)
+- [Contributing](#contributing)
 - [Credits](#credits)
 
 ## The CLI tool
@@ -277,6 +278,14 @@ rules:
   resources: ["secrets"]
   verbs:     ["get", "create", "update"]
 ```
+
+### Contributing
+
+If you find this project useful here's how you can help:
+
+- Send a pull request with your new features and bug fixes
+- Help new users with issues they may encounter
+- Support the development of this project and star this repo!
 
 ## Credits
 
