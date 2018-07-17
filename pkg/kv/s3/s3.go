@@ -22,7 +22,11 @@ type s3Storage struct {
 // New creates a new kv.Service backed by AWS S3
 func New(region, bucket, prefix string) (kv.Service, error) {
 	if region == "" {
-		return nil, fmt.Errorf("region can't be empty")
+		return nil, fmt.Errorf("region must be specified")
+	}
+
+	if bucket == "" {
+		return nil, fmt.Errorf("bucket must be specified")
 	}
 
 	sess := session.Must(session.NewSession(aws.NewConfig().WithRegion(region)))

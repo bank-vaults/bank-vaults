@@ -32,11 +32,9 @@ func NewWithSession(sess *session.Session, store kv.Service, kmsID string) (kv.S
 }
 
 // New creates a new kv.Service encrypted by AWS KMS
-func New(store kv.Service, kmsID string) (kv.Service, error) {
-	sess, err := session.NewSession()
-	if err != nil {
-		return nil, err
-	}
+func New(store kv.Service, region string, kmsID string) (kv.Service, error) {
+
+	sess := session.Must(session.NewSession(aws.NewConfig().WithRegion(region)))
 
 	return NewWithSession(sess, store, kmsID)
 }
