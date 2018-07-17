@@ -260,6 +260,12 @@ The Instance profile in which the Pod is running has to have the following IAM P
 - KMS: `kms:Encrypt, kms:Decrypt`
 - S3:  `s3:GetObject, s3:PutObject`
 
+An example command how to init & unseal Vault on AWS:
+
+```bash
+bank-vaults unseal --init --mode aws-kms-s3 --aws-kms-key-id 9f054126-2a98-470c-9f10-9b3b0cad94a1 --aws-s3-region eu-west-1 --aws-kms-region eu-west-1 --aws-s3-bucket bank-vaults
+```
+
 ### Alibaba Cloud
 
 A CLI example how to run bank-vaults based Vault unsealing on Alibaba Cloud:

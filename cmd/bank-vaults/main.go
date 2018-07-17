@@ -31,6 +31,7 @@ const cfgGoogleCloudKMSCryptoKey = "google-cloud-kms-crypto-key"
 const cfgGoogleCloudStorageBucket = "google-cloud-storage-bucket"
 const cfgGoogleCloudStoragePrefix = "google-cloud-storage-prefix"
 
+const cfgAWSKMSRegion = "aws-kms-region"
 const cfgAWSKMSKeyID = "aws-kms-key-id"
 
 const cfgAWSS3Bucket = "aws-s3-bucket"
@@ -116,6 +117,7 @@ func init() {
 	configStringVar(cfgGoogleCloudStoragePrefix, "", "The prefix to use for values store in Google Cloud Storage")
 
 	// AWS KMS flags
+	configStringVar(cfgAWSKMSRegion, "", "The region of the AWS KMS key to encrypt values")
 	configStringVar(cfgAWSKMSKeyID, "", "The ID or ARN of the AWS KMS key to encrypt values")
 
 	// AWS S3 Object Storage flags
