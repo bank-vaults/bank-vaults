@@ -161,6 +161,20 @@ secrets:
           key_type: "ca"
           default_user: "ubuntu"
           ttl: "24h"
+
+  # The RabbitMQ secrets engine generates user credentials dynamically based on configured permissions and virtual hosts.
+  # See https://www.vaultproject.io/docs/secrets/rabbitmq/index.html
+  - type: rabbitmq
+    description: local-rabbit
+    configuration:
+      config:
+        - name: connection
+          connection_uri: "http://localhost:15672"
+          username: guest
+          password: guest
+      roles:
+        - name: prod_role
+          vhosts: '{"/web":{"write": "production_.*", "read": "production_.*"}}'
 ```
 
 ## The Go library
