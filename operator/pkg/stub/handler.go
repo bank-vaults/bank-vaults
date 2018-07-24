@@ -90,29 +90,30 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 			return fmt.Errorf("failed to create secret for vault: %v", err)
 		}
 
-		// Create the deployment if it doesn't exist
-		dep, err := deploymentForVault(v)
+		// Create the StatefulSet if it doesn't exist
+		statefulSet, err := statefulSetForVault(v)
 		if err != nil {
-			return fmt.Errorf("failed to fabricate deployment: %v", err)
+			return fmt.Errorf("failed to fabricate StatefulSet: %v", err)
 		}
-		err = action.Create(dep)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create deployment: %v", err)
-		}
-		logDeployment(dep)
-
-		// Ensure the deployment size is the same as the spec
-		err = query.Get(dep)
+		err = query.Get(statefulSet)
 		if err != nil {
-			return fmt.Errorf("failed to get deployment: %v", err)
-		}
-		size := v.Spec.Size
-		if *dep.Spec.Replicas != size {
-			dep.Spec.Replicas = &size
-			err = action.Update(dep)
-			if err != nil {
-				return fmt.Errorf("failed to update deployment: %v", err)
+			if apierrors.IsNotFound(err) {
+				if err := action.Create(statefulSet); err != nil {
+					return fmt.Errorf("failed to create StatefulSet: %v", err)
+				}
+			} else {
+				return fmt.Errorf("failed to get StatefulSet: %v", err)
 			}
+		}
+
+		newStatefulSet, err := statefulSetForVault(v)
+		if err != nil {
+			return fmt.Errorf("failed to fabricate StatefulSet: %v", err)
+		}
+		statefulSet.Spec = newStatefulSet.Spec
+		err = action.Update(statefulSet)
+		if err != nil {
+			return fmt.Errorf("failed to update StatefulSet: %v", err)
 		}
 
 		// Update the Vault status with the pod names
@@ -140,12 +141,12 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		}
 
 		// Create the deployment if it doesn't exist
-		dep = deploymentForConfigurer(v)
-		err = action.Create(dep)
+		configurerDep := deploymentForConfigurer(v)
+		err = action.Create(configurerDep)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create configurer deployment: %v", err)
 		}
-		logDeployment(dep)
+		logDeployment(configurerDep)
 
 		// Create the configmap if it doesn't exist
 		cm := configMapForConfigurer(v)
@@ -254,8 +255,8 @@ func secretForVault(om *v1alpha1.Vault) (*v1.Secret, error) {
 	return secret, nil
 }
 
-// deploymentForVault returns a vault Deployment object
-func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
+// statefulSetForVault returns a Vault StatefulSet object
+func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 	ls := labelsForVault(v.Name)
 	replicas := v.Spec.Size
 
@@ -343,16 +344,16 @@ func deploymentForVault(v *v1alpha1.Vault) (*appsv1.Deployment, error) {
 	}
 
 	// TODO check if upgrade strategy is HA
-	dep := &appsv1.Deployment{
+	dep := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
-			Kind:       "Deployment",
+			Kind:       "StatefulSet",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name,
 			Namespace: v.Namespace,
 		},
-		Spec: appsv1.DeploymentSpec{
+		Spec: appsv1.StatefulSetSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
