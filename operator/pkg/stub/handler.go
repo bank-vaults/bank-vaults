@@ -104,16 +104,16 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 			} else {
 				return fmt.Errorf("failed to get StatefulSet: %v", err)
 			}
-		}
-
-		newStatefulSet, err := statefulSetForVault(v)
-		if err != nil {
-			return fmt.Errorf("failed to fabricate StatefulSet: %v", err)
-		}
-		statefulSet.Spec = newStatefulSet.Spec
-		err = action.Update(statefulSet)
-		if err != nil {
-			return fmt.Errorf("failed to update StatefulSet: %v", err)
+		} else {
+			newStatefulSet, err := statefulSetForVault(v)
+			if err != nil {
+				return fmt.Errorf("failed to fabricate StatefulSet: %v", err)
+			}
+			statefulSet.Spec = newStatefulSet.Spec
+			err = action.Update(statefulSet)
+			if err != nil {
+				return fmt.Errorf("failed to update StatefulSet: %v", err)
+			}
 		}
 
 		// Update the Vault status with the pod names
