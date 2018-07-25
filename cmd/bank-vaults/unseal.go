@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"time"
 
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
@@ -11,10 +12,12 @@ import (
 
 const cfgUnsealPeriod = "unseal-period"
 const cfgInit = "init"
+const cfgOnce = "once"
 
 type unsealCfg struct {
 	unsealPeriod time.Duration
 	proceedInit  bool
+	runOnce      bool
 }
 
 var unsealConfig unsealCfg
@@ -31,10 +34,12 @@ from one of the followings:
 	Run: func(cmd *cobra.Command, args []string) {
 		appConfig.BindPFlag(cfgUnsealPeriod, cmd.PersistentFlags().Lookup(cfgUnsealPeriod))
 		appConfig.BindPFlag(cfgInit, cmd.PersistentFlags().Lookup(cfgInit))
+		appConfig.BindPFlag(cfgOnce, cmd.PersistentFlags().Lookup(cfgOnce))
 		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))
 		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))
 		unsealConfig.unsealPeriod = appConfig.GetDuration(cfgUnsealPeriod)
 		unsealConfig.proceedInit = appConfig.GetBool(cfgInit)
+		unsealConfig.runOnce = appConfig.GetBool(cfgOnce)
 
 		store, err := kvStoreForConfig(appConfig)
 
@@ -75,6 +80,7 @@ from one of the followings:
 				sealed, err := v.Sealed()
 				if err != nil {
 					logrus.Errorf("error checking if vault is sealed: %s", err.Error())
+					exitIfNecessary(1)
 					return
 				}
 
@@ -82,25 +88,36 @@ from one of the followings:
 
 				// If vault is not sealed, we stop here and wait another unsealPeriod
 				if !sealed {
+					exitIfNecessary(0)
 					return
 				}
 
 				if err = v.Unseal(); err != nil {
 					logrus.Errorf("error unsealing vault: %s", err.Error())
+					exitIfNecessary(1)
 					return
 				}
 
 				logrus.Infof("successfully unsealed vault")
+				exitIfNecessary(0)
 			}()
+
 			// wait unsealPeriod before trying again
 			time.Sleep(unsealConfig.unsealPeriod)
 		}
 	},
 }
 
+func exitIfNecessary(code int) {
+	if unsealConfig.runOnce {
+		os.Exit(code)
+	}
+}
+
 func init() {
 	unsealCmd.PersistentFlags().Duration(cfgUnsealPeriod, time.Second*30, "How often to attempt to unseal the vault instance")
 	unsealCmd.PersistentFlags().Bool(cfgInit, false, "Initialize vault instantce if not yet initialized")
+	unsealCmd.PersistentFlags().Bool(cfgOnce, false, "Run unseal only once")
 	unsealCmd.PersistentFlags().String(cfgInitRootToken, "", "root token for the new vault cluster (only if -init=true)")
 	unsealCmd.PersistentFlags().Bool(cfgStoreRootToken, true, "should the root token be stored in the key store (only if -init=true)")
 
