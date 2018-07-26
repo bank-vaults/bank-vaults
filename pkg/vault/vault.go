@@ -338,6 +338,22 @@ func (v *vault) Configure() error {
 			if err != nil {
 				return fmt.Errorf("error configuring aws auth roles for vault: %s", err.Error())
 			}
+		case "ldap":
+			config := cast.ToStringMap(authMethod["config"])
+			err = v.configureLdapConfig(config)
+			if err != nil {
+				return fmt.Errorf("error configuring ldap auth for vault: %s", err.Error())
+			}
+			groups := cast.ToStringMap(authMethod["groups"])
+			err = v.configureLdapMappings("groups", groups)
+			if err != nil {
+				return fmt.Errorf("error configuring ldap groups for vault: %s", err.Error())
+			}
+			users := cast.ToStringMap(authMethod["users"])
+			err = v.configureLdapMappings("users", users)
+			if err != nil {
+				return fmt.Errorf("error configuring ldap users for vault: %s", err.Error())
+			}
 		}
 	}
 
@@ -453,6 +469,27 @@ func (v *vault) configureAwsRoles(roles []interface{}) error {
 
 		if err != nil {
 			return fmt.Errorf("error putting %s aws role into vault: %s", role["name"], err.Error())
+		}
+	}
+	return nil
+}
+
+func (v *vault) configureLdapConfig(config map[string]interface{}) error {
+	// https://www.vaultproject.io/api/auth/ldap/index.html
+	_, err := v.cl.Logical().Write("auth/ldap/config", config)
+
+	if err != nil {
+		return fmt.Errorf("error putting %s ldap config into vault: %s", config, err.Error())
+	}
+	return nil
+}
+
+func (v *vault) configureLdapMappings(mappingType string, mappings map[string]interface{}) error {
+	for userOrGroup, policy := range cast.ToStringMap(mappings) {
+		mapping := cast.ToStringMap(policy)
+		_, err := v.cl.Logical().Write(fmt.Sprintf("auth/ldap/%s/%s", mappingType, userOrGroup), mapping)
+		if err != nil {
+			return fmt.Errorf("error putting %s ldap mapping into vault: %s", mappingType, err.Error())
 		}
 	}
 	return nil
