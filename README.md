@@ -110,6 +110,31 @@ auth:
       policies: allow_secrets
       period: 1h
 
+  # Allows creating group mappings in Vault which can be used later on for the LDAP 
+  # based authentication.
+  # See https://www.vaultproject.io/docs/auth/ldap.html#configuration for
+  # more information.
+  # Start an LDAP testing server: docker run -it --rm -p 389:389 -e LDAP_TLS=false --name ldap osixia/openldap
+  # Start an LDAP admin server: docker run -it --rm -p 6443:443 --link ldap:ldap -e PHPLDAPADMIN_LDAP_HOSTS=ldap -e PHPLDAPADMIN_LDAP_CLIENT_TLS=false osixia/phpldapadmin
+  - type: ldap
+    description: LDAP directory auth.
+    config:
+      url: ldap://localhost
+      binddn: "cn=admin,dc=example,dc=org"
+      bindpass: "admin"
+      userattr: uid
+      userdn: "ou=users,dc=example,dc=org"
+      groupdn: "ou=groups,dc=example,dc=org"
+    groups:
+      # Map the banzaicloud dev team on GitHub to the dev policy in Vault
+      developers:
+        policies: allow_secrets
+    # Map myself to the allow_secrets policy in Vault
+    users:
+      bonifaido:
+        groups: developers
+        policies: allow_secrets
+
 # Allows configuring Secrets Engines in Vault (KV, Database and SSH is tested,
 # but the config is free form so probably more is supported).
 # See https://www.vaultproject.io/docs/secrets/index.html for more information.
