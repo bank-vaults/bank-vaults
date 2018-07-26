@@ -251,7 +251,7 @@ kubectl apply -f operator/deploy/operator.yaml
 
 This will create a Kubernetes [CustomResourceDefinition](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/) called `Vault`.
 
-A documented example of this CRD can be found in [deploy/cr.yaml](deploy/cr.yaml).
+A documented example of this CRD can be found in [operator/deploy/cr.yaml](operator/deploy/cr.yaml).
 
 ## Examples
 
