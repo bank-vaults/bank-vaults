@@ -209,7 +209,7 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 func keyToBytes(key *rsa.PrivateKey) ([]byte, error) {
 	keyBytes := x509.MarshalPKCS1PrivateKey(key)
 	buffer := bytes.NewBuffer(nil)
-	if err := pem.Encode(buffer, &pem.Block{Type: "PRIVATE KEY", Bytes: keyBytes}); err != nil {
+	if err := pem.Encode(buffer, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: keyBytes}); err != nil {
 		return nil, err
 	}
 	return buffer.Bytes(), nil
