@@ -5,7 +5,7 @@ metadata:
 spec:
   size: 2
   image: vault:0.10.3
-  bankVaultsImage: banzaicloud/bank-vaults:master
+  bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Describe where you would like to store the Vault unseal keys and root token
   # in GCS encrypted with KMS.
