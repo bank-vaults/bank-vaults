@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: vault-operator
-          image: banzaicloud/vault-operator
+          image: banzaicloud/vault-operator:latest
           command:
           - vault-operator
           imagePullPolicy: IfNotPresent
