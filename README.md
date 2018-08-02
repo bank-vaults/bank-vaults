@@ -224,6 +224,10 @@ This repository contains several Go packages for interacting with Vault:
 
     ![token](docs/images/vault-mySQL.gif)
 
+- `pkg/tls`
+
+    A simple package to generate self-signed TLS certificates. Useful for bootstrapping situations, when you can't use Vault's [PKI secret engine](https://www.vaultproject.io/docs/secrets/pki/index.html).
+
 ## Helm Chart
 
 We have a fully fledged, production ready [Helm chart](https://github.com/banzaicloud/banzai-charts/tree/master/vault) for Vault using `bank-vaults`. With the help of this chart you can run a HA Vault instance with automatic initialization, unsealing and external configuration which used to be a tedious manual operation. This chart can be used easily for development purposes as well.
