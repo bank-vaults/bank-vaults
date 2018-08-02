@@ -6,7 +6,7 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.10
-      - image: vault:0.10.2
+      - image: vault:0.10.4
         environment:
             SKIP_SETCAP: true
             VAULT_DEV_ROOT_TOKEN_ID: 227e1cce-6bf7-30bb-2d2a-acc854318caf
@@ -15,10 +15,11 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Run dep ensure
+          name: Run dep ensure if necessary
           command: |
-              curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+            if [[ `git diff HEAD^ Gopkg.* vendor/` ]]; then
               dep ensure -v
+            fi
       - run:
           name: Unwind vendor
           command: |
