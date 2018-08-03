@@ -369,10 +369,15 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Name:            "vault",
 							Args:            []string{"server", "-log-level=debug"},
-							Ports: []v1.ContainerPort{{
-								ContainerPort: 8200,
-								Name:          "vault",
-							}},
+							Ports: []v1.ContainerPort{
+								{
+									ContainerPort: 8200,
+									Name:          "api-port",
+								},
+								{
+									ContainerPort: 8201,
+									Name:          "cluster-port",
+								}},
 							Env: withCredentialsEnv(v, []v1.EnvVar{
 								{
 									Name:  "VAULT_LOCAL_CONFIG",
@@ -529,8 +534,12 @@ func serviceForVault(v *v1alpha1.Vault) *v1.Service {
 			Selector: ls,
 			Ports: []v1.ServicePort{
 				{
-					Name: "vault",
+					Name: "api-port",
 					Port: 8200,
+				},
+				{
+					Name: "cluster-port",
+					Port: 8201,
 				},
 			},
 		},
