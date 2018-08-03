@@ -398,7 +398,7 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 								Handler: v1.Handler{
 									HTTPGet: &v1.HTTPGetAction{
 										Scheme: v1.URISchemeHTTPS,
-										Port:   intstr.FromString("vault"),
+										Port:   intstr.FromString("api-port"),
 										Path:   "/v1/sys/init",
 									}},
 							},
@@ -408,7 +408,7 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 								Handler: v1.Handler{
 									HTTPGet: &v1.HTTPGetAction{
 										Scheme: v1.URISchemeHTTPS,
-										Port:   intstr.FromString("vault"),
+										Port:   intstr.FromString("api-port"),
 										Path:   "/v1/sys/health",
 									}},
 							},
