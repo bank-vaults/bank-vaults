@@ -29,6 +29,11 @@ spec:
       containers:
         - name: vault-operator
           image: banzaicloud/vault-operator:latest
+          imagePullPolicy: IfNotPresent
           command:
           - vault-operator
-          imagePullPolicy: IfNotPresent
+          env:
+          # OPERATOR_NAMESPACE defines the namespace where the operator watches
+          # for CRD objects, if not defined all namespaces are whatched.
+          - name: OPERATOR_NAMESPACE 
+            value: default
