@@ -11,6 +11,8 @@ operator-sdk build banzaicloud/vault-operator
 
 ## Deploying the operator
 
+Some deployment *samples* can be found at the projects `operator/deploy` directory:
+
 ```bash
 kubectl apply -f operator/deploy/rbac.yaml     # If you have an RBAC enabled cluster
 kubectl apply -f operator/deploy/operator.yaml
