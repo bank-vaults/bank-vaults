@@ -17,6 +17,9 @@ spec:
   - port: {{ .Values.service.port }}
     protocol: TCP
     name: {{ .Values.service.name }}
+  - port: {{ add .Values.service.port 1 }}
+    protocol: TCP
+    name: {{ .Values.service.name }}-cluster
   selector:
     app: {{ template "vault.name" . }}
     release: {{ .Release.Name }}

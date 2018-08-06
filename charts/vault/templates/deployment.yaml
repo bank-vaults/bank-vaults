@@ -35,6 +35,8 @@ spec:
         ports:
         - containerPort: {{ .Values.service.port }}
           name: vault
+        - containerPort: {{ add .Values.service.port 1 }}
+          name: cluster
         # This probe makes sure Vault is responsive in a HTTPS manner
         # See: https://www.vaultproject.io/api/system/init.html
         livenessProbe:
