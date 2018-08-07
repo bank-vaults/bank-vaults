@@ -38,6 +38,7 @@ type VaultSpec struct {
 	Size              int32                  `json:"size"`
 	Image             string                 `json:"image"`
 	BankVaultsImage   string                 `json:"bankVaultsImage"`
+	Annotations       map[string]string      `json:"annotations"`
 	Config            map[string]interface{} `json:"config"`
 	ExternalConfig    map[string]interface{} `json:"externalConfig"`
 	UnsealConfig      UnsealConfig           `json:"unsealConfig"`
