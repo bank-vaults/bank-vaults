@@ -8,23 +8,22 @@ spec:
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Describe where you would like to store the Vault unseal keys and root token
-  # in GCS encrypted with KMS.
+  # in S3 encrypted with KMS.
   unsealConfig:
-    google:
-      kmsKeyRing: "vault"
-      kmsCryptoKey: "vault-unsealer"
-      kmsLocation: "global"
-      kmsProject: "continual-air-196513"
-      storageBucket: "vault-ha"
+    aws:
+      kmsKeyId: "94c836b9-4907-47a7-928e-85d5d5518eff"
+      kmsRegion: "us-east-1"
+      s3Bucket: "my-vault"
+      s3Prefix: "vault-operator"
+      s3Region: "us-east-1"
 
   # A YAML representation of a final vault config file, this config represents
-  # a HA config in Google Cloud.
+  # a backend config in AWS.
   # See https://www.vaultproject.io/docs/configuration/ for more information.
   config:
     storage:
-      gcs:
-        bucket: "vault-ha"
-        ha_enabled: "true"
+      aws:
+        bucket: "my-vault"
     listener:
       tcp:
         address: "0.0.0.0:8200"
@@ -50,12 +49,12 @@ spec:
           policies: allow_secrets
           ttl: 1h
 
-  # If you are not using a Service Account to authenticate against GCP you can pass in an
-  # GCP credentials refering to a Secret with the following configuration block. You have to
-  # create the "gcp-sa" secret manually, it has to have a key called "service-account.json"
-  # holding the configuration in the following format:
-  # https://cloud.google.com/docs/authentication/getting-started
+  # If you are not using IAM instance profiles to authenticate against AWS you can pass in an
+  # AWS credentials refering to a Secret with the following configuration block. You have to
+  # create the "aws-cred" secret manually, it has to have a key called "credentials" holding
+  # the configuration in the following format:
+  # https://docs.aws.amazon.com/cli/latest/topic/config-vars.html#the-shared-credentials-file
   credentialsConfig:
-    env: GOOGLE_APPLICATION_CREDENTIALS
-    path: /etc/gcp/service-account.json
-    secretName: gcp-sa
+    env: AWS_SHARED_CREDENTIALS_FILE
+    path: /etc/aws/credentials
+    secretName: aws-cred
