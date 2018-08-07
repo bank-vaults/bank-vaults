@@ -360,7 +360,8 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: ls,
+					Labels:      ls,
+					Annotations: v.Spec.Annotations,
 				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
@@ -565,7 +566,8 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: ls,
+					Labels:      ls,
+					Annotations: v.Spec.Annotations,
 				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{

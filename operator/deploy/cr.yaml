@@ -7,6 +7,11 @@ spec:
   image: vault:0.10.3
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
+  # Support for custom Vault (and sidecar) pod annotations
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9102"
+
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
     kubernetes:
