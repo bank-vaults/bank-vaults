@@ -274,11 +274,17 @@ func (v *vault) Configure() error {
 		return fmt.Errorf("error unmarshalling vault auth methods config: %s", err.Error())
 	}
 	for _, authMethod := range authMethods {
-		authMethodType := authMethod["type"].(string)
+		authMethodType, err := cast.ToStringE(authMethod["type"])
+		if err != nil {
+			return fmt.Errorf("error finding auth method type: %s", err.Error())
+		}
 
 		path := authMethodType
 		if pathOverwrite, ok := authMethod["path"]; ok {
-			path = pathOverwrite.(string)
+			path, err = cast.ToStringE(pathOverwrite)
+			if err != nil {
+				return fmt.Errorf("error converting path for auth method: %s", err.Error())
+			}
 		}
 
 		// Check and skip existing auth mounts
@@ -317,39 +323,61 @@ func (v *vault) Configure() error {
 				return fmt.Errorf("error configuring kubernetes auth roles for vault: %s", err.Error())
 			}
 		case "github":
-			config := cast.ToStringMap(authMethod["config"])
+			config, err := cast.ToStringMapE(authMethod["config"])
+			if err != nil {
+				return fmt.Errorf("error finding config block for github: %s", err.Error())
+			}
 			err = v.configureGithubConfig(config)
 			if err != nil {
 				return fmt.Errorf("error configuring github auth for vault: %s", err.Error())
 			}
-			mappings := cast.ToStringMap(authMethod["map"])
+			mappings, err := cast.ToStringMapE(authMethod["map"])
+			if err != nil {
+				return fmt.Errorf("error finding map block for github: %s", err.Error())
+			}
 			err = v.configureGithubMappings(mappings)
 			if err != nil {
 				return fmt.Errorf("error configuring github mappings for vault: %s", err.Error())
 			}
 		case "aws":
-			config := cast.ToStringMap(authMethod["config"])
+			config, err := cast.ToStringMapE(authMethod["config"])
+			if err != nil {
+				return fmt.Errorf("error finding config block for aws: %s", err.Error())
+			}
 			err = v.configureAwsConfig(config)
 			if err != nil {
 				return fmt.Errorf("error configuring aws auth for vault: %s", err.Error())
 			}
-			roles := authMethod["roles"].([]interface{})
+			roles, err := cast.ToSliceE(authMethod["roles"])
+			if err != nil {
+				return fmt.Errorf("error finding roles block for aws: %s", err.Error())
+			}
 			err = v.configureAwsRoles(roles)
 			if err != nil {
 				return fmt.Errorf("error configuring aws auth roles for vault: %s", err.Error())
 			}
 		case "ldap":
-			config := cast.ToStringMap(authMethod["config"])
+			config, err := cast.ToStringMapE(authMethod["config"])
+			if err != nil {
+				return fmt.Errorf("error finding config block for ldap: %s", err.Error())
+			}
 			err = v.configureLdapConfig(config)
 			if err != nil {
 				return fmt.Errorf("error configuring ldap auth for vault: %s", err.Error())
 			}
-			groups := cast.ToStringMap(authMethod["groups"])
+			groups, err := cast.ToStringMapE(authMethod["groups"])
+			if err != nil {
+				return fmt.Errorf("error finding groups block for ldap: %s", err.Error())
+			}
+
 			err = v.configureLdapMappings("groups", groups)
 			if err != nil {
 				return fmt.Errorf("error configuring ldap groups for vault: %s", err.Error())
 			}
-			users := cast.ToStringMap(authMethod["users"])
+			users, err := cast.ToStringMapE(authMethod["users"])
+			if err != nil {
+				return fmt.Errorf("error finding users block for ldap: %s", err.Error())
+			}
 			err = v.configureLdapMappings("users", users)
 			if err != nil {
 				return fmt.Errorf("error configuring ldap users for vault: %s", err.Error())
@@ -420,8 +448,12 @@ func (v *vault) configurePolicies() error {
 
 func (v *vault) configureKubernetesRoles(roles []interface{}) error {
 	for _, roleInterface := range roles {
-		role := cast.ToStringMap(roleInterface)
-		_, err := v.cl.Logical().Write(fmt.Sprint("auth/kubernetes/role/", role["name"]), role)
+		role, err := cast.ToStringMapE(roleInterface)
+		if err != nil {
+			return fmt.Errorf("error converting role for kubernetes: %s", err.Error())
+		}
+
+		_, err = v.cl.Logical().Write(fmt.Sprint("auth/kubernetes/role/", role["name"]), role)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s kubernetes role into vault: %s", role["name"], err.Error())
@@ -442,7 +474,11 @@ func (v *vault) configureGithubConfig(config map[string]interface{}) error {
 
 func (v *vault) configureGithubMappings(mappings map[string]interface{}) error {
 	for mappingType, mapping := range mappings {
-		for userOrTeam, policy := range cast.ToStringMapString(mapping) {
+		mapping, err := cast.ToStringMapStringE(mapping)
+		if err != nil {
+			return fmt.Errorf("error converting mapping for github: %s", err.Error())
+		}
+		for userOrTeam, policy := range mapping {
 			_, err := v.cl.Logical().Write(fmt.Sprintf("auth/github/map/%s/%s", mappingType, userOrTeam), map[string]interface{}{"value": policy})
 			if err != nil {
 				return fmt.Errorf("error putting %s github mapping into vault: %s", mappingType, err.Error())
@@ -464,8 +500,11 @@ func (v *vault) configureAwsConfig(config map[string]interface{}) error {
 
 func (v *vault) configureAwsRoles(roles []interface{}) error {
 	for _, roleInterface := range roles {
-		role := cast.ToStringMap(roleInterface)
-		_, err := v.cl.Logical().Write(fmt.Sprint("auth/aws/role/", role["name"]), role)
+		role, err := cast.ToStringMapE(roleInterface)
+		if err != nil {
+			return fmt.Errorf("error converting roles for aws: %s", err.Error())
+		}
+		_, err = v.cl.Logical().Write(fmt.Sprint("auth/aws/role/", role["name"]), role)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s aws role into vault: %s", role["name"], err.Error())
@@ -485,9 +524,12 @@ func (v *vault) configureLdapConfig(config map[string]interface{}) error {
 }
 
 func (v *vault) configureLdapMappings(mappingType string, mappings map[string]interface{}) error {
-	for userOrGroup, policy := range cast.ToStringMap(mappings) {
-		mapping := cast.ToStringMap(policy)
-		_, err := v.cl.Logical().Write(fmt.Sprintf("auth/ldap/%s/%s", mappingType, userOrGroup), mapping)
+	for userOrGroup, policy := range mappings {
+		mapping, err := cast.ToStringMapE(policy)
+		if err != nil {
+			return fmt.Errorf("error converting mapping for ldap: %s", err.Error())
+		}
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/ldap/%s/%s", mappingType, userOrGroup), mapping)
 		if err != nil {
 			return fmt.Errorf("error putting %s ldap mapping into vault: %s", mappingType, err.Error())
 		}
@@ -503,26 +545,44 @@ func (v *vault) configureSecretEngines() error {
 	}
 
 	for _, secretEngine := range secretsEngines {
-		secretEngineType := secretEngine["type"].(string)
+		secretEngineType, err := cast.ToStringE(secretEngine["type"])
+		if err != nil {
+			return fmt.Errorf("error finding type for secret engine: %s", err.Error())
+		}
 
 		path := secretEngineType
 		if pathOverwrite, ok := secretEngine["path"]; ok {
-			path = pathOverwrite.(string)
+			path, err = cast.ToStringE(pathOverwrite)
+			if err != nil {
+				return fmt.Errorf("error converting path for secret engine: %s", err.Error())
+			}
 		}
 
 		mounts, err := v.cl.Sys().ListMounts()
 		if err != nil {
 			return fmt.Errorf("error reading mounts from vault: %s", err.Error())
 		}
-		fmt.Printf("Already existing mounts: %#v\n", mounts)
+		logrus.Debugf("Already existing mounts: %#v\n", mounts)
 		if mounts[path+"/"] == nil {
+			description, err := getOrDefault(secretEngine, "description")
+			if err != nil {
+				return fmt.Errorf("error getting description for secret engine: %s", err.Error())
+			}
+			pluginName, err := getOrDefault(secretEngine, "plugin_name")
+			if err != nil {
+				return fmt.Errorf("error getting plugin_name for secret engine: %s", err.Error())
+			}
+			options, err := getOrDefaultStringMapString(secretEngine, "options")
+			if err != nil {
+				return fmt.Errorf("error getting options for secret engine: %s", err.Error())
+			}
 			input := api.MountInput{
 				Type:        secretEngineType,
-				Description: getOrDefault(secretEngine, "description"),
-				PluginName:  getOrDefault(secretEngine, "plugin_name"),
-				Options:     getOrDefaultStringMapString(secretEngine, "options"),
+				Description: description,
+				PluginName:  pluginName,
+				Options:     options,
 			}
-			logrus.Infoln("Mounting secret engine with input: %#v\n", input)
+			logrus.Infof("Mounting secret engine with input: %#v\n", input)
 			err = v.cl.Sys().Mount(path, &input)
 			if err != nil {
 				return fmt.Errorf("error mounting %s into vault: %s", path, err.Error())
@@ -531,8 +591,12 @@ func (v *vault) configureSecretEngines() error {
 			logrus.Infoln("mounted", secretEngineType, "to", path)
 
 		} else {
+			options, err := getOrDefaultStringMapString(secretEngine, "options")
+			if err != nil {
+				return fmt.Errorf("error getting options for secret engine: %s", err.Error())
+			}
 			input := api.MountConfigInput{
-				Options: getOrDefaultStringMapString(secretEngine, "options"),
+				Options: options,
 			}
 			err = v.cl.Sys().TuneMount(path, input)
 			if err != nil {
@@ -541,16 +605,30 @@ func (v *vault) configureSecretEngines() error {
 		}
 
 		// Configuration of the Secret Engine in a very generic manner, YAML config file should have the proper format
-		configuration := getOrDefaultStringMap(secretEngine, "configuration")
+		configuration, err := getOrDefaultStringMap(secretEngine, "configuration")
+		if err != nil {
+			return fmt.Errorf("error getting configuration for secret engine: %s", err.Error())
+		}
 		for configOption, configData := range configuration {
-			configData := configData.([]interface{})
+			configData, err := cast.ToSliceE(configData)
+			if err != nil {
+				return fmt.Errorf("error converting config data for secret engine: %s", err.Error())
+			}
 			for _, subConfigData := range configData {
-				subConfigData := subConfigData.(map[interface{}]interface{})
-				configPath := fmt.Sprintf("%s/%s/%s", path, configOption, subConfigData["name"])
-				_, err := v.cl.Logical().Write(configPath, cast.ToStringMap(subConfigData))
+				subConfigData, err := cast.ToStringMapE(subConfigData)
+				if err != nil {
+					return fmt.Errorf("error converting sub config data for secret engine: %s", err.Error())
+				}
+
+				name, ok := subConfigData["name"]
+				if !ok {
+					return fmt.Errorf("error finding sub config data name for secret engine")
+				}
+				configPath := fmt.Sprintf("%s/%s/%s", path, configOption, name)
+				_, err = v.cl.Logical().Write(configPath, subConfigData)
 
 				if err != nil {
-					if isOverwriteProbihitedError(err) {
+					if isOverwriteProhibitedError(err) {
 						logrus.Debugln("Can't reconfigure", configPath, "please delete it manually")
 						continue
 					}
@@ -563,32 +641,30 @@ func (v *vault) configureSecretEngines() error {
 	return nil
 }
 
-func getOrDefault(m map[string]interface{}, key string) string {
+func getOrDefault(m map[string]interface{}, key string) (string, error) {
 	value := m[key]
 	if value != nil {
-		return value.(string)
+		return cast.ToStringE(value)
 	}
-	return ""
+	return "", nil
 }
 
-func getOrDefaultStringMapString(m map[string]interface{}, key string) map[string]string {
+func getOrDefaultStringMapString(m map[string]interface{}, key string) (map[string]string, error) {
 	value := m[key]
-	stringMap := map[string]string{}
 	if value != nil {
-		return cast.ToStringMapString(value)
+		return cast.ToStringMapStringE(value)
 	}
-	return stringMap
+	return map[string]string{}, nil
 }
 
-func getOrDefaultStringMap(m map[string]interface{}, key string) map[string]interface{} {
+func getOrDefaultStringMap(m map[string]interface{}, key string) (map[string]interface{}, error) {
 	value := m[key]
-	stringMap := map[string]interface{}{}
 	if value != nil {
-		return cast.ToStringMap(value)
+		return cast.ToStringMapE(value)
 	}
-	return stringMap
+	return map[string]interface{}{}, nil
 }
 
-func isOverwriteProbihitedError(err error) bool {
+func isOverwriteProhibitedError(err error) bool {
 	return strings.Contains(err.Error(), "delete them before reconfiguring")
 }
