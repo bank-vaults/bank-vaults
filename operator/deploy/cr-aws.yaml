@@ -7,6 +7,10 @@ spec:
   image: vault:0.10.3
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
+  # Insted of credentialsConfig one can use IAM instance profiles, or kube2iam for example:
+  annotations:
+    iam.amazonaws.com/role: "role-arn..."
+
   # Describe where you would like to store the Vault unseal keys and root token
   # in S3 encrypted with KMS.
   unsealConfig:
