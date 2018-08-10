@@ -89,6 +89,17 @@ func (spec *VaultSpec) HasStorageHAEnabled() bool {
 	return storageType == "consul" || cast.ToBool(storageSpecs["ha_enabled"])
 }
 
+// GetTLSDisable returns if Vault's TLS is disabled
+func (spec *VaultSpec) GetTLSDisable() bool {
+	listener := spec.getListener()
+	tcpSpecs := cast.ToStringMap(listener["tcp"])
+	return cast.ToBool(tcpSpecs["tls_disable"])
+}
+
+func (spec *VaultSpec) getListener() map[string]interface{} {
+	return cast.ToStringMap(spec.Config["listener"])
+}
+
 // GetBankVaultsImage returns the bank-vaults image to use
 func (spec *VaultSpec) GetBankVaultsImage() string {
 	if spec.BankVaultsImage == "" {
