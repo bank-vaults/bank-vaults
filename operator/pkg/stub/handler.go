@@ -77,17 +77,19 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 			}
 		}
 
-		// Create the secret if it doesn't exist
-		sec, err := secretForVault(v)
-		if err != nil {
-			return fmt.Errorf("failed to fabricate secret for vault: %v", err)
-		}
+		if !v.Spec.GetTLSDisable() {
+			// Create the secret if it doesn't exist
+			sec, err := secretForVault(v)
+			if err != nil {
+				return fmt.Errorf("failed to fabricate secret for vault: %v", err)
+			}
 
-		addOwnerRefToObject(sec, asOwner(v))
+			addOwnerRefToObject(sec, asOwner(v))
 
-		err = action.Create(sec)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create secret for vault: %v", err)
+			err = action.Create(sec)
+			if err != nil && !apierrors.IsAlreadyExists(err) {
+				return fmt.Errorf("failed to create secret for vault: %v", err)
+			}
 		}
 
 		// Create the StatefulSet if it doesn't exist
@@ -265,7 +267,7 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 		return nil, fmt.Errorf("More than 1 replicas are not supported without HA storage backend")
 	}
 
-	volumes := withCredentialsVolume(v, []v1.Volume{
+	volumes := withTLSVolume(v, withCredentialsVolume(v, []v1.Volume{
 		{
 			Name: "vault-config",
 			VolumeSource: v1.VolumeSource{
@@ -278,28 +280,17 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 				EmptyDir: &v1.EmptyDirVolumeSource{},
 			},
 		},
-		{
-			Name: "vault-tls",
-			VolumeSource: v1.VolumeSource{
-				Secret: &v1.SecretVolumeSource{
-					SecretName: v.Name + "-tls",
-				},
-			},
-		},
-	})
+	}))
 
-	volumeMounts := withCredentialsVolumeMount(v, []v1.VolumeMount{
+	volumeMounts := withTLSVolumeMount(v, withCredentialsVolumeMount(v, []v1.VolumeMount{
 		{
 			Name:      "vault-config",
 			MountPath: "/vault/config",
 		}, {
 			Name:      "vault-file",
 			MountPath: "/vault/file",
-		}, {
-			Name:      "vault-tls",
-			MountPath: "/vault/tls",
 		},
-	})
+	}))
 
 	// TODO Configure Vault to wait for etcd in an init container in this case
 	if v.Spec.GetStorageType() == "etcd" {
@@ -379,15 +370,12 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 									ContainerPort: 8201,
 									Name:          "cluster-port",
 								}},
-							Env: withCredentialsEnv(v, []v1.EnvVar{
+							Env: withTLSEnv(v, true, withCredentialsEnv(v, []v1.EnvVar{
 								{
 									Name:  "VAULT_LOCAL_CONFIG",
 									Value: configJSON,
-								}, {
-									Name:  api.EnvVaultCACert,
-									Value: "/vault/tls/ca.crt",
 								},
-							}),
+							})),
 							SecurityContext: &v1.SecurityContext{
 								Capabilities: &v1.Capabilities{
 									Add: []v1.Capability{"IPC_LOCK"},
@@ -398,7 +386,7 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							LivenessProbe: &v1.Probe{
 								Handler: v1.Handler{
 									HTTPGet: &v1.HTTPGetAction{
-										Scheme: v1.URISchemeHTTPS,
+										Scheme: getVaultURIScheme(v),
 										Port:   intstr.FromString("api-port"),
 										Path:   "/v1/sys/init",
 									}},
@@ -408,7 +396,7 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							ReadinessProbe: &v1.Probe{
 								Handler: v1.Handler{
 									HTTPGet: &v1.HTTPGetAction{
-										Scheme: v1.URISchemeHTTPS,
+										Scheme: getVaultURIScheme(v),
 										Port:   intstr.FromString("api-port"),
 										Path:   "/v1/sys/health",
 									}},
@@ -421,19 +409,13 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							Name:            "bank-vaults",
 							Command:         []string{"bank-vaults", "unseal", "--init"},
 							Args:            v.Spec.UnsealConfig.ToArgs(v),
-							Env: withCredentialsEnv(v, []v1.EnvVar{
+							Env: withTLSEnv(v, true, withCredentialsEnv(v, []v1.EnvVar{
 								{
 									Name:  k8s.EnvK8SOwnerReference,
 									Value: string(ownerJSON),
-								}, {
-									Name:  api.EnvVaultCACert,
-									Value: "/vault/tls/ca.crt",
 								},
-							}),
-							VolumeMounts: withCredentialsVolumeMount(v, []v1.VolumeMount{{
-								Name:      "vault-tls",
-								MountPath: "/vault/tls",
-							}}),
+							})),
+							VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []v1.VolumeMount{})),
 						},
 					},
 					Volumes: volumes,
@@ -443,6 +425,63 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 	}
 	addOwnerRefToObject(dep, owner)
 	return dep, nil
+}
+
+func getVaultURIScheme(v *v1alpha1.Vault) v1.URIScheme {
+	if v.Spec.GetTLSDisable() {
+		return v1.URISchemeHTTP
+	}
+	return v1.URISchemeHTTPS
+}
+
+func withTLSEnv(v *v1alpha1.Vault, localhost bool, envs []v1.EnvVar) []v1.EnvVar {
+	host := fmt.Sprintf("%s.%s", v.Name, v.Namespace)
+	if localhost {
+		host = "127.0.0.1"
+	}
+	if !v.Spec.GetTLSDisable() {
+		envs = append(envs, []v1.EnvVar{
+			{
+				Name:  api.EnvVaultAddress,
+				Value: fmt.Sprintf("https://%s:8200", host),
+			},
+			{
+				Name:  api.EnvVaultCACert,
+				Value: "/vault/tls/ca.crt",
+			},
+		}...)
+	} else {
+		envs = append(envs, v1.EnvVar{
+
+			Name:  api.EnvVaultAddress,
+			Value: fmt.Sprintf("http://%s:8200", host),
+		})
+	}
+	return envs
+}
+
+func withTLSVolume(v *v1alpha1.Vault, volumes []v1.Volume) []v1.Volume {
+	if !v.Spec.GetTLSDisable() {
+		volumes = append(volumes, v1.Volume{
+			Name: "vault-tls",
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: v.Name + "-tls",
+				},
+			},
+		})
+	}
+	return volumes
+}
+
+func withTLSVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) []v1.VolumeMount {
+	if !v.Spec.GetTLSDisable() {
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "vault-tls",
+			MountPath: "/vault/tls",
+		})
+	}
+	return volumeMounts
 }
 
 func withCredentialsEnv(v *v1alpha1.Vault, envs []v1.EnvVar) []v1.EnvVar {
@@ -577,26 +616,17 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 							Name:            "bank-vaults",
 							Command:         []string{"bank-vaults", "configure"},
 							Args:            v.Spec.UnsealConfig.ToArgs(v),
-							Env: withCredentialsEnv(v, []v1.EnvVar{
+							Env:             withTLSEnv(v, false, withCredentialsEnv(v, []v1.EnvVar{})),
+							VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []v1.VolumeMount{
 								{
-									Name:  api.EnvVaultAddress,
-									Value: fmt.Sprintf("https://%s.%s:8200", v.Name, v.Namespace),
-								}, {
-									Name:  api.EnvVaultCACert,
-									Value: "/vault/tls/ca.crt",
+									Name:      "config",
+									MountPath: "/config",
 								},
-							}),
-							VolumeMounts: withCredentialsVolumeMount(v, []v1.VolumeMount{{
-								Name:      "config",
-								MountPath: "/config",
-							}, {
-								Name:      "vault-tls",
-								MountPath: "/vault/tls",
-							}}),
+							})),
 							WorkingDir: "/config",
 						},
 					},
-					Volumes: withCredentialsVolume(v, []v1.Volume{
+					Volumes: withTLSVolume(v, withCredentialsVolume(v, []v1.Volume{
 						{
 							Name: "config",
 							VolumeSource: v1.VolumeSource{
@@ -605,15 +635,7 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 								},
 							},
 						},
-						{
-							Name: "vault-tls",
-							VolumeSource: v1.VolumeSource{
-								Secret: &v1.SecretVolumeSource{
-									SecretName: v.Name + "-tls",
-								},
-							},
-						},
-					}),
+					})),
 				},
 			},
 		},
