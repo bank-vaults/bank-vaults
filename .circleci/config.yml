@@ -36,13 +36,8 @@ jobs:
           environment:
             VAULT_ADDR: http://localhost:8200
             VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
-      - run:
-          name: Install Operator SDK
-          command:
-              go get github.com/operator-framework/operator-sdk/commands/operator-sdk
       - setup_remote_docker
       - run:
           name: Build Vault Operator
           command: |
-              cd operator
-              operator-sdk build banzaicloud/vault-operator
+              go build ./operator/cmd/vault-operator
