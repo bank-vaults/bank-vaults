@@ -27,6 +27,12 @@ spec:
             value: /vault/tls/ca.crt
           - name: VAULT_LOG_LEVEL
             value: {{ .Values.vault.logLevel }}
+          - name: VAULT_ADDR
+          {{ if .Values.vault.config.listener.tcp.tls_disable }}
+            value: http://127.0.0.1:{{ .Values.service.port }}
+           {{ else }}
+            value: https://127.0.0.1:{{ .Values.service.port }}
+           {{ end }}
         envFrom:
         {{- range .Values.vault.customSecrets }}
         - secretRef:
@@ -41,14 +47,22 @@ spec:
         # See: https://www.vaultproject.io/api/system/init.html
         livenessProbe:
           httpGet:
+            {{ if .Values.vault.config.listener.tcp.tls_disable }}
+            scheme: HTTP
+            {{ else }}
             scheme: HTTPS
+            {{ end }}
             path: /v1/sys/init
             port: vault
         # This probe makes sure that only the active Vault instance gets traffic
         # See: https://www.vaultproject.io/api/system/health.html
         readinessProbe:
           httpGet:
+            {{ if .Values.vault.config.listener.tcp.tls_disable }}
+            scheme: HTTP
+            {{ else }}
             scheme: HTTPS
+            {{ end }}
             path: /v1/sys/health
             port: vault
         securityContext:
@@ -79,6 +93,12 @@ spec:
         env:
           - name: VAULT_CACERT
             value: /vault/tls/ca.crt
+          - name: VAULT_ADDR
+          {{ if .Values.vault.config.listener.tcp.tls_disable }}
+            value: http://127.0.0.1:{{ .Values.service.port }}
+           {{ else }}
+            value: https://127.0.0.1:{{ .Values.service.port }}
+           {{ end }}
         envFrom:
         {{- range .Values.vault.customSecrets }}
         - secretRef:
@@ -97,6 +117,12 @@ spec:
         env:
           - name: VAULT_CACERT
             value: /vault/tls/ca.crt
+          - name: VAULT_ADDR
+          {{ if .Values.vault.config.listener.tcp.tls_disable }}
+            value: http://127.0.0.1:{{ .Values.service.port }}
+           {{ else }}
+            value: https://127.0.0.1:{{ .Values.service.port }}
+           {{ end }}
         envFrom:
         {{- range .Values.vault.customSecrets }}
         - secretRef:
