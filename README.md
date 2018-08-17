@@ -12,6 +12,7 @@
 **Bank Vaults** is a core building block of the **[Pipeline](https://github.com/banzaicloud/pipeline)** PaaS. Some of the usage patterns are highlighted through these blog posts:
 
 **Securing Kubernetes deployments with Vault:**
+
 - [Authentication and authorization of Pipeline users with OAuth2 and Vault](https://banzaicloud.com/blog/oauth2-vault/)
 - [Dynamic credentials with Vault using Kubernetes Service Accounts](https://banzaicloud.com/blog/vault-dynamic-secrets/)
 - [Dynamic SSH with Vault and Pipeline](https://banzaicloud.com/blog/vault-dynamic-ssh/)
@@ -19,7 +20,7 @@
 - [Vault Operator](https://banzaicloud.com/blog/vault-operator/)
 - [Vault unseal flow with KMS](https://banzaicloud.com/blog/vault-unsealing/)
 
-We use Vault across our large Kubernetes deployments and all the projects were `reinventing` the wheel. We have externalized all the codebase into this project and removed all the [Pipeline](https://github.com/banzaicloud/pipeline) and [Hollowtrees](https://github.com/banzaicloud/hollowtrees) dependencies thus this project can be used independently as a CLI tool to manage Vault, a Golang library to build upon (OAuth2 tokens, K8s auth, Vault operator, dynamic secrets, cloud credential storage, etc), Helm chart for a HA cluster, operator and a collection of scripts to support some advanced features (dynamic SSH, etc). 
+We use Vault across our large Kubernetes deployments and all the projects were `reinventing` the wheel. We have externalized all the codebase into this project and removed all the [Pipeline](https://github.com/banzaicloud/pipeline) and [Hollowtrees](https://github.com/banzaicloud/hollowtrees) dependencies thus this project can be used independently as a CLI tool to manage Vault, a Golang library to build upon (OAuth2 tokens, K8s auth, Vault operator, dynamic secrets, cloud credential storage, etc), Helm chart for a HA cluster, operator and a collection of scripts to support some advanced features (dynamic SSH, etc).
 
 >We take bank-vaults' security and our users' trust very seriously. If you believe you have found a security issue in bank-vaults, please contact us at security@banzaicloud.com.
 
@@ -39,19 +40,21 @@ We use Vault across our large Kubernetes deployments and all the projects were `
 The `bank-vaults` CLI tool is to help automate the setup and management of HashiCorp Vault.
 
 Features:
- - Initializes Vault and stores the root token and unseal keys in one of the followings:
-    - AWS KMS keyring (backed by S3)
-    - Azure Key Vault
-    - Google Cloud KMS keyring (backed by GCS)
-    - Alibaba Cloud KMS (backed by OSS)
-    - Kubernetes Secrets (should be used only for development purposes)
-    - Dev Mode (useful for `vault server -dev` dev mode Vault servers)
- - Automatically unseals Vault with these keys
- - Continuously configures Vault with a YAML/JSON based external configuration (besides the [standard Vault configuration](https://www.vaultproject.io/docs/configuration/index.html))
-    - If the configuration is updated Vault will be reconfigured
-    - It supports configuring Vault secret engines, auth methods, and policies
+
+- Initializes Vault and stores the root token and unseal keys in one of the followings:
+  - AWS KMS keyring (backed by S3)
+  - Azure Key Vault
+  - Google Cloud KMS keyring (backed by GCS)
+  - Alibaba Cloud KMS (backed by OSS)
+  - Kubernetes Secrets (should be used only for development purposes)
+  - Dev Mode (useful for `vault server -dev` dev mode Vault servers)
+- Automatically unseals Vault with these keys
+- Continuously configures Vault with a YAML/JSON based external configuration (besides the [standard Vault configuration](https://www.vaultproject.io/docs/configuration/index.html))
+  - If the configuration is updated Vault will be reconfigured
+  - It supports configuring Vault secret engines, auth methods, and policies
 
 ### Example external Vault configuration
+
 ```yaml
 # Allows creating policies in Vault which can be used later on in roles
 # for the Kubernetes based authentication.
@@ -78,7 +81,7 @@ auth:
         policies: allow_secrets
         ttl: 1h
 
-  # Allows creating team mappings in Vault which can be used later on for the GitHub 
+  # Allows creating team mappings in Vault which can be used later on for the GitHub
   # based authentication.
   # See https://www.vaultproject.io/docs/auth/github.html#configuration for
   # more information.
@@ -93,7 +96,7 @@ auth:
       users:
         bonifaido: allow_secrets
 
-  # Allows creating roles in Vault which can be used later on for AWS 
+  # Allows creating roles in Vault which can be used later on for AWS
   # IAM based authentication.
   # See https://www.vaultproject.io/docs/auth/aws.html for
   # more information.
@@ -101,7 +104,7 @@ auth:
     config:
       access_key: VKIAJBRHKH6EVTTNXDHA
       secret_key: vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj
-      iam_server_id_header_value: vault-dev.example.com # consider setting this to the Vault server's DNS name 
+      iam_server_id_header_value: vault-dev.example.com # consider setting this to the Vault server's DNS name
     roles:
     # Add roles for AWS instances or principals
     # See https://www.vaultproject.io/api/auth/aws/index.html#create-role
@@ -110,7 +113,7 @@ auth:
       policies: allow_secrets
       period: 1h
 
-  # Allows creating group mappings in Vault which can be used later on for the LDAP 
+  # Allows creating group mappings in Vault which can be used later on for the LDAP
   # based authentication.
   # See https://www.vaultproject.io/docs/auth/ldap.html#configuration for
   # more information.
@@ -338,4 +341,4 @@ If you find this project useful here's how you can help:
 
 ## Credits
 
-Kudos to HashiCorp for open sourcing Vault and making secret management easier and more secure. 
+Kudos to HashiCorp for open sourcing Vault and making secret management easier and more secure.
