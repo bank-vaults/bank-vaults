@@ -267,6 +267,9 @@ The keys that will be stored are:
 - `vault-root`, which is the Vault's root token
 - `vault-unseal-N`, where `N` is a number, starting at 0 up to the maximum defined minus 1, e.g. 5 unseal keys will be `vault-unseal-0` up to including `vault-unseal-4`
 
+HashiCorp [recommends to revoke root tokens](https://www.vaultproject.io/docs/concepts/tokens.html#root-tokens) after the initial set up of Vault has been completed.
+To unseal Vault the `vault-root` token is not needed and can be removed from the storage if it was put there via the `--init` call to `bank-vaults`.
+
 ## Examples
 
 Some examples are in `cmd/examples/main.go`
@@ -319,16 +322,16 @@ An example command how to init and unseal Vault on AWS:
 bank-vaults unseal --init --mode aws-kms-s3 --aws-kms-key-id 9f054126-2a98-470c-9f10-9b3b0cad94a1 --aws-s3-region eu-west-1 --aws-kms-region eu-west-1 --aws-s3-bucket bank-vaults
 ```
 
-When using an existing root token and unseal keys, you need to make sure to kms encrypt these with the proper `EncryptionContext`.
+When using existing unseal keys, you need to make sure to kms encrypt these with the proper `EncryptionContext`.
 If this is not done, the invocation of `bank-vaults` will trigger an `InvalidCiphertextException` from AWS KMS.
-An example how to encrypt the token and keys (specify `--profile` and `--region` accordingly):
+An example how to encrypt the keys (specify `--profile` and `--region` accordingly):
 
 ```bash
-aws kms encrypt --key-id "alias/kms-key-alias" --encryption-context "Tool=bank-vaults"  --plaintext fileb://vault-root.txt --output text --query CiphertextBlob | base64 -D > vault-root
+aws kms encrypt --key-id "alias/kms-key-alias" --encryption-context "Tool=bank-vaults"  --plaintext fileb://vault-unseal-0.txt --output text --query CiphertextBlob | base64 -D > vault-unseal-0
 ```
 
 From this point on copy the encrypted files to the appropriate S3 bucket.
-As an additional security measure make sure to turn on encryption of the S3 bucket.
+As an additional security measure make sure to turn on encryption of the S3 bucket before uploading the files.
 
 ### Alibaba Cloud
 
