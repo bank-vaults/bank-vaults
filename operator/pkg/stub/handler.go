@@ -352,7 +352,7 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      ls,
-					Annotations: v.Spec.Annotations,
+					Annotations: v.Spec.GetAnnotations(),
 				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
@@ -416,6 +416,28 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 								},
 							})),
 							VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []v1.VolumeMount{})),
+						},
+						{
+							Image:           v.Spec.GetStatsDImage(),
+							ImagePullPolicy: v1.PullIfNotPresent,
+							Name:            "prometheus-statsd-exporter",
+							Args:            []string{"-statsd.mapping-config=/tmp/statsd-mapping.conf"},
+							Env: withTLSEnv(v, true, withCredentialsEnv(v, []v1.EnvVar{
+								{
+									Name:  k8s.EnvK8SOwnerReference,
+									Value: string(ownerJSON),
+								},
+							})),
+							Ports: []v1.ContainerPort{{
+								Name:          "statsd",
+								ContainerPort: 9125,
+								Protocol:      "UDP",
+							}, {
+								Name:          "prometheus",
+								ContainerPort: 9102,
+								Protocol:      "TCP",
+							}},
+							VolumeMounts: withStatsDVolumeMount(v, []v1.VolumeMount{}),
 						},
 					},
 					Volumes: volumes,
@@ -481,6 +503,26 @@ func withTLSVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) []v1.V
 			MountPath: "/vault/tls",
 		})
 	}
+	return volumeMounts
+}
+
+func withStatsDVolume(v *v1alpha1.Vault, volumes []v1.Volume) []v1.Volume {
+	volumes = append(volumes, v1.Volume{
+		Name: "statsd-mapping",
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{Name: v.Name + "-statsd-mapping"},
+			},
+		},
+	})
+	return volumes
+}
+
+func withStatsDVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) []v1.VolumeMount {
+	volumeMounts = append(volumeMounts, v1.VolumeMount{
+		Name:      "statsd-mapping",
+		MountPath: "/tmp/",
+	})
 	return volumeMounts
 }
 
