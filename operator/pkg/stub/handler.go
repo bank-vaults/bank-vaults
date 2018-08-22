@@ -92,6 +92,13 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 			}
 		}
 
+		// Create the configmap if it doesn't exist
+		cm := configMapForStatsD(v)
+		err := action.Create(cm)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed to create statsd configmap: %v", err)
+		}
+
 		// Create the StatefulSet if it doesn't exist
 		statefulSet, err := statefulSetForVault(v)
 		if err != nil {
@@ -151,7 +158,7 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		logDeployment(configurerDep)
 
 		// Create the configmap if it doesn't exist
-		cm := configMapForConfigurer(v)
+		cm = configMapForConfigurer(v)
 		err = action.Create(cm)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create configurer configmap: %v", err)
@@ -278,6 +285,14 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 			Name: "vault-file",
 			VolumeSource: v1.VolumeSource{
 				EmptyDir: &v1.EmptyDirVolumeSource{},
+			},
+		},
+		{
+			Name: "statsd-mapping",
+			VolumeSource: v1.VolumeSource{
+				ConfigMap: &v1.ConfigMapVolumeSource{
+					LocalObjectReference: v1.LocalObjectReference{Name: v.Name + "-statsd-mapping"},
+				},
 			},
 		},
 	}))
@@ -420,7 +435,7 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 						{
 							Image:           v.Spec.GetStatsDImage(),
 							ImagePullPolicy: v1.PullIfNotPresent,
-							Name:            "prometheus-statsd-exporter",
+							Name:            "prometheus-exporter",
 							Args:            []string{"-statsd.mapping-config=/tmp/statsd-mapping.conf"},
 							Env: withTLSEnv(v, true, withCredentialsEnv(v, []v1.EnvVar{
 								{
@@ -437,7 +452,10 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 								ContainerPort: 9102,
 								Protocol:      "TCP",
 							}},
-							VolumeMounts: withStatsDVolumeMount(v, []v1.VolumeMount{}),
+							VolumeMounts: []v1.VolumeMount{{
+								Name:      "statsd-mapping",
+								MountPath: "/tmp/",
+							}},
 						},
 					},
 					Volumes: volumes,
@@ -503,26 +521,6 @@ func withTLSVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) []v1.V
 			MountPath: "/vault/tls",
 		})
 	}
-	return volumeMounts
-}
-
-func withStatsDVolume(v *v1alpha1.Vault, volumes []v1.Volume) []v1.Volume {
-	volumes = append(volumes, v1.Volume{
-		Name: "statsd-mapping",
-		VolumeSource: v1.VolumeSource{
-			ConfigMap: &v1.ConfigMapVolumeSource{
-				LocalObjectReference: v1.LocalObjectReference{Name: v.Name + "-statsd-mapping"},
-			},
-		},
-	})
-	return volumes
-}
-
-func withStatsDVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) []v1.VolumeMount {
-	volumeMounts = append(volumeMounts, v1.VolumeMount{
-		Name:      "statsd-mapping",
-		MountPath: "/tmp/",
-	})
 	return volumeMounts
 }
 
@@ -699,6 +697,29 @@ func configMapForConfigurer(v *v1alpha1.Vault) *v1.ConfigMap {
 			Labels:    ls,
 		},
 		Data: map[string]string{vault.DefaultConfigFile: v.Spec.ExternalConfigJSON()},
+	}
+	addOwnerRefToObject(cm, asOwner(v))
+	return cm
+}
+
+func configMapForStatsD(v *v1alpha1.Vault) *v1.ConfigMap {
+	ls := labelsForVault(v.Name)
+	cm := &v1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v.Name + "-statsd-mapping",
+			Namespace: v.Namespace,
+			Labels:    ls,
+		},
+		Data: map[string]string{"statsd-mapping.conf": `mappings:
+    - match: vault.route.*.*
+      name: "vault_route"
+      labels:
+        method: "$1"
+        path: "$2"`},
 	}
 	addOwnerRefToObject(cm, asOwner(v))
 	return cm

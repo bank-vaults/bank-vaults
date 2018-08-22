@@ -119,13 +119,9 @@ func (spec *VaultSpec) GetStatsDImage() string {
 
 // GetAnnotations returns the Annotations
 func (spec *VaultSpec) GetAnnotations() map[string]string {
-	if len(spec.Annotations) == 0 {
-		return map[string]string{
-			"prometheus.io/scrape": "true",
-			"prometheus.io/path":   "/metrics",
-			"prometheus.io/port":   "9102",
-		}
-	}
+	spec.Annotations["prometheus.io/scrape"] = "true"
+	spec.Annotations["prometheus.io/path"] = "/metrics"
+	spec.Annotations["prometheus.io/port"] = "9102"
 	return spec.Annotations
 }
 
