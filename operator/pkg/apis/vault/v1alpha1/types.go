@@ -38,6 +38,7 @@ type VaultSpec struct {
 	Size              int32                  `json:"size"`
 	Image             string                 `json:"image"`
 	BankVaultsImage   string                 `json:"bankVaultsImage"`
+	StatsDImage       string                 `json:"statsdImage"`
 	Annotations       map[string]string      `json:"annotations"`
 	Config            map[string]interface{} `json:"config"`
 	ExternalConfig    map[string]interface{} `json:"externalConfig"`
@@ -106,6 +107,22 @@ func (spec *VaultSpec) GetBankVaultsImage() string {
 		return "banzaicloud/bank-vaults:latest"
 	}
 	return spec.BankVaultsImage
+}
+
+// GetStatsDImage returns the StatsD image to use
+func (spec *VaultSpec) GetStatsDImage() string {
+	if spec.StatsDImage == "" {
+		return "prom/statsd-exporter:latest"
+	}
+	return spec.StatsDImage
+}
+
+// GetAnnotations returns the Annotations
+func (spec *VaultSpec) GetAnnotations() map[string]string {
+	spec.Annotations["prometheus.io/scrape"] = "true"
+	spec.Annotations["prometheus.io/path"] = "/metrics"
+	spec.Annotations["prometheus.io/port"] = "9102"
+	return spec.Annotations
 }
 
 // ConfigJSON returns the Config field as a JSON string
