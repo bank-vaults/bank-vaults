@@ -32,6 +32,7 @@ We use Vault across our large Kubernetes deployments and all the projects were `
 - [Operator](#operator)
 - [Examples](#examples)
 - [Getting and Installing](#getting-and-installing)
+- [Monitoring](#monitoring)
 - [Contributing](#contributing)
 - [Credits](#credits)
 
@@ -283,6 +284,17 @@ Some examples are in `cmd/examples/main.go`
 ```bash
 go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
 ```
+
+or
+
+```bash
+docker pull banzaicloud/bank-vaults
+docker pull banzaicloud/vault-operator
+```
+
+## Monitoring
+
+At Banzaicloud we prefer Prometheus for monitoring and use it also for Vault. If you configure, Vault can expose metrics through [statsd](https://www.vaultproject.io/docs/configuration/telemetry.html#statsd). Both the [Helm chart](https://github.com/banzaicloud/banzai-charts/tree/master/vault) and the Vault Operator installs the [Prometheus StatsD exporter](https://github.com/prometheus/statsd_exporter) and annotates the pods correctly with Prometheus annotations so Prometheus can discover and scrape them.
 
 ## Cloud permissions
 
