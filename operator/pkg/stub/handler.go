@@ -436,7 +436,7 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							Image:           v.Spec.GetStatsDImage(),
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Name:            "prometheus-exporter",
-							Args:            []string{"-statsd.mapping-config=/tmp/statsd-mapping.conf"},
+							Args:            []string{"--statsd.mapping-config=/tmp/statsd-mapping.conf"},
 							Env: withTLSEnv(v, true, withCredentialsEnv(v, []v1.EnvVar{
 								{
 									Name:  k8s.EnvK8SOwnerReference,
