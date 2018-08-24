@@ -20,6 +20,7 @@ type Token struct {
 	ID        string     `json:"id"`
 	Name      string     `json:"name"`
 	CreatedAt *time.Time `json:"createdAt,omitempty"`
+	Value     string     `json:"value,omitempty"`
 }
 
 // TokenStore is general interface for storing access tokens
@@ -38,24 +39,35 @@ func NewToken(id, name string) *Token {
 func parseToken(secret *vaultapi.Secret) (*Token, error) {
 	data := cast.ToStringMap(secret.Data["data"])
 	metadata := cast.ToStringMap(secret.Data["metadata"])
+
 	if tokenData, ok := data["token"]; ok {
+
 		tokenData := tokenData.(map[string]interface{})
 		token := &Token{}
+
 		tokenID := tokenData["id"]
 		if tokenID == nil {
 			return nil, fmt.Errorf("Can't find \"token.id\" in Secret")
 		}
 		token.ID = tokenID.(string)
+
 		tokenName := tokenData["name"]
 		if tokenName == nil {
 			return nil, fmt.Errorf("Can't find \"token.name\" in Secret")
 		}
 		token.Name = tokenName.(string)
+
 		createdAt, err := time.Parse(time.RFC3339, metadata["created_time"].(string))
 		if err != nil {
 			return nil, err
 		}
 		token.CreatedAt = &createdAt
+
+		tokenValue := tokenData["value"]
+		if tokenValue != nil {
+			token.Value = tokenValue.(string)
+		}
+
 		return token, nil
 	}
 	return nil, fmt.Errorf("Can't find \"token\" in Secret")
