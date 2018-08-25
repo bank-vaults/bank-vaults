@@ -139,7 +139,7 @@ spec:
       - name: prometheus-statsd-exporter
         image: "prom/statsd-exporter:latest"
         imagePullPolicy: IfNotPresent
-        args: ["-statsd.mapping-config=/tmp/statsd-mapping.conf"]
+        args: ["--statsd.mapping-config=/tmp/statsd-mapping.conf"]
         ports:
         - containerPort: 9102
           name: prometheus
