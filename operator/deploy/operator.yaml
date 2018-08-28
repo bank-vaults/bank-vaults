@@ -37,3 +37,4 @@ spec:
           # for CRD objects, if not defined all namespaces are whatched.
           - name: OPERATOR_NAMESPACE 
             value: default
+      serviceAccount: vault-operator

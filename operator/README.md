@@ -29,6 +29,7 @@ kubectl apply -f operator/deploy/cr.yaml
 Additionally you have to deploy the [etcd-operator](https://github.com/coreos/etcd-operator) to the cluster as well:
 
 ```bash
+kubectl apply -f operator/deploy/etcd-rbac.yaml
 kubectl apply -f operator/deploy/etcd-operator.yaml
 ```
 
