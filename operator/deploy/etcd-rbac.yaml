@@ -1,17 +1,17 @@
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: vault-operator
+  name: etcd-operator
 
 ---
 
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: vault-operator
+  name: etcd-operator
 rules:
 - apiGroups:
-  - vault.banzaicloud.com
+  - etcd.database.coreos.com
   resources:
   - "*"
   verbs:
@@ -38,9 +38,12 @@ rules:
   verbs:
   - "*"
 - apiGroups:
-  - etcd.database.coreos.com
+  - apps
   resources:
-  - etcdclusters
+  - deployments
+  - daemonsets
+  - replicasets
+  - statefulsets
   verbs:
   - "*"
 
@@ -49,11 +52,11 @@ rules:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: vault-operator
+  name: etcd-operator
 subjects:
 - kind: ServiceAccount
-  name: vault-operator
+  name: etcd-operator
 roleRef:
   kind: Role
-  name: vault-operator
+  name: etcd-operator
   apiGroup: rbac.authorization.k8s.io
