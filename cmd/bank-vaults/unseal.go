@@ -65,6 +65,7 @@ from one of the followings:
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
 
+		metrics := prometheusExporter{Vault: v}
 		go metrics.Run()
 
 		for {
@@ -86,9 +87,7 @@ from one of the followings:
 					return
 				}
 
-				metrics.Initialized = true
 				logrus.Infof("vault sealed: %t", sealed)
-				metrics.Sealed = sealed
 
 				// If vault is not sealed, we stop here and wait another unsealPeriod
 				if !sealed {

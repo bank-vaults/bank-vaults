@@ -46,9 +46,10 @@ var _ Vault = &vault{}
 // Vault is an interface that can be used to attempt to perform actions against
 // a Vault server.
 type Vault interface {
+	Init() error
 	Sealed() (bool, error)
 	Unseal() error
-	Init() error
+	Leader() (bool, error)
 	Configure() error
 }
 
@@ -72,6 +73,14 @@ func (v *vault) Sealed() (bool, error) {
 		return false, fmt.Errorf("error checking status: %s", err.Error())
 	}
 	return resp.Sealed, nil
+}
+
+func (v *vault) Leader() (bool, error) {
+	resp, err := v.cl.Sys().Leader()
+	if err != nil {
+		return false, fmt.Errorf("error checking leader: %s", err.Error())
+	}
+	return resp.IsSelf, nil
 }
 
 // Unseal will attempt to unseal vault by retrieving keys from the kms service
