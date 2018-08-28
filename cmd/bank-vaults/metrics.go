@@ -1,37 +1,41 @@
 package main
 
 import (
+	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 )
 
-var metrics prometheusExporter
-
 const prometheusNS = "vault"
 
 var (
-	initialized = prometheus.NewDesc(
-		prometheus.BuildFQName(prometheusNS, "", "initialized"),
+	initializedDesc = prometheus.NewDesc(
+		prometheus.BuildFQName(prometheusNS, "sys", "initialized"),
 		"Is the Vault node initialized.",
 		nil, nil,
 	)
-	sealed = prometheus.NewDesc(
-		prometheus.BuildFQName(prometheusNS, "", "sealed"),
+	sealedDesc = prometheus.NewDesc(
+		prometheus.BuildFQName(prometheusNS, "sys", "sealed"),
 		"Is the Vault node sealed.",
+		nil, nil,
+	)
+	leaderDesc = prometheus.NewDesc(
+		prometheus.BuildFQName(prometheusNS, "sys", "leader"),
+		"Is the Vault node the leader.",
 		nil, nil,
 	)
 )
 
 type prometheusExporter struct {
-	Sealed      bool
-	Initialized bool
+	Vault vault.Vault
 }
 
 func (e *prometheusExporter) Describe(ch chan<- *prometheus.Desc) {
-	ch <- initialized
-	ch <- sealed
+	ch <- initializedDesc
+	ch <- sealedDesc
+	ch <- leaderDesc
 }
 
 func bToF(b bool) float64 {
@@ -42,13 +46,30 @@ func bToF(b bool) float64 {
 }
 
 func (e *prometheusExporter) Collect(ch chan<- prometheus.Metric) {
+
+	sealed, err := e.Vault.Sealed()
+	if err != nil {
+		logrus.Errorf("error checking if vault is sealed: %s", err.Error())
+		return
+	}
+
+	leader, err := e.Vault.Leader()
+	if err != nil {
+		logrus.Errorf("error checking if vault is leader: %s", err.Error())
+		return
+	}
+
 	ch <- prometheus.MustNewConstMetric(
-		sealed, prometheus.GaugeValue, bToF(e.Sealed),
+		initializedDesc, prometheus.GaugeValue, bToF(true),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		initialized, prometheus.GaugeValue, bToF(e.Initialized),
+		sealedDesc, prometheus.GaugeValue, bToF(sealed),
+	)
+	ch <- prometheus.MustNewConstMetric(
+		leaderDesc, prometheus.GaugeValue, bToF(leader),
 	)
 }
+
 func (e prometheusExporter) Run() {
 	var defaultMetricsPath = "/metrics"
 	var defaultMetricsPort = ":9091"
