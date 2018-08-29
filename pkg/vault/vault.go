@@ -359,7 +359,7 @@ func (v *vault) Configure() error {
 			}
 			crossaccountrole, err := cast.ToSliceE(authMethod["crossaccountrole"])
 			if err != nil {
-				return
+				return nil
 			}
 			err = v.configureAWSCrossAccountRoles(crossaccountrole)
 			if err != nil {
