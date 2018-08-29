@@ -104,6 +104,9 @@ spec:
         - secretRef:
             name: {{ .secretName }}
         {{- end }}
+        ports:
+        - containerPort: {{ .Values.unsealer.merics.port }}
+          name: "{{ .Values.unsealer.merics.name }}"
         volumeMounts:
         - name: vault-tls
           mountPath: /vault/tls
