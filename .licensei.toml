@@ -1,0 +1,19 @@
+approved = [
+  "mit",
+  "apache-2.0",
+  "bsd-3-clause",
+  "bsd-2-clause",
+  "mpl-2.0",
+]
+
+ignored = [
+  "github.com/aliyun/aliyun-oss-go-sdk",
+  "github.com/ghodss/yaml",
+  "github.com/gogo/protobuf",
+  "github.com/golang/protobuf",
+  "github.com/stretchr/testify",
+
+  "github.com/davecgh/go-spew", # ISC license
+  "github.com/howeyc/gopass", # ISC license
+  "github.com/oracle/oci-go-sdk", # UPL-1.0
+]
