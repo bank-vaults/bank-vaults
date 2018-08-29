@@ -14,6 +14,31 @@ jobs:
     working_directory: /go/src/github.com/banzaicloud/bank-vaults
     steps:
       - checkout
+      
+      - run:
+          name: Install license checker
+          command: curl https://raw.githubusercontent.com/goph/licensei/master/install.sh | bash -s v0.0.6
+
+      - restore_cache:
+          keys:
+          - licensei-v1-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          - licensei-v1-{{ .Branch }}
+          - licensei-v1-master
+          - licensei-v1
+
+      - run:
+          name: Download license information for dependencies
+          command: bin/licensei cache
+
+      - save_cache:
+          key: licensei-v1-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          paths:
+            - .licensei.cache
+
+      - run:
+          name: Check dependency licenses
+          command: bin/licensei check 
+      
       - run:
           name: Run dep ensure if necessary
           command: |
