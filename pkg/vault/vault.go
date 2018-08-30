@@ -322,14 +322,21 @@ func (v *vault) Configure() error {
 
 		switch authMethodType {
 		case "kubernetes":
-			err = v.kubernetesAuthConfig(path)
+			config, err := cast.ToStringMapE(authMethod["config"])
 			if err != nil {
-				return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
+			    err = v.kubernetesAuthConfigDefault(path)
+			    if err != nil {
+			        return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
+			    }
+			}
+			err = v.kubernetesAuthConfig(path, config)
+			if err != nil {
+			    return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
 			}
 			roles := authMethod["roles"].([]interface{})
 			err = v.configureKubernetesRoles(roles)
 			if err != nil {
-				return fmt.Errorf("error configuring kubernetes auth roles for vault: %s", err.Error())
+			    return fmt.Errorf("error configuring kubernetes auth roles for vault: %s", err.Error())
 			}
 		case "github":
 			config, err := cast.ToStringMapE(authMethod["config"])
@@ -427,7 +434,7 @@ func (*vault) testKey() string {
 	return fmt.Sprint("vault-test")
 }
 
-func (v *vault) kubernetesAuthConfig(path string) error {
+func (v *vault) kubernetesAuthConfigDefault(path string) error {
 	kubernetesCACert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 	if err != nil {
 		return err
@@ -445,6 +452,15 @@ func (v *vault) kubernetesAuthConfig(path string) error {
 	return err
 }
 
+func (v *vault) kubernetesAuthConfig(path string, config map[string]interface{}) error {
+	_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
+	
+	if err != nil {
+	    return fmt.Errorf("error putting %s kubernetes config into vault: %s", config, err.Error())
+	}
+	return nil	
+}
+	
 func (v *vault) configurePolicies() error {
 	policies := []map[string]string{}
 	err := viper.UnmarshalKey("policies", &policies)
