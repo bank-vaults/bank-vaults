@@ -324,19 +324,19 @@ func (v *vault) Configure() error {
 		case "kubernetes":
 			config, err := cast.ToStringMapE(authMethod["config"])
 			if err != nil {
-			    err = v.kubernetesAuthConfigDefault(path)
-			    if err != nil {
-			        return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
-			    }
+				err = v.kubernetesAuthConfigDefault(path)
+				if err != nil {
+					return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
+				}
 			}
 			err = v.kubernetesAuthConfig(path, config)
 			if err != nil {
-			    return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
+				return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
 			}
 			roles := authMethod["roles"].([]interface{})
 			err = v.configureKubernetesRoles(roles)
 			if err != nil {
-			    return fmt.Errorf("error configuring kubernetes auth roles for vault: %s", err.Error())
+				return fmt.Errorf("error configuring kubernetes auth roles for vault: %s", err.Error())
 			}
 		case "github":
 			config, err := cast.ToStringMapE(authMethod["config"])
