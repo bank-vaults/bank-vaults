@@ -453,7 +453,7 @@ func (v *vault) kubernetesAuthConfigDefault(path string) error {
 }
 
 func (v *vault) kubernetesAuthConfig(path string, config map[string]interface{}) error {
-	_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
+	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
 
 	if err != nil {
 		return fmt.Errorf("error putting %s kubernetes config into vault: %s", config, err.Error())
