@@ -399,18 +399,20 @@
   revision = "ef8a98b0bbce4a65b5aa4c368430a80ddc533168"
 
 [[projects]]
-  digest = "1:c3404551b349d2811149279839411ab1ef4bfcbbae8f407195e6b95dddc0b308"
+  digest = "1:dbef1dda9aa352f3e62bcaa87be4e33d5e1736416aec983a7868d219249e919d"
   name = "github.com/hashicorp/vault"
   packages = [
     "api",
     "helper/compressutil",
+    "helper/consts",
+    "helper/hclutil",
     "helper/jsonutil",
     "helper/parseutil",
     "helper/strutil",
   ]
   pruneopts = "NUT"
-  revision = "3ee0802ed08cb7f4046c2151ec4671a076b76166"
-  version = "v0.10.2"
+  revision = "87492f9258e0227f3717e3883c6a8be5716bf564"
+  version = "v0.11.0"
 
 [[projects]]
   branch = "master"

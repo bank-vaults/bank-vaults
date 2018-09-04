@@ -42,7 +42,7 @@ required = [
 
 [[constraint]]
   name = "github.com/hashicorp/vault"
-  version = "0.10.2"
+  version = "0.11.0"
 
 [[constraint]]
   name = "github.com/Masterminds/sprig"
