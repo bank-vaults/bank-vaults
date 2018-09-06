@@ -23,23 +23,23 @@ jobs:
           - build-deps-v1-master
           - build-deps-v1
 
-          - restore_cache:
-              name: Restore dependencies
-              keys:
-              - gopkg-v1-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
-              - gopkg-v1-{{ .Branch }}
-              - gopkg-v1-master
-              - gopkg-v1
+      - restore_cache:
+          name: Restore dependencies
+          keys:
+          - gopkg-v1-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          - gopkg-v1-{{ .Branch }}
+          - gopkg-v1-master
+          - gopkg-v1
 
-          - run:
-              name: Install dependencies
-              command: make vendor
+      - run:
+          name: Install dependencies
+          command: make vendor
 
-          - save_cache:
-              name: Save dependencies
-              key: gopkg-v1-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
-              paths:
-              - vendor/
+      - save_cache:
+          name: Save dependencies
+          key: gopkg-v1-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          paths:
+          - vendor/
       
       - run:
           name: Install license checker
