@@ -14,6 +14,32 @@ jobs:
     working_directory: /go/src/github.com/banzaicloud/bank-vaults
     steps:
       - checkout
+
+      - restore_cache:
+          name: Restore build dependencies
+          keys:
+          - build-deps-v1-{{ .Branch }}-{{ checksum "Makefile" }}
+          - build-deps-v1-{{ .Branch }}
+          - build-deps-v1-master
+          - build-deps-v1
+
+          - restore_cache:
+              name: Restore dependencies
+              keys:
+              - gopkg-v1-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+              - gopkg-v1-{{ .Branch }}
+              - gopkg-v1-master
+              - gopkg-v1
+
+          - run:
+              name: Install dependencies
+              command: make vendor
+
+          - save_cache:
+              name: Save dependencies
+              key: gopkg-v1-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+              paths:
+              - vendor/
       
       - run:
           name: Install license checker
