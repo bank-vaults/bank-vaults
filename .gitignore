@@ -18,3 +18,7 @@
 operator/tmp/_output/bin/*
 
 .idea
+
+/vendor/
+/.licensei.cache
+bin/*
