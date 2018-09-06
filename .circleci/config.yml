@@ -66,17 +66,6 @@ jobs:
           command: bin/licensei check 
       
       - run:
-          name: Run dep ensure if necessary
-          command: |
-            if [[ `git diff HEAD^ Gopkg.* vendor/` ]]; then
-              dep ensure -v
-            fi
-      - run:
-          name: Unwind vendor
-          command: |
-              rm -rf vendor/
-              git reset --hard
-      - run:
           name: Build Bank Vaults
           command:
               make build
