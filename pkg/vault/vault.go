@@ -322,13 +322,19 @@ func (v *vault) Configure() error {
 
 		switch authMethodType {
 		case "kubernetes":
-			config, err := cast.ToStringMapE(authMethod["config"])
+			config, err := getOrDefaultStringMap(authMethod, "config")
 			if err != nil {
-				err = v.kubernetesAuthConfigDefault(path)
-				if err != nil {
-					return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
-				}
+				return fmt.Errorf("error finding config block for kubernetes: %s", err.Error())
 			}
+			defaultConfig, err := v.kubernetesAuthConfigDefault()
+			if err != nil {
+				return fmt.Errorf("error getting default kubernetes auth config for vault: %s", err.Error())
+			}
+			// merge the config blocks
+			for k, v := range config {
+				defaultConfig[k] = v
+			}
+			config = defaultConfig
 			err = v.kubernetesAuthConfig(path, config)
 			if err != nil {
 				return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
@@ -434,22 +440,21 @@ func (*vault) testKey() string {
 	return fmt.Sprint("vault-test")
 }
 
-func (v *vault) kubernetesAuthConfigDefault(path string) error {
+func (v *vault) kubernetesAuthConfigDefault() (map[string]interface{}, error) {
 	kubernetesCACert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	tokenReviewerJWT, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	config := map[string]interface{}{
 		"kubernetes_host":    fmt.Sprint("https://", os.Getenv("KUBERNETES_SERVICE_HOST")),
 		"kubernetes_ca_cert": string(kubernetesCACert),
 		"token_reviewer_jwt": string(tokenReviewerJWT),
 	}
-	_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
-	return err
+	return config, err
 }
 
 func (v *vault) kubernetesAuthConfig(path string, config map[string]interface{}) error {
