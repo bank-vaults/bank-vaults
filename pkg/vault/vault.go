@@ -370,13 +370,15 @@ func (v *vault) Configure() error {
 			if err != nil {
 				return fmt.Errorf("error configuring aws auth for vault: %s", err.Error())
 			}
-			crossaccountrole, err := cast.ToSliceE(authMethod["crossaccountrole"])
-			if err != nil {
-				return nil
-			}
-			err = v.configureAWSCrossAccountRoles(crossaccountrole)
-			if err != nil {
-				return fmt.Errorf("error configuring aws auth cross account roles for vault: %s", err.Error())
+			if crossaccountroleRaw, ok := authMethod["crossaccountrole"]; ok {
+				crossaccountrole, err := cast.ToSliceE(crossaccountroleRaw)
+				if err != nil {
+					return fmt.Errorf("error finding crossaccountrole block for aws: %s", err.Error())
+				}
+				err = v.configureAWSCrossAccountRoles(crossaccountrole)
+				if err != nil {
+					return fmt.Errorf("error configuring aws auth cross account roles for vault: %s", err.Error())
+				}
 			}
 			roles, err := cast.ToSliceE(authMethod["roles"])
 			if err != nil {
@@ -395,22 +397,25 @@ func (v *vault) Configure() error {
 			if err != nil {
 				return fmt.Errorf("error configuring ldap auth for vault: %s", err.Error())
 			}
-			groups, err := cast.ToStringMapE(authMethod["groups"])
-			if err != nil {
-				return fmt.Errorf("error finding groups block for ldap: %s", err.Error())
+			if groupsRaw, ok := authMethod["groups"]; ok {
+				groups, err := cast.ToStringMapE(groupsRaw)
+				if err != nil {
+					return fmt.Errorf("error finding groups block for ldap: %s", err.Error())
+				}
+				err = v.configureLdapMappings("groups", groups)
+				if err != nil {
+					return fmt.Errorf("error configuring ldap groups for vault: %s", err.Error())
+				}
 			}
-
-			err = v.configureLdapMappings("groups", groups)
-			if err != nil {
-				return fmt.Errorf("error configuring ldap groups for vault: %s", err.Error())
-			}
-			users, err := cast.ToStringMapE(authMethod["users"])
-			if err != nil {
-				return fmt.Errorf("error finding users block for ldap: %s", err.Error())
-			}
-			err = v.configureLdapMappings("users", users)
-			if err != nil {
-				return fmt.Errorf("error configuring ldap users for vault: %s", err.Error())
+			if usersRaw, ok := authMethod["users"]; ok {
+				users, err := cast.ToStringMapE(usersRaw)
+				if err != nil {
+					return fmt.Errorf("error finding users block for ldap: %s", err.Error())
+				}
+				err = v.configureLdapMappings("users", users)
+				if err != nil {
+					return fmt.Errorf("error configuring ldap users for vault: %s", err.Error())
+				}
 			}
 		}
 	}
