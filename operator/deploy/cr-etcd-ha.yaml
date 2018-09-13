@@ -7,6 +7,11 @@ spec:
   image: vault:0.11.0
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
+  # This option gives us the option to workaround current StatefulSet limitations around updates
+  # See: https://github.com/kubernetes/kubernetes/issues/67250
+  # By default it is false.
+  supportUpgrade: true
+
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
     kubernetes:

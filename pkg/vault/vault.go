@@ -51,6 +51,7 @@ type Vault interface {
 	Unseal() error
 	Leader() (bool, error)
 	Configure() error
+	StepDownActive(string) error
 }
 
 // New returns a new vault Vault, or an error.
@@ -254,6 +255,26 @@ func (v *vault) Init() error {
 	}
 
 	return nil
+}
+
+func (v *vault) StepDownActive(address string) error {
+	logrus.Debugf("retrieving key from kms service...")
+
+	rootToken, err := v.keyStore.Get(v.rootTokenKey())
+	if err != nil {
+		return fmt.Errorf("unable to get key '%s': %s", v.rootTokenKey(), err.Error())
+	}
+
+	v.cl.SetToken(string(rootToken))
+
+	// Clear the token and GC it
+	defer runtime.GC()
+	defer v.cl.SetToken("")
+	defer func() { rootToken = nil }()
+
+	v.cl.SetAddress(address)
+
+	return v.cl.Sys().StepDown()
 }
 
 func (v *vault) Configure() error {
