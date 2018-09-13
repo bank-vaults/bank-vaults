@@ -349,7 +349,6 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 		return nil, err
 	}
 
-	// TODO check if upgrade strategy is HA
 	dep := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -361,6 +360,10 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &replicas,
+			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+			},
+			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
@@ -422,7 +425,7 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							Image:           v.Spec.GetBankVaultsImage(),
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Name:            "bank-vaults",
-							Command:         []string{"bank-vaults", "unseal", "--init"},
+							Command:         withSupportUpgradeParams(v, []string{"bank-vaults", "unseal", "--init"}),
 							Args:            v.Spec.UnsealConfig.ToArgs(v),
 							Env: withTLSEnv(v, true, withCredentialsEnv(v, []v1.EnvVar{
 								{
@@ -465,6 +468,15 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 	}
 	addOwnerRefToObject(dep, owner)
 	return dep, nil
+}
+
+func withSupportUpgradeParams(v *v1alpha1.Vault, params []string) []string {
+	if v.Spec.SupportUpgrade {
+		host := fmt.Sprintf("%s.%s", v.Name, v.Namespace)
+		address := fmt.Sprintf("https://%s:8200", host)
+		params = append(params, []string{"--step-down-active", "--active-node-address", address}...)
+	}
+	return params
 }
 
 func getVaultURIScheme(v *v1alpha1.Vault) v1.URIScheme {
