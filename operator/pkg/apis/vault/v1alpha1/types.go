@@ -148,6 +148,9 @@ func (spec *VaultSpec) GetAnnotations() map[string]string {
 
 // ConfigJSON returns the Config field as a JSON string
 func (spec *VaultSpec) ConfigJSON() string {
+	if _, ok := spec.Config["disable_clustering"]; !ok {
+		spec.Config["disable_clustering"] = true
+	}
 	config, _ := json.Marshal(spec.Config)
 	return string(config)
 }
