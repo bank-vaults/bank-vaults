@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 )
 
 var (
@@ -96,7 +97,12 @@ func GetKeyvaultAuthorizer() (a autorest.Authorizer, err error) {
 		return keyvaultAuthorizer, nil
 	}
 
-	vaultEndpoint := "https://vault.azure.net"
+	if _, ok := os.LookupEnv("AZURE_AUTH_LOCATION"); ok {
+		a, err = auth.NewAuthorizerFromFile(azure.PublicCloud.KeyVaultEndpoint)
+		keyvaultAuthorizer = a
+		return
+	}
+
 	config, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
 	updatedAuthorizeEndpoint, err := url.Parse("https://login.windows.net/" + tenantID + "/oauth2/token")
 	config.AuthorizeEndpoint = *updatedAuthorizeEndpoint
@@ -104,7 +110,7 @@ func GetKeyvaultAuthorizer() (a autorest.Authorizer, err error) {
 		return
 	}
 
-	token, err := adal.NewServicePrincipalToken(*config, clientID, clientSecret, vaultEndpoint)
+	token, err := adal.NewServicePrincipalToken(*config, clientID, clientSecret, azure.PublicCloud.KeyVaultEndpoint)
 	if err != nil {
 		return a, err
 	}
