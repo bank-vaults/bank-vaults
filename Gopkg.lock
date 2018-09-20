@@ -29,12 +29,13 @@
   version = "v15.2.0"
 
 [[projects]]
-  digest = "1:43ab673e1f361c23d631604e7f96acf2a0e35f6194178f9895663edc3c304146"
+  digest = "1:bf3dc72a7473bb43f47717ace335c4d69fdfc08492368d76fbc2ef42a7474742"
   name = "github.com/Azure/go-autorest"
   packages = [
     "autorest",
     "autorest/adal",
     "autorest/azure",
+    "autorest/azure/auth",
     "autorest/date",
     "autorest/to",
     "autorest/validation",
@@ -188,6 +189,14 @@
   pruneopts = "NUT"
   revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
   version = "v3.2.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:ec6271918b59b872a2d25e374569a4f75f1839d91e4191470c297b7eaaaf7641"
+  name = "github.com/dimchansky/utfbom"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "5448fe645cb1964ba70ac8f9f2ffe975e61a536c"
 
 [[projects]]
   digest = "1:1b91ae0dc69a41d4c2ed23ea5cffb721ea63f5037ca4b81e6d6771fbb8f45129"
@@ -752,10 +761,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1c2f8ee5475a159add4b99b6236fa2fb86c7e4ea169484f5c624272fe06ea2b2"
+  digest = "1:7197491b7bf0683298c954212e66ea405e7a4befce2a7ccd9712bdb90e41da24"
   name = "golang.org/x/crypto"
   packages = [
     "pbkdf2",
+    "pkcs12",
+    "pkcs12/internal/rc2",
     "scrypt",
     "ssh/terminal",
   ]
@@ -1149,6 +1160,7 @@
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/adal",
     "github.com/Azure/go-autorest/autorest/azure",
+    "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/Masterminds/sprig",
     "github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests",
     "github.com/aliyun/alibaba-cloud-sdk-go/services/kms",
