@@ -63,7 +63,7 @@ type VaultSpec struct {
 	// TODO: Should be removed once the ParallelPodManagement policy supports the broken update.
 	SupportUpgrade bool   `json:"supportUpgrade"`
 	EtcdVersion    string `json:"etcdVersion"`
-	EtcdSize       int32  `json:"etcdSize"`
+	EtcdSize       int    `json:"etcdSize"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
@@ -112,7 +112,7 @@ func (spec *VaultSpec) GetEtcdVersion() string {
 }
 
 // GetEtcdSize returns the number of etcd pods to use
-func (spec *VaultSpec) GetEtcdSize() int32 {
+func (spec *VaultSpec) GetEtcdSize() int {
 	if spec.EtcdSize < 1 {
 		return 3
 	}
