@@ -61,8 +61,8 @@ type VaultSpec struct {
 	// This option gives us the option to workaround current StatefulSet limitations around updates
 	// See: https://github.com/kubernetes/kubernetes/issues/67250
 	// TODO: Should be removed once the ParallelPodManagement policy supports the broken update.
-	SupportUpgrade 	  bool 					 `json:"supportUpgrade"`
-	etcdVersion       string                 `json:"etcdVersion"`	
+	SupportUpgrade bool   `json:"supportUpgrade"`
+	etcdVersion    string `json:"etcdVersion"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
