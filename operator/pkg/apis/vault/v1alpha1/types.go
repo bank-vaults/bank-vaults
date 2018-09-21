@@ -63,6 +63,7 @@ type VaultSpec struct {
 	// TODO: Should be removed once the ParallelPodManagement policy supports the broken update.
 	SupportUpgrade bool   `json:"supportUpgrade"`
 	EtcdVersion    string `json:"etcdVersion"`
+	EtcdSize       int32  `json:"etcdSize"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
@@ -108,6 +109,13 @@ func (spec *VaultSpec) GetEtcdVersion() string {
 		return "3.1.15"
 	}
 	return spec.EtcdVersion
+}
+
+func (spec *VaultSpec) GetEtcdSize() int32 {
+	if spec.EtcdSize == "" {
+		return 3
+	}
+	return spec.EtcdSize
 }
 
 // HasStorageHAEnabled detects if the ha_enabled field is set to true in Vault's storage stanza
