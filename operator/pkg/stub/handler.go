@@ -606,8 +606,6 @@ func etcdForVault(v *v1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
 	etcdCluster.Namespace = v.Namespace
 	etcdCluster.Labels = labelsForVault(v.Name)
 	etcdCluster.Spec.Size = 3
-	// See https://github.com/coreos/etcd-operator/issues/1962#issuecomment-390539621
-	// for more details why we have to pin to 3.1.15
 	etcdCluster.Spec.Version = v.Spec.GetEtcdVersion()
 	etcdCluster.Spec.TLS = &etcdV1beta2.TLSPolicy{
 		Static: &etcdV1beta2.StaticTLS{
