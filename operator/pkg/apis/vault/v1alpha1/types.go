@@ -62,7 +62,7 @@ type VaultSpec struct {
 	// See: https://github.com/kubernetes/kubernetes/issues/67250
 	// TODO: Should be removed once the ParallelPodManagement policy supports the broken update.
 	SupportUpgrade bool   `json:"supportUpgrade"`
-	etcdVersion    string `json:"etcdVersion"`
+	EtcdVersion    string `json:"etcdVersion"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
@@ -102,12 +102,12 @@ func (spec *VaultSpec) GetStorageType() string {
 
 // GetEtcdVersion returns the etcd version to use
 func (spec *VaultSpec) GetEtcdVersion() string {
-	if spec.etcdVersion == "" {
+	if spec.EtcdVersion == "" {
 		// See https://github.com/coreos/etcd-operator/issues/1962#issuecomment-390539621
 		// for more details why we have to pin to 3.1.15
 		return "3.1.15"
 	}
-	return spec.etcdVersion
+	return spec.EtcdVersion
 }
 
 // HasStorageHAEnabled detects if the ha_enabled field is set to true in Vault's storage stanza
