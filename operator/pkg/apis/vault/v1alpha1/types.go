@@ -113,7 +113,7 @@ func (spec *VaultSpec) GetEtcdVersion() string {
 
 // GetEtcdSize returns the number of etcd pods to use
 func (spec *VaultSpec) GetEtcdSize() int32 {
-	if spec.EtcdSize == "" || spec.EtcdSize < 1 {
+	if spec.EtcdSize < 1 {
 		return 3
 	}
 	// check if size given is even. If even, subtract 1. Reasoning: Because of raft consensus protocol,
