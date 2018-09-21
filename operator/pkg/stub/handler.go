@@ -605,7 +605,7 @@ func etcdForVault(v *v1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
 	etcdCluster.Name = etcdName
 	etcdCluster.Namespace = v.Namespace
 	etcdCluster.Labels = labelsForVault(v.Name)
-	etcdCluster.Spec.Size = 3
+	etcdCluster.Spec.Size = v.Spec.GetEtcdSize()
 	etcdCluster.Spec.Version = v.Spec.GetEtcdVersion()
 	etcdCluster.Spec.TLS = &etcdV1beta2.TLSPolicy{
 		Static: &etcdV1beta2.StaticTLS{
