@@ -18,18 +18,18 @@
   version = "v0.20.0"
 
 [[projects]]
-  digest = "1:e1a37397526b96340ab6a54b5a3fb246b1490615fb9daed066fef8b4a6c7ef5f"
+  digest = "1:ac2a7a152d06d320e9c124c54bec6fc0c8425170696d8f50c5b61d788b0ebff2"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "services/keyvault/2016-10-01/keyvault",
     "version",
   ]
   pruneopts = "NUT"
-  revision = "060bf9b93ad98bc41813ca23f5328843f6c0e90b"
-  version = "v15.2.0"
+  revision = "f912cddf81bffc1569ccd89719a36acb64ca3035"
+  version = "v20.2.0"
 
 [[projects]]
-  digest = "1:bf3dc72a7473bb43f47717ace335c4d69fdfc08492368d76fbc2ef42a7474742"
+  digest = "1:f7303a47ca09bf170d666a2ded8dd453ddd40a75d8524073fddb64929b1c5ae9"
   name = "github.com/Azure/go-autorest"
   packages = [
     "autorest",
@@ -39,10 +39,12 @@
     "autorest/date",
     "autorest/to",
     "autorest/validation",
+    "logger",
+    "version",
   ]
   pruneopts = "NUT"
-  revision = "9ad9326b278af8fa5cc67c30c0ce9a58cc0862b2"
-  version = "v10.6.0"
+  revision = "a88c19ef2016e095f0b6c3b451074b4663f53bed"
+  version = "v10.15.4"
 
 [[projects]]
   digest = "1:a26f8da48b22e6176c1c6a2459904bb30bd0c49ada04b2963c2c3a203e81a620"

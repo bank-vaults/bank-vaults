@@ -36,6 +36,10 @@ var _ kv.Service = &azureKeyVault{}
 
 // New creates a new kv.Service backed by Azure Key Vault
 func New(name string) (kv.Service, error) {
+	if name == "" {
+		return nil, fmt.Errorf("invalid Key Vault specified: '%s'", name)
+	}
+
 	keyClient := keyvault.New()
 	authorizer, err := GetKeyvaultAuthorizer()
 	if err != nil {

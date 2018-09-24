@@ -129,11 +129,11 @@ version = "v1.1.5"
 
 [[constraint]]
   name = "github.com/Azure/azure-sdk-for-go"
-  version = "15.2.0"
+  version = ">=18.0.0"
 
 [[constraint]]
   name = "github.com/Azure/go-autorest"
-  version = "10.6.0"
+  version = ">=10.12.0"
 
 [[constraint]]
   name = "github.com/dgrijalva/jwt-go"
