@@ -21,7 +21,7 @@ import (
 
 	"github.com/spf13/cast"
 
-	"github.com/banzaicloud/bank-vaults/vault"
+	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 )
 

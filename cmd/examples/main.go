@@ -21,9 +21,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/banzaicloud/bank-vaults/auth"
-	"github.com/banzaicloud/bank-vaults/database"
-	"github.com/banzaicloud/bank-vaults/vault"
+	"github.com/banzaicloud/bank-vaults/pkg/auth"
+	"github.com/banzaicloud/bank-vaults/pkg/db"
+	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 )
