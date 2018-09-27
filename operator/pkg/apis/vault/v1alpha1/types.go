@@ -53,6 +53,7 @@ type VaultSpec struct {
 	Image             string                 `json:"image"`
 	BankVaultsImage   string                 `json:"bankVaultsImage"`
 	StatsDImage       string                 `json:"statsdImage"`
+	FluentDImage      string                 `json:"fluentdImage"`
 	Annotations       map[string]string      `json:"annotations"`
 	Config            map[string]interface{} `json:"config"`
 	ExternalConfig    map[string]interface{} `json:"externalConfig"`
@@ -170,6 +171,22 @@ func (spec *VaultSpec) GetAnnotations() map[string]string {
 	spec.Annotations["prometheus.io/path"] = "/metrics"
 	spec.Annotations["prometheus.io/port"] = "9102"
 	return spec.Annotations
+}
+
+// GetFluentDImage returns the StatsD image to use
+func (spec *VaultSpec) GetFluentDImage() string {
+	if spec.FluentDImage == "" {
+		return "fluent/fluentd:v0.12-onbuild"
+	}
+	return spec.FluentDImage
+}
+
+// GetFluentDEnable returns true if fluentd sidecar is to be deployed
+func (spec *VaultSpec) GetFluentDEnable() bool {
+	if spec.FluentDImage == "" {
+		return false
+	}
+	return true
 }
 
 // ConfigJSON returns the Config field as a JSON string
