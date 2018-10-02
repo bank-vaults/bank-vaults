@@ -210,19 +210,19 @@ secrets:
 
 This repository contains several Go packages for interacting with Vault:
 
-- `auth`
+- `pkg/auth`
 
     A GitHub OAuth2 based authentication system as a Gin Middleware, stores JWT bearer tokens in Vault.
 
     ![authn](docs/images/authn-vault-flow.png)
 
-- `vault`
+- `pkg/vault`
 
     A wrapper for the official Vault client with automatic token renewal, and Kubernetes support.
 
     ![token](docs/images/token-request-vault-flow.png)
 
-- `database`
+- `pkg/db`
 
     A helper for creating database source strings (MySQL/PostgreSQL) with database credentials dynamically based on configured Vault roles (instead of `username:password`).
 
