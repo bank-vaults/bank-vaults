@@ -72,6 +72,7 @@ var HAStorageTypes = map[string]bool{
 	"dynamodb":  true,
 	"etcd":      true,
 	"gcs":       true,
+	"mysql":     true,
 	"spanner":   true,
 	"zookeeper": true,
 }
