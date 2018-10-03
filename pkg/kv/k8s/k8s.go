@@ -114,7 +114,7 @@ func (k *k8sStorage) Get(key string) ([]byte, error) {
 
 	val := secret.Data[key]
 	if val == nil {
-		return nil, kv.NewNotFoundError("key '%s' is not present in secret: %s", key)
+		return nil, kv.NewNotFoundError("key '%s' is not present in secret: %s", key, secret.GetName())
 	}
 
 	return val, nil
