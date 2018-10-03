@@ -16,4 +16,7 @@ ignored = [
   "github.com/davecgh/go-spew", # ISC license
   "github.com/howeyc/gopass", # ISC license
   "github.com/oracle/oci-go-sdk", # UPL-1.0
+
+  "github.com/Masterminds/sprig",
+  "github.com/magiconair/properties"
 ]
