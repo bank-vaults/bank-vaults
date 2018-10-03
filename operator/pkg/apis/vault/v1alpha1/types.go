@@ -53,6 +53,7 @@ type VaultSpec struct {
 	Image             string                 `json:"image"`
 	BankVaultsImage   string                 `json:"bankVaultsImage"`
 	StatsDImage       string                 `json:"statsdImage"`
+	FluentDEnabled    bool                   `json:"fluentdEnabled"`
 	FluentDImage      string                 `json:"fluentdImage"`
 	Annotations       map[string]string      `json:"annotations"`
 	Config            map[string]interface{} `json:"config"`
@@ -173,20 +174,18 @@ func (spec *VaultSpec) GetAnnotations() map[string]string {
 	return spec.Annotations
 }
 
-// GetFluentDImage returns the StatsD image to use
+// GetFluentDImage returns the FluentD image to use
 func (spec *VaultSpec) GetFluentDImage() string {
 	if spec.FluentDImage == "" {
-		return "fluent/fluentd:v0.12-onbuild"
+		return "fluent/fluentd:stable"
 	}
 	return spec.FluentDImage
 }
 
 // GetFluentDEnable returns true if fluentd sidecar is to be deployed
-func (spec *VaultSpec) GetFluentDEnable() bool {
-	if spec.FluentDImage == "" {
-		return false
-	}
-	return true
+func (spec *VaultSpec) IsFluentDEnabled() bool {
+	// zero value for bool is false
+	return spec.FluentDEnabled
 }
 
 // ConfigJSON returns the Config field as a JSON string
