@@ -10,7 +10,6 @@ policies:
 # Allows configuring Auth Methods in Vault (Kubernetes and GitHub is supported now).
 # See https://www.vaultproject.io/docs/auth/index.html for more information.
 auth:
-  
   - type: kubernetes
     # If you want to configure with specific kubernets service account instead of default service account
     # https://www.vaultproject.io/docs/auth/kubernetes.html
@@ -30,7 +29,7 @@ auth:
         policies: allow_secrets
         ttl: 1h
 
-  # Allows creating team mappings in Vault which can be used later on for the GitHub 
+  # Allows creating team mappings in Vault which can be used later on for the GitHub
   # based authentication.
   # See https://www.vaultproject.io/docs/auth/github.html#configuration for
   # more information.
@@ -108,6 +107,17 @@ secrets:
     description: General secrets.
     options:
       version: 2
+  # Mounts non-default plugin's path
+  - path: ethereum-gateway
+    type: plugin
+    plugin_name: ethereum-plugin
+    description: Immutability's Ethereum Wallet
+# Registers a new plugin in Vault's plugin catalog. "plugin_directory" setting should be set it Vault server configuration and plugin binary should be present in plugin directory. Also, for some plugins readOnlyRootFilesystem Pod Security Policy should be disabled to allow RPC communication between plugin and Vault server since appa
+# See https://www.vaultproject.io/api/system/plugins-catalog.html and https://github.com/hashicorp/go-plugin/blob/master/docs/internals.md for details.
+plugins:
+  - plugin_name: ethereum-plugin
+    command: ethereum-vault-plugin --ca-cert=/vault/tls/client/ca.crt --client-cert=/vault/tls/server/server.crt --client-key=/vault/tls/server/server.key
+    sha256: 62fb461a8743f2a0af31d998074b58bb1a589ec1d28da3a2a5e8e5820d2c6e0a
 
   # This plugin stores database credentials dynamically based on configured roles for
   # the MySQL database.
@@ -150,7 +160,7 @@ secrets:
 
   # The RabbitMQ secrets engine generates user credentials dynamically based on configured permissions and virtual hosts.
   # See https://www.vaultproject.io/docs/secrets/rabbitmq/index.html
-  # Start a RabbitMQ testing server: docker run -it --rm -p 15672:15672 rabbitmq:3.7-management-alpine 
+  # Start a RabbitMQ testing server: docker run -it --rm -p 15672:15672 rabbitmq:3.7-management-alpine
   - type: rabbitmq
     description: local-rabbit
     configuration:
