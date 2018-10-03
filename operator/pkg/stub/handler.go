@@ -555,7 +555,7 @@ func withTLSVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) []v1.V
 }
 
 func withAuditLogVolume(v *v1alpha1.Vault, volumes []v1.Volume) []v1.Volume {
-	if v.Spec.GetFluentDEnable() {
+	if v.Spec.IsFluentDEnabled() {
 		volumes = append(volumes, v1.Volume{
 			Name: "vault-auditlogs",
 			VolumeSource: v1.VolumeSource{
@@ -567,7 +567,7 @@ func withAuditLogVolume(v *v1alpha1.Vault, volumes []v1.Volume) []v1.Volume {
 }
 
 func withAuditLogVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) []v1.VolumeMount {
-	if v.Spec.GetFluentDEnable() {
+	if v.Spec.IsFluentDEnabled() {
 		volumeMounts = append(volumeMounts, v1.VolumeMount{
 			Name:      "vault-auditlogs",
 			MountPath: "/tmp/",
@@ -577,7 +577,7 @@ func withAuditLogVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) [
 }
 
 func withAuditLogContainer(v *v1alpha1.Vault, owner string, containers []v1.Container) []v1.Container {
-	if v.Spec.GetFluentDEnable() {
+	if v.Spec.IsFluentDEnabled() {
 		containers = append(containers, v1.Container{
 			Image:           v.Spec.GetFluentDImage(),
 			ImagePullPolicy: v1.PullAlways,
