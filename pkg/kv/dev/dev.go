@@ -49,7 +49,7 @@ func (d *dev) Get(key string) ([]byte, error) {
 		return d.rootToken, nil
 	}
 
-	return nil, kv.NewNotFoundError("key '%s' is not present in secret: %s", key)
+	return nil, kv.NewNotFoundError("key '%s' is not present in secret", key)
 }
 
 func (d *dev) Test(key string) error {
