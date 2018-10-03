@@ -52,7 +52,7 @@ Features:
 - Automatically unseals Vault with these keys
 - Continuously configures Vault with a YAML/JSON based external configuration (besides the [standard Vault configuration](https://www.vaultproject.io/docs/configuration/index.html))
   - If the configuration is updated Vault will be reconfigured
-  - It supports configuring Vault secret engines, auth methods, and policies
+  - It supports configuring Vault secret engines, plugins, auth methods, and policies
 
 ### Example external Vault configuration
 
@@ -69,11 +69,17 @@ policies:
 # Allows configuring Auth Methods in Vault (Kubernetes and GitHub is supported now).
 # See https://www.vaultproject.io/docs/auth/index.html for more information.
 auth:
-  # Allows creating roles in Vault which can be used later on for the Kubernetes based
-  # authentication.
-  # See https://www.vaultproject.io/docs/auth/kubernetes.html#creating-a-role for
-  # more information.
   - type: kubernetes
+    # If you want to configure with specific kubernets service account instead of default service account
+    # https://www.vaultproject.io/docs/auth/kubernetes.html
+    # config:
+    #  token_reviewer_jwt: your_service_account_jwt
+    #  kubernetes_ca_cert: -----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----
+    #  kubernetes_host: https://192.168.99.100:8443
+    # Allows creating roles in Vault which can be used later on for the Kubernetes based
+    # authentication.
+    #  See https://www.vaultproject.io/docs/auth/kubernetes.html#creating-a-role for
+    # more information.
     roles:
       # Allow every pod in the default namespace to use the secret kv store
       - name: default
@@ -97,7 +103,7 @@ auth:
       users:
         bonifaido: allow_secrets
 
-  # Allows creating roles in Vault which can be used later on for AWS
+  # Allows creating roles in Vault which can be used later on for AWS 
   # IAM based authentication.
   # See https://www.vaultproject.io/docs/auth/aws.html for
   # more information.
@@ -105,7 +111,12 @@ auth:
     config:
       access_key: VKIAJBRHKH6EVTTNXDHA
       secret_key: vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj
-      iam_server_id_header_value: vault-dev.example.com # consider setting this to the Vault server's DNS name
+      iam_server_id_header_value: vault-dev.example.com # consider setting this to the Vault server's DNS name 
+    crossaccountrole:
+    # Add cross account number and role to assume in the cross account
+    # https://www.vaultproject.io/api/auth/aws/index.html#create-sts-role
+    - sts_account: 12345671234
+      sts_role_arn: arn:aws:iam::12345671234:role/crossaccountrole
     roles:
     # Add roles for AWS instances or principals
     # See https://www.vaultproject.io/api/auth/aws/index.html#create-role
@@ -113,8 +124,12 @@ auth:
       bound_iam_principal_arn: arn:aws:iam::123456789012:role/dev-vault
       policies: allow_secrets
       period: 1h
+    - name: cross-account-role
+      bound_iam_principal_arn: arn:aws:iam::12345671234:role/crossaccountrole
+      policies: allow_secrets
+      period: 1h
 
-  # Allows creating group mappings in Vault which can be used later on for the LDAP
+  # Allows creating group mappings in Vault which can be used later on for the LDAP 
   # based authentication.
   # See https://www.vaultproject.io/docs/auth/ldap.html#configuration for
   # more information.
@@ -143,18 +158,29 @@ auth:
 # but the config is free form so probably more is supported).
 # See https://www.vaultproject.io/docs/secrets/index.html for more information.
 secrets:
-  # This plugin stores database credentials dynamically based on configured roles for
-  # the MySQL database.
-  # See https://www.vaultproject.io/docs/secrets/databases/mysql-maria.html for
+  # This plugin stores arbitrary secrets within the configured physical storage for Vault.
+  # See https://www.vaultproject.io/docs/secrets/kv/index.html for
   # more information.
   - path: secret
     type: kv
     description: General secrets.
     options:
-      version: 1
+      version: 2
+  # Mounts non-default plugin's path
+  - path: ethereum-gateway
+    type: plugin
+    plugin_name: ethereum-plugin
+    description: Immutability's Ethereum Wallet
+# Registers a new plugin in Vault's plugin catalog. "plugin_directory" setting should be set it Vault server configuration and plugin binary should be present in plugin directory. Also, for some plugins readOnlyRootFilesystem Pod Security Policy should be disabled to allow RPC communication between plugin and Vault server via Unix socket
+# See https://www.vaultproject.io/api/system/plugins-catalog.html and https://github.com/hashicorp/go-plugin/blob/master/docs/internals.md for details.
+plugins:
+  - plugin_name: ethereum-plugin
+    command: ethereum-vault-plugin --ca-cert=/vault/tls/client/ca.crt --client-cert=/vault/tls/server/server.crt --client-key=/vault/tls/server/server.key
+    sha256: 62fb461a8743f2a0af31d998074b58bb1a589ec1d28da3a2a5e8e5820d2c6e0a
 
-  # This plugin stores arbitrary secrets within the configured physical storage for Vault.
-  # See https://www.vaultproject.io/docs/secrets/kv/index.html for
+  # This plugin stores database credentials dynamically based on configured roles for
+  # the MySQL database.
+  # See https://www.vaultproject.io/docs/secrets/databases/mysql-maria.html for
   # more information.
   - type: database
     description: MySQL Database secret engine.
@@ -193,6 +219,7 @@ secrets:
 
   # The RabbitMQ secrets engine generates user credentials dynamically based on configured permissions and virtual hosts.
   # See https://www.vaultproject.io/docs/secrets/rabbitmq/index.html
+  # Start a RabbitMQ testing server: docker run -it --rm -p 15672:15672 rabbitmq:3.7-management-alpine
   - type: rabbitmq
     description: local-rabbit
     configuration:
