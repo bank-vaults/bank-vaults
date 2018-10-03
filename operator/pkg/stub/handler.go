@@ -477,7 +477,7 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 								Name:      "statsd-mapping",
 								MountPath: "/tmp/",
 							}},
-						},					
+						},
 					}),
 					Volumes: volumes,
 				},
@@ -788,32 +788,6 @@ func configMapForStatsD(v *v1alpha1.Vault) *v1.ConfigMap {
 			Labels:    ls,
 		},
 		Data: map[string]string{"statsd-mapping.conf": `mappings:
-    - match: vault.route.*.*
-      name: "vault_route"
-      labels:
-        method: "$1"
-        path: "$2"`},
-	}
-	addOwnerRefToObject(cm, asOwner(v))
-	return cm
-}
-
-func configMapForFluentD(v *v1alpha1.Vault) *v1.ConfigMap {
-	ls := labelsForVault(v.Name)
-	cm := &v1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.Name + "-fluentd-mapping",
-			Namespace: v.Namespace,
-			Labels:    ls,
-		},
-		//
-		//TODO: CHANGE MAPPINGS
-		//
-		Data: map[string]string{"fluentd-mapping.conf": `mappings:
     - match: vault.route.*.*
       name: "vault_route"
       labels:
