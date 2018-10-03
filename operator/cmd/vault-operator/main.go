@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"runtime"
 
@@ -26,7 +27,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const operatorNamespace = "OPERATOR_NAMESPACE"
+const (
+	operatorNamespace = "OPERATOR_NAMESPACE"
+	livenessPort      = "8080"
+)
 
 func printVersion(namespace string) {
 	logrus.Infof("Go Version: %s", runtime.Version())
@@ -35,10 +39,23 @@ func printVersion(namespace string) {
 	logrus.Infof("operator namespace: %s", namespace)
 }
 
+func handleLiveness() {
+	logrus.Infof("Liveness probe listening on: %s", livenessPort)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		logrus.Debug("ping")
+	})
+	err := http.ListenAndServe(":"+livenessPort, nil)
+	if err != nil {
+		logrus.Errorf("failed to start health probe: %v\n", err)
+	}
+}
+
 func main() {
 	ns := os.Getenv(operatorNamespace)
 	printVersion(ns)
 	sdk.Watch("vault.banzaicloud.com/v1alpha1", "Vault", ns, 5)
 	sdk.Handle(stub.NewHandler())
+	// Start the health probe
+	go handleLiveness()
 	sdk.Run(context.TODO())
 }
