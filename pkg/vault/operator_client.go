@@ -460,6 +460,10 @@ func (v *vault) Configure() error {
 		return fmt.Errorf("error configuring policies for vault: %s", err.Error())
 	}
 
+	err = v.configurePlugins()
+	if err != nil {
+		return fmt.Errorf("error configuring plugins for vault: %s", err.Error())
+	}
 	err = v.configureSecretEngines()
 	if err != nil {
 		return fmt.Errorf("error configuring secret engines for vault: %s", err.Error())
@@ -630,6 +634,42 @@ func (v *vault) configureLdapMappings(mappingType string, mappings map[string]in
 	return nil
 }
 
+func (v *vault) configurePlugins() error {
+	plugins := []map[string]interface{}{}
+	err := viper.UnmarshalKey("plugins", &plugins)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling vault plugins config: %s", err.Error())
+	}
+	for _, plugin := range plugins {
+		command, err := getOrDefault(plugin, "command")
+		if err != nil {
+			return fmt.Errorf("error getting command for plugin: %s", err.Error())
+		}
+		pluginName, err := getOrDefault(plugin, "plugin_name")
+		if err != nil {
+			return fmt.Errorf("error getting plugin_name for plugin: %s", err.Error())
+		}
+		sha256, err := getOrDefault(plugin, "sha256")
+		if err != nil {
+			return fmt.Errorf("error getting options for plugin: %s", err.Error())
+		}
+		input := api.RegisterPluginInput{
+			Name:    pluginName,
+			Command: command,
+			SHA256:  sha256,
+		}
+		logrus.Infof("Registering plugin with input: %#v\n", input)
+		err = v.cl.Sys().RegisterPlugin(&input)
+		if err != nil {
+			return fmt.Errorf("error registering plugin %s into vault", err.Error())
+		}
+
+		logrus.Infoln("registered", plugin)
+
+	}
+
+	return nil
+}
 func (v *vault) configureSecretEngines() error {
 	secretsEngines := []map[string]interface{}{}
 	err := viper.UnmarshalKey("secrets", &secretsEngines)
