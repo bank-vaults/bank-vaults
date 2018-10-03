@@ -640,16 +640,24 @@ func (v *vault) configurePlugins() error {
 	if err != nil {
 		return fmt.Errorf("error unmarshalling vault plugins config: %s", err.Error())
 	}
+
+	var registeredPlugins api.ListPluginsInput
+	listPlugins, err := v.cl.Sys().ListPlugins(&registeredPlugins)
+	if err != nil {
+		return fmt.Errorf("Failed to retrieve list of plugins: %s", err.Error())
+	}
+
+	logrus.Debugf("Already registered plugins: %#v\n", listPlugins.Names)
 	for _, plugin := range plugins {
-		command, err := getOrDefault(plugin, "command")
+		command, err := getOrError(plugin, "command")
 		if err != nil {
 			return fmt.Errorf("error getting command for plugin: %s", err.Error())
 		}
-		pluginName, err := getOrDefault(plugin, "plugin_name")
+		pluginName, err := getOrError(plugin, "plugin_name")
 		if err != nil {
 			return fmt.Errorf("error getting plugin_name for plugin: %s", err.Error())
 		}
-		sha256, err := getOrDefault(plugin, "sha256")
+		sha256, err := getOrError(plugin, "sha256")
 		if err != nil {
 			return fmt.Errorf("error getting options for plugin: %s", err.Error())
 		}
@@ -661,7 +669,7 @@ func (v *vault) configurePlugins() error {
 		logrus.Infof("Registering plugin with input: %#v\n", input)
 		err = v.cl.Sys().RegisterPlugin(&input)
 		if err != nil {
-			return fmt.Errorf("error registering plugin %s into vault", err.Error())
+			return fmt.Errorf("error registering plugin %s in vault", err.Error())
 		}
 
 		logrus.Infoln("registered", plugin)
@@ -796,6 +804,14 @@ func getOrDefaultStringMap(m map[string]interface{}, key string) (map[string]int
 		return cast.ToStringMapE(value)
 	}
 	return map[string]interface{}{}, nil
+}
+
+func getOrError(m map[string]interface{}, key string) (string, error) {
+	value := m[key]
+	if value != nil {
+		return cast.ToStringE(value)
+	}
+	return "", fmt.Errorf("Value for %s is not set", key)
 }
 
 func isOverwriteProhibitedError(err error) bool {
