@@ -1,4 +1,4 @@
-FROM golang:1.10-alpine as golang
+FROM golang:1.11-alpine as golang
 RUN apk add --update --no-cache ca-certificates curl git make
 RUN mkdir -p /go/src/github.com/banzaicloud/bank-vaults
 ADD Gopkg.* Makefile /go/src/github.com/banzaicloud/bank-vaults/
