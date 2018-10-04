@@ -183,7 +183,7 @@ func (spec *VaultSpec) GetFluentDImage() string {
 	return spec.FluentDImage
 }
 
-// GetFluentDEnable returns true if fluentd sidecar is to be deployed
+// IsFluentDEnabled returns true if fluentd sidecar is to be deployed
 func (spec *VaultSpec) IsFluentDEnabled() bool {
 	// zero value for bool is false
 	return spec.FluentDEnabled
