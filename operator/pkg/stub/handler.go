@@ -311,6 +311,8 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 		},
 	}))
 
+	volumes = withAuditLogVolume(v, volumes)
+
 	volumeMounts := withTLSVolumeMount(v, withCredentialsVolumeMount(v, []v1.VolumeMount{
 		{
 			Name:      "vault-config",
@@ -320,6 +322,8 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 			MountPath: "/vault/file",
 		},
 	}))
+
+	volumeMounts = withAuditLogVolumeMount(v, volumeMounts)
 
 	// TODO Configure Vault to wait for etcd in an init container in this case
 	if v.Spec.GetStorageType() == "etcd" {
@@ -387,7 +391,7 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 					Annotations: v.Spec.GetAnnotations(),
 				},
 				Spec: v1.PodSpec{
-					Containers: []v1.Container{
+					Containers: withAuditLogContainer(v, string(ownerJSON), []v1.Container{
 						{
 							Image:           v.Spec.Image,
 							ImagePullPolicy: v1.PullIfNotPresent,
@@ -474,7 +478,7 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 								MountPath: "/tmp/",
 							}},
 						},
-					},
+					}),
 					Volumes: volumes,
 				},
 			},
@@ -548,6 +552,51 @@ func withTLSVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) []v1.V
 		})
 	}
 	return volumeMounts
+}
+
+func withAuditLogVolume(v *v1alpha1.Vault, volumes []v1.Volume) []v1.Volume {
+	if v.Spec.IsFluentDEnabled() {
+		volumes = append(volumes, v1.Volume{
+			Name: "vault-auditlogs",
+			VolumeSource: v1.VolumeSource{
+				EmptyDir: &v1.EmptyDirVolumeSource{},
+			},
+		})
+	}
+	return volumes
+}
+
+func withAuditLogVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) []v1.VolumeMount {
+	if v.Spec.IsFluentDEnabled() {
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "vault-auditlogs",
+			MountPath: "/tmp/",
+		})
+	}
+	return volumeMounts
+}
+
+func withAuditLogContainer(v *v1alpha1.Vault, owner string, containers []v1.Container) []v1.Container {
+	if v.Spec.IsFluentDEnabled() {
+		containers = append(containers, v1.Container{
+			Image:           v.Spec.GetFluentDImage(),
+			ImagePullPolicy: v1.PullAlways,
+			Name:            "auditlog-exporter",
+			Env: withTLSEnv(v, true, withCredentialsEnv(v, []v1.EnvVar{
+				{
+					Name:  k8s.EnvK8SOwnerReference,
+					Value: owner,
+				},
+			})),
+			VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []v1.VolumeMount{
+				{
+					Name:      "vault-auditlogs",
+					MountPath: "/tmp/",
+				},
+			})),
+		})
+	}
+	return containers
 }
 
 func withCredentialsEnv(v *v1alpha1.Vault, envs []v1.EnvVar) []v1.EnvVar {
