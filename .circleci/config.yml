@@ -5,7 +5,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.11
       - image: vault:0.11.0
         environment:
             SKIP_SETCAP: true
