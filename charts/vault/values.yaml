@@ -4,7 +4,7 @@
 replicaCount: 1
 image:
   repository: vault
-  tag: 0.11.0
+  tag: 0.11.1
   pullPolicy: Always
 service:
   name: vault
@@ -129,8 +129,8 @@ vault:
 unsealer:
   image:
     repository: banzaicloud/bank-vaults
-    tag: "0.2.17"
-    pullPolicy: Always
+    tag: "0.3.4"
+    pullPolicy: IfNotPresent
   args: [
       "--mode",
       "k8s",
