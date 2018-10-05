@@ -15,9 +15,11 @@
 package vault
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"runtime"
 	"strings"
@@ -62,6 +64,7 @@ var _ Vault = &vault{}
 type Vault interface {
 	Init() error
 	Sealed() (bool, error)
+	Active() (bool, error)
 	Unseal() error
 	Leader() (bool, error)
 	Configure() error
@@ -88,6 +91,21 @@ func (v *vault) Sealed() (bool, error) {
 		return false, fmt.Errorf("error checking status: %s", err.Error())
 	}
 	return resp.Sealed, nil
+}
+
+func (v *vault) Active() (bool, error) {
+	req := v.cl.NewRequest("GET", "/v1/sys/health")
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := v.cl.RawRequestWithContext(ctx, req)
+	if err != nil {
+		return false, fmt.Errorf("error checking status: %s", err.Error())
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		return true, nil
+	}
+	return false, fmt.Errorf("error unexpected status code: %d", resp.StatusCode)
 }
 
 func (v *vault) Leader() (bool, error) {
@@ -703,7 +721,7 @@ func (v *vault) configureSecretEngines() error {
 		if err != nil {
 			return fmt.Errorf("error reading mounts from vault: %s", err.Error())
 		}
-		logrus.Debugf("Already existing mounts: %#v\n", mounts)
+		logrus.Infof("Already existing mounts: %#v\n", mounts)
 		if mounts[path+"/"] == nil {
 			description, err := getOrDefault(secretEngine, "description")
 			if err != nil {
@@ -732,6 +750,7 @@ func (v *vault) configureSecretEngines() error {
 			logrus.Infoln("mounted", secretEngineType, "to", path)
 
 		} else {
+			logrus.Infof("Tuning already existing mount: %s/\n", path)
 			options, err := getOrDefaultStringMapString(secretEngine, "options")
 			if err != nil {
 				return fmt.Errorf("error getting options for secret engine: %s", err.Error())
