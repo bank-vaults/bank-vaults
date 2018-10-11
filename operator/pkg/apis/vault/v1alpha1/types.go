@@ -27,15 +27,6 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:openapi-gen=true
 
-// VaultList represents a list of Vault Kubernetes objects
-type VaultList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []Vault `json:"items"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // Vault represents a Vault Kubernetes object
 type Vault struct {
 	metav1.TypeMeta `json:",inline"`
@@ -45,6 +36,15 @@ type Vault struct {
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	Spec              VaultSpec   `json:"spec"`
 	Status            VaultStatus `json:"status,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// VaultList represents a list of Vault Kubernetes objects
+type VaultList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []Vault `json:"items"`
 }
 
 // VaultSpec represents the Spec field of a Vault Kubernetes object

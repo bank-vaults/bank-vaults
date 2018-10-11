@@ -12,8 +12,8 @@ type FakeVaultV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeVaultV1alpha1) VaultLists(namespace string) v1alpha1.VaultListInterface {
-	return &FakeVaultLists{c, namespace}
+func (c *FakeVaultV1alpha1) Vaults(namespace string) v1alpha1.VaultInterface {
+	return &FakeVaults{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
