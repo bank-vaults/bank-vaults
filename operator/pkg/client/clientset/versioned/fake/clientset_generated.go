@@ -7,6 +7,7 @@ import (
 	vaultv1alpha1 "github.com/banzaicloud/bank-vaults/operator/pkg/client/clientset/versioned/typed/vault/v1alpha1"
 	fakevaultv1alpha1 "github.com/banzaicloud/bank-vaults/operator/pkg/client/clientset/versioned/typed/vault/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/testing"
@@ -24,18 +25,26 @@ func NewSimpleClientset(objects ...runtime.Object) *Clientset {
 		}
 	}
 
-	cs := &Clientset{}
-	cs.discovery = &fakediscovery.FakeDiscovery{Fake: &cs.Fake}
-	cs.AddReactor("*", "*", testing.ObjectReaction(o))
+	fakePtr := testing.Fake{}
+	fakePtr.AddReactor("*", "*", testing.ObjectReaction(o))
+	fakePtr.AddWatchReactor("*", func(action testing.Action) (handled bool, ret watch.Interface, err error) {
+		gvr := action.GetResource()
+		ns := action.GetNamespace()
+		watch, err := o.Watch(gvr, ns)
+		if err != nil {
+			return false, nil, err
+		}
+		return true, watch, nil
+	})
 
-	return cs
+	return &Clientset{&fakePtr, &fakediscovery.FakeDiscovery{Fake: &fakePtr}}
 }
 
 // Clientset implements clientset.Interface. Meant to be embedded into a
 // struct to get a default implementation. This makes faking out just the method
 // you want to test easier.
 type Clientset struct {
-	testing.Fake
+	*testing.Fake
 	discovery *fakediscovery.FakeDiscovery
 }
 
@@ -47,10 +56,10 @@ var _ clientset.Interface = &Clientset{}
 
 // VaultV1alpha1 retrieves the VaultV1alpha1Client
 func (c *Clientset) VaultV1alpha1() vaultv1alpha1.VaultV1alpha1Interface {
-	return &fakevaultv1alpha1.FakeVaultV1alpha1{Fake: &c.Fake}
+	return &fakevaultv1alpha1.FakeVaultV1alpha1{Fake: c.Fake}
 }
 
 // Vault retrieves the VaultV1alpha1Client
 func (c *Clientset) Vault() vaultv1alpha1.VaultV1alpha1Interface {
-	return &fakevaultv1alpha1.FakeVaultV1alpha1{Fake: &c.Fake}
+	return &fakevaultv1alpha1.FakeVaultV1alpha1{Fake: c.Fake}
 }
