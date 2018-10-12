@@ -116,6 +116,11 @@ func (spec *VaultSpec) GetEtcdVersion() string {
 
 // GetEtcdSize returns the number of etcd pods to use
 func (spec *VaultSpec) GetEtcdSize() int {
+	// Default value of EctdSize is 0. So if < 0 will assume use existing etcd
+	if spec.EtcdSize < 0 {
+		return -1
+	}
+
 	if spec.EtcdSize < 1 {
 		return 3
 	}

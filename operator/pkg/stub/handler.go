@@ -65,7 +65,8 @@ func (h *Handler) Handle(ctx types.Context, event types.Event) error {
 		}
 
 		// check if we need to create an etcd cluster
-		if v.Spec.GetStorageType() == "etcd" {
+		// if etcd size is < 0. Will not create etcd cluster
+		if v.Spec.GetStorageType() == "etcd" && v.Spec.GetEtcdSize() > 0 {
 
 			etcdCluster, err := etcdForVault(v)
 			if err != nil {
@@ -326,7 +327,9 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 	volumeMounts = withAuditLogVolumeMount(v, volumeMounts)
 
 	// TODO Configure Vault to wait for etcd in an init container in this case
-	if v.Spec.GetStorageType() == "etcd" {
+	// If etcd size is < 0 means not create new etcd cluster
+	// No need to override etcd config, and use user input value
+	if v.Spec.GetStorageType() == "etcd" && v.Spec.GetEtcdSize() > 0 {
 
 		// Overwrite Vault config with the generated TLS certificate's settings
 		etcdStorage := v.Spec.GetStorage()
