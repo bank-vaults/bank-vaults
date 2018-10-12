@@ -40,3 +40,8 @@ kubectl apply -f operator/deploy/cr-etcd-ha.yaml
 ```
 
 From now on, if you deploy a Vault CRD into the cluster which has an [Etcd Storage Backend](https://www.vaultproject.io/docs/configuration/storage/etcd.html) defined in its configuration the Vault operator will create an EtcdCluster CRD for the Vault instance, and the etcd-operator will orchestrate the etcd cluster. After the etcd cluster is ready the Vault instance can connect to it and will start up. If the Vault CRD is deleted from the cluster the etcd cluster will be GCd as well. You have to make sure you define backup and restore for the etcd cluster to prevent data loss, this part is not handled by the Vault operator, see [this](https://github.com/coreos/etcd-operator#backup-and-restore-an-etcd-cluster) document for more details.
+
+## Use existing etcd
+
+If you want to use an existing etcd. You can set `etcdSize` vault to < 0. Then it won't create a new etcd.
+And all config under etcd storage will not be override.
