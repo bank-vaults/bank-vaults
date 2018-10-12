@@ -103,7 +103,7 @@ auth:
       users:
         bonifaido: allow_secrets
 
-  # Allows creating roles in Vault which can be used later on for AWS 
+  # Allows creating roles in Vault which can be used later on for AWS
   # IAM based authentication.
   # See https://www.vaultproject.io/docs/auth/aws.html for
   # more information.
@@ -111,7 +111,7 @@ auth:
     config:
       access_key: VKIAJBRHKH6EVTTNXDHA
       secret_key: vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj
-      iam_server_id_header_value: vault-dev.example.com # consider setting this to the Vault server's DNS name 
+      iam_server_id_header_value: vault-dev.example.com # consider setting this to the Vault server's DNS name
     crossaccountrole:
     # Add cross account number and role to assume in the cross account
     # https://www.vaultproject.io/api/auth/aws/index.html#create-sts-role
@@ -129,7 +129,7 @@ auth:
       policies: allow_secrets
       period: 1h
 
-  # Allows creating group mappings in Vault which can be used later on for the LDAP 
+  # Allows creating group mappings in Vault which can be used later on for the LDAP
   # based authentication.
   # See https://www.vaultproject.io/docs/auth/ldap.html#configuration for
   # more information.
@@ -231,6 +231,28 @@ plugins:
       roles:
         - name: prod_role
           vhosts: '{"/web":{"write": "production_.*", "read": "production_.*"}}'
+
+  # The PKI secrets engine generates X.509 certificates
+  # See https://www.vaultproject.io/docs/secrets/pki/index.html for more information
+  - type: pki
+    description: Vault PKI Backend
+    options:
+      default_ttl: 168h
+      max_ttl: 720h
+    configuration:
+      config:
+      - name: urls
+        issuing_certificates: https://vault.default:8200/v1/pki/ca
+        crl_distribution_points: https://vault.default:8200/v1/pki/crl
+      root/generate:
+      - name: internal
+        common_name: vault.default
+      roles:
+      - name: default
+        allowed_domains: localhost,pod,svc,default
+        allow_subdomains: true
+        generate_lease: true
+        ttl: 30m
 ```
 
 ## The Go library
