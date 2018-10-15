@@ -112,12 +112,6 @@ secrets:
     type: plugin
     plugin_name: ethereum-plugin
     description: Immutability's Ethereum Wallet
-# Registers a new plugin in Vault's plugin catalog. "plugin_directory" setting should be set it Vault server configuration and plugin binary should be present in plugin directory. Also, for some plugins readOnlyRootFilesystem Pod Security Policy should be disabled to allow RPC communication between plugin and Vault server via Unix socket
-# See https://www.vaultproject.io/api/system/plugins-catalog.html and https://github.com/hashicorp/go-plugin/blob/master/docs/internals.md for details.
-plugins:
-  - plugin_name: ethereum-plugin
-    command: ethereum-vault-plugin --ca-cert=/vault/tls/client/ca.crt --client-cert=/vault/tls/server/server.crt --client-key=/vault/tls/server/server.key
-    sha256: 62fb461a8743f2a0af31d998074b58bb1a589ec1d28da3a2a5e8e5820d2c6e0a
 
   # This plugin stores database credentials dynamically based on configured roles for
   # the MySQL database.
@@ -172,3 +166,32 @@ plugins:
       roles:
         - name: prod_role
           vhosts: '{"/web":{"write": "production_.*", "read": "production_.*"}}'
+
+  # The PKI secrets engine generates X.509 certificates
+  # See https://www.vaultproject.io/docs/secrets/pki/index.html for more information
+  - type: pki
+    description: Vault PKI Backend
+    options:
+      default_ttl: 168h
+      max_ttl: 720h
+    configuration:
+      config:
+      - name: urls
+        issuing_certificates: https://vault.default:8200/v1/pki/ca
+        crl_distribution_points: https://vault.default:8200/v1/pki/crl
+      root/generate:
+      - name: internal
+        common_name: vault.default
+      roles:
+      - name: default
+        allowed_domains: localhost,pod,svc,default
+        allow_subdomains: true
+        generate_lease: true
+        ttl: 30m
+
+# Registers a new plugin in Vault's plugin catalog. "plugin_directory" setting should be set it Vault server configuration and plugin binary should be present in plugin directory. Also, for some plugins readOnlyRootFilesystem Pod Security Policy should be disabled to allow RPC communication between plugin and Vault server via Unix socket
+# See https://www.vaultproject.io/api/system/plugins-catalog.html and https://github.com/hashicorp/go-plugin/blob/master/docs/internals.md for details.
+plugins:
+  - plugin_name: ethereum-plugin
+    command: ethereum-vault-plugin --ca-cert=/vault/tls/client/ca.crt --client-cert=/vault/tls/server/server.crt --client-key=/vault/tls/server/server.key
+    sha256: 62fb461a8743f2a0af31d998074b58bb1a589ec1d28da3a2a5e8e5820d2c6e0a
