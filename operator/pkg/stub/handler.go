@@ -686,7 +686,7 @@ func serviceForVault(v *v1alpha1.Vault) *v1.Service {
 			Namespace: v.Namespace,
 		},
 		Spec: v1.ServiceSpec{
-			Type:     v1.ServiceTypeNodePort,
+			Type:     v1.ServiceTypeClusterIP,
 			Selector: ls,
 			Ports: []v1.ServicePort{
 				{
