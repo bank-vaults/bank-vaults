@@ -66,7 +66,7 @@ type VaultSpec struct {
 	SupportUpgrade bool   `json:"supportUpgrade"`
 	EtcdVersion    string `json:"etcdVersion"`
 	EtcdSize       int    `json:"etcdSize"`
-	ServiceType    string `json:"service_type"`
+	ServiceType    string `json:"serviceType"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
