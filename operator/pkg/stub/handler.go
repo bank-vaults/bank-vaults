@@ -686,7 +686,7 @@ func serviceForVault(v *v1alpha1.Vault) *v1.Service {
 			Namespace: v.Namespace,
 		},
 		Spec: v1.ServiceSpec{
-			Type:     v1.ServiceTypeClusterIP,
+			Type:     serviceType(v),
 			Selector: ls,
 			Ports: []v1.ServicePort{
 				{
@@ -702,6 +702,21 @@ func serviceForVault(v *v1alpha1.Vault) *v1.Service {
 	}
 	addOwnerRefToObject(service, asOwner(v))
 	return service
+}
+
+func serviceType(v *v1alpha1.Vault) v1.ServiceType {
+	switch v.Spec.ServiceType {
+	case string(v1.ServiceTypeClusterIP):
+		return v1.ServiceTypeClusterIP
+	case string(v1.ServiceTypeNodePort):
+		return v1.ServiceTypeNodePort
+	case string(v1.ServiceTypeLoadBalancer):
+		return v1.ServiceTypeLoadBalancer
+	case string(v1.ServiceTypeExternalName):
+		return v1.ServiceTypeExternalName
+	default:
+		return v1.ServiceTypeNodePort
+	}
 }
 
 func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
