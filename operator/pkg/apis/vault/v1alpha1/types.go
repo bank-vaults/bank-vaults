@@ -16,6 +16,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"k8s.io/api/core/v1"
 	"reflect"
 
 	"github.com/spf13/cast"
@@ -60,6 +61,7 @@ type VaultSpec struct {
 	ExternalConfig    map[string]interface{} `json:"externalConfig"`
 	UnsealConfig      UnsealConfig           `json:"unsealConfig"`
 	CredentialsConfig CredentialsConfig      `json:"credentialsConfig"`
+	SecurityContext   v1.PodSecurityContext  `json:"securityContext,omitempty"`
 	// This option gives us the option to workaround current StatefulSet limitations around updates
 	// See: https://github.com/kubernetes/kubernetes/issues/67250
 	// TODO: Should be removed once the ParallelPodManagement policy supports the broken update.
