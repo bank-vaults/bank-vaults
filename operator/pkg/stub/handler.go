@@ -482,13 +482,21 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							}},
 						},
 					}),
-					Volumes: volumes,
+					Volumes:         volumes,
+					SecurityContext: withSecurityContext(v),
 				},
 			},
 		},
 	}
 	addOwnerRefToObject(dep, owner)
 	return dep, nil
+}
+
+func withSecurityContext(v *v1alpha1.Vault) *v1.PodSecurityContext {
+	if v.Spec.SecurityContext.Size() == 0 {
+		return nil
+	}
+	return &v.Spec.SecurityContext
 }
 
 func withSupportUpgradeParams(v *v1alpha1.Vault, params []string) []string {
