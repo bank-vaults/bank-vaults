@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vault-operator.fullname" . }}
+  labels:
+    app: {{ include "vault-operator.name" . }}
+    chart: {{ include "vault-operator.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "vault-operator.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "vault-operator.name" . }}
+        release: {{ .Release.Name }}
+ {{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}       
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - vault-operator
+          env:
+            - name: OPERATOR_NAMESAPCE
+              value: {{ .Values.watchNamespace }}
+          ports:
+          - containerPort: {{ .Values.service.internalPort }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probePath }}
+              port: {{ .Values.service.internalPort }}
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probePath }}
+              port: {{ .Values.service.internalPort }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+      serviceAccount: {{ include "vault-operator.fullname" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}

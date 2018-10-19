@@ -1,0 +1,55 @@
+# Default values for vault-operator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: banzaicloud/vault-operator
+  tag: 0.3.6
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  externalPort: 80
+  internalPort: 8080
+
+nameOverride: ""
+fullnameOverride: ""
+
+# The namespace where the operator watches for vault CRD objects, if not defined
+# all namespaces are watched
+watchNamespace: ""
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+terminationGracePeriodSeconds: 10
+
+probePath: /
+livenessProbe:
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 1
+readinessProbe:
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 1
+
+etcd-operator:
+  enabled: false
+  etcdOperator:
+    image:
+      tag: v0.9.1
+  backupOperator:
+    image:
+      tag: v0.9.1
+  restoreOperator:
+    image:
+      tag: v0.9.1
