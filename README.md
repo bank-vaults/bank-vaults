@@ -282,9 +282,9 @@ This repository contains several Go packages for interacting with Vault:
 
     A simple package to generate self-signed TLS certificates. Useful for bootstrapping situations, when you can't use Vault's [PKI secret engine](https://www.vaultproject.io/docs/secrets/pki/index.html).
 
-## Helm Chart
+## Helm Charts
 
-We have a fully fledged, production ready [Helm chart](https://github.com/banzaicloud/banzai-charts/tree/master/vault) for Vault using `bank-vaults`. With the help of this chart you can run a HA Vault instance with automatic initialization, unsealing and external configuration which used to be a tedious manual operation. This chart can be used easily for development purposes as well.
+We have some fully fledged, production ready Helm charts for deploying [Vault](https://github.com/banzaicloud/banzai-charts/tree/master/vault) using `bank-vaults` and the [Vault Operator](https://github.com/banzaicloud/banzai-charts/tree/master/vault-operator). With the help of this chart you can run a HA Vault instance with automatic initialization, unsealing and external configuration which used to be a tedious manual operation. This chart can be used easily for development purposes as well.
 
 ## Operator
 
@@ -302,6 +302,10 @@ The source code can be found inside the [operator](operator/) directory.
 
 ### Deploying the operator
 
+There are two ways to deploy the operator:
+
+#### K8s deployment
+
 ```bash
 kubectl apply -f operator/deploy/rbac.yaml
 kubectl apply -f operator/deploy/operator.yaml
@@ -310,6 +314,18 @@ kubectl apply -f operator/deploy/operator.yaml
 This will create a Kubernetes [CustomResourceDefinition](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/) called `Vault`.
 
 A documented example of this CRD can be found in [operator/deploy/cr.yaml](operator/deploy/cr.yaml).
+
+#### Helm chart
+
+There is a Helm chart available to deploy the [Vault Operator](https://github.com/banzaicloud/banzai-charts/tree/master/vault-operator). 
+
+```bash
+helm init -c
+helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch/master
+helm install vault-operator
+``` 
+
+For further details follow the operator's Helm chart [repository](https://github.com/banzaicloud/banzai-charts/tree/master/vault-operator). 
 
 ## Keys
 
