@@ -397,7 +397,7 @@ The Access Policy in which the Pod is running has to have the following IAM Role
 The Instance profile in which the Pod is running has to have the following IAM Policies:
 
 - KMS: `kms:Encrypt, kms:Decrypt`
-- S3:  `s3:GetObject, s3:PutObject`
+- S3:  `s3:GetObject, s3:PutObject` on object level and `s3:ListBucket` on bucket level
 
 An example command how to init and unseal Vault on AWS:
 
