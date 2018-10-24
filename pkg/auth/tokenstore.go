@@ -19,10 +19,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/spf13/cast"
-
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/spf13/cast"
 )
 
 // Verify tokenstores satisfy the correct interface
@@ -33,6 +32,7 @@ var _ TokenStore = (*vaultTokenStore)(nil)
 type Token struct {
 	ID        string     `json:"id"`
 	Name      string     `json:"name"`
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
 	CreatedAt *time.Time `json:"createdAt,omitempty"`
 	Value     string     `json:"value,omitempty"`
 }
@@ -43,6 +43,7 @@ type TokenStore interface {
 	Lookup(userID string, tokenID string) (*Token, error)
 	Revoke(userID string, tokenID string) error
 	List(userID string) ([]*Token, error)
+	GC() error
 }
 
 // NewToken Creates a new Token instance initialized ID and Name and CreatedAt fields
@@ -50,7 +51,7 @@ func NewToken(id, name string) *Token {
 	return &Token{ID: id, Name: name}
 }
 
-func parseToken(secret *vaultapi.Secret) (*Token, error) {
+func parseToken(secret *vaultapi.Secret, showExpired bool) (*Token, error) {
 	data := cast.ToStringMap(secret.Data["data"])
 	metadata := cast.ToStringMap(secret.Data["metadata"])
 
@@ -58,6 +59,19 @@ func parseToken(secret *vaultapi.Secret) (*Token, error) {
 
 		tokenData := tokenData.(map[string]interface{})
 		token := &Token{}
+
+		expiresAtRaw := tokenData["expiresAt"]
+		if expiresAtRaw != nil {
+			expiresAt, err := time.Parse(time.RFC3339, expiresAtRaw.(string))
+			if err != nil {
+				return nil, err
+			}
+			// Token has expired, make it invisible
+			if !showExpired && expiresAt.Before(time.Now()) {
+				return nil, nil
+			}
+			token.ExpiresAt = &expiresAt
+		}
 
 		tokenID := tokenData["id"]
 		if tokenID == nil {
@@ -146,6 +160,11 @@ func (tokenStore *inMemoryTokenStore) List(userID string) ([]*Token, error) {
 	return nil, nil
 }
 
+func (tokenStore *inMemoryTokenStore) GC() error {
+	// not implemented
+	return nil
+}
+
 // Vault KV Version 2 based implementation
 
 // A TokenStore implementation which stores tokens in Vault
@@ -182,6 +201,10 @@ func (tokenStore vaultTokenStore) Store(userID string, token *Token) error {
 }
 
 func (tokenStore vaultTokenStore) Lookup(userID, tokenID string) (*Token, error) {
+	return tokenStore.lookup(userID, tokenID, false)
+}
+
+func (tokenStore vaultTokenStore) lookup(userID, tokenID string, showExpired bool) (*Token, error) {
 	secret, err := tokenStore.logical.Read(tokenDataPath(userID, tokenID))
 	if err != nil {
 		return nil, err
@@ -190,7 +213,7 @@ func (tokenStore vaultTokenStore) Lookup(userID, tokenID string) (*Token, error)
 	if secret == nil {
 		return nil, nil
 	}
-	return parseToken(secret)
+	return parseToken(secret, showExpired)
 }
 
 func (tokenStore vaultTokenStore) Revoke(userID, tokenID string) error {
@@ -199,25 +222,61 @@ func (tokenStore vaultTokenStore) Revoke(userID, tokenID string) error {
 }
 
 func (tokenStore vaultTokenStore) List(userID string) ([]*Token, error) {
+	return tokenStore.list(userID, false)
+}
+
+func (tokenStore vaultTokenStore) list(userID string, showExpired bool) ([]*Token, error) {
 	secret, err := tokenStore.logical.List(fmt.Sprintf("secret/metadata/accesstokens/%s", userID))
 	if err != nil {
 		return nil, err
 	}
 
-	var keys []interface{}
+	var tokenIDs []string
 	if secret != nil {
-		if keysi := secret.Data["keys"]; keysi != nil {
-			keys = keysi.([]interface{})
+		if keys := secret.Data["keys"]; keys != nil {
+			tokenIDs = cast.ToStringSlice(keys)
 		}
 	}
-	tokens := make([]*Token, len(keys))
+	tokens := make([]*Token, len(tokenIDs))
 
-	for i, tokenID := range keys {
-		token, err := tokenStore.Lookup(userID, tokenID.(string))
+	for i, tokenID := range tokenIDs {
+		token, err := tokenStore.lookup(userID, tokenID, showExpired)
 		if err != nil {
 			return nil, err
 		}
 		tokens[i] = token
 	}
 	return tokens, nil
+}
+
+// GC removes expired tokens from all users
+func (tokenStore vaultTokenStore) GC() error {
+	secret, err := tokenStore.logical.List("secret/metadata/accesstokens")
+	if err != nil {
+		return err
+	}
+
+	var userIDs []string
+	if secret != nil {
+		if keys := secret.Data["keys"]; keys != nil {
+			userIDs = cast.ToStringSlice(keys)
+		}
+	}
+
+	for _, userID := range userIDs {
+		tokens, err := tokenStore.list(userID, true)
+		if err != nil {
+			return err
+		}
+		for _, token := range tokens {
+			if token.ExpiresAt != nil && token.ExpiresAt.Before(time.Now()) {
+				err = tokenStore.Revoke(userID, token.ID)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }

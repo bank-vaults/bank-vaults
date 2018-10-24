@@ -46,7 +46,7 @@ type ScopedClaims struct {
 }
 
 // JWTAuth returns a new JWT authentication handler
-func JWTAuth(tokenStore TokenStore, signingKey string, claimConverter ClaimConverter) gin.HandlerFunc {
+func JWTAuth(tokenStore TokenStore, signingKey string, claimConverter ClaimConverter, extractors ...jwtRequest.Extractor) gin.HandlerFunc {
 
 	signingKeyBase32 := []byte(base32.StdEncoding.EncodeToString([]byte(signingKey)))
 
@@ -58,10 +58,15 @@ func JWTAuth(tokenStore TokenStore, signingKey string, claimConverter ClaimConve
 		return signingKeyBase32, nil
 	}
 
+	extractor := jwtRequest.MultiExtractor{jwtRequest.OAuth2Extractor}
+	for _, e := range extractors {
+		extractor = append(extractor, e)
+	}
+
 	return func(c *gin.Context) {
 
 		var claims ScopedClaims
-		accessToken, err := jwtRequest.ParseFromRequest(c.Request, jwtRequest.OAuth2Extractor, hmacKeyFunc, jwtRequest.WithClaims(&claims))
+		accessToken, err := jwtRequest.ParseFromRequest(c.Request, extractor, hmacKeyFunc, jwtRequest.WithClaims(&claims))
 
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized,
