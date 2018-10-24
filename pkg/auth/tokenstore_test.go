@@ -26,7 +26,7 @@ func TestVaultTokenStore(t *testing.T) {
 	startTime := time.Now()
 	ts := NewVaultTokenStore("")
 	userID := "12"
-	token := NewToken("id12", "nandi's token")
+	token := NewToken("id12", "my token")
 
 	err := ts.Store(userID, token)
 	if err != nil {
@@ -56,5 +56,42 @@ func TestVaultTokenStore(t *testing.T) {
 	err = ts.Revoke(userID, token.ID)
 	if err != nil {
 		t.Fatal(err.Error())
+	}
+
+	expiredToken := NewToken("id13", "my expired token")
+	now := time.Now().Add(-time.Minute)
+	expiredToken.ExpiresAt = &now
+
+	err = ts.Store(userID, expiredToken)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	expiredToken, err = ts.Lookup(userID, "id13")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if expiredToken != nil {
+		t.Fatalf("the expired token shouldn't be visible: %+v", expiredToken)
+	}
+
+	err = ts.Store(userID, token)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	err = ts.GC()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	tokens, err = ts.List(userID)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if len(tokens) != 1 {
+		t.Fatal("There should be no expired Tokens listed, but there are", len(tokens))
 	}
 }
