@@ -65,6 +65,10 @@ policies:
     rules: path "secret/*" {
              capabilities = ["create", "read", "update", "delete", "list"]
            }
+  - name: readonly_secrets
+    rules: path "secret/*" {
+             capabilities = ["read", "list"]
+           }
 
 # Allows configuring Auth Methods in Vault (Kubernetes and GitHub is supported now).
 # See https://www.vaultproject.io/docs/auth/index.html for more information.
@@ -128,6 +132,41 @@ auth:
       bound_iam_principal_arn: arn:aws:iam::12345671234:role/crossaccountrole
       policies: allow_secrets
       period: 1h
+
+  # Allows creating roles in Vault which can be used later on for GCP
+  # IAM based authentication.
+  # See https://www.vaultproject.io/docs/auth/gcp.html for
+  # more information.
+  - type: gcp
+    config:
+      # Credentials context is service account's key. Can download when you create a key for service account. 
+      # No need to manually create it. Just paste the json context as multiline yaml.
+      credentials: |
+        {
+          "type": "service_account",
+          "project_id": "PROJECT_ID",
+          "private_key_id": "KEY_ID",
+          "private_key": "-----BEGIN PRIVATE KEY-----.....-----END PRIVATE KEY-----\n",
+          "client_email": "SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com",
+          "client_id": "CLIENT_ID",
+          "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+          "token_uri": "https://oauth2.googleapis.com/token",
+          "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/SERVICE_ACCOUNT%40PROJECT_ID.iam.gserviceaccount.com"
+        }
+    roles:
+    # Add roles for gcp service account
+    # See https://www.vaultproject.io/api/auth/gcp/index.html#create-role
+    - name: user-role
+      type: iam
+      project_id: PROJECT_ID
+      policies: "readonly_secrets"
+      bound_service_accounts: "USER_SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com"
+    - name: admin-role
+      type: iam
+      project_id: PROJECT_ID
+      policies: "allow_secrets"
+      bound_service_accounts: "ADMIN_SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com"
 
   # Allows creating group mappings in Vault which can be used later on for the LDAP
   # based authentication.

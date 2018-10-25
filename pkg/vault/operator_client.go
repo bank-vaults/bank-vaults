@@ -441,6 +441,23 @@ func (v *vault) Configure() error {
 			if err != nil {
 				return fmt.Errorf("error configuring aws auth roles for vault: %s", err.Error())
 			}
+		case "gcp":
+			config, err := cast.ToStringMapE(authMethod["config"])
+			if err != nil {
+				return fmt.Errorf("error finding config block for gcp: %s", err.Error())
+			}
+			err = v.configureGcpConfig(config)
+			if err != nil {
+				return fmt.Errorf("error configuring gcp auth for vault: %s", err.Error())
+			}
+			roles, err := cast.ToSliceE(authMethod["roles"])
+			if err != nil {
+				return fmt.Errorf("error finding roles block for gcp: %s", err.Error())
+			}
+			err = v.configureGcpRoles(roles)
+			if err != nil {
+				return fmt.Errorf("error configuring gcp auth roles for vault: %s", err.Error())
+			}
 		case "ldap":
 			config, err := cast.ToStringMapE(authMethod["config"])
 			if err != nil {
@@ -623,6 +640,31 @@ func (v *vault) configureAWSCrossAccountRoles(crossAccountRoles []interface{}) e
 
 		if err != nil {
 			return fmt.Errorf("error putting %s cross account aws role into vault: %s", crossAccountRole["sts_account"], err.Error())
+		}
+	}
+	return nil
+}
+
+func (v *vault) configureGcpConfig(config map[string]interface{}) error {
+	// https://www.vaultproject.io/api/auth/gcp/index.html
+	_, err := v.cl.Logical().Write("auth/gcp/config", config)
+
+	if err != nil {
+		return fmt.Errorf("error putting %s gcp config into vault: %s", config, err.Error())
+	}
+	return nil
+}
+
+func (v *vault) configureGcpRoles(roles []interface{}) error {
+	for _, roleInterface := range roles {
+		role, err := cast.ToStringMapE(roleInterface)
+		if err != nil {
+			return fmt.Errorf("error converting roles for aws: %s", err.Error())
+		}
+		_, err = v.cl.Logical().Write(fmt.Sprint("auth/gcp/role/", role["name"]), role)
+
+		if err != nil {
+			return fmt.Errorf("error putting %s gcp role into vault: %s", role["name"], err.Error())
 		}
 	}
 	return nil
