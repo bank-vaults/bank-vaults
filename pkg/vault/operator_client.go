@@ -826,6 +826,16 @@ func (v *vault) configureSecretEngines() error {
 				if !ok {
 					return fmt.Errorf("error finding sub config data name for secret engine")
 				}
+
+				// config data can have child dict. But it will cause `json: unsupported type: map[interface {}]interface {}`
+				// So check and replace by `map[string]interface{}` before use it.
+				for k, v := range subConfigData {
+					switch val := v.(type) {
+					case map[interface{}]interface{}:
+						subConfigData[k] = cast.ToStringMap(val)
+					}
+				}
+
 				configPath := fmt.Sprintf("%s/%s/%s", path, configOption, name)
 				_, err = v.cl.Logical().Write(configPath, subConfigData)
 
