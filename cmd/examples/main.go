@@ -36,23 +36,25 @@ func vaultExample() {
 
 	log.Println("Created Vault client.")
 
-	secret, err := client.Vault().Logical().List("secret/accesstokens")
-	if err != nil {
-		log.Fatal(err)
-	}
-	if secret != nil {
-		for _, v := range secret.Data {
-			log.Printf("-> %+v", v)
-			for _, v := range v.([]interface{}) {
-				log.Printf("-> %+v", v)
-			}
+	for {
+		secret, err := client.Vault().Logical().List("secret/accesstokens")
+		if err != nil {
+			log.Println(err)
 		}
+		if secret != nil {
+			for _, v := range secret.Data {
+				log.Printf("-> %+v", v)
+				for _, v := range v.([]interface{}) {
+					log.Printf("-> %+v", v)
+				}
+			}
 
-	} else {
-		log.Println("Found nothing")
-		time.Sleep(time.Minute)
-		client.Close()
-		time.Sleep(time.Hour)
+			log.Println("Finished reading Vault.")
+
+		} else {
+			log.Println("Found nothing")
+		}
+		time.Sleep(time.Second * 5)
 	}
 }
 
