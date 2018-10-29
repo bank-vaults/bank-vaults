@@ -487,6 +487,15 @@ func (v *vault) Configure() error {
 					return fmt.Errorf("error configuring ldap users for vault: %s", err.Error())
 				}
 			}
+		case "approle":
+			roles := authMethod["roles"].([]interface{})
+			if err != nil {
+				return fmt.Errorf("error finding role block for approle: %s", err.Error())
+			}
+			err = v.configureApproleRoles(roles)
+			if err != nil {
+				return fmt.Errorf("error configuring approle auth for vault: %s", err.Error())
+			}
 		}
 	}
 
@@ -676,6 +685,21 @@ func (v *vault) configureLdapConfig(config map[string]interface{}) error {
 
 	if err != nil {
 		return fmt.Errorf("error putting %s ldap config into vault: %s", config, err.Error())
+	}
+	return nil
+}
+
+func (v *vault) configureApproleRoles(roles []interface{}) error {
+	for _, roleInterface := range roles {
+		role, err := cast.ToStringMapE(roleInterface)
+		if err != nil {
+			return fmt.Errorf("error converting role for approle: %s", err.Error())
+		}
+		_, err = v.cl.Logical().Write(fmt.Sprint("auth/approle/role/", role["name"]), role)
+
+		if err != nil {
+			return fmt.Errorf("error putting %s approle role into vault: %s", role["name"], err.Error())
+		}
 	}
 	return nil
 }
