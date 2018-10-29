@@ -18,9 +18,12 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 
+	"github.com/fsnotify/fsnotify"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 )
 
@@ -39,6 +42,7 @@ type Client struct {
 	logical      *vaultapi.Logical
 	tokenRenewer *vaultapi.Renewer
 	closed       bool
+	watch        *fsnotify.Watcher
 }
 
 // NewClient creates a new Vault client
@@ -56,6 +60,51 @@ func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) 
 	var tokenRenewer *vaultapi.Renewer
 
 	client := &Client{client: rawClient, logical: logical}
+
+	caCertPath := os.Getenv(vaultapi.EnvVaultCACert)
+	caCertReload := (os.Getenv("VAULT_CACERT_RELOAD") != "false")
+
+	if caCertPath != "" && caCertReload {
+		watch, err := fsnotify.NewWatcher()
+		if err != nil {
+			return nil, err
+		}
+
+		caCertFile := filepath.Clean(caCertPath)
+		configDir, _ := filepath.Split(caCertFile)
+
+		watch.Add(configDir)
+
+		go func() {
+			for {
+				client.Lock()
+				if client.closed {
+					client.Unlock()
+					break
+				}
+				client.Unlock()
+
+				select {
+				case event := <-watch.Events:
+					// we only care about the CA cert file or the Secret mount directory (if in Kubernetes)
+					if filepath.Clean(event.Name) == caCertFile || filepath.Base(event.Name) == "..data" {
+						if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
+							err := config.ReadEnvironment()
+							if err != nil {
+								logrus.Println("failed to reload Vault config:", err)
+							} else {
+								logrus.Println("CA certificate reloaded")
+							}
+						}
+					}
+				case err := <-watch.Errors:
+					logrus.Println("watcher error:", err)
+				}
+			}
+		}()
+
+		client.watch = watch
+	}
 
 	if rawClient.Token() == "" {
 
@@ -154,5 +203,8 @@ func (client *Client) Close() {
 	if client.tokenRenewer != nil {
 		client.closed = true
 		client.tokenRenewer.Stop()
+	}
+	if client.watch != nil {
+		client.watch.Close()
 	}
 }
