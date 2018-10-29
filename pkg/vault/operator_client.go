@@ -488,7 +488,7 @@ func (v *vault) Configure() error {
 				}
 			}
 		case "approle":
-			roles := authMethod["roles"].([]interface{})
+			roles, err := cast.ToSliceE(authMethod["roles"])
 			if err != nil {
 				return fmt.Errorf("error finding role block for approle: %s", err.Error())
 			}
