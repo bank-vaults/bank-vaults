@@ -192,6 +192,17 @@ auth:
       bonifaido:
         groups: developers
         policies: allow_secrets
+  # Allows machines/apps to authenticate with Vault-defined roles.
+  # See https://www.vaultproject.io/docs/auth/approle.html for more information
+  - type: approle
+    roles:
+    - name: default
+      policies: allow_secrets
+      secret_id_ttl: 10m
+      token_num_uses: 10
+      token_ttl: 20m
+      token_max_ttl: 30m
+      secret_id_num_uses: 40
 
 # Allows configuring Secrets Engines in Vault (KV, Database and SSH is tested,
 # but the config is free form so probably more is supported).
