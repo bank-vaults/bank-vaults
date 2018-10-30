@@ -394,6 +394,8 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 					Annotations: v.Spec.GetAnnotations(),
 				},
 				Spec: v1.PodSpec{
+					Affinity: getPodAntiAffinity(v),
+
 					Containers: withAuditLogContainer(v, string(ownerJSON), []v1.Container{
 						{
 							Image:           v.Spec.Image,
@@ -822,6 +824,26 @@ func configMapForStatsD(v *v1alpha1.Vault) *v1.ConfigMap {
 	}
 	addOwnerRefToObject(cm, asOwner(v))
 	return cm
+}
+
+func getPodAntiAffinity(v *v1alpha1.Vault) *v1.Affinity {
+	if v.Spec.PodAntiAffinity == "" {
+		return nil
+	}
+
+	ls := labelsForVault(v.Name)
+	return &v1.Affinity{
+		PodAntiAffinity: &v1.PodAntiAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: []v1.PodAffinityTerm{
+				{
+					LabelSelector: &metav1.LabelSelector{
+						MatchLabels: ls,
+					},
+					TopologyKey: v.Spec.PodAntiAffinity,
+				},
+			},
+		},
+	}
 }
 
 // labelsForVault returns the labels for selecting the resources
