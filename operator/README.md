@@ -45,3 +45,7 @@ From now on, if you deploy a Vault CRD into the cluster which has an [Etcd Stora
 
 If you want to use an existing etcd. You can set `etcdSize` vault to < 0. Then it won't create a new etcd.
 And all config under etcd storage will not be override.
+
+## Pod anti-affinity
+If you want setup pod anti-affinity. You can set `podAntiAffinity` vault with a topologyKey value. 
+For example, you can use `failure-domain.beta.kubernetes.io/zone` to force K8S deploy vault on multi AZ.
