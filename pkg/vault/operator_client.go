@@ -790,13 +790,21 @@ func (v *vault) configureSecretEngines() error {
 		}
 		logrus.Infof("Already existing mounts: %#v\n", mounts)
 		if mounts[path+"/"] == nil {
-			description, err := getOrDefault(secretEngine, "description")
+			description, err := getOrDefaultString(secretEngine, "description")
 			if err != nil {
 				return fmt.Errorf("error getting description for secret engine: %s", err.Error())
 			}
-			pluginName, err := getOrDefault(secretEngine, "plugin_name")
+			pluginName, err := getOrDefaultString(secretEngine, "plugin_name")
 			if err != nil {
 				return fmt.Errorf("error getting plugin_name for secret engine: %s", err.Error())
+			}
+			local, err := getOrDefaultBool(secretEngine, "local")
+			if err != nil {
+				return fmt.Errorf("error getting local for secret engine: %s", err.Error())
+			}
+			sealWrap, err := getOrDefaultBool(secretEngine, "seal_wrap")
+			if err != nil {
+				return fmt.Errorf("error getting seal_wrap for secret engine: %s", err.Error())
 			}
 			config, err := getMountConfigInput(secretEngine)
 			if err != nil {
@@ -808,6 +816,8 @@ func (v *vault) configureSecretEngines() error {
 				PluginName:  pluginName,
 				Config:      config,
 				Options:     config.Options, // options needs to be sent here first time
+				Local:       local,
+				SealWrap:    sealWrap,
 			}
 			logrus.Infof("Mounting secret engine with input: %#v\n", input)
 			err = v.cl.Sys().Mount(path, &input)
@@ -877,7 +887,15 @@ func (v *vault) configureSecretEngines() error {
 	return nil
 }
 
-func getOrDefault(m map[string]interface{}, key string) (string, error) {
+func getOrDefaultBool(m map[string]interface{}, key string) (bool, error) {
+	value := m[key]
+	if value != nil {
+		return cast.ToBoolE(value)
+	}
+	return false, nil
+}
+
+func getOrDefaultString(m map[string]interface{}, key string) (string, error) {
 	value := m[key]
 	if value != nil {
 		return cast.ToStringE(value)
