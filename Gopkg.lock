@@ -29,13 +29,12 @@
   version = "v20.2.0"
 
 [[projects]]
-  digest = "1:f7303a47ca09bf170d666a2ded8dd453ddd40a75d8524073fddb64929b1c5ae9"
+  digest = "1:ec10827fcacfaa45219ef2a22be6158b10c8de91b62094c7f40c3ab1fa76d67f"
   name = "github.com/Azure/go-autorest"
   packages = [
     "autorest",
     "autorest/adal",
     "autorest/azure",
-    "autorest/azure/auth",
     "autorest/date",
     "autorest/to",
     "autorest/validation",
@@ -191,14 +190,6 @@
   pruneopts = "NUT"
   revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
   version = "v3.2.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:ec6271918b59b872a2d25e374569a4f75f1839d91e4191470c297b7eaaaf7641"
-  name = "github.com/dimchansky/utfbom"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "5448fe645cb1964ba70ac8f9f2ffe975e61a536c"
 
 [[projects]]
   digest = "1:1b91ae0dc69a41d4c2ed23ea5cffb721ea63f5037ca4b81e6d6771fbb8f45129"
@@ -538,12 +529,12 @@
   revision = "b8bc1bf767474819792c23f32d8286a45736f1c6"
 
 [[projects]]
-  branch = "master"
-  digest = "1:eeb1f466766c40a4656b090593e103d2ce327b914329232bc1d4632dae17fc4f"
+  digest = "1:a45ae66dea4c899d79fceb116accfa1892105c251f0dcd9a217ddc276b42ec68"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
+  revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
+  version = "v1.1.2"
 
 [[projects]]
   digest = "1:2f42fa12d6911c7b7659738758631bec870b7e9b4c6be5444f963cdcfccc191f"
@@ -763,12 +754,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7197491b7bf0683298c954212e66ea405e7a4befce2a7ccd9712bdb90e41da24"
+  digest = "1:1c2f8ee5475a159add4b99b6236fa2fb86c7e4ea169484f5c624272fe06ea2b2"
   name = "golang.org/x/crypto"
   packages = [
     "pbkdf2",
-    "pkcs12",
-    "pkcs12/internal/rc2",
     "scrypt",
     "ssh/terminal",
   ]
@@ -1162,7 +1151,6 @@
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/adal",
     "github.com/Azure/go-autorest/autorest/azure",
-    "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/Masterminds/sprig",
     "github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests",
     "github.com/aliyun/alibaba-cloud-sdk-go/services/kms",
@@ -1178,7 +1166,9 @@
     "github.com/dgrijalva/jwt-go/request",
     "github.com/fsnotify/fsnotify",
     "github.com/gin-gonic/gin",
+    "github.com/golang/glog",
     "github.com/hashicorp/vault/api",
+    "github.com/mitchellh/mapstructure",
     "github.com/operator-framework/operator-sdk/pkg/sdk",
     "github.com/operator-framework/operator-sdk/pkg/sdk/action",
     "github.com/operator-framework/operator-sdk/pkg/sdk/handler",
@@ -1212,6 +1202,7 @@
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/testing",
+    "k8s.io/client-go/tools/cache",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/util/flowcontrol",
     "k8s.io/code-generator/cmd/client-gen",
