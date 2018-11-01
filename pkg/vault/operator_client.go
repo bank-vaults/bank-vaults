@@ -27,6 +27,7 @@ import (
 
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/hashicorp/vault/api"
+	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
@@ -797,15 +798,16 @@ func (v *vault) configureSecretEngines() error {
 			if err != nil {
 				return fmt.Errorf("error getting plugin_name for secret engine: %s", err.Error())
 			}
-			options, err := getOrDefaultStringMapString(secretEngine, "options")
+			config, err := getMountConfigInput(secretEngine)
 			if err != nil {
-				return fmt.Errorf("error getting options for secret engine: %s", err.Error())
+				return err
 			}
 			input := api.MountInput{
 				Type:        secretEngineType,
 				Description: description,
 				PluginName:  pluginName,
-				Options:     options,
+				Config:      config,
+				Options:     config.Options, // options needs to be sent here first time
 			}
 			logrus.Infof("Mounting secret engine with input: %#v\n", input)
 			err = v.cl.Sys().Mount(path, &input)
@@ -817,14 +819,11 @@ func (v *vault) configureSecretEngines() error {
 
 		} else {
 			logrus.Infof("Tuning already existing mount: %s/\n", path)
-			options, err := getOrDefaultStringMapString(secretEngine, "options")
+			config, err := getMountConfigInput(secretEngine)
 			if err != nil {
-				return fmt.Errorf("error getting options for secret engine: %s", err.Error())
+				return err
 			}
-			input := api.MountConfigInput{
-				Options: options,
-			}
-			err = v.cl.Sys().TuneMount(path, input)
+			err = v.cl.Sys().TuneMount(path, config)
 			if err != nil {
 				return fmt.Errorf("error tuning %s in vault: %s", path, err.Error())
 			}
@@ -851,8 +850,9 @@ func (v *vault) configureSecretEngines() error {
 					return fmt.Errorf("error finding sub config data name for secret engine")
 				}
 
-				// config data can have child dict. But it will cause `json: unsupported type: map[interface {}]interface {}`
-				// So check and replace by `map[string]interface{}` before use it.
+				// config data can have a child dict. But it will cause:
+				// `json: unsupported type: map[interface {}]interface {}`
+				// So check and replace by `map[string]interface{}` before using it.
 				for k, v := range subConfigData {
 					switch val := v.(type) {
 					case map[interface{}]interface{}:
@@ -911,4 +911,28 @@ func getOrError(m map[string]interface{}, key string) (string, error) {
 
 func isOverwriteProhibitedError(err error) bool {
 	return strings.Contains(err.Error(), "delete them before reconfiguring")
+}
+
+func getMountConfigInput(secretEngine map[string]interface{}) (api.MountConfigInput, error) {
+	var mountConfigInput api.MountConfigInput
+
+	config, err := getOrDefaultStringMapString(secretEngine, "config")
+	if err != nil {
+		return mountConfigInput, fmt.Errorf("error getting config for secret engine: %s", err.Error())
+	}
+	err = mapstructure.Decode(config, &mountConfigInput)
+	if err != nil {
+		return mountConfigInput, fmt.Errorf("error parsing config for secret engine: %s", err.Error())
+	}
+
+	// Bank-Vaults supported options outside config to be used options in the mount request
+	// so for now, to preserve backward compatibility we overwrite the options inside config
+	// with the options outside.
+	options, err := getOrDefaultStringMapString(secretEngine, "options")
+	if err != nil {
+		return mountConfigInput, fmt.Errorf("error getting options for secret engine: %s", err.Error())
+	}
+	mountConfigInput.Options = options
+
+	return mountConfigInput, nil
 }

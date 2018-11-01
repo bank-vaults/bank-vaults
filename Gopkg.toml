@@ -168,3 +168,7 @@ version = "v1.1.5"
 [[override]]
   name = "github.com/golang/protobuf"
   version = "v1.2.0"
+
+[[constraint]]
+  version = "v1.1.2"
+  name = "github.com/mitchellh/mapstructure"
