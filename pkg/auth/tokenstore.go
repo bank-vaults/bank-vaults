@@ -58,7 +58,7 @@ func parseToken(secret *vaultapi.Secret, showExpired bool) (*Token, error) {
 	if tokenData, ok := data["token"]; ok {
 
 		tokenData := tokenData.(map[string]interface{})
-		token := &Token{}
+		token := Token{}
 
 		expiresAtRaw := tokenData["expiresAt"]
 		if expiresAtRaw != nil {
@@ -96,7 +96,7 @@ func parseToken(secret *vaultapi.Secret, showExpired bool) (*Token, error) {
 			token.Value = tokenValue.(string)
 		}
 
-		return token, nil
+		return &token, nil
 	}
 	return nil, fmt.Errorf("Can't find \"token\" in Secret")
 }
@@ -237,15 +237,20 @@ func (tokenStore vaultTokenStore) list(userID string, showExpired bool) ([]*Toke
 			tokenIDs = cast.ToStringSlice(keys)
 		}
 	}
-	tokens := make([]*Token, len(tokenIDs))
 
-	for i, tokenID := range tokenIDs {
+	tokens := []*Token{}
+
+	for _, tokenID := range tokenIDs {
 		token, err := tokenStore.lookup(userID, tokenID, showExpired)
 		if err != nil {
 			return nil, err
 		}
-		tokens[i] = token
+		// if token got removed in a race condition between list and lookup it becomes
+		if token != nil {
+			tokens = append(tokens, token)
+		}
 	}
+
 	return tokens, nil
 }
 
