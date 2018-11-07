@@ -12,6 +12,12 @@ spec:
   # By default it is false.
   supportUpgrade: true
 
+  # This option allows you to annotate the ETCD Cluster that Vault Operator creates.
+  # It's specifically to annotate the ETCD Cluster as 'clusterwide' for a cluster wide
+  # ETCD Operator, however it can be used to set any arbitrary annotations on the ETCD Cluster.
+  # etcdAnnotations:
+  #   etcd.database.coreos.com/scope: clusterwide
+  
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
     kubernetes:

@@ -664,6 +664,7 @@ func etcdForVault(v *v1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
 	etcdCluster := &etcdV1beta2.EtcdCluster{}
 	etcdCluster.APIVersion = etcdV1beta2.SchemeGroupVersion.String()
 	etcdCluster.Kind = etcdV1beta2.EtcdClusterResourceKind
+	etcdCluster.Annotations = v.Spec.EtcdAnnotations
 	etcdCluster.Name = etcdName
 	etcdCluster.Namespace = v.Namespace
 	etcdCluster.Labels = labelsForVault(v.Name)
