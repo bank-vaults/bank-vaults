@@ -394,8 +394,8 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 					Annotations: v.Spec.GetAnnotations(),
 				},
 				Spec: v1.PodSpec{
-					Affinity: getPodAntiAffinity(v),
-
+					Affinity:           getPodAntiAffinity(v),
+					ServiceAccountName: v.Spec.GetServiceAccount(),
 					Containers: withAuditLogContainer(v, string(ownerJSON), []v1.Container{
 						{
 							Image:           v.Spec.Image,
@@ -751,6 +751,7 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 					Annotations: v.Spec.Annotations,
 				},
 				Spec: v1.PodSpec{
+					ServiceAccountName: v.Spec.GetServiceAccount(),
 					Containers: []v1.Container{
 						{
 							Image:           v.Spec.GetBankVaultsImage(),
