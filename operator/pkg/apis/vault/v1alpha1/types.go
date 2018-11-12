@@ -16,10 +16,10 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"k8s.io/api/core/v1"
 	"reflect"
 
 	"github.com/spf13/cast"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -71,6 +71,7 @@ type VaultSpec struct {
 	EtcdAnnotations map[string]string `json:"etcdAnnotations,omitempty"`
 	ServiceType     string            `json:"serviceType"`
 	PodAntiAffinity string            `json:"podAntiAffinity"`
+	ServiceAccount  string            `json:"serviceAccount"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
@@ -117,6 +118,14 @@ func (spec *VaultSpec) GetEtcdVersion() string {
 		return "3.1.15"
 	}
 	return spec.EtcdVersion
+}
+
+// GetServiceAccount returns the Kubernetes Service Account to use for Vault
+func (spec *VaultSpec) GetServiceAccount() string {
+	if spec.ServiceAccount != "" {
+		return spec.ServiceAccount
+	}
+	return "default"
 }
 
 // GetEtcdSize returns the number of etcd pods to use

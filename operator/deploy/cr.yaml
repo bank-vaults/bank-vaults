@@ -12,6 +12,9 @@ spec:
     prometheus.io/scrape: "true"
     prometheus.io/port: "9102"
 
+  # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
+  serviceAccount: vault-operator
+
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
     kubernetes:
