@@ -61,6 +61,7 @@ type VaultSpec struct {
 	ExternalConfig    map[string]interface{} `json:"externalConfig"`
 	UnsealConfig      UnsealConfig           `json:"unsealConfig"`
 	CredentialsConfig CredentialsConfig      `json:"credentialsConfig"`
+	SecretEnvsConfig  []SecretEnvConfig      `json:"secretEnvsConfig"`
 	SecurityContext   v1.PodSecurityContext  `json:"securityContext,omitempty"`
 	// This option gives us the option to workaround current StatefulSet limitations around updates
 	// See: https://github.com/kubernetes/kubernetes/issues/67250
@@ -348,4 +349,11 @@ type CredentialsConfig struct {
 	Env        string `json:"env"`
 	Path       string `json:"path"`
 	SecretName string `json:"secretName"`
+}
+
+// CredentialsConfig configuration for a credentials file provided as a secret
+type SecretEnvConfig struct {
+	Env        string `json:"env"`
+	SecretName string `json:"secretName"`
+	SecretKey  string `json:"secretKey"`
 }
