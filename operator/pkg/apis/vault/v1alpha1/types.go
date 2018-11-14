@@ -351,7 +351,7 @@ type CredentialsConfig struct {
 	SecretName string `json:"secretName"`
 }
 
-// CredentialsConfig configuration for a credentials file provided as a secret
+// SecretEnvConfig configuration for set environment variable from secret
 type SecretEnvConfig struct {
 	Env        string `json:"env"`
 	SecretName string `json:"secretName"`
