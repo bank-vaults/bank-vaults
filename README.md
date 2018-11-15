@@ -205,6 +205,22 @@ auth:
       token_max_ttl: 30m
       secret_id_num_uses: 40
 
+# Pass secret to environment variables. Please reference below `my-mysql` part for usage.
+# `env` is environment variable name
+# `secretName` is secret's name.
+# `secretKey` is secret's data key.
+envsConfig:
+  - name: ROOT_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: mysql-login
+        key: user
+  - name: ROOT_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: mysql-login
+        key: password
+
 # Allows configuring Secrets Engines in Vault (KV, Database and SSH is tested,
 # but the config is free form so probably more is supported).
 # See https://www.vaultproject.io/docs/secrets/index.html for more information.
@@ -235,8 +251,8 @@ secrets:
           plugin_name: "mysql-database-plugin"
           connection_url: "{{username}}:{{password}}@tcp(127.0.0.1:3306)/"
           allowed_roles: [pipeline]
-          username: "${env "ROOT_USERNAME"}" # Example how to read environment variables
-          password: "${env "ROOT_PASSWORD"}"
+          username: "${env `ROOT_USERNAME`}" # Example how to read environment variables
+          password: "${env `ROOT_PASSWORD`}"
       roles:
         - name: pipeline
           db_name: my-mysql
