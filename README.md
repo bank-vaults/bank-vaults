@@ -209,13 +209,17 @@ auth:
 # `env` is environment variable name
 # `secretName` is secret's name.
 # `secretKey` is secret's data key.
-secretEnvsConfig:
-  - env: ROOT_USERNAME
-    secretName: mysql-login
-    secretKey: user
-  - env: ROOT_PASSWORD
-    secretName: mysql-login
-    secretKey: password
+envsConfig:
+  - name: ROOT_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: mysql-login
+        key: user
+  - name: ROOT_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: mysql-login
+        key: password
 
 # Allows configuring Secrets Engines in Vault (KV, Database and SSH is tested,
 # but the config is free form so probably more is supported).

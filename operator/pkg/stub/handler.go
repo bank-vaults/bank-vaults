@@ -654,16 +654,8 @@ func withCredentialsVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount
 }
 
 func withSecretEnv(v *v1alpha1.Vault, envs []v1.EnvVar) []v1.EnvVar {
-	for _, secret := range v.Spec.SecretEnvsConfig {
-		envs = append(envs, v1.EnvVar{
-			Name: secret.Env,
-			ValueFrom: &v1.EnvVarSource{
-				SecretKeyRef: &v1.SecretKeySelector{
-					LocalObjectReference: v1.LocalObjectReference{Name: secret.SecretName},
-					Key:                  secret.SecretKey,
-				},
-			},
-		})
+	for _, env := range v.Spec.EnvsConfig {
+		envs = append(envs, env)
 	}
 
 	return envs
