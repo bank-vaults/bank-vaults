@@ -61,6 +61,7 @@ type VaultSpec struct {
 	ExternalConfig    map[string]interface{} `json:"externalConfig"`
 	UnsealConfig      UnsealConfig           `json:"unsealConfig"`
 	CredentialsConfig CredentialsConfig      `json:"credentialsConfig"`
+	EnvsConfig        []v1.EnvVar            `json:"envsConfig"`
 	SecurityContext   v1.PodSecurityContext  `json:"securityContext,omitempty"`
 	// This option gives us the option to workaround current StatefulSet limitations around updates
 	// See: https://github.com/kubernetes/kubernetes/issues/67250

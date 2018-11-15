@@ -450,12 +450,12 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							Name:            "bank-vaults",
 							Command:         withSupportUpgradeParams(v, []string{"bank-vaults", "unseal", "--init"}),
 							Args:            v.Spec.UnsealConfig.ToArgs(v),
-							Env: withTLSEnv(v, true, withCredentialsEnv(v, []v1.EnvVar{
+							Env: withSecretEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, []v1.EnvVar{
 								{
 									Name:  k8s.EnvK8SOwnerReference,
 									Value: string(ownerJSON),
 								},
-							})),
+							}))),
 							VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []v1.VolumeMount{})),
 						},
 						{
@@ -653,6 +653,14 @@ func withCredentialsVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount
 	return volumeMounts
 }
 
+func withSecretEnv(v *v1alpha1.Vault, envs []v1.EnvVar) []v1.EnvVar {
+	for _, env := range v.Spec.EnvsConfig {
+		envs = append(envs, env)
+	}
+
+	return envs
+}
+
 func etcdForVault(v *v1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
 	storage := v.Spec.GetStorage()
 	etcdAddress := storage["address"].(string)
@@ -759,7 +767,7 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 							Name:            "bank-vaults",
 							Command:         []string{"bank-vaults", "configure"},
 							Args:            v.Spec.UnsealConfig.ToArgs(v),
-							Env:             withTLSEnv(v, false, withCredentialsEnv(v, []v1.EnvVar{})),
+							Env:             withSecretEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []v1.EnvVar{}))),
 							VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []v1.VolumeMount{
 								{
 									Name:      "config",
