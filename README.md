@@ -205,10 +205,10 @@ auth:
       token_max_ttl: 30m
       secret_id_num_uses: 40
 
-# Pass secret to environment variables. Please reference below `my-mysql` part for usage.
-# `env` is environment variable name
-# `secretName` is secret's name.
-# `secretKey` is secret's data key.
+# Add environment variables. Please reference below `my-mysql` part for usage.
+# This is a list of K8S env. You can reference K8S document for detail
+# https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/
+# https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-environment-variables
 envsConfig:
   - name: ROOT_USERNAME
     valueFrom:
