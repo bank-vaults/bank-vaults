@@ -15,6 +15,9 @@ spec:
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault-operator
 
+  # Specify the Service's type where the Vault Service is exposed
+  serviceType: ClusterIP
+
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
     kubernetes:
