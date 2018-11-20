@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Pkg tests" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="bank-vaults" />
+    <working_directory value="$PROJECT_DIR$/" />
+    <go_parameters value="-i" />
+    <framework value="gotest" />
+    <kind value="DIRECTORY" />
+    <package value="github.com/banzaicloud/bank-vaults" />
+    <directory value="$PROJECT_DIR$/pkg/" />
+    <filePath value="$PROJECT_DIR$/" />
+    <method v="2" />
+  </configuration>
+</component>
