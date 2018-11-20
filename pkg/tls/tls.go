@@ -25,6 +25,7 @@ import (
 	"net"
 	"strings"
 	"time"
+	"github.com/pkg/errors"
 )
 
 // CertificateChain represents a full certificate chain with a root CA, a server, client and peer certificate
@@ -222,17 +223,22 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 
 func keyToBytes(key *rsa.PrivateKey) ([]byte, error) {
 	keyBytes := x509.MarshalPKCS1PrivateKey(key)
-	buffer := bytes.NewBuffer(nil)
-	if err := pem.Encode(buffer, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: keyBytes}); err != nil {
-		return nil, err
+
+	var buf bytes.Buffer
+
+	if err := pem.Encode(&buf, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: keyBytes}); err != nil {
+		return nil, errors.WithStack(err)
 	}
-	return buffer.Bytes(), nil
+
+	return buf.Bytes(), nil
 }
 
 func certToBytes(certBytes []byte) ([]byte, error) {
-	buffer := bytes.NewBuffer(nil)
-	if err := pem.Encode(buffer, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes}); err != nil {
-		return nil, err
+	var buf bytes.Buffer
+	
+	if err := pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes}); err != nil {
+		return nil, errors.WithStack(err)
 	}
-	return buffer.Bytes(), nil
+
+	return buf.Bytes(), nil
 }
