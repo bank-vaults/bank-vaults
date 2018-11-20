@@ -28,6 +28,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+var serialNumberLimit *big.Int
+
+func init() {
+	serialNumberLimit = new(big.Int).Lsh(big.NewInt(1), 128)
+}
+
+const (
+	defaultValidity = 365 * 24 * time.Hour
+	defaultKeyBits  = 2038
+)
+
 // CertificateChain represents a full certificate chain with a root CA, a server, client and peer certificate
 // All values are in PEM format
 type CertificateChain struct {
@@ -53,7 +64,6 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 
 	notAfter := notBefore.Add(validityDuration)
 
-	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -92,48 +102,23 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 		return nil, err
 	}
 
-	serverKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	serverKeyBytes, err := keyToBytes(serverKey)
-	if err != nil {
-		return nil, err
-	}
-
-	serialNumber, err = rand.Int(rand.Reader, serialNumberLimit)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	serverCertTemplate := x509.Certificate{
-		SerialNumber: serialNumber,
+	serverCertRequest := ServerCertificateRequest{
 		Subject: pkix.Name{
 			Organization: []string{"Banzai Cloud"},
 			CommonName:   "Banzai Cloud Generated Server Cert",
 		},
-		NotBefore:             notBefore,
-		NotAfter:              notAfter,
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-		IsCA:                  false,
+		Validity:  validityDuration,
+		notBefore: notBefore,
 	}
 	for _, h := range strings.Split(hosts, ",") {
 		if ip := net.ParseIP(h); ip != nil {
-			serverCertTemplate.IPAddresses = append(serverCertTemplate.IPAddresses, ip)
+			serverCertRequest.IPAddresses = append(serverCertRequest.IPAddresses, ip)
 		} else {
-			serverCertTemplate.DNSNames = append(serverCertTemplate.DNSNames, h)
+			serverCertRequest.DNSNames = append(serverCertRequest.DNSNames, h)
 		}
 	}
 
-	serverCert, err := x509.CreateCertificate(rand.Reader, &serverCertTemplate, &caCertTemplate, &serverKey.PublicKey, caKey)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	serverCertBytes, err := certToBytes(serverCert)
+	serverCert, err := GenerateServerCertificate(serverCertRequest, &caCertTemplate, caKey)
 	if err != nil {
 		return nil, err
 	}
@@ -221,8 +206,8 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 	cc := CertificateChain{
 		CAKey:      string(caKeyBytes),
 		CACert:     string(caCertBytes),
-		ServerKey:  string(serverKeyBytes),
-		ServerCert: string(serverCertBytes),
+		ServerKey:  string(serverCert.Key),
+		ServerCert: string(serverCert.Certificate),
 		ClientKey:  string(clientKeyBytes),
 		ClientCert: string(clientCertBytes),
 		PeerKey:    string(peerKeyBytes),
