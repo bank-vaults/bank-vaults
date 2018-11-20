@@ -24,7 +24,7 @@ import (
 )
 
 func TestGenerateTLS(t *testing.T) {
-	cc, err := GenerateTLS("localhost", "1h")
+	cc, err := GenerateTLS("localhost,127.0.0.1", "1h")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,14 +72,25 @@ func TestGenerateTLS(t *testing.T) {
 	transport := &http.Transport{TLSClientConfig: clientTLSConfig}
 	client := &http.Client{Transport: transport}
 
-	req, err := http.NewRequest("GET", "https://"+strings.Replace(server.Listener.Addr().String(), "127.0.0.1", "localhost", 1), nil)
-	if err != nil {
-		t.Fatal(err)
+	tests := []string{
+		server.Listener.Addr().String(), // Should work with IP address as well
+		strings.Replace(server.Listener.Addr().String(), "127.0.0.1", "localhost", 1),
 	}
 
-	_, err = client.Do(req)
-	if err != nil {
-		t.Fatal(err)
+	for _, test := range tests {
+		test := test
+
+		t.Run(strings.Split(test, ":")[0], func(t *testing.T) {
+			req, err := http.NewRequest("GET", "https://"+test, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = client.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 
 	server.Close()
