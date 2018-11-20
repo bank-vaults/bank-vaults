@@ -48,19 +48,22 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 	notBefore := time.Now()
 	validityDuration, err := time.ParseDuration(validity)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
+
 	notAfter := notBefore.Add(validityDuration)
 
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
+
 	caKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
+
 	caKeyBytes, err := keyToBytes(caKey)
 	if err != nil {
 		return nil, err
@@ -91,8 +94,9 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 
 	serverKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
+
 	serverKeyBytes, err := keyToBytes(serverKey)
 	if err != nil {
 		return nil, err
@@ -100,8 +104,9 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 
 	serialNumber, err = rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
+
 	serverCertTemplate := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
@@ -125,8 +130,9 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 
 	serverCert, err := x509.CreateCertificate(rand.Reader, &serverCertTemplate, &caCertTemplate, &serverKey.PublicKey, caKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
+
 	serverCertBytes, err := certToBytes(serverCert)
 	if err != nil {
 		return nil, err
@@ -134,8 +140,9 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 
 	clientKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
+
 	clientKeyBytes, err := keyToBytes(clientKey)
 	if err != nil {
 		return nil, err
@@ -157,8 +164,9 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 
 	clientCert, err := x509.CreateCertificate(rand.Reader, &clientCertTemplate, &caCertTemplate, &clientKey.PublicKey, caKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
+
 	clientCertBytes, err := certToBytes(clientCert)
 	if err != nil {
 		return nil, err
@@ -166,8 +174,9 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 
 	peerKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
+
 	peerKeyBytes, err := keyToBytes(peerKey)
 	if err != nil {
 		return nil, err
@@ -175,8 +184,9 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 
 	serialNumber, err = rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
+
 	peerCertTemplate := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
@@ -200,8 +210,9 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 
 	peerCert, err := x509.CreateCertificate(rand.Reader, &peerCertTemplate, &caCertTemplate, &peerKey.PublicKey, caKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
+
 	peerCertBytes, err := certToBytes(peerCert)
 	if err != nil {
 		return nil, err
@@ -235,7 +246,7 @@ func keyToBytes(key *rsa.PrivateKey) ([]byte, error) {
 
 func certToBytes(certBytes []byte) ([]byte, error) {
 	var buf bytes.Buffer
-	
+
 	if err := pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes}); err != nil {
 		return nil, errors.WithStack(err)
 	}
