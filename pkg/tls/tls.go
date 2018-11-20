@@ -69,7 +69,7 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			Organization: []string{"Banzai Cloud"},
-			CommonName:   "Root CA",
+			CommonName:   "Banzai Cloud Generated Root CA",
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
@@ -105,7 +105,7 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			Organization: []string{"Banzai Cloud"},
-			CommonName:   "Banzai Genereted Server Cert",
+			CommonName:   "Banzai Cloud Generated Server Cert",
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
@@ -144,7 +144,7 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 		SerialNumber: new(big.Int).SetInt64(4),
 		Subject: pkix.Name{
 			Organization: []string{"Banzai Cloud"},
-			CommonName:   "Banzai Genereted Client Cert",
+			CommonName:   "Banzai Cloud Generated Client Cert",
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
@@ -180,7 +180,7 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			Organization: []string{"Banzai Cloud"},
-			CommonName:   "Banzai Genereted Peer Cert",
+			CommonName:   "Banzai Cloud Generated Peer Cert",
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
