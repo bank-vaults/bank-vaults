@@ -123,36 +123,16 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 		return nil, err
 	}
 
-	clientKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	clientKeyBytes, err := keyToBytes(clientKey)
-	if err != nil {
-		return nil, err
-	}
-
-	clientCertTemplate := x509.Certificate{
-		SerialNumber: new(big.Int).SetInt64(4),
+	clientCertRequest := ClientCertificateRequest{
 		Subject: pkix.Name{
 			Organization: []string{"Banzai Cloud"},
 			CommonName:   "Banzai Cloud Generated Client Cert",
 		},
-		NotBefore:             notBefore,
-		NotAfter:              notAfter,
-		KeyUsage:              x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-		BasicConstraintsValid: true,
-		IsCA:                  false,
+		Validity:  validityDuration,
+		notBefore: notBefore,
 	}
 
-	clientCert, err := x509.CreateCertificate(rand.Reader, &clientCertTemplate, &caCertTemplate, &clientKey.PublicKey, caKey)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	clientCertBytes, err := certToBytes(clientCert)
+	clientCert, err := GenerateClientCertificate(clientCertRequest, &caCertTemplate, caKey)
 	if err != nil {
 		return nil, err
 	}
@@ -208,8 +188,8 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 		CACert:     string(caCertBytes),
 		ServerKey:  string(serverCert.Key),
 		ServerCert: string(serverCert.Certificate),
-		ClientKey:  string(clientKeyBytes),
-		ClientCert: string(clientCertBytes),
+		ClientKey:  string(clientCert.Key),
+		ClientCert: string(clientCert.Certificate),
 		PeerKey:    string(peerKeyBytes),
 		PeerCert:   string(peerCertBytes),
 	}
