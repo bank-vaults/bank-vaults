@@ -137,48 +137,23 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 		return nil, err
 	}
 
-	peerKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	peerKeyBytes, err := keyToBytes(peerKey)
-	if err != nil {
-		return nil, err
-	}
-
-	serialNumber, err = rand.Int(rand.Reader, serialNumberLimit)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	peerCertTemplate := x509.Certificate{
-		SerialNumber: serialNumber,
+	peerCertRequest := PeerCertificateRequest{
 		Subject: pkix.Name{
 			Organization: []string{"Banzai Cloud"},
 			CommonName:   "Banzai Cloud Generated Peer Cert",
 		},
-		NotBefore:             notBefore,
-		NotAfter:              notAfter,
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		BasicConstraintsValid: true,
-		IsCA:                  false,
+		Validity:  validityDuration,
+		notBefore: notBefore,
 	}
 	for _, h := range strings.Split(hosts, ",") {
 		if ip := net.ParseIP(h); ip != nil {
-			peerCertTemplate.IPAddresses = append(peerCertTemplate.IPAddresses, ip)
+			peerCertRequest.IPAddresses = append(peerCertRequest.IPAddresses, ip)
 		} else {
-			peerCertTemplate.DNSNames = append(peerCertTemplate.DNSNames, h)
+			peerCertRequest.DNSNames = append(peerCertRequest.DNSNames, h)
 		}
 	}
 
-	peerCert, err := x509.CreateCertificate(rand.Reader, &peerCertTemplate, &caCertTemplate, &peerKey.PublicKey, caKey)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	peerCertBytes, err := certToBytes(peerCert)
+	peerCert, err := GeneratePeerCertificate(peerCertRequest, &caCertTemplate, caKey)
 	if err != nil {
 		return nil, err
 	}
@@ -190,8 +165,8 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 		ServerCert: string(serverCert.Certificate),
 		ClientKey:  string(clientCert.Key),
 		ClientCert: string(clientCert.Certificate),
-		PeerKey:    string(peerKeyBytes),
-		PeerCert:   string(peerCertBytes),
+		PeerKey:    string(peerCert.Key),
+		PeerCert:   string(peerCert.Certificate),
 	}
 
 	return &cc, nil
