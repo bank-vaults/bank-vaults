@@ -17,21 +17,9 @@ package tls
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
 	"net/http"
-	"os"
 	"testing"
 )
-
-const (
-	ServerKey  = "server.key"
-	ServerCert = "server.crt"
-)
-
-func helloServer(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte("This is an example TLS server.\n"))
-}
 
 func TestGenerateTLS(t *testing.T) {
 	cc, err := GenerateTLS("localhost", "1h")
@@ -39,49 +27,49 @@ func TestGenerateTLS(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = ioutil.WriteFile(ServerKey, []byte(cc.ServerKey), 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = ioutil.WriteFile(ServerCert, []byte(cc.ServerCert), 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.Remove(ServerKey)
-	defer os.Remove(ServerCert)
-
 	// Load CA cert
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM([]byte(cc.CACert))
+
+	serverCert, err := tls.X509KeyPair([]byte(cc.ServerCert), []byte(cc.ServerKey))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tlsConfig := &tls.Config{
 		ClientAuth:               tls.RequireAndVerifyClientCert,
 		ClientCAs:                caCertPool,
 		PreferServerCipherSuites: true,
 		MinVersion:               tls.VersionTLS12,
+		Certificates:             []tls.Certificate{serverCert},
 	}
 
 	tlsConfig.BuildNameToCertificate()
 
+	ln, err := tls.Listen("tcp", "127.0.0.1:8443", tlsConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	server := &http.Server{
-		Addr:      ":8443",
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "text/plain")
+			w.Write([]byte("This is an example TLS server.\n"))
+		}),
 		TLSConfig: tlsConfig,
 	}
 
-	http.HandleFunc("/", helloServer)
-
-	go server.ListenAndServeTLS(ServerCert, ServerKey)
+	go server.Serve(ln)
 
 	// Load client cert
-	cert, err := tls.X509KeyPair([]byte(cc.ClientCert), []byte(cc.ClientKey))
+	clientCert, err := tls.X509KeyPair([]byte(cc.ClientCert), []byte(cc.ClientKey))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Setup HTTPS client
 	clientTLSConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
+		Certificates: []tls.Certificate{clientCert},
 		RootCAs:      caCertPool,
 	}
 	clientTLSConfig.BuildNameToCertificate()
