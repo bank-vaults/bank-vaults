@@ -19,6 +19,8 @@ import (
 	"crypto/x509"
 	"net/http"
 	"testing"
+	"net/http/httptest"
+	"strings"
 )
 
 func TestGenerateTLS(t *testing.T) {
@@ -46,20 +48,14 @@ func TestGenerateTLS(t *testing.T) {
 
 	tlsConfig.BuildNameToCertificate()
 
-	ln, err := tls.Listen("tcp", "127.0.0.1:8443", tlsConfig)
-	if err != nil {
-		t.Fatal(err)
-	}
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("This is an example TLS server.\n"))
+	}))
 
-	server := &http.Server{
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.Header().Set("Content-Type", "text/plain")
-			w.Write([]byte("This is an example TLS server.\n"))
-		}),
-		TLSConfig: tlsConfig,
-	}
+	server.Listener = tls.NewListener(server.Listener, tlsConfig)
 
-	go server.Serve(ln)
+	server.Start()
 
 	// Load client cert
 	clientCert, err := tls.X509KeyPair([]byte(cc.ClientCert), []byte(cc.ClientKey))
@@ -76,7 +72,7 @@ func TestGenerateTLS(t *testing.T) {
 	transport := &http.Transport{TLSClientConfig: clientTLSConfig}
 	client := &http.Client{Transport: transport}
 
-	req, err := http.NewRequest("GET", "https://localhost:8443/", nil)
+	req, err := http.NewRequest("GET", "https://"+strings.Replace(server.Listener.Addr().String(), "127.0.0.1", "localhost", 1), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
