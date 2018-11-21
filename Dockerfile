@@ -1,14 +1,25 @@
-FROM golang:1.11-alpine as golang
-RUN apk add --update --no-cache ca-certificates curl git make
-RUN mkdir -p /go/src/github.com/banzaicloud/bank-vaults
-ADD Gopkg.* Makefile /go/src/github.com/banzaicloud/bank-vaults/
-WORKDIR /go/src/github.com/banzaicloud/bank-vaults
+ARG GO_VERSION=1.11
+
+FROM golang:${GO_VERSION}-alpine AS builder
+
+RUN apk add --update --no-cache ca-certificates make git curl mercurial
+
+ARG PACKAGE=github.com/banzaicloud/bank-vaults
+
+RUN mkdir -p /go/src/${PACKAGE}
+WORKDIR /go/src/${PACKAGE}
+
+COPY Gopkg.* Makefile /go/src/${PACKAGE}/
 RUN make vendor
-ADD . /go/src/github.com/banzaicloud/bank-vaults
+
+COPY . /go/src/${PACKAGE}
 RUN go install ./cmd/bank-vaults
 
 
 FROM alpine:3.7
+
 RUN apk add --no-cache ca-certificates
-COPY --from=golang /go/bin/bank-vaults /usr/local/bin/bank-vaults
+
+COPY --from=builder /go/bin/bank-vaults /usr/local/bin/bank-vaults
+
 ENTRYPOINT ["/usr/local/bin/bank-vaults"]
