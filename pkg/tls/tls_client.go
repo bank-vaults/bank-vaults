@@ -26,7 +26,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ServerCertificateRequest contains a set of options configurable for client certificate generation
+// ClientCertificateRequest contains a set of options configurable for client certificate generation
 type ClientCertificateRequest struct {
 	Subject  pkix.Name
 	Validity time.Duration
