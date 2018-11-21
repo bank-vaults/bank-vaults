@@ -1,0 +1,8 @@
+run:
+    skip-dirs:
+        - operator
+
+linters:
+    disable:
+        - errcheck
+        - megacheck

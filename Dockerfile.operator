@@ -1,16 +1,28 @@
-FROM golang:1.11-alpine as golang
-RUN apk add --update --no-cache ca-certificates curl git make
-RUN mkdir -p /go/src/github.com/banzaicloud/bank-vaults
-ADD Gopkg.* Makefile /go/src/github.com/banzaicloud/bank-vaults/
-WORKDIR /go/src/github.com/banzaicloud/bank-vaults
+ARG GO_VERSION=1.11
+
+FROM golang:${GO_VERSION}-alpine AS builder
+
+RUN apk add --update --no-cache ca-certificates make git curl mercurial
+
+ARG PACKAGE=github.com/banzaicloud/bank-vaults
+
+RUN mkdir -p /go/src/${PACKAGE}
+WORKDIR /go/src/${PACKAGE}
+
+COPY Gopkg.* Makefile /go/src/${PACKAGE}/
 RUN make vendor
-ADD . /go/src/github.com/banzaicloud/bank-vaults
+
+COPY . /go/src/${PACKAGE}
 RUN go install ./operator/cmd/vault-operator
 
 
 FROM alpine:3.7
+
 RUN apk add --no-cache ca-certificates
-COPY --from=golang /go/bin/vault-operator /usr/local/bin/vault-operator
+
+COPY --from=builder /go/bin/vault-operator /usr/local/bin/vault-operator
+
 RUN adduser -D vault-operator
 USER vault-operator
+
 ENTRYPOINT ["/usr/local/bin/vault-operator"]

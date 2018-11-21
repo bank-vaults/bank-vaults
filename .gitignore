@@ -20,6 +20,7 @@ operator/tmp/_output/bin/*
 /vendor/
 /.licensei.cache
 bin/*
+/build/
 
 
 # IDE integration

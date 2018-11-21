@@ -72,7 +72,7 @@ jobs:
       - run:
           name: Run verification
           command:
-              make verify
+              make check
           environment:
             VAULT_ADDR: http://localhost:8200
             VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
