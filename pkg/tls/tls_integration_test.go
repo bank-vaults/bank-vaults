@@ -18,9 +18,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"net/http"
-	"testing"
 	"net/http/httptest"
 	"strings"
+	"testing"
 )
 
 func TestGenerateTLS(t *testing.T) {
