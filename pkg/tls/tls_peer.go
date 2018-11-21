@@ -15,14 +15,15 @@
 package tls
 
 import (
-	"crypto/x509/pkix"
-	"time"
-	"net"
-	"crypto/x509"
 	"crypto"
 	"crypto/rand"
-	"github.com/pkg/errors"
 	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"net"
+	"time"
+
+	"github.com/pkg/errors"
 )
 
 // PeerCertificateRequest contains a set of options configurable for peer certificate generation.

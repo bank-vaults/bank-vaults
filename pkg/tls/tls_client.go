@@ -15,14 +15,15 @@
 package tls
 
 import (
-	"crypto/x509/pkix"
-	"time"
-	"crypto/x509"
 	"crypto"
 	"crypto/rand"
-	"github.com/pkg/errors"
 	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"math/big"
+	"time"
+
+	"github.com/pkg/errors"
 )
 
 // ServerCertificateRequest contains a set of options configurable for client certificate generation
