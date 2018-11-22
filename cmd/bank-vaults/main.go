@@ -36,6 +36,7 @@ const cfgModeValueAzureKeyVault = "azure-key-vault"
 const cfgModeValueAlibabaKMSOSS = "alibaba-kms-oss"
 const cfgModeValueK8S = "k8s"
 const cfgModeValueDev = "dev"
+const cfgModeValueFile = "file"
 
 const cfgGoogleCloudKMSProject = "google-cloud-kms-project"
 const cfgGoogleCloudKMSLocation = "google-cloud-kms-location"
@@ -64,6 +65,8 @@ const cfgAlibabaKMSKeyID = "alibaba-kms-key-id"
 
 const cfgK8SNamespace = "k8s-secret-namespace"
 const cfgK8SSecret = "k8s-secret-name"
+
+const cfgFilePath = "file-path"
 
 var rootCmd = &cobra.Command{
 	Use:   "bank-vaults",
@@ -107,13 +110,16 @@ func init() {
 						'%s' => Azure Key Vault secret;
 						'%s' => Alibaba OSS with KMS encryption;
 						'%s' => Kubernetes Secrets;
-						'%s' => Dev (local) mode`,
+						'%s' => Dev (vault server -dev) mode
+						'%s' => File mode`,
 			cfgModeValueGoogleCloudKMSGCS,
 			cfgModeValueAWSKMS3,
 			cfgModeValueAzureKeyVault,
 			cfgModeValueAlibabaKMSOSS,
 			cfgModeValueK8S,
-			cfgModeValueDev),
+			cfgModeValueDev,
+			cfgModeValueFile,
+		),
 	)
 
 	// Secret config
@@ -158,6 +164,9 @@ func init() {
 	// K8S Secret Storage flags
 	configStringVar(cfgK8SNamespace, "", "The namespace of the K8S Secret to store values in")
 	configStringVar(cfgK8SSecret, "", "The name of the K8S Secret to store values in")
+
+	// File flags
+	configStringVar(cfgFilePath, "", "The path prefix of the files where to store values in")
 }
 
 func main() {
