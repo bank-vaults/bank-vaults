@@ -50,10 +50,25 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: vault-operator
-subjects:
-- kind: ServiceAccount
-  name: vault-operator
 roleRef:
   kind: Role
   name: vault-operator
   apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: vault-operator
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vault-operator-auth-delegator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: vault-operator
+  namespace: default
