@@ -50,6 +50,7 @@ Features:
   - Alibaba Cloud KMS (backed by OSS)
   - Kubernetes Secrets (should be used only for development purposes)
   - Dev Mode (useful for `vault server -dev` dev mode Vault servers)
+  - Files (backed by files, should be used only for development purposes)
 - Automatically unseals Vault with these keys
 - Continuously configures Vault with a YAML/JSON based external configuration (besides the [standard Vault configuration](https://www.vaultproject.io/docs/configuration/index.html))
   - If the configuration is updated Vault will be reconfigured
@@ -493,7 +494,7 @@ bank-vaults unseal --mode alibaba-kms-oss --alibaba-access-key-id ${ALIBABA_ACCE
 
 ### Kubernetes
 
-The Service Account in which the Pod is running has to have the following Roles rules:
+The Service Account in which the bank-vaults Pod is running has to have the following Roles rules:
 
 ```yaml
 rules:

@@ -23,6 +23,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv/awskms"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/azurekv"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/dev"
+	"github.com/banzaicloud/bank-vaults/pkg/kv/file"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/gckms"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/gcs"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
@@ -44,9 +45,10 @@ func vaultConfigForConfig(cfg *viper.Viper) (vault.Config, error) {
 
 func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 
-	if cfg.GetString(cfgMode) == cfgModeValueGoogleCloudKMSGCS {
+	switch mode := cfg.GetString(cfgMode); mode {
 
-		g, err := gcs.New(
+	case cfgModeValueGoogleCloudKMSGCS:
+		gcs, err := gcs.New(
 			cfg.GetString(cfgGoogleCloudStorageBucket),
 			cfg.GetString(cfgGoogleCloudStoragePrefix),
 		)
@@ -55,7 +57,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			return nil, fmt.Errorf("error creating google cloud storage kv store: %s", err.Error())
 		}
 
-		kms, err := gckms.New(g,
+		kms, err := gckms.New(gcs,
 			cfg.GetString(cfgGoogleCloudKMSProject),
 			cfg.GetString(cfgGoogleCloudKMSLocation),
 			cfg.GetString(cfgGoogleCloudKMSKeyRing),
@@ -67,9 +69,8 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		}
 
 		return kms, nil
-	}
 
-	if cfg.GetString(cfgMode) == cfgModeValueAWSKMS3 {
+	case cfgModeValueAWSKMS3:
 		s3, err := s3.New(
 			cfg.GetString(cfgAWSS3Region),
 			cfg.GetString(cfgAWSS3Bucket),
@@ -87,18 +88,16 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		}
 
 		return kms, nil
-	}
 
-	if cfg.GetString(cfgMode) == cfgModeValueAzureKeyVault {
-		kms, err := azurekv.New(cfg.GetString(cfgAzureKeyVaultName))
+	case cfgModeValueAzureKeyVault:
+		akv, err := azurekv.New(cfg.GetString(cfgAzureKeyVaultName))
 		if err != nil {
 			return nil, fmt.Errorf("error creating Azure Key Vault kv store: %s", err.Error())
 		}
 
-		return kms, nil
-	}
+		return akv, nil
 
-	if cfg.GetString(cfgMode) == cfgModeValueAlibabaKMSOSS {
+	case cfgModeValueAlibabaKMSOSS:
 		accessKeyID := cfg.GetString(cfgAlibabaAccessKeyID)
 		accessKeySecret := cfg.GetString(cfgAlibabaAccessKeySecret)
 
@@ -134,9 +133,8 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		}
 
 		return kms, nil
-	}
 
-	if cfg.GetString(cfgMode) == cfgModeValueK8S {
+	case cfgModeValueK8S:
 		k8s, err := k8s.New(
 			cfg.GetString(cfgK8SNamespace),
 			cfg.GetString(cfgK8SSecret),
@@ -147,16 +145,24 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		}
 
 		return k8s, nil
-	}
 
-	if cfg.GetString(cfgMode) == cfgModeValueDev {
-		k8s, err := dev.New()
+	case cfgModeValueDev:
+		dev, err := dev.New()
 		if err != nil {
 			return nil, fmt.Errorf("error creating Dev Secret kv store: %s", err.Error())
 		}
 
-		return k8s, nil
-	}
+		return dev, nil
 
-	return nil, fmt.Errorf("Unsupported backend mode: '%s'", cfg.GetString(cfgMode))
+	case cfgModeValueFile:
+		file, err := file.New(cfg.GetString(cfgFilePath))
+		if err != nil {
+			return nil, fmt.Errorf("error creating File kv store: %s", err.Error())
+		}
+
+		return file, nil
+
+	default:
+		return nil, fmt.Errorf("Unsupported backend mode: '%s'", cfg.GetString(cfgMode))
+	}
 }
