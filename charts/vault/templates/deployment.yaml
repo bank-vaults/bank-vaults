@@ -110,8 +110,8 @@ spec:
             name: {{ .secretName }}
         {{- end }}
         ports:
-        - containerPort: {{ .Values.unsealer.merics.port }}
-          name: "{{ .Values.unsealer.merics.name }}"
+        - containerPort: {{ .Values.unsealer.metrics.port }}
+          name: "{{ .Values.unsealer.metrics.name }}"
         volumeMounts:
         - name: vault-tls
           mountPath: /vault/tls
@@ -149,7 +149,7 @@ spec:
         imagePullPolicy: IfNotPresent
         args: ["--statsd.mapping-config=/tmp/statsd-mapping.conf"]
         ports:
-        - containerPort: 9102
+        - containerPort: {{ .Values.statsd.metrics.port }}
           name: prometheus
         volumeMounts:
         - name: statsd-mapping

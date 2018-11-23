@@ -139,16 +139,27 @@ unsealer:
       "--k8s-secret-name",
       "bank-vaults"
   ]
-  merics:
+  metrics:
+    enabled: true
+    debug: true
     name: metrics
     type: ClusterIP
-    port: 9091
+    port: 9102
+    serviceMonitor:
+      enabled: true
+      additionalLabels: {}
     annotations:
       prometheus.io/scrape: "true"
       prometheus.io/path: "/metrics"
       prometheus.io/port: "9091"
 
 statsd:
+  metrics:
+    enabled: true
+    port: 9102
+    serviceMonitor:
+      enabled: true
+      additionalLabels: {}
   config:
     mappings:
     - match: vault.route.*.*
