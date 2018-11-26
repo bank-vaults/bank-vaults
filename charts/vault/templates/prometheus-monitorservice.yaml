@@ -27,7 +27,31 @@ spec:
     matchLabels:
       app: {{ template "vault.name" . }}
       release: "{{ .Release.Name }}"
-      component: "unsealer"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+  name: {{ include "vault.fullname" . }}-statsd
+  labels:
+    app: {{ include "vault.name" . }}
+    chart: {{ template "vault.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: {{ .Values.statsd.metrics.port }}
+    protocol: TCP
+    targetPort: {{ .Values.statsd.metrics.port }}
+  selector:
+    app: {{ include "vault.name" . }}
+    release: "{{ .Release.Name }}"
+  sessionAffinity: None
+  type: ClusterIP
 
 ---
 apiVersion: v1
@@ -40,11 +64,10 @@ metadata:
     chart: {{ template "vault.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
-    component: "unsealer"
 spec:
   clusterIP: None
   ports:
-  - name: unsealer
+  - name: metrics
     port: {{ .Values.unsealer.metrics.port }}
     protocol: TCP
     targetPort: {{ .Values.unsealer.metrics.port }}
