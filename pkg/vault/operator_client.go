@@ -297,17 +297,20 @@ func (v *vault) StepDownActive(address string) error {
 	if err != nil {
 		return fmt.Errorf("unable to get key '%s': %s", v.rootTokenKey(), err.Error())
 	}
-
-	v.cl.SetToken(string(rootToken))
-
 	// Clear the token and GC it
 	defer runtime.GC()
 	defer v.cl.SetToken("")
 	defer func() { rootToken = nil }()
 
-	v.cl.SetAddress(address)
+	tmpClient, err := api.NewClient(nil)
+	if err != nil {
+		return fmt.Errorf("unable to create temporary client: %s", err.Error())
+	}
 
-	return v.cl.Sys().StepDown()
+	tmpClient.SetAddress(address)
+	tmpClient.SetToken(string(rootToken))
+
+	return tmpClient.Sys().StepDown()
 }
 
 func (v *vault) Configure() error {
