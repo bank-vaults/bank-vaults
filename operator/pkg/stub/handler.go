@@ -441,6 +441,8 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 										Port:   intstr.FromString("api-port"),
 										Path:   "/v1/sys/health",
 									}},
+								PeriodSeconds:    5,
+								FailureThreshold: 2,
 							},
 							VolumeMounts: volumeMounts,
 						},
