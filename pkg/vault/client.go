@@ -27,6 +27,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+const (
+	serviceAccountFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+)
+
 // NewData is a helper function for Vault KV Version two secret data creation
 func NewData(cas int, data map[string]interface{}) map[string]interface{} {
 	return map[string]interface{}{
@@ -118,7 +122,13 @@ func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) 
 			// If VAULT_TOKEN or ~/.vault-token wasn't provided let's suppose
 			// we are in Kubernetes and try to get one with the ServiceAccount token
 
-			k8sconfig, err := rest.InClusterConfig()
+			// Check that we are in Kubernetes
+			_, err := rest.InClusterConfig()
+			if err != nil {
+				return nil, err
+			}
+
+			jwt, err := ioutil.ReadFile(serviceAccountFile)
 			if err != nil {
 				return nil, err
 			}
@@ -135,7 +145,7 @@ func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) 
 					}
 					client.Unlock()
 
-					data := map[string]interface{}{"jwt": k8sconfig.BearerToken, "role": role}
+					data := map[string]interface{}{"jwt": string(jwt), "role": role}
 					secret, err := logical.Write("auth/kubernetes/login", data)
 					if err != nil {
 						log.Println("Failed to request new Vault token", err.Error())
