@@ -112,15 +112,19 @@ func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) 
 
 	if rawClient.Token() == "" {
 
-		token, err := ioutil.ReadFile(os.Getenv("HOME") + "/.vault-token")
+		tokenPath := os.Getenv("HOME") + "/.vault-token"
+		if env, ok := os.LookupEnv("VAULT_TOKEN_PATH"); ok {
+			tokenPath = env
+		}
 
+		token, err := ioutil.ReadFile(tokenPath)
 		if err == nil {
 
 			rawClient.SetToken(string(token))
 
 		} else {
-			// If VAULT_TOKEN or ~/.vault-token wasn't provided let's suppose
-			// we are in Kubernetes and try to get one with the ServiceAccount token
+			// If VAULT_TOKEN, VAULT_TOKEN_PATH or ~/.vault-token wasn't provided let's
+			// suppose we are in Kubernetes and try to get one with the ServiceAccount token.
 
 			// Check that we are in Kubernetes
 			_, err := rest.InClusterConfig()
