@@ -8,7 +8,7 @@ OPERATOR_DOCKER_IMAGE = banzaicloud/vault-operator
 
 # Build variables
 BUILD_DIR ?= build
-BUILD_PACKAGE = ${PACKAGE}/cmd/bank-vaults
+BUILD_PACKAGE = ${PACKAGE}/cmd/...
 VERSION ?= $(shell git symbolic-ref -q --short HEAD || git describe --tags --exact-match)
 COMMIT_HASH ?= $(shell git rev-parse --short HEAD 2>/dev/null)
 BUILD_DATE ?= $(shell date +%FT%T%z)
@@ -53,11 +53,6 @@ bin/dep-${DEP_VERSION}:
 vendor: bin/dep ## Install dependencies
 	bin/dep ensure -v -vendor-only
 
-.PHONY: run
-run: GOTAGS += dev
-run: build ## Build and execute a binary
-	${BUILD_DIR}/${GENERATED_BINARY_NAME} ${ARGS}
-
 .PHONY: build
 build: GOARGS += -tags "${GOTAGS}" -ldflags "${LDFLAGS}"
 build: ## Build a binary
@@ -68,9 +63,7 @@ ifneq (${IGNORE_GOLANG_VERSION_REQ}, 1)
 	@printf "${GOLANG_VERSION}\n$$(go version | awk '{sub(/^go/, "", $$3);print $$3}')" | sort -t '.' -k 1,1 -k 2,2 -k 3,3 -g | head -1 | grep -q -E "^${GOLANG_VERSION}$$" || (printf "Required Go version is ${GOLANG_VERSION}\nInstalled: `go version`" && exit 1)
 endif
 
-	@$(eval GENERATED_BINARY_NAME = ${BINARY_NAME})
-	@$(if $(strip ${BINARY_NAME_SUFFIX}),$(eval GENERATED_BINARY_NAME = ${BINARY_NAME}-$(subst $(eval) ,-,$(strip ${BINARY_NAME_SUFFIX}))),)
-	go build ${GOARGS} -o ${BUILD_DIR}/${GENERATED_BINARY_NAME} ${BUILD_PACKAGE}
+	go build ${GOARGS} ${BUILD_PACKAGE}
 
 .PHONY: build-release
 build-release: LDFLAGS += -w
