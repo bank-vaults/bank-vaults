@@ -92,8 +92,8 @@ required = [
   branch = "release-1.10"
 
 [[override]]
-name = "github.com/json-iterator/go"
-version = "v1.1.5"
+  name = "github.com/json-iterator/go"
+  version = "v1.1.5"
 
 [[constraint]]
   name = "github.com/operator-framework/operator-sdk"
@@ -146,3 +146,7 @@ version = "v1.1.5"
 [[constraint]]
   version = "v1.1.2"
   name = "github.com/mitchellh/mapstructure"
+
+[[constraint]]
+  name = "github.com/slok/kubewebhook"
+  version = "v0.2.0"

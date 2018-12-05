@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: vault:0.11.0
+  image: vault:0.11.5
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Support for custom Vault (and sidecar) pod annotations
@@ -56,3 +56,10 @@ spec:
           bound_service_account_namespaces: default
           policies: allow_secrets
           ttl: 1h
+
+    secrets:
+    - path: secret
+      type: kv
+      description: General secrets.
+      options:
+        version: 2
