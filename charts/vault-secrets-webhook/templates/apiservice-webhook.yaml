@@ -1,0 +1,89 @@
+{{ $ca := genCA "svc-cat-ca" 3650 }}
+{{ $cn := printf "%s-%s.%s.svc" .Release.Name .Chart.Name .Release.Namespace }}
+{{ $server := genSignedCert $cn nil nil 365 $ca }}
+
+apiVersion: v1
+kind: List
+metadata:
+items:
+
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: {{ template "vault-secrets-webhook.fullname" . }}
+    type: kubernetes.io/tls
+  data:
+    servingCert: {{ b64enc $server.Cert }}
+    servingKey: {{ b64enc $server.Key }}
+    caCert: {{ b64enc $ca.Cert }}
+
+- apiVersion: apiregistration.k8s.io/v1beta1
+  kind: APIService
+  metadata:
+    name: {{ .Values.apiService.version }}.{{ .Values.apiService.group }}
+  spec:
+    caBundle: {{ b64enc $ca.Cert }}
+    group: {{ .Values.apiService.group }}
+    groupPriorityMinimum: 1000
+    versionPriority: 15
+    service:
+      name: {{ template "vault-secrets-webhook.fullname" . }}
+      namespace: {{ .Release.Namespace }}
+    version: {{ .Values.apiService.version }}
+
+- apiVersion: admissionregistration.k8s.io/v1beta1
+  kind: MutatingWebhookConfiguration
+  metadata:
+    name: {{ template "vault-secrets-webhook.fullname" . }}
+  webhooks:
+  - name: deployments.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+    clientConfig:
+      service:
+        namespace: default
+        name: {{ template "vault-secrets-webhook.fullname" . }}
+        path: /deployments
+      caBundle: {{ b64enc $ca.Cert }}
+    rules:
+    - operations:
+      - CREATE
+      apiGroups:
+      - "*"
+      apiVersions:
+      - "*"
+      resources:
+      - deployments
+    failurePolicy: Fail
+  - name: replicasets.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+    clientConfig:
+      service:
+        namespace: default
+        name: {{ template "vault-secrets-webhook.fullname" . }}
+        path: /replicasets
+      caBundle: {{ b64enc $ca.Cert }}
+    rules:
+    - operations:
+      - CREATE
+      apiGroups:
+      - "*"
+      apiVersions:
+      - "*"
+      resources:
+      - replicasets
+    failurePolicy: Fail
+  - name: statefulsets.{{ template "vault-secrets-webhook.name" . }}.{{ .Values.apiService.group }}
+    clientConfig:
+      service:
+        namespace: default
+        name: {{ template "vault-secrets-webhook.fullname" . }}
+        path: /statefulsets
+      caBundle: {{ b64enc $ca.Cert }}
+    rules:
+    - operations:
+      - CREATE
+      apiGroups:
+      - "*"
+      apiVersions:
+      - "*"
+      resources:
+      - statefulsets
+    failurePolicy: Fail

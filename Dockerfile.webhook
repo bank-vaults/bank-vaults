@@ -1,0 +1,29 @@
+ARG GO_VERSION=1.11
+
+FROM golang:${GO_VERSION}-alpine AS builder
+
+RUN apk add --update --no-cache ca-certificates make git curl mercurial
+
+ARG PACKAGE=github.com/banzaicloud/bank-vaults
+
+RUN mkdir -p /go/src/${PACKAGE}
+WORKDIR /go/src/${PACKAGE}
+
+COPY Gopkg.* Makefile /go/src/${PACKAGE}/
+RUN make vendor
+
+COPY . /go/src/${PACKAGE}
+RUN go install ./cmd/vault-secrets-webhook
+
+FROM alpine:3.8
+
+RUN apk add --update libcap && rm -rf /var/cache/apk/*
+
+COPY --from=builder /go/bin/vault-secrets-webhook /usr/local/bin/vault-secrets-webhook
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+RUN adduser -D vault-secrets-webhook
+RUN setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/vault-secrets-webhook
+USER vault-secrets-webhook
+
+ENTRYPOINT ["/usr/local/bin/vault-secrets-webhook"]
