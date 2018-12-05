@@ -23,7 +23,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 |logVerbosity                         |log verbosity level                          |8                                         |
 |apiService.group                     |group of registered api service              |vault.banzaicloud.com                 |
 |apiService.version                   |version of registered api service            |v1beta1                                   |
-|apiService.resource                  |api service endpoint where hook is available |spotscheduling                            |
+|apiService.resource                  |api service endpoint where hook is available |vaultsecrets                            |
 |image.repository                     |image repo that contains the admission server|banzaicloud/vault-secrets-webhook             |
 |image.tag                            |image tag                                    |latest                                    |
 |image.pullPolicy                     |image pull policy                            |IfNotPresent                              |
