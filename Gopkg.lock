@@ -97,6 +97,14 @@
   version = "v1.0.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:57f0079d7222addbbdf984cf5c866e20ecfee6ab504d95cece4cd46fdad52157"
+  name = "github.com/appscode/jsonpatch"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "5af499cf01c842bfdd7761a433fc90525ccd6836"
+
+[[projects]]
   digest = "1:ab2662ab5b64d517676a950bf0a75f772bfb398f87c643581c88b4be16a81fcc"
   name = "github.com/aws/aws-sdk-go"
   packages = [
@@ -144,7 +152,7 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
-  digest = "1:c1c1c89d99634cdd1e3c7961bce66ae2a1a32b29674f69c936a8ac43e379e86d"
+  digest = "1:615a1022e468379a3736c3b9360046180142e60d9308952cc53c55e9a55eb6dc"
   name = "github.com/coreos/etcd"
   packages = [
     "auth/authpb",
@@ -154,14 +162,13 @@
     "mvcc/mvccpb",
     "pkg/tlsutil",
     "pkg/transport",
-    "pkg/types",
   ]
   pruneopts = "NUT"
-  revision = "121edf0467052d55876a817b89875fb39a99bf78"
-  version = "v3.2.16"
+  revision = "95a726a27e09030f9ccbd9982a1508f5a6d25ada"
+  version = "v3.2.13"
 
 [[projects]]
-  digest = "1:7002f8811b7956171efc2a61e8bcae719c74bf42240598b71db8fc476df94069"
+  digest = "1:471b4cbfba324d49898fe91af57ae80de9fe9e713dbc5343a25fc7dadfb14a19"
   name = "github.com/coreos/etcd-operator"
   packages = [
     "pkg/apis/etcd/v1beta2",
@@ -169,8 +176,8 @@
     "pkg/util/etcdutil",
   ]
   pruneopts = "NUT"
-  revision = "a0032c1f9a708d2164f3f03109ece06c5439df80"
-  version = "v0.9.2"
+  revision = "44f2671c8d74cad373282a6ba714071336a69452"
+  version = "v0.9.3"
 
 [[projects]]
   digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
@@ -553,6 +560,18 @@
   version = "1.0.1"
 
 [[projects]]
+  digest = "1:7da29c22bcc5c2ffb308324377dc00b5084650348c2799e573ed226d8cc9faf0"
+  name = "github.com/opentracing/opentracing-go"
+  packages = [
+    ".",
+    "ext",
+    "log",
+  ]
+  pruneopts = "NUT"
+  revision = "1949ddbfd147afd4d964a9f00b24eb291e0e7c38"
+  version = "v1.0.2"
+
+[[projects]]
   branch = "master"
   digest = "1:62db057c157d17a5d24194707edb422620b2f0de4398027662ca2663c980d8c8"
   name = "github.com/operator-framework/operator-sdk"
@@ -674,6 +693,23 @@
   version = "v1.0.5"
 
 [[projects]]
+  digest = "1:9ff0a8bcd867ef3758a6ffc6555750efe59b9170190d11b38e6ca64755df0c91"
+  name = "github.com/slok/kubewebhook"
+  packages = [
+    "pkg/http",
+    "pkg/log",
+    "pkg/observability/metrics",
+    "pkg/webhook",
+    "pkg/webhook/context",
+    "pkg/webhook/internal/helpers",
+    "pkg/webhook/internal/instrumenting",
+    "pkg/webhook/mutating",
+  ]
+  pruneopts = "NUT"
+  revision = "ae7dbe514548a05bc8605fd2dccae876178091b2"
+  version = "v0.2.0"
+
+[[projects]]
   digest = "1:35f36ea322654e3d0932e58ad26556998260b9fa9e691471f756d173684eac0a"
   name = "github.com/spf13/afero"
   packages = [
@@ -717,12 +753,12 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:ea67fb4941c0a1a92f828e73cf426533c71db02df45a2cdf55a14c3e7b74c07a"
+  digest = "1:9caed8c7c05e8927f5bc6eec5698119b2b63a7cf304effc6c9b818bc864a10d3"
   name = "github.com/spf13/viper"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "b5e8006cbee93ec955a89ab31e0e3ce3204f3736"
-  version = "v1.0.2"
+  revision = "2c12c60302a5a0e62ee102ca9bc996277c2f64f5"
+  version = "v1.2.1"
 
 [[projects]]
   digest = "1:919fc2a81add8ac4a7a236dceaf3e4c29ba4df96d13c3f2ce13a4d0132ebefb8"
@@ -961,9 +997,10 @@
 
 [[projects]]
   branch = "release-1.10"
-  digest = "1:a6d7383856d51f2769d6b3d147f849450f538ded9bb693ef447e7684b68a1e0c"
+  digest = "1:f2a9a80f2d71006102a054fd41ad73cc7969000a766d842faaea801e74233a8f"
   name = "k8s.io/api"
   packages = [
+    "admission/v1beta1",
     "admissionregistration/v1alpha1",
     "admissionregistration/v1beta1",
     "apps/v1",
@@ -998,7 +1035,7 @@
 
 [[projects]]
   branch = "release-1.10"
-  digest = "1:7bd1762ba7d0355279ad8c91689b3672aff9c3380235df6faffe3548c9aa8de2"
+  digest = "1:be2d4c9a1432dd394ca1bb9888c9796078aba7c0dd73e4c132f7c819b75757cc"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -1041,7 +1078,7 @@
     "third_party/forked/golang/reflect",
   ]
   pruneopts = "NUT"
-  revision = "e386b2658ed20923da8cc9250e552f082899a1ee"
+  revision = "110b8e1801665ddf67cf9c5187b1975de2c62f7f"
 
 [[projects]]
   digest = "1:08e0f5d81c766108fbb115988c848cc2cb400ddd77651c9b2fd6b0a1f6aad403"
@@ -1181,6 +1218,9 @@
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/qor/qor/utils",
     "github.com/sirupsen/logrus",
+    "github.com/slok/kubewebhook/pkg/http",
+    "github.com/slok/kubewebhook/pkg/log",
+    "github.com/slok/kubewebhook/pkg/webhook/mutating",
     "github.com/spf13/cast",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",

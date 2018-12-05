@@ -1,0 +1,21 @@
+ARG GO_VERSION=1.11
+
+FROM golang:${GO_VERSION}-alpine AS builder
+
+RUN apk add --update --no-cache ca-certificates make git curl mercurial
+
+ARG PACKAGE=github.com/banzaicloud/bank-vaults
+
+RUN mkdir -p /go/src/${PACKAGE}
+WORKDIR /go/src/${PACKAGE}
+
+COPY Gopkg.* Makefile /go/src/${PACKAGE}/
+RUN make vendor
+
+COPY . /go/src/${PACKAGE}
+RUN go install ./cmd/vault-env
+
+
+FROM vault:0.11.5
+
+COPY --from=builder /go/bin/vault-env /usr/local/bin/vault-env
