@@ -217,9 +217,7 @@ func transformVaultEnvContainers(obj metav1.Object, podSpec *corev1.PodSpec, vau
 
 		mutated = true
 
-		args := []string{}
-		args = container.Command
-		args = append(args, container.Args...)
+		args := append(container.Command, container.Args...)
 
 		container.Command = []string{"/vault/vault-env"}
 		container.Args = args
