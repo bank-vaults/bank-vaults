@@ -69,6 +69,7 @@ jobs:
           name: Build Bank Vaults
           command:
               make build
+
       - run:
           name: Run verification
           command:
@@ -76,7 +77,7 @@ jobs:
           environment:
             VAULT_ADDR: http://localhost:8200
             VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
-      - setup_remote_docker
+
       - run:
           name: Build Vault Operator
           command: |
