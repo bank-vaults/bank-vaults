@@ -5,6 +5,13 @@ metadata:
 
 ---
 
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: vault
+
+---
+
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -60,15 +67,17 @@ subjects:
 
 ---
 
+# This binding allows the deployed Vault instance to authenticate clients
+# through Kubernetes ServiceAccounts (if configured so).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: vault-operator-auth-delegator
+  name: vault-auth-delegator
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: system:auth-delegator
 subjects:
 - kind: ServiceAccount
-  name: vault-operator
+  name: vault
   namespace: default
