@@ -408,7 +408,7 @@
   revision = "ef8a98b0bbce4a65b5aa4c368430a80ddc533168"
 
 [[projects]]
-  digest = "1:dbef1dda9aa352f3e62bcaa87be4e33d5e1736416aec983a7868d219249e919d"
+  digest = "1:855a0cb08277efb9b18fee68f6f94259775df36350276257df8c96e9d51dbaaf"
   name = "github.com/hashicorp/vault"
   packages = [
     "api",
@@ -420,8 +420,8 @@
     "helper/strutil",
   ]
   pruneopts = "NUT"
-  revision = "87492f9258e0227f3717e3883c6a8be5716bf564"
-  version = "v0.11.0"
+  revision = "c19cef14891751a23eaa9b41fd456d1f99e7e856"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -596,6 +596,17 @@
   pruneopts = "NUT"
   revision = "acdc4509485b587f5e675510c4f2c63e90ff68a8"
   version = "v1.1.0"
+
+[[projects]]
+  digest = "1:1d920dce8e11bfff65b5709e883a8ece131b63a5bc4b2cd404f9ef7eb445f73f"
+  name = "github.com/pierrec/lz4"
+  packages = [
+    ".",
+    "internal/xxh32",
+  ]
+  pruneopts = "NUT"
+  revision = "635575b42742856941dbc767b44905bb9ba083f6"
+  version = "v2.0.7"
 
 [[projects]]
   digest = "1:5cf3f025cbee5951a4ee961de067c8a89fc95a5adabead774f82822efabab121"
