@@ -12,6 +12,9 @@ spec:
   # By default it is false.
   supportUpgrade: true
 
+  # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
+  serviceAccount: vault
+
   # This option allows you to annotate the ETCD Cluster that Vault Operator creates.
   # It's specifically to annotate the ETCD Cluster as 'clusterwide' for a cluster wide
   # ETCD Operator, however it can be used to set any arbitrary annotations on the ETCD Cluster.
