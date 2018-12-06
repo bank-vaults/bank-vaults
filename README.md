@@ -5,7 +5,7 @@
 
 *Bank Vaults is a thick, tricky, shifty right with a fast and intense tube for experienced surfers only, located on Mentawai. Think heavy steel doors, secret unlocking combinations and burly guards with smack-down attitude. Watch out for clean-up sets.*
 
-*Bank Vaults is a wrapper for the official Vault client with automatic token renewal, built in Kubernetes support, dynamic database credential management, multiple unseal options, automatic re/configuration and more.*
+*Bank Vaults is an umbrella project which provides various tools for Vault to make using and operating Hashicorp Vault easier. Its a wrapper for the official Vault client with automatic token renewal and built in Kubernetes support, dynamic database credential provider for Golang SQL based clients. It has a CLI tool to automatically initialize, unseal and configure Vault. It also provides a Kubernetes operator for provisioning, and a mutating webhook for injecting secrets.*
 
 ---
 
@@ -21,7 +21,7 @@
 - [Vault unseal flow with KMS](https://banzaicloud.com/blog/vault-unsealing/)
 - [Monitoring Vault on Kubernetes using Cloud Native technologies](https://banzaicloud.com/blog/monitoring-vault-grafana/)
 
-We use Vault across our large Kubernetes deployments and all the projects were `reinventing` the wheel. We have externalized all the codebase into this project and removed all the [Pipeline](https://github.com/banzaicloud/pipeline) and [Hollowtrees](https://github.com/banzaicloud/hollowtrees) dependencies thus this project can be used independently as a CLI tool to manage Vault, a Golang library to build upon (OAuth2 tokens, K8s auth, Vault operator, dynamic secrets, cloud credential storage, etc), Helm chart for a HA cluster, operator and a collection of scripts to support some advanced features (dynamic SSH, etc).
+We use Vault across our large Kubernetes deployments and all the projects were `reinventing` the wheel. We have externalized all the codebase into this project and removed all the [Pipeline](https://github.com/banzaicloud/pipeline) and [Hollowtrees](https://github.com/banzaicloud/hollowtrees) dependencies thus this project can be used independently as a CLI tool to manage Vault, a Golang library to build upon (OAuth2 tokens, K8s auth, Vault operator, dynamic secrets, cloud credential storage, etc), Helm chart for a HA cluster, operator, mutating webhook and a collection of scripts to support some advanced features (dynamic SSH, etc).
 
 >We take bank-vaults' security and our users' trust very seriously. If you believe you have found a security issue in bank-vaults, please contact us at security@banzaicloud.com.
 
@@ -31,6 +31,8 @@ We use Vault across our large Kubernetes deployments and all the projects were `
 - [The Go library](#the-go-library)
 - [Helm Chart](#helm-chart)
 - [Operator](#operator)
+- [Mutating Webhook](#mutating-webhook)
+- [Unseal Keys](#unseal-keys)
 - [Examples](#examples)
 - [Getting and Installing](#getting-and-installing)
 - [Monitoring](#monitoring)
@@ -390,12 +392,88 @@ There is a Helm chart available to deploy the [Vault Operator](https://github.co
 ```bash
 helm init -c
 helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch/master
-helm install vault-operator
-``` 
+helm install banzaicloud-stable/vault-operator
+```
 
-For further details follow the operator's Helm chart [repository](https://github.com/banzaicloud/banzai-charts/tree/master/vault-operator). 
+For further details follow the operator's Helm chart [repository](https://github.com/banzaicloud/banzai-charts/tree/master/vault-operator).
 
-## Keys
+## Mutating Webhook
+
+The mutating admission webhook injects an executable to containers (in a very non-intrusive way) inside a Deployments/StatefulSets which than can request secrets from Vault through special environment variable definitions. The project is inspired by many, already existing projects (e.g.: `channable/vaultenv`, `hashicorp/envconsul`). The webhook checks if a container has environment variables defined in the following form, and reads the values for those variables directly from Vault during startup time:
+
+```yaml
+        env:
+        - name: AWS_SECRET_ACCESS_KEY
+          value: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
+```
+
+In this case the a init-container will be injected to the given Pod which copies a small binary, called `vault-env` into an in-memory volume and mounts that Volume to all the containers which have an environment variable definition like that and. It also changes the `command` of the container to run `vault-env` instead of your application directly. `vault-env` starts up, connects to Vault with (currently with the [Kubernetes Auth method](https://www.vaultproject.io/docs/auth/kubernetes.html) checks the environment variables, and that has a reference to a value stored in Vault (`vault:secret/....`) will be replaced with that value read from the Secret backend, after this `vault-env` immediately executes (with `syscall.Exec()`) your process with the given arguments, replacing itself with that process.
+
+**With this solution none of your Secrets stored in Vault will ever land in Kubernetes Secrets, thus in etcd.**
+
+`vault-env` was designed to work in Kubernetes at the first place, but nothing stops you to use it outside Kubernetes as well. It can be configured with the standard Vault client's [environment variables](https://www.vaultproject.io/docs/commands/#environment-variables) (because there is a standard Go Vault client underneath).
+
+Currently the Kubernetes Service Account based Vault authentication mechanism is used by `vault-env`, so it requests a Vault token based on the Service Account of the container it is injected into. Implementation is ongoing to use [Vault Agent's Auto-Auth](https://www.vaultproject.io/docs/agent/autoauth/index.html) to request tokens in an init-container with all the supported authentication mechanisms.
+
+**Current limitations:**
+
+- Only Vault KV 2 is supported right now.
+- The command of the container has to be explicitly defined in the resource definition, the container's default `ENTRYPOINT` and `CMD` will not work.
+
+### Deploying the webhook
+
+#### Helm chart
+
+There is a Helm chart available to deploy the [Vault Secrets Webhook](https://github.com/banzaicloud/banzai-charts/tree/master/vault-secrets-webhook). 
+
+```bash
+helm init -c
+helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch/master
+helm install banzaicloud-stable/vault-secrets-webhook
+```
+
+For further details follow the operator's Helm chart [repository](https://github.com/banzaicloud/banzai-charts/tree/master/vault-secrets-webhook).
+
+### Example
+
+Write a secret into Vault:
+
+```bash
+vault kv put secret/valami/aws AWS_SECRET_ACCESS_KEY=s3cr3t
+```
+
+This deployment will be mutated by the webhook, since it has at least one environment variable having a value which is a reference to a path in Vault:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault-test
+  annotations:
+    vault.banzaicloud.com/vault-addr: "https://vault:8200"
+    vault.banzaicloud.com/vault-role: "default"
+    vault.banzaicloud.com/vault-skip-verify: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault
+  template:
+    metadata:
+      labels:
+        app: vault
+    spec:
+      serviceAccountName: default
+      containers:
+      - name: alpine
+        image: alpine
+        command: ["sh", "-c", "echo $AWS_SECRET_ACCESS_KEY && echo going to sleep... && sleep 10000"]
+        env:
+        - name: AWS_SECRET_ACCESS_KEY
+          value: vault:secret/data/valami/aws#AWS_SECRET_ACCESS_KEY
+```
+
+## Unseal Keys
 
 The keys that will be stored are:
 
@@ -417,6 +495,7 @@ Some examples are in `cmd/examples/main.go`
 
 ```bash
 go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
+go get github.com/banzaicloud/bank-vaults/cmd/vault-env
 ```
 
 or
@@ -424,6 +503,7 @@ or
 ```bash
 docker pull banzaicloud/bank-vaults
 docker pull banzaicloud/vault-operator
+docker pull banzaicloud/vault-env
 ```
 
 ## Monitoring
