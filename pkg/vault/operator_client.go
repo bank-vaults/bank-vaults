@@ -27,6 +27,7 @@ import (
 
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
@@ -729,13 +730,13 @@ func (v *vault) configurePlugins() error {
 		return fmt.Errorf("error unmarshalling vault plugins config: %s", err.Error())
 	}
 
-	var registeredPlugins api.ListPluginsInput
-	listPlugins, err := v.cl.Sys().ListPlugins(&registeredPlugins)
+	listPlugins, err := v.cl.Sys().ListPlugins(&api.ListPluginsInput{})
 	if err != nil {
 		return fmt.Errorf("Failed to retrieve list of plugins: %s", err.Error())
 	}
 
 	logrus.Debugf("Already registered plugins: %#v\n", listPlugins.Names)
+
 	for _, plugin := range plugins {
 		command, err := getOrError(plugin, "command")
 		if err != nil {
@@ -747,25 +748,36 @@ func (v *vault) configurePlugins() error {
 		}
 		sha256, err := getOrError(plugin, "sha256")
 		if err != nil {
-			return fmt.Errorf("error getting options for plugin: %s", err.Error())
+			return fmt.Errorf("error getting sha256 for plugin: %s", err.Error())
 		}
+		typeRaw, err := getOrError(plugin, "type")
+		if err != nil {
+			return fmt.Errorf("error getting type for plugin: %s", err.Error())
+		}
+		pluginType, err := consts.ParsePluginType(typeRaw)
+		if err != nil {
+			return fmt.Errorf("error parsing type for plugin: %s", err.Error())
+		}
+
 		input := api.RegisterPluginInput{
 			Name:    pluginName,
 			Command: command,
 			SHA256:  sha256,
+			Type:    pluginType,
 		}
 		logrus.Infof("Registering plugin with input: %#v\n", input)
+
 		err = v.cl.Sys().RegisterPlugin(&input)
 		if err != nil {
 			return fmt.Errorf("error registering plugin %s in vault", err.Error())
 		}
 
 		logrus.Infoln("registered", plugin)
-
 	}
 
 	return nil
 }
+
 func (v *vault) configureSecretEngines() error {
 	secretsEngines := []map[string]interface{}{}
 	err := viper.UnmarshalKey("secrets", &secretsEngines)
