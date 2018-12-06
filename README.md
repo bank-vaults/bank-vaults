@@ -319,12 +319,16 @@ secrets:
         generate_lease: true
         ttl: 30m
 
-# Registers a new plugin in Vault's plugin catalog. "plugin_directory" setting should be set it Vault server configuration and plugin binary should be present in plugin directory. Also, for some plugins readOnlyRootFilesystem Pod Security Policy should be disabled to allow RPC communication between plugin and Vault server via Unix socket
-# See https://www.vaultproject.io/api/system/plugins-catalog.html and https://github.com/hashicorp/go-plugin/blob/master/docs/internals.md for details.
+# Registers a new plugin in Vault's plugin catalog. "plugin_directory" setting should be set it Vault server configuration
+# and plugin binary should be present in plugin directory. Also, for some plugins readOnlyRootFilesystem Pod Security Policy
+# should be disabled to allow RPC communication between plugin and Vault server via Unix socket
+# See https://www.vaultproject.io/api/system/plugins-catalog.html and
+#     https://github.com/hashicorp/go-plugin/blob/master/docs/internals.md for details.
 plugins:
   - plugin_name: ethereum-plugin
     command: ethereum-vault-plugin --ca-cert=/vault/tls/client/ca.crt --client-cert=/vault/tls/server/server.crt --client-key=/vault/tls/server/server.key
     sha256: 62fb461a8743f2a0af31d998074b58bb1a589ec1d28da3a2a5e8e5820d2c6e0a
+    type: secret
 ```
 
 ## The Go library
