@@ -13,7 +13,7 @@ spec:
     prometheus.io/port: "9102"
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
-  serviceAccount: vault-operator
+  serviceAccount: vault
 
   # Specify the Service's type where the Vault Service is exposed
   serviceType: ClusterIP

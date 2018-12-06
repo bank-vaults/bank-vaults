@@ -17,6 +17,9 @@ spec:
       kmsProject: "continual-air-196513"
       storageBucket: "vault-ha"
 
+  # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
+  serviceAccount: vault
+
   # A YAML representation of a final vault config file, this config represents
   # a HA config in Google Cloud.
   # See https://www.vaultproject.io/docs/configuration/ for more information.

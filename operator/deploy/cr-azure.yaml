@@ -13,6 +13,9 @@ spec:
     azure:
       keyVaultName: "azuretestkv"
 
+  # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
+  serviceAccount: vault
+
   # A YAML representation of a final vault config file, this config represents
   # a backend config in Azure.
   # See https://www.vaultproject.io/docs/configuration/ for more information.
