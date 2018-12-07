@@ -104,7 +104,7 @@ endif
 
 .PHONY: docker-operator-push
 docker-operator-push: ## Push a Docker image for the Operator
-	dockerpush ${OPERATOR_DOCKER_IMAGE}:${DOCKER_TAG}
+	docker push ${OPERATOR_DOCKER_IMAGE}:${DOCKER_TAG}
 ifeq (${DOCKER_LATEST}, 1)
 	docker push ${OPERATOR_DOCKER_IMAGE}:latest
 endif
