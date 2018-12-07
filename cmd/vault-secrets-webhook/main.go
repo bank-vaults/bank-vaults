@@ -150,14 +150,14 @@ func vaultSecretsMutator(_ context.Context, obj metav1.Object) (bool, error) {
 	}
 
 	annotations := obj.GetAnnotations()
-	if _, ok := annotations["vault.banzaicloud.com/mutated"]; ok {
+	if _, ok := annotations["vault.banzaicloud.io/mutated"]; ok {
 		return false, nil
 	}
 	if annotations == nil {
 		annotations = map[string]string{}
 		obj.SetAnnotations(annotations)
 	}
-	annotations["vault.banzaicloud.com/mutated"] = "true"
+	annotations["vault.banzaicloud.io/mutated"] = "true"
 
 	vaultConfig := parseVaultConfig(obj)
 
@@ -167,10 +167,10 @@ func vaultSecretsMutator(_ context.Context, obj metav1.Object) (bool, error) {
 func parseVaultConfig(obj metav1.Object) vaultConfig {
 	var vaultConfig vaultConfig
 	annotations := obj.GetAnnotations()
-	vaultConfig.addr = annotations["vault.banzaicloud.com/vault-addr"]
-	vaultConfig.role = annotations["vault.banzaicloud.com/vault-role"]
-	vaultConfig.skipVerify = annotations["vault.banzaicloud.com/vault-skip-verify"]
-	vaultConfig.useAgent, _ = strconv.ParseBool(annotations["vault.banzaicloud.com/vault-agent"])
+	vaultConfig.addr = annotations["vault.banzaicloud.io/vault-addr"]
+	vaultConfig.role = annotations["vault.banzaicloud.io/vault-role"]
+	vaultConfig.skipVerify = annotations["vault.banzaicloud.io/vault-skip-verify"]
+	vaultConfig.useAgent, _ = strconv.ParseBool(annotations["vault.banzaicloud.io/vault-agent"])
 	return vaultConfig
 }
 
