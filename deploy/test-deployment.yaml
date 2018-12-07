@@ -3,9 +3,9 @@ kind: Deployment
 metadata:
   name: vault-test
   annotations:
-    vault.banzaicloud.com/vault-addr: "https://vault:8200"
-    vault.banzaicloud.com/vault-role: "default"
-    vault.banzaicloud.com/vault-skip-verify: "true"
+    vault.banzaicloud.io/vault-addr: "https://vault:8200"
+    vault.banzaicloud.io/vault-role: "default"
+    vault.banzaicloud.io/vault-skip-verify: "true"
 spec:
   replicas: 1
   selector:
