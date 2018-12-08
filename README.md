@@ -418,7 +418,7 @@ Currently the Kubernetes Service Account based Vault authentication mechanism is
 **Current limitations:**
 
 - Only Vault KV 2 is supported right now.
-- The command of the container has to be explicitly defined in the resource definition, the container's default `ENTRYPOINT` and `CMD` will not work.
+- The command of the container has to be explicitly defined in the resource definition, the container's default `ENTRYPOINT` and `CMD` will not work (to overcome this is a work-in-progress).
 
 ### Deploying the webhook
 
@@ -432,7 +432,7 @@ helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch
 helm install banzaicloud-stable/vault-secrets-webhook
 ```
 
-For further details follow the operator's Helm chart [repository](https://github.com/banzaicloud/banzai-charts/tree/master/vault-secrets-webhook).
+For further details follow the webhook's Helm chart [repository](https://github.com/banzaicloud/banzai-charts/tree/master/vault-secrets-webhook).
 
 ### Example
 
