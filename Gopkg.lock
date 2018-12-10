@@ -408,7 +408,8 @@
   revision = "ef8a98b0bbce4a65b5aa4c368430a80ddc533168"
 
 [[projects]]
-  digest = "1:855a0cb08277efb9b18fee68f6f94259775df36350276257df8c96e9d51dbaaf"
+  branch = "api-list-plugins-backward-fix"
+  digest = "1:1e45ee6ab49aa5b4e6107d56cefae7d5e890962c748fa40b9e92c4fb2b55406d"
   name = "github.com/hashicorp/vault"
   packages = [
     "api",
@@ -420,8 +421,8 @@
     "helper/strutil",
   ]
   pruneopts = "NUT"
-  revision = "c19cef14891751a23eaa9b41fd456d1f99e7e856"
-  version = "v1.0.0"
+  revision = "ad8da7e156f011d5b0b9361e7dae3754a79f8379"
+  source = "github.com/banzaicloud/vault"
 
 [[projects]]
   branch = "master"
@@ -1216,6 +1217,7 @@
     "github.com/gin-gonic/gin",
     "github.com/golang/glog",
     "github.com/hashicorp/vault/api",
+    "github.com/hashicorp/vault/helper/consts",
     "github.com/mitchellh/mapstructure",
     "github.com/operator-framework/operator-sdk/pkg/sdk",
     "github.com/operator-framework/operator-sdk/pkg/sdk/action",
