@@ -29,7 +29,7 @@ spec:
           command:
             - vault-operator
           env:
-            - name: OPERATOR_NAMESAPCE
+            - name: OPERATOR_NAMESPACE
               value: {{ .Values.watchNamespace }}
           ports:
           - containerPort: {{ .Values.service.internalPort }}
