@@ -18,32 +18,42 @@
   version = "v0.20.0"
 
 [[projects]]
-  digest = "1:ac2a7a152d06d320e9c124c54bec6fc0c8425170696d8f50c5b61d788b0ebff2"
+  digest = "1:f323f98930459f65f4699b5bfba563743680e2633d96e72d61a9732648e2d07c"
+  name = "contrib.go.opencensus.io/exporter/ocagent"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "00af367e65149ff1f2f4b93bbfbb84fd9297170d"
+  version = "v0.2.0"
+
+[[projects]]
+  digest = "1:9a759d0c70ac6c8a1b42f718e245219b679bf0ee26a8d43b223ab2b3818553ed"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "services/keyvault/2016-10-01/keyvault",
     "version",
   ]
   pruneopts = "NUT"
-  revision = "f912cddf81bffc1569ccd89719a36acb64ca3035"
-  version = "v20.2.0"
+  revision = "199e71492c8f8ffb9d1d9432d425a1c8731fba19"
+  version = "v23.2.0"
 
 [[projects]]
-  digest = "1:ec10827fcacfaa45219ef2a22be6158b10c8de91b62094c7f40c3ab1fa76d67f"
+  digest = "1:067748d36a49258957c5978039ca7d334683c62df53012e100cbcbab5c38fe5c"
   name = "github.com/Azure/go-autorest"
   packages = [
     "autorest",
     "autorest/adal",
     "autorest/azure",
+    "autorest/azure/auth",
+    "autorest/azure/cli",
     "autorest/date",
     "autorest/to",
     "autorest/validation",
     "logger",
-    "version",
+    "tracing",
   ]
   pruneopts = "NUT"
-  revision = "a88c19ef2016e095f0b6c3b451074b4663f53bed"
-  version = "v10.15.4"
+  revision = "f401b1ccc8eb505927fae7a0c7f6406d37ca1c7e"
+  version = "v11.2.8"
 
 [[projects]]
   digest = "1:a26f8da48b22e6176c1c6a2459904bb30bd0c49ada04b2963c2c3a203e81a620"
@@ -152,6 +162,19 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
+  digest = "1:65b0d980b428a6ad4425f2df4cd5410edd81f044cf527bd1c345368444649e58"
+  name = "github.com/census-instrumentation/opencensus-proto"
+  packages = [
+    "gen-go/agent/common/v1",
+    "gen-go/agent/trace/v1",
+    "gen-go/resource/v1",
+    "gen-go/trace/v1",
+  ]
+  pruneopts = "NUT"
+  revision = "7f2434bc10da710debe5c4315ed6d4df454b4024"
+  version = "v0.1.0"
+
+[[projects]]
   digest = "1:615a1022e468379a3736c3b9360046180142e60d9308952cc53c55e9a55eb6dc"
   name = "github.com/coreos/etcd"
   packages = [
@@ -197,6 +220,14 @@
   pruneopts = "NUT"
   revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
   version = "v3.2.0"
+
+[[projects]]
+  digest = "1:f9adc21a937e5da643ea14a3488cb7506788876737a5e205394e508627a6eec8"
+  name = "github.com/dimchansky/utfbom"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "d2133a1ce379ef6fa992b0514a77146c60db9d1c"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:1b91ae0dc69a41d4c2ed23ea5cffb721ea63f5037ca4b81e6d6771fbb8f45129"
@@ -263,7 +294,7 @@
   revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998"
 
 [[projects]]
-  digest = "1:5ae5b54d7cd695bafa92bf426b7c3d046f907260ec0fcb4fe5c368d937597c00"
+  digest = "1:381fdad8817f7dc3e36a62441e87b29251fcf216d93d39a244fda414ce9f1feb"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -272,6 +303,7 @@
     "ptypes/any",
     "ptypes/duration",
     "ptypes/timestamp",
+    "ptypes/wrappers",
   ]
   pruneopts = "NUT"
   revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
@@ -529,12 +561,12 @@
   revision = "995366fdf961d03629cd17361bddd32745718e2c"
 
 [[projects]]
-  branch = "master"
-  digest = "1:b62c4f18ad6eb454ac5253e7791ded3d7867330015ca4b37b6336e57f514585e"
+  digest = "1:a4df73029d2c42fabcb6b41e327d2f87e685284ec03edf76921c267d9cfc9c23"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "b8bc1bf767474819792c23f32d8286a45736f1c6"
+  revision = "ae18d6b8b3205b561c79e8e5f69bff09736185f4"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:a45ae66dea4c899d79fceb116accfa1892105c251f0dcd9a217ddc276b42ec68"
@@ -781,31 +813,38 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:4de165d9ef06c2bcdc5c389cc41f8199942721bf8af37d834701cc9dcb3aaaa6"
+  digest = "1:c96bd0ae5a0629eaa2a78d339cbd09355a43506ccfec2ef0e39df7798b01e434"
   name = "go.opencensus.io"
   packages = [
+    ".",
+    "exemplar",
     "exporter/stackdriver/propagation",
     "internal",
     "internal/tagencoding",
     "plugin/ochttp",
     "plugin/ochttp/propagation/b3",
+    "plugin/ochttp/propagation/tracecontext",
     "stats",
     "stats/internal",
     "stats/view",
     "tag",
     "trace",
+    "trace/internal",
     "trace/propagation",
+    "trace/tracestate",
   ]
   pruneopts = "NUT"
-  revision = "076344b67ac19bcb8096c4b12440c3cf92ac3927"
-  version = "v0.7.0"
+  revision = "b7bf3cdb64150a8c8c53b769fdeb2ba581bd4d4b"
+  version = "v0.18.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:1c2f8ee5475a159add4b99b6236fa2fb86c7e4ea169484f5c624272fe06ea2b2"
+  digest = "1:7197491b7bf0683298c954212e66ea405e7a4befce2a7ccd9712bdb90e41da24"
   name = "golang.org/x/crypto"
   packages = [
     "pbkdf2",
+    "pkcs12",
+    "pkcs12/internal/rc2",
     "scrypt",
     "ssh/terminal",
   ]
@@ -844,6 +883,14 @@
   ]
   pruneopts = "NUT"
   revision = "921ae394b9430ed4fb549668d7b087601bd60a81"
+
+[[projects]]
+  branch = "master"
+  digest = "1:5e4d81c50cffcb124b899e4f3eabec3930c73532f0096c27f94476728ba03028"
+  name = "golang.org/x/sync"
+  packages = ["semaphore"]
+  pruneopts = "NUT"
+  revision = "42b317875d0fa942474b76e1b46a6060d720ae6e"
 
 [[projects]]
   branch = "master"
@@ -901,7 +948,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:28c24ce656433491aad9cec59143cfac7d84a8cde98b88ae61a284610b7e0a80"
+  digest = "1:5b9271f6433d8bc34cb00474416b4a2bfeee500f50a8d0ce38a15862d34cb999"
   name = "google.golang.org/api"
   packages = [
     "cloudkms/v1",
@@ -913,6 +960,7 @@
     "iterator",
     "option",
     "storage/v1",
+    "support/bundler",
     "transport/http",
   ]
   pruneopts = "NUT"
@@ -1198,8 +1246,8 @@
     "cloud.google.com/go/storage",
     "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault",
     "github.com/Azure/go-autorest/autorest",
-    "github.com/Azure/go-autorest/autorest/adal",
     "github.com/Azure/go-autorest/autorest/azure",
+    "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/Masterminds/sprig",
     "github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests",
     "github.com/aliyun/alibaba-cloud-sdk-go/services/kms",
