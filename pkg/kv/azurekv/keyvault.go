@@ -41,11 +41,7 @@ func New(name string) (kv.Service, error) {
 	}
 
 	keyClient := keyvault.New()
-	authorizer, err := GetKeyvaultAuthorizer()
-	if err != nil {
-		return nil, err
-	}
-	keyClient.Authorizer = authorizer
+	keyClient.Authorizer = GetKeyvaultAuthorizer()
 	return &azureKeyVault{
 		client:       &keyClient,
 		vaultBaseURL: fmt.Sprintf("https://%s.%s", name, azure.PublicCloud.KeyVaultDNSSuffix),
