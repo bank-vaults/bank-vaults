@@ -33,8 +33,11 @@ spec:
           command:
           - vault-operator
           env:
-          # OPERATOR_NAMESPACE defines the namespace where the operator watches
-          # for CRD objects, if not defined all namespaces are whatched.
-          - name: OPERATOR_NAMESPACE 
+            # OPERATOR_NAMESPACE defines the namespace where the operator watches
+            # for CRD objects, if not defined all namespaces are whatched.
+          - name: OPERATOR_NAMESPACE
             value: default
+            # LOG_LEVEL defines the logging level in Logrus log levels
+          - name: OPERATOR_LOG_LEVEL
+            value: info
       serviceAccount: vault-operator
