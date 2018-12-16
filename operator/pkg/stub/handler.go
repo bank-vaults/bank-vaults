@@ -209,8 +209,8 @@ func logDeployment(dep *appsv1.Deployment) error {
 		return fmt.Errorf("failed to indent the content: %v", err)
 	}
 
-	logrus.Infoln("Deployed:")
-	if logrus.GetLevel() >= logrus.InfoLevel {
+	if logrus.GetLevel() >= logrus.DebugLevel {
+		logrus.Debugln("Deployed:")
 		// use println because the logrus formatter is messing up the JSON indet
 		fmt.Println(string(prettyData.Bytes()))
 	}
