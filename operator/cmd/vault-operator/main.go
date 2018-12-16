@@ -29,6 +29,7 @@ import (
 
 const (
 	operatorNamespace = "OPERATOR_NAMESPACE"
+	operatorLogLevel  = "OPERATOR_LOG_LEVEL"
 	livenessPort      = "8080"
 )
 
@@ -50,7 +51,16 @@ func handleLiveness() {
 	}
 }
 
+func initLogging() {
+	logLevel, err := logrus.ParseLevel(os.Getenv(operatorLogLevel))
+	if err != nil {
+		logLevel = logrus.InfoLevel
+	}
+	logrus.SetLevel(logLevel)
+}
+
 func main() {
+	initLogging()
 	ns := os.Getenv(operatorNamespace)
 	printVersion(ns)
 	sdk.Watch("vault.banzaicloud.com/v1alpha1", "Vault", ns, 5)
