@@ -37,6 +37,7 @@ import (
 type vaultConfig struct {
 	addr       string
 	role       string
+	path       string
 	skipVerify string
 	useAgent   bool
 }
@@ -47,6 +48,7 @@ exit_after_auth = true
 
 auto_auth {
 	method "kubernetes" {
+		mount_path = "%s"
 		config = {
 			role = "%s"
 		}
@@ -169,6 +171,13 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	annotations := obj.GetAnnotations()
 	vaultConfig.addr = annotations["vault.security.banzaicloud.io/vault-addr"]
 	vaultConfig.role = annotations["vault.security.banzaicloud.io/vault-role"]
+	if vaultConfig.role == "" {
+		vaultConfig.role = "default"
+	}
+	vaultConfig.path = annotations["vault.security.banzaicloud.io/vault-path"]
+	if vaultConfig.path == "" {
+		vaultConfig.path = "kubernetes"
+	}
 	vaultConfig.skipVerify = annotations["vault.security.banzaicloud.io/vault-skip-verify"]
 	vaultConfig.useAgent, _ = strconv.ParseBool(annotations["vault.security.banzaicloud.io/vault-agent"])
 	return vaultConfig
@@ -186,7 +195,7 @@ func getConfigMapForVaultAgent(obj metav1.Object, vaultConfig vaultConfig) *core
 			// },
 		},
 		Data: map[string]string{
-			"config.hcl": fmt.Sprintf(vaultAgentConfig, vaultConfig.role),
+			"config.hcl": fmt.Sprintf(vaultAgentConfig, vaultConfig.path, vaultConfig.role),
 		},
 	}
 }
@@ -237,6 +246,14 @@ func transformVaultEnvContainers(obj metav1.Object, podSpec *corev1.PodSpec, vau
 			{
 				Name:  "VAULT_SKIP_VERIFY",
 				Value: vaultConfig.skipVerify,
+			},
+			{
+				Name:  "VAULT_PATH",
+				Value: vaultConfig.path,
+			},
+			{
+				Name:  "VAULT_ROLE",
+				Value: vaultConfig.role,
 			},
 		}...)
 

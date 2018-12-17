@@ -15,6 +15,7 @@
 package vault
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -51,11 +52,11 @@ type Client struct {
 
 // NewClient creates a new Vault client
 func NewClient(role string) (*Client, error) {
-	return NewClientWithConfig(vaultapi.DefaultConfig(), role)
+	return NewClientWithConfig(vaultapi.DefaultConfig(), role, "kubernetes")
 }
 
 // NewClientWithConfig creates a new Vault client with custom configuration
-func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) {
+func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, error) {
 	rawClient, err := vaultapi.NewClient(config)
 	if err != nil {
 		return nil, err
@@ -150,7 +151,7 @@ func NewClientWithConfig(config *vaultapi.Config, role string) (*Client, error) 
 					client.Unlock()
 
 					data := map[string]interface{}{"jwt": string(jwt), "role": role}
-					secret, err := logical.Write("auth/kubernetes/login", data)
+					secret, err := logical.Write(fmt.Sprintf("auth/%s/login", path), data)
 					if err != nil {
 						log.Println("Failed to request new Vault token", err.Error())
 						continue
