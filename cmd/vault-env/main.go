@@ -22,12 +22,22 @@ import (
 	"syscall"
 
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
+	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/spf13/cast"
 )
 
 func main() {
 
-	client, err := vault.NewClient("default")
+	role := os.Getenv("VAULT_ROLE")
+	if role == "" {
+		role = "default"
+	}
+	path := os.Getenv("VAULT_PATH")
+	if path == "" {
+		path = "kubernetes"
+	}
+
+	client, err := vault.NewClientWithConfig(vaultapi.DefaultConfig(), role, path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create vault client: %s\n", err.Error())
 		os.Exit(1)
@@ -72,7 +82,7 @@ func main() {
 	}
 
 	if len(os.Args) == 1 {
-		fmt.Fprintf(os.Stderr, "no command is given, currently vault-env can't determine the enrypoint (command), please specify it explicitly")
+		fmt.Fprintf(os.Stderr, "no command is given, currently vault-env can't determine the entrypoint (command), please specify it explicitly")
 		os.Exit(1)
 	} else {
 		binary, err := exec.LookPath(os.Args[1])
