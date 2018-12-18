@@ -39,7 +39,7 @@ items:
   - name: deployments.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
     clientConfig:
       service:
-        namespace: default
+        namespace: {{ .Release.Namespace }}
         name: {{ template "vault-secrets-webhook.fullname" . }}
         path: /deployments
       caBundle: {{ b64enc $ca.Cert }}
@@ -56,7 +56,7 @@ items:
   - name: replicasets.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
     clientConfig:
       service:
-        namespace: default
+        namespace: {{ .Release.Namespace }}
         name: {{ template "vault-secrets-webhook.fullname" . }}
         path: /replicasets
       caBundle: {{ b64enc $ca.Cert }}
@@ -73,7 +73,7 @@ items:
   - name: statefulsets.{{ template "vault-secrets-webhook.name" . }}.{{ .Values.apiService.group }}
     clientConfig:
       service:
-        namespace: default
+        namespace: {{ .Release.Namespace }}
         name: {{ template "vault-secrets-webhook.fullname" . }}
         path: /statefulsets
       caBundle: {{ b64enc $ca.Cert }}
