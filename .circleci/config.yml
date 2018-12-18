@@ -4,32 +4,41 @@
 version: 2
 jobs:
   build:
-    docker:
-      - image: circleci/golang:1.11
-      - image: vault:0.11.0
-        environment:
-            SKIP_SETCAP: true
-            VAULT_DEV_ROOT_TOKEN_ID: 227e1cce-6bf7-30bb-2d2a-acc854318caf
+    machine:
+      image: circleci/classic:201808-01
+      docker_layer_caching: true
 
-    working_directory: /go/src/github.com/banzaicloud/bank-vaults
+    environment:
+      GO_VERSION: "1.11.4"
+      K8S_VERSION: v1.12.0
+      VAULT_VERSION: "1.0.0"
+      KUBECONFIG: /home/circleci/.kube/config
+      MINIKUBE_VERSION: v0.31.0
+      MINIKUBE_WANTUPDATENOTIFICATION: false
+      MINIKUBE_WANTREPORTERRORPROMPT: false
+      MINIKUBE_HOME: /home/circleci
+      CHANGE_MINIKUBE_NONE_USER: true
+      GOPATH: /home/circleci/go
+
+    working_directory: /home/circleci/go/src/github.com/banzaicloud/bank-vaults
     steps:
       - checkout
 
       - restore_cache:
           name: Restore build dependencies
           keys:
-          - build-deps-v1-{{ .Branch }}-{{ checksum "Makefile" }}
-          - build-deps-v1-{{ .Branch }}
-          - build-deps-v1-master
-          - build-deps-v1
+          - build-deps-v2-{{ .Branch }}-{{ checksum "Makefile" }}
+          - build-deps-v2-{{ .Branch }}
+          - build-deps-v2-master
+          - build-deps-v2
 
       - restore_cache:
           name: Restore dependencies
           keys:
-          - gopkg-v1-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
-          - gopkg-v1-{{ .Branch }}
-          - gopkg-v1-master
-          - gopkg-v1
+          - gopkg-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          - gopkg-v2-{{ .Branch }}
+          - gopkg-v2-master
+          - gopkg-v2
 
       - run:
           name: Install dependencies
@@ -37,7 +46,7 @@ jobs:
 
       - save_cache:
           name: Save dependencies
-          key: gopkg-v1-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          key: gopkg-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
           paths:
           - vendor/
       
@@ -47,17 +56,17 @@ jobs:
 
       - restore_cache:
           keys:
-          - licensei-v1-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
-          - licensei-v1-{{ .Branch }}
-          - licensei-v1-master
-          - licensei-v1
+          - licensei-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          - licensei-v2-{{ .Branch }}
+          - licensei-v2-master
+          - licensei-v2
 
       - run:
           name: Download license information for dependencies
           command: bin/licensei cache
 
       - save_cache:
-          key: licensei-v1-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          key: licensei-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
           paths:
             - .licensei.cache
 
@@ -66,9 +75,15 @@ jobs:
           command: bin/licensei check 
       
       - run:
-          name: Build Bank Vaults
+          name: Setup golang
+          command: |
+            sudo rm -rf /usr/local/go
+            curl -Lo go.linux-amd64.tar.gz https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && sudo tar -C /usr/local -xzf go.linux-amd64.tar.gz
+
+      - run:
+          name: Start Vault
           command:
-              make build
+              docker run -d -e SKIP_SETCAP=true -e VAULT_DEV_ROOT_TOKEN_ID=227e1cce-6bf7-30bb-2d2a-acc854318caf -p 8200:8200 vault:${VAULT_VERSION}
 
       - run:
           name: Run verification
@@ -79,6 +94,26 @@ jobs:
             VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
 
       - run:
-          name: Build Vault Operator
+          name: Build Docker images
           command: |
-              go build ./operator/cmd/vault-operator
+            docker build -t banzaicloud/bank-vaults:latest .
+            docker build -f Dockerfile.operator -t banzaicloud/vault-operator .
+            docker build -f Dockerfile.vault-env -t banzaicloud/vault-env:latest .
+            docker build -f Dockerfile.webhook -t banzaicloud/vault-secrets-webhook:latest .
+
+      - run:
+          name: Setup kubectl
+          command: |
+            curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+            mkdir -p ${HOME}/.kube
+            touch ${HOME}/.kube/config
+
+      - run:
+          name: Setup minikube
+          command: |
+            curl -Lo minikube https://github.com/kubernetes/minikube/releases/download/${MINIKUBE_VERSION}/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+
+      - run:
+          name: Start minikube
+          command: |
+            sudo -E minikube start --vm-driver=none --cpus 2 --memory 2048 --kubernetes-version=${K8S_VERSION}
