@@ -440,8 +440,7 @@
   revision = "ef8a98b0bbce4a65b5aa4c368430a80ddc533168"
 
 [[projects]]
-  branch = "api-list-plugins-backward-fix"
-  digest = "1:1e45ee6ab49aa5b4e6107d56cefae7d5e890962c748fa40b9e92c4fb2b55406d"
+  digest = "1:ac52144f192f9c6a37ac9d0abdb9c837da80446a25a881db2b63c04e1259bd8a"
   name = "github.com/hashicorp/vault"
   packages = [
     "api",
@@ -453,8 +452,8 @@
     "helper/strutil",
   ]
   pruneopts = "NUT"
-  revision = "ad8da7e156f011d5b0b9361e7dae3754a79f8379"
-  source = "github.com/banzaicloud/vault"
+  revision = "08df121c8b9adcc2b8fd55fc8506c3f9714c7e61"
+  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
