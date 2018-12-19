@@ -33,10 +33,7 @@ required = [
 
 [[constraint]]
   name = "github.com/hashicorp/vault"
-  source = "github.com/banzaicloud/vault"
-  branch = "api-list-plugins-backward-fix"
-  # Use our own branch until https://github.com/hashicorp/vault/pull/5913 is resolved.
-  # version = "1.0.0"
+  version = "1.0.1"
 
 [[constraint]]
   name = "github.com/Masterminds/sprig"
