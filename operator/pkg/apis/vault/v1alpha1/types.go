@@ -73,6 +73,8 @@ type VaultSpec struct {
 	ServiceType     string            `json:"serviceType"`
 	PodAntiAffinity string            `json:"podAntiAffinity"`
 	ServiceAccount  string            `json:"serviceAccount"`
+	Volumes         []v1.Volume       `json:"volumes,omitempty"`
+	VolumeMounts    []v1.VolumeMount  `json:"volumeMounts,omitempty"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability

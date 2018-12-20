@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
@@ -444,7 +445,7 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 								PeriodSeconds:    5,
 								FailureThreshold: 2,
 							},
-							VolumeMounts: volumeMounts,
+							VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
 						},
 						{
 							Image:           v.Spec.GetBankVaultsImage(),
@@ -486,7 +487,7 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							}},
 						},
 					}),
-					Volumes:         volumes,
+					Volumes:         withVaultVolumes(v, volumes),
 					SecurityContext: withSecurityContext(v),
 				},
 			},
@@ -566,6 +567,36 @@ func withTLSVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) []v1.V
 			MountPath: "/vault/tls",
 		})
 	}
+	return volumeMounts
+}
+
+func withVaultVolumes(v *v1alpha1.Vault, volumes []v1.Volume) []v1.Volume {
+	index := map[string]v1.Volume{}
+	for _, v := range append(volumes, v.Spec.Volumes...) {
+		index[v.Name] = v
+	}
+
+	volumes = []v1.Volume{}
+	for _, v := range index {
+		volumes = append(volumes, v)
+	}
+
+	sort.Slice(volumes, func(i, j int) bool { return volumes[i].Name < volumes[j].Name })
+	return volumes
+}
+
+func withVaultVolumeMounts(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) []v1.VolumeMount {
+	index := map[string]v1.VolumeMount{}
+	for _, v := range append(volumeMounts, v.Spec.VolumeMounts...) {
+		index[v.Name] = v
+	}
+
+	volumeMounts = []v1.VolumeMount{}
+	for _, v := range index {
+		volumeMounts = append(volumeMounts, v)
+	}
+
+	sort.Slice(volumeMounts, func(i, j int) bool { return volumeMounts[i].Name < volumeMounts[j].Name })
 	return volumeMounts
 }
 
