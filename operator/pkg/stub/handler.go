@@ -571,11 +571,11 @@ func withTLSVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) []v1.V
 }
 
 func withVaultEnv(v *v1alpha1.Vault, envs []v1.EnvVar) []v1.EnvVar {
-   for _, env := range v.Spec.VaultEnvsConfig {
-       envs = append(envs, env)
-   }
+	for _, env := range v.Spec.VaultEnvsConfig {
+		envs = append(envs, env)
+	}
 
-     return envs
+	return envs
 }
 
 func withVaultVolumes(v *v1alpha1.Vault, volumes []v1.Volume) []v1.Volume {
