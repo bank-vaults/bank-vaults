@@ -17,10 +17,17 @@ spec:
       labels:
         app: hello-secrets
     spec:
+      initContainers:
+      - name: init-alpine
+        image: alpine
+        command: ["sh", "-c", "echo $AWS_SECRET_ACCESS_KEY && echo going to sleep... && sleep 1"]
+        env:
+        - name: AWS_SECRET_ACCESS_KEY
+          value: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
       containers:
       - name: alpine
         image: alpine
-        command: ["sh", "-c", "echo $AWS_SECRET_ACCESS_KEY $ && echo going to sleep... && sleep 10000"]
+        command: ["sh", "-c", "echo $AWS_SECRET_ACCESS_KEY && echo going to sleep... && sleep 10000"]
         env:
         - name: AWS_SECRET_ACCESS_KEY
           value: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
