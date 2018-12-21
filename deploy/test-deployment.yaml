@@ -18,9 +18,9 @@ spec:
         app: hello-secrets
     spec:
       initContainers:
-      - name: init-alpine
-        image: alpine
-        command: ["sh", "-c", "echo $AWS_SECRET_ACCESS_KEY && echo going to sleep... && sleep 1"]
+      - name: init-ubuntu
+        image: ubuntu
+        command: ["sh", "-c", "echo $AWS_SECRET_ACCESS_KEY && echo initContainers ready"]
         env:
         - name: AWS_SECRET_ACCESS_KEY
           value: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
