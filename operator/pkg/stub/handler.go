@@ -820,6 +820,7 @@ func deploymentForConfigurer(v *v1alpha1.Vault) *appsv1.Deployment {
 							},
 						},
 					})),
+                    SecurityContext: withSecurityContext(v),
 				},
 			},
 		},
