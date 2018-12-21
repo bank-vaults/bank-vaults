@@ -13,7 +13,7 @@ COPY Gopkg.* Makefile /go/src/${PACKAGE}/
 RUN make vendor
 
 COPY . /go/src/${PACKAGE}
-RUN go install ./cmd/vault-env
+RUN CGO_ENABLED=0 go install ./cmd/vault-env
 
 
 FROM vault:0.11.5
