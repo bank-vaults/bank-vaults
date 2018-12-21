@@ -412,12 +412,12 @@ func statefulSetForVault(v *v1alpha1.Vault) (*appsv1.StatefulSet, error) {
 									ContainerPort: 8201,
 									Name:          "cluster-port",
 								}},
-							Env: withTLSEnv(v, true, withCredentialsEnv(v, []v1.EnvVar{
+							Env: withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []v1.EnvVar{
 								{
 									Name:  "VAULT_LOCAL_CONFIG",
 									Value: configJSON,
 								},
-							})),
+							}))),
 							SecurityContext: &v1.SecurityContext{
 								Capabilities: &v1.Capabilities{
 									Add: []v1.Capability{"IPC_LOCK"},
@@ -568,6 +568,14 @@ func withTLSVolumeMount(v *v1alpha1.Vault, volumeMounts []v1.VolumeMount) []v1.V
 		})
 	}
 	return volumeMounts
+}
+
+func withVaultEnv(v *v1alpha1.Vault, envs []v1.EnvVar) []v1.EnvVar {
+   for _, env := range v.Spec.VaultEnvsConfig {
+       envs = append(envs, env)
+   }
+
+     return envs
 }
 
 func withVaultVolumes(v *v1alpha1.Vault, volumes []v1.Volume) []v1.Volume {
