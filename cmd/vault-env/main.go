@@ -66,7 +66,10 @@ func main() {
 				os.Exit(1)
 			}
 
-			if secret != nil {
+			if secret == nil {
+				fmt.Fprintf(os.Stderr, "path not found: %s\n", path)
+				os.Exit(1)
+			} else {
 				data := cast.ToStringMap(secret.Data["data"])
 				if value, ok := data[key]; ok {
 					environ[i] = fmt.Sprintf("%s=%s", name, value)
@@ -74,9 +77,6 @@ func main() {
 					fmt.Fprintf(os.Stderr, "key not found: %s\n", key)
 					os.Exit(1)
 				}
-			} else {
-				fmt.Fprintf(os.Stderr, "path not found: %s\n", path)
-				os.Exit(1)
 			}
 		}
 	}
