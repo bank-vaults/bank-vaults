@@ -163,7 +163,7 @@ func vaultSecretsMutator(_ context.Context, obj metav1.Object) (bool, error) {
 
 	vaultConfig := parseVaultConfig(obj)
 
-	return false, transformVaultEnvContainers(obj, podSpec, vaultConfig)
+	return false, mutatePodSpec(obj, podSpec, vaultConfig)
 }
 
 func parseVaultConfig(obj metav1.Object) vaultConfig {
@@ -200,20 +200,9 @@ func getConfigMapForVaultAgent(obj metav1.Object, vaultConfig vaultConfig) *core
 	}
 }
 
-func transformVaultEnvContainers(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vaultConfig) error {
-
-	kubeConfig, err := rest.InClusterConfig()
-	if err != nil {
-		return err
-	}
-
-	clientset, err := kubernetes.NewForConfig(kubeConfig)
-	if err != nil {
-		return err
-	}
-
+func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig) bool {
 	mutated := false
-	for i, container := range podSpec.Containers {
+	for i, container := range containers {
 		var envVars []corev1.EnvVar
 		for _, env := range container.Env {
 			if strings.HasPrefix(env.Value, "vault:") {
@@ -264,10 +253,28 @@ func transformVaultEnvContainers(obj metav1.Object, podSpec *corev1.PodSpec, vau
 			})
 		}
 
-		podSpec.Containers[i] = container
+		containers[i] = container
 	}
 
-	if mutated {
+	return mutated
+}
+
+func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vaultConfig) error {
+
+	kubeConfig, err := rest.InClusterConfig()
+	if err != nil {
+		return err
+	}
+
+	clientset, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		return err
+	}
+
+	initContainersMutated := mutateContainers(podSpec.InitContainers, vaultConfig)
+	containersMutated := mutateContainers(podSpec.Containers, vaultConfig)
+
+	if initContainersMutated || containersMutated {
 
 		if vaultConfig.useAgent {
 
@@ -286,7 +293,7 @@ func transformVaultEnvContainers(obj metav1.Object, podSpec *corev1.PodSpec, vau
 			}
 		}
 
-		podSpec.InitContainers = append(podSpec.InitContainers, getInitContainers(vaultConfig)...)
+		podSpec.InitContainers = append(getInitContainers(vaultConfig), podSpec.InitContainers...)
 		podSpec.Volumes = append(podSpec.Volumes, getVolumes(obj.GetName(), vaultConfig)...)
 	}
 
