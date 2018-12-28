@@ -26,7 +26,6 @@ import (
 	"github.com/slok/kubewebhook/pkg/log"
 	"github.com/slok/kubewebhook/pkg/webhook/mutating"
 	"github.com/spf13/viper"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -141,25 +140,11 @@ func vaultSecretsMutator(_ context.Context, obj metav1.Object) (bool, error) {
 	var podSpec *corev1.PodSpec
 
 	switch v := obj.(type) {
-	case *appsv1.Deployment:
-		podSpec = &v.Spec.Template.Spec
-	case *appsv1.ReplicaSet:
-		podSpec = &v.Spec.Template.Spec
-	case *appsv1.StatefulSet:
-		podSpec = &v.Spec.Template.Spec
+	case *corev1.Pod:
+		podSpec = &v.Spec
 	default:
 		return false, nil
 	}
-
-	annotations := obj.GetAnnotations()
-	if _, ok := annotations["vault.security.banzaicloud.io/mutated"]; ok {
-		return false, nil
-	}
-	if annotations == nil {
-		annotations = map[string]string{}
-		obj.SetAnnotations(annotations)
-	}
-	annotations["vault.security.banzaicloud.io/mutated"] = "true"
 
 	vaultConfig := parseVaultConfig(obj)
 
@@ -328,14 +313,10 @@ func main() {
 
 	mutator := mutating.MutatorFunc(vaultSecretsMutator)
 
-	handlerDeployment := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-deployment", Obj: &appsv1.Deployment{}}, mutator, logger)
-	handlerReplicaSet := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-deployment", Obj: &appsv1.ReplicaSet{}}, mutator, logger)
-	handlerStatefulSet := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-deployment", Obj: &appsv1.StatefulSet{}}, mutator, logger)
+	podHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-pods", Obj: &corev1.Pod{}}, mutator, logger)
 
 	mux := http.NewServeMux()
-	mux.Handle("/deployments", handlerDeployment)
-	mux.Handle("/replicasets", handlerReplicaSet)
-	mux.Handle("/statefulsets", handlerStatefulSet)
+	mux.Handle("/pods", podHandler)
 
 	logger.Infof("Listening on :443")
 	err := http.ListenAndServeTLS(":443", viper.GetString("tls_cert_file"), viper.GetString("tls_private_key_file"), mux)
