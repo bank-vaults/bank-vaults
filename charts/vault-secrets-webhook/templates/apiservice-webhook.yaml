@@ -36,12 +36,12 @@ items:
   metadata:
     name: {{ template "vault-secrets-webhook.fullname" . }}
   webhooks:
-  - name: deployments.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+  - name: pods.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
     clientConfig:
       service:
         namespace: {{ .Release.Namespace }}
         name: {{ template "vault-secrets-webhook.fullname" . }}
-        path: /deployments
+        path: /pods
       caBundle: {{ b64enc $ca.Cert }}
     rules:
     - operations:
@@ -51,39 +51,5 @@ items:
       apiVersions:
       - "*"
       resources:
-      - deployments
-    failurePolicy: Fail
-  - name: replicasets.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
-    clientConfig:
-      service:
-        namespace: {{ .Release.Namespace }}
-        name: {{ template "vault-secrets-webhook.fullname" . }}
-        path: /replicasets
-      caBundle: {{ b64enc $ca.Cert }}
-    rules:
-    - operations:
-      - CREATE
-      apiGroups:
-      - "*"
-      apiVersions:
-      - "*"
-      resources:
-      - replicasets
-    failurePolicy: Fail
-  - name: statefulsets.{{ template "vault-secrets-webhook.name" . }}.{{ .Values.apiService.group }}
-    clientConfig:
-      service:
-        namespace: {{ .Release.Namespace }}
-        name: {{ template "vault-secrets-webhook.fullname" . }}
-        path: /statefulsets
-      caBundle: {{ b64enc $ca.Cert }}
-    rules:
-    - operations:
-      - CREATE
-      apiGroups:
-      - "*"
-      apiVersions:
-      - "*"
-      resources:
-      - statefulsets
+      - pods
     failurePolicy: Fail
