@@ -14,7 +14,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
 	"github.com/banzaicloud/bank-vaults/pkg/tls"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
-	vaultv1alpha1 "github.com/banzaicloud/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
+	vaultv1alpha1 "github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
 	etcdV1beta2 "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
 	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
 	"github.com/hashicorp/vault/api"
