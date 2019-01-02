@@ -63,7 +63,7 @@ jobs:
 
       - run:
           name: Download license information for dependencies
-          command: bin/licensei cache
+          command: make license-cache
 
       - save_cache:
           key: licensei-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
@@ -72,7 +72,7 @@ jobs:
 
       - run:
           name: Check dependency licenses
-          command: bin/licensei check 
+          command: make license-check
       
       - run:
           name: Setup golang
@@ -96,8 +96,8 @@ jobs:
       - run:
           name: Build Docker images
           command: |
-            docker build -t banzaicloud/bank-vaults:latest .
-            docker build -f Dockerfile.operator -t banzaicloud/vault-operator .
+            make docker
+            make docker-operator
             docker build -f Dockerfile.vault-env -t banzaicloud/vault-env:latest .
             docker build -f Dockerfile.webhook -t banzaicloud/vault-secrets-webhook:latest .
 

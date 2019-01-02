@@ -9,7 +9,7 @@ ARG PACKAGE=github.com/banzaicloud/bank-vaults
 RUN mkdir -p /go/src/${PACKAGE}
 WORKDIR /go/src/${PACKAGE}
 
-COPY Gopkg.* Makefile /go/src/${PACKAGE}/
+COPY Gopkg.* Makefile main-targets.mk /go/src/${PACKAGE}/
 RUN make vendor
 
 COPY . /go/src/${PACKAGE}
