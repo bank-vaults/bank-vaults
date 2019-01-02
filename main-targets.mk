@@ -85,7 +85,6 @@ license-cache: bin/licensei ## Generate license cache
 
 .PHONY: test
 test:
-	set -o pipefail
 	go list ./... | xargs -n1 go test ${GOARGS} -v -parallel 1 2>&1 | tee test.txt
 
 bin/go-junit-report:
