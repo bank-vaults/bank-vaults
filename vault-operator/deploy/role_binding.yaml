@@ -1,0 +1,13 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: vault-operator
+subjects:
+- kind: ServiceAccount
+  name: vault-operator
+  # Replace this with the namespace the operator is deployed in.
+  namespace: REPLACE_NAMESPACE
+roleRef:
+  kind: ClusterRole
+  name: vault-operator
+  apiGroup: rbac.authorization.k8s.io
