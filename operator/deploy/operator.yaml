@@ -1,17 +1,3 @@
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
-  name: vaults.vault.banzaicloud.com
-spec:
-  group: vault.banzaicloud.com
-  names:
-    kind: Vault
-    listKind: VaultList
-    plural: vaults
-    singular: vault
-  scope: Namespaced
-  version: v1alpha1
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -26,18 +12,31 @@ spec:
       labels:
         name: vault-operator
     spec:
+      serviceAccountName: vault-operator
       containers:
         - name: vault-operator
-          image: banzaicloud/vault-operator:latest
-          imagePullPolicy: IfNotPresent
+          # Replace this with the built image name
+          image: REPLACE_IMAGE
+          ports:
+          - containerPort: 60000
+            name: metrics
           command:
           - vault-operator
+          imagePullPolicy: Always
+          readinessProbe:
+            exec:
+              command:
+                - stat
+                - /tmp/operator-sdk-ready
+            initialDelaySeconds: 4
+            periodSeconds: 10
+            failureThreshold: 1
           env:
-            # OPERATOR_NAMESPACE defines the namespace where the operator watches
-            # for CRD objects, if not defined all namespaces are whatched.
-          - name: OPERATOR_NAMESPACE
-            value: default
-            # LOG_LEVEL defines the logging level in Logrus log levels
-          - name: OPERATOR_LOG_LEVEL
-            value: info
-      serviceAccount: vault-operator
+            - name: WATCH_NAMESPACE
+              value: ""
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "vault-operator"

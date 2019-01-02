@@ -7,8 +7,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/banzaicloud/bank-vaults/vault-operator/pkg/apis"
-	"github.com/banzaicloud/bank-vaults/vault-operator/pkg/controller"
+	"github.com/banzaicloud/bank-vaults/operator/pkg/apis"
+	"github.com/banzaicloud/bank-vaults/operator/pkg/controller"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/ready"
