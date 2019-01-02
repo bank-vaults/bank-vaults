@@ -27,6 +27,21 @@ ingress:
   #   - secretName: chart-example-tls
   #     hosts:
   #       - chart-example.local
+persistence:
+  ## Enable persistence using Persistent Volume Claims
+  ## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
+  enabled: false
+  ## Vault data Persistent Volume Storage Class
+  ## If defined, storageClassName: <storageClass>
+  ## If set to "-", storageClassName: "", which disables dynamic provisioning
+  ## If undefined (the default) or set to null, no storageClassName spec is
+  ## set, choosing the default provisioner. (gp2 on AWS, standard on
+  ## GKE, AWS & OpenStack)
+  # storageClass: "-"
+  ## Set default PVC size
+  size: 10G
+  ## Set default PVC access mode: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
+  accessMode: ReadWriteOnce
 podAnnotations:
   prometheus.io/scrape: "true"
   prometheus.io/path: "/metrics"

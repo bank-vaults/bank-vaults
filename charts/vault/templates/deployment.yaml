@@ -176,7 +176,13 @@ spec:
         - name: vault-root
           emptyDir: {}
         - name: vault-file
-          emptyDir: {}
+        {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ template "vault.fullname" . }}-pvc
+        {{- else }}
+          hostPath:
+            path: /opt/vault
+        {{- end }}        
         {{- range .Values.vault.customSecrets }}
         - name: {{ .secretName }}
           secret:
