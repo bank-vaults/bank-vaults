@@ -1,5 +1,7 @@
 # A Self-Documenting Makefile: http://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 
+OS = $(shell uname)
+
 # Project variables
 PACKAGE = github.com/banzaicloud/bank-vaults
 BINARY_NAME ?= bank-vaults
@@ -24,6 +26,7 @@ DOCKER_TAG ?= ${VERSION}
 
 # Dependency versions
 DEP_VERSION = 0.5.0
+GOTESTSUM_VERSION = 0.3.2
 GOLANGCI_VERSION = 1.12.2
 LICENSEI_VERSION = 0.0.7
 
