@@ -15,7 +15,7 @@
 ./bank-vaults
 
 # Operator
-operator/tmp/_output/bin/*
+operator/build/_output/bin/*
 
 /vendor/
 /.licensei.cache

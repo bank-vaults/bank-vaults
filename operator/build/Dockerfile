@@ -4,4 +4,4 @@ RUN apk upgrade --update --no-cache
 
 USER nobody
 
-ADD build/_output/bin/vault-operator /usr/local/bin/vault-operator
+ADD build/_output/bin/operator /usr/local/bin/vault-operator

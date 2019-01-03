@@ -1,0 +1,69 @@
+apiVersion: "vault.banzaicloud.com/v1alpha1"
+kind: "Vault"
+metadata:
+    name: "vault"
+spec:
+    size: 2
+    image: vault:1.0.0
+    bankVaultsImage: banzaicloud/bank-vaults:latest
+
+    # Insted of credentialsConfig one can use IAM instance profiles, or kube2iam for example:
+    annotations:
+        iam.amazonaws.com/role: "role-arn..."
+
+    # Describe where you would like to store the Vault unseal keys and root token
+    # in S3 encrypted with KMS.
+    unsealConfig:
+        aws:
+            kmsKeyId: "94c836b9-4907-47a7-928e-85d5d5518eff"
+            kmsRegion: "us-east-1"
+            s3Bucket: "my-vault"
+            s3Prefix: "vault-operator"
+            s3Region: "us-east-1"
+
+    # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
+    serviceAccount: vault
+
+    # A YAML representation of a final vault config file, this config represents
+    # a backend config in AWS.
+    # See https://www.vaultproject.io/docs/configuration/ for more information.
+    config:
+        storage:
+            aws:
+                bucket: "my-vault"
+        listener:
+            tcp:
+                address: "0.0.0.0:8200"
+                tls_cert_file: /vault/tls/server.crt
+                tls_key_file: /vault/tls/server.key
+        api_addr: https://vault.default:8200
+        telemetry:
+            statsd_address: localhost:9125
+        ui: true
+
+    # See: https://github.com/banzaicloud/bank-vaults#example-external-vault-configuration for more details.
+    externalConfig:
+        policies:
+            - name: allow_secrets
+              rules: path "secret/*" {
+                  capabilities = ["create", "read", "update", "delete", "list"]
+                  }
+        auth:
+            - type: kubernetes
+              roles:
+                  # Allow every pod in the default namespace to use the secret kv store
+                  - name: default
+                    bound_service_account_names: default
+                    bound_service_account_namespaces: default
+                    policies: allow_secrets
+                    ttl: 1h
+
+    # If you are not using IAM instance profiles to authenticate against AWS you can pass in an
+    # AWS credentials refering to a Secret with the following configuration block. You have to
+    # create the "aws-cred" secret manually, it has to have a key called "credentials" holding
+    # the configuration in the following format:
+    # https://docs.aws.amazon.com/cli/latest/topic/config-vars.html#the-shared-credentials-file
+    credentialsConfig:
+        env: AWS_SHARED_CREDENTIALS_FILE
+        path: /etc/aws/credentials
+        secretName: aws-cred

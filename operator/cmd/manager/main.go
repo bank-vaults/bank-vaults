@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"runtime"
 
@@ -22,10 +23,27 @@ import (
 
 var log = logf.Log.WithName("cmd")
 
+const (
+	operatorNamespace = "OPERATOR_NAMESPACE"
+	livenessPort      = "8080"
+)
+
+
 func printVersion() {
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	log.Info(fmt.Sprintf("operator-sdk Version: %v", sdkVersion.Version))
+}
+
+func handleLiveness() {
+	log.Info("Liveness probe listening on: %s", livenessPort)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.V(2).Info("ping")
+	})
+	err := http.ListenAndServe(":"+livenessPort, nil)
+	if err != nil {
+		log.Error(err, "failed to start health probe: %v\n")
+	}
 }
 
 func main() {
@@ -39,11 +57,18 @@ func main() {
 
 	printVersion()
 
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		log.Error(err, "failed to get watch namespace")
-		os.Exit(1)
+	var namespace string
+	var err error
+	namespace, isSet := os.LookupEnv(operatorNamespace)
+
+	if !isSet {
+		namespace, err = k8sutil.GetWatchNamespace()
+		if err != nil {
+			log.Error(err, "failed to get watch namespace")
+			os.Exit(1)
+		}
 	}
+	log.Info("Watched namespace:", namespace)
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
@@ -85,6 +110,9 @@ func main() {
 	}
 
 	log.Info("Starting the Cmd.")
+
+	// Start the health probe
+	go handleLiveness()
 
 	// Start the Cmd
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
