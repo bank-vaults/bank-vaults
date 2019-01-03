@@ -1,7 +1,0 @@
-apiVersion: vault.banzaicloud.com/v1alpha1
-kind: Vault
-metadata:
-  name: example-vault
-spec:
-  # Add fields here
-  size: 3

@@ -11,14 +11,13 @@ import (
 	"sort"
 	"strings"
 
+	vaultv1alpha1 "github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
 	"github.com/banzaicloud/bank-vaults/pkg/tls"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
-	vaultv1alpha1 "github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
 	etcdV1beta2 "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
 	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
 	"github.com/hashicorp/vault/api"
-	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -63,16 +62,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
-
-	//// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	//// Watch for changes to secondary resource Pods and requeue the owner Vault
-	//err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-	//	IsController: true,
-	//	OwnerType:    &vaultv1alpha1.Vault{},
-	//})
-	//if err != nil {
-	//	return err
-	//}
 
 	return nil
 }
@@ -129,8 +118,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			return reconcile.Result{}, err
 		}
 
-
-		err = r.client.Create(context.TODO(),sec)
+		err = r.client.Create(context.TODO(), sec)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return reconcile.Result{}, fmt.Errorf("failed to create secret for etcd: %v", err)
 		}
@@ -158,7 +146,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			return reconcile.Result{}, err
 		}
 
-		err = r.client.Create(context.TODO(),sec)
+		err = r.client.Create(context.TODO(), sec)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return reconcile.Result{}, fmt.Errorf("failed to create secret for vault: %v", err)
 		}
@@ -188,7 +176,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-	err = r.client.Get(context.TODO(),request.NamespacedName, statefulSet)
+	err = r.client.Get(context.TODO(), request.NamespacedName, statefulSet)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			if err := r.client.Create(context.TODO(), statefulSet); err != nil {
@@ -294,11 +282,7 @@ func logDeployment(dep *appsv1.Deployment) error {
 		return fmt.Errorf("failed to indent the content: %v", err)
 	}
 
-	if logrus.GetLevel() >= logrus.DebugLevel {
-		logrus.Debugln("Deployed:")
-		// use println because the logrus formatter is messing up the JSON indet
-		fmt.Println(string(prettyData.Bytes()))
-	}
+	log.Info("Deployed:","deployment", string(prettyData.Bytes()))
 	return nil
 }
 
