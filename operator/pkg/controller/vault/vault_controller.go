@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -25,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -239,7 +239,6 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	if err != nil && !apierrors.IsAlreadyExists(err) {
 		return reconcile.Result{}, fmt.Errorf("failed to create configurer deployment: %v", err)
 	}
-	logDeployment(configurerDep)
 
 	// Create the configmap if it doesn't exist
 	cm = configMapForConfigurer(v)
@@ -254,9 +253,9 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Ensure the configmap is the same as the spec
-	err = r.client.Get(context.TODO(), request.NamespacedName, cm)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: cm.Name, Namespace: cm.Namespace}, cm)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get deployment: %v", err)
+		return reconcile.Result{}, fmt.Errorf("failed to get configmap: %v", err)
 	}
 
 	externalConfig := v.Spec.ExternalConfigJSON()
@@ -269,21 +268,6 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func logDeployment(dep *appsv1.Deployment) error {
-	data, err := json.Marshal(dep)
-	if err != nil {
-		return fmt.Errorf("failed to marshal the deployment object: %v", err)
-	}
-	var prettyData bytes.Buffer
-	err = json.Indent(&prettyData, data, "", "    ")
-	if err != nil {
-		return fmt.Errorf("failed to indent the content: %v", err)
-	}
-
-	log.Info("Deployed:","deployment", string(prettyData.Bytes()))
-	return nil
 }
 
 func secretForEtcd(e *etcdV1beta2.EtcdCluster) (*corev1.Secret, error) {
@@ -503,7 +487,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 
 	// validate configuration
 	if replicas > 1 && !v.Spec.HasHAStorage() {
-		return nil, fmt.Errorf("More than 1 replicas are not supported without HA storage backend")
+		return nil, fmt.Errorf("more than 1 replicas are not supported without HA storage backend")
 	}
 
 	volumes := withTLSVolume(v, withCredentialsVolume(v, []corev1.Volume{

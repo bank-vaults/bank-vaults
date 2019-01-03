@@ -36,13 +36,21 @@ func printVersion() {
 }
 
 func handleLiveness() {
-	log.Info("Liveness probe listening on: %s", livenessPort)
+	log.Info(fmt.Sprintf("Liveness probe listening on: %s", livenessPort))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.V(2).Info("ping")
 	})
 	err := http.ListenAndServe(":"+livenessPort, nil)
 	if err != nil {
 		log.Error(err, "failed to start health probe: %v\n")
+	}
+}
+
+func Unset(r ready.Ready) {
+	err := r.Unset()
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
 	}
 }
 
@@ -68,7 +76,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	log.Info("Watched namespace:", namespace)
+	log.Info(fmt.Sprintf("Watched namespace: %s", namespace))
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
@@ -78,7 +86,11 @@ func main() {
 	}
 
 	// Become the leader before proceeding
-	leader.Become(context.TODO(), "vault-operator-lock")
+	err = leader.Become(context.TODO(), "vault-operator-lock")
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
 
 	r := ready.NewFileReady()
 	err = r.Set()
@@ -86,7 +98,7 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
-	defer r.Unset()
+	defer Unset(r)
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, manager.Options{Namespace: namespace})
