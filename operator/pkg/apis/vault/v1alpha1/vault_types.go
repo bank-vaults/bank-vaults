@@ -41,7 +41,6 @@ type VaultSpec struct {
 	VolumeMounts    []v1.VolumeMount  `json:"volumeMounts,omitempty"`
 	VaultEnvsConfig []v1.EnvVar       `json:"vaultEnvsConfig"`
 }
-type P interface {}
 
 // HAStorageTypes is the set of storage backends supporting High Availability
 var HAStorageTypes = map[string]bool{
