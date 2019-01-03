@@ -2,9 +2,12 @@
 
 
 .PHONY: clean
-clean: ## Clean the working area and the project
-	rm -rf bin/ ${BUILD_DIR}/ vendor/
-	rm -rf ${BINARY_NAME}
+clean: ## Clean builds
+	rm -rf ${BUILD_DIR}/
+
+.PHONY: clear
+clear: ## Clear the working area and the project
+	rm -rf bin/ vendor/
 
 bin/dep: bin/dep-${DEP_VERSION}
 	@ln -sf dep-${DEP_VERSION} bin/dep
@@ -18,12 +21,12 @@ vendor: bin/dep ## Install dependencies
 	bin/dep ensure -v -vendor-only
 
 .PHONY: build
-build: GOARGS += -tags "${GOTAGS}" -ldflags "${LDFLAGS}"
 build: ## Build a binary
 ifneq (${IGNORE_GOLANG_VERSION_REQ}, 1)
 	@printf "${GOLANG_VERSION}\n$$(go version | awk '{sub(/^go/, "", $$3);print $$3}')" | sort -t '.' -k 1,1 -k 2,2 -k 3,3 -g | head -1 | grep -q -E "^${GOLANG_VERSION}$$" || (printf "Required Go version is ${GOLANG_VERSION}\nInstalled: `go version`" && exit 1)
 endif
-	go build ${GOARGS} ${BUILD_PACKAGE}
+	go build ${GOARGS} -tags "${GOTAGS}" -ldflags "${LDFLAGS}" ${BUILD_PACKAGE}
+
 
 .PHONY: docker-build
 docker-build: ## Builds go binary in docker image
@@ -38,8 +41,6 @@ debug: build ## Builds binary package
 debug-docker: debug ## Builds binary package
 	docker build -t banzaicloud/${BINARY_NAME}:debug -f Dockerfile.dev .
 
-.PHONY: check
-check: test lint ## Run tests and linters
 
 bin/golangci-lint: bin/golangci-lint-${GOLANGCI_VERSION}
 	@ln -sf golangci-lint-${GOLANGCI_VERSION} bin/golangci-lint
@@ -83,18 +84,37 @@ license-check: bin/licensei ## Run license check
 license-cache: bin/licensei ## Generate license cache
 	bin/licensei cache
 
-.PHONY: test
-test:
-	go list ./... | xargs -n1 go test ${GOARGS} -v -parallel 1 2>&1 | tee test.txt
+.PHONY: check
+check: test lint ## Run tests and linters
 
-bin/go-junit-report:
+bin/gotestsum: bin/gotestsum-${GOTESTSUM_VERSION}
+	@ln -sf gotestsum-${GOTESTSUM_VERSION} bin/gotestsum
+bin/gotestsum-${GOTESTSUM_VERSION}:
 	@mkdir -p bin
-	GOBIN=${PWD}/bin/ go get -u github.com/jstemmer/go-junit-report
+ifeq (${OS}, Darwin)
+	curl -L https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_darwin_amd64.tar.gz | tar -zOxf - gotestsum > ./bin/gotestsum-${GOTESTSUM_VERSION} && chmod +x ./bin/gotestsum-${GOTESTSUM_VERSION}
+endif
+ifeq (${OS}, Linux)
+	curl -L https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz | tar -zOxf - gotestsum > ./bin/gotestsum-${GOTESTSUM_VERSION} && chmod +x ./bin/gotestsum-${GOTESTSUM_VERSION}
+endif
 
-.PHONY: junit-report
-junit-report: bin/go-junit-report # Generate test reports
-	@mkdir -p build
-	cat test.txt | bin/go-junit-report > build/report.xml
+TEST_PKGS ?= ./...
+TEST_REPORT_NAME ?= results.xml
+.PHONY: test
+test: TEST_REPORT ?= main
+test: TEST_FORMAT ?= short
+test: SHELL = /bin/bash
+test: bin/gotestsum ## Run tests
+	@mkdir -p ${BUILD_DIR}/test_results/${TEST_REPORT}
+	bin/gotestsum --no-summary=skipped --junitfile ${BUILD_DIR}/test_results/${TEST_REPORT}/${TEST_REPORT_NAME} --format ${TEST_FORMAT} -- $(filter-out -v,${GOARGS}) $(if ${TEST_PKGS},${TEST_PKGS},./...)
+
+.PHONY: test-all
+test-all: ## Run all tests
+	@${MAKE} GOARGS="${GOARGS} -run .\*" TEST_REPORT=all test
+
+.PHONY: test-integration
+test-integration: ## Run integration tests
+	@${MAKE} GOARGS="${GOARGS} -run ^TestIntegration\$$\$$" TEST_REPORT=integration test
 
 bin/jq: bin/jq-${JQ_VERSION}
 	@ln -sf jq-${JQ_VERSION} bin/jq
