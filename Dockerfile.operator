@@ -13,14 +13,14 @@ COPY Gopkg.* Makefile main-targets.mk /go/src/${PACKAGE}/
 RUN make vendor
 
 COPY . /go/src/${PACKAGE}
-RUN go install ./operator/cmd/vault-operator
+RUN go install ./operator/cmd/manager
 
 
 FROM alpine:3.7
 
 RUN apk add --no-cache ca-certificates
 
-COPY --from=builder /go/bin/vault-operator /usr/local/bin/vault-operator
+COPY --from=builder /go/bin/manager /usr/local/bin/vault-operator
 
 RUN adduser -D vault-operator
 USER vault-operator
