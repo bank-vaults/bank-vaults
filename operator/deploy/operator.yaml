@@ -1,16 +1,16 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-    name: vaults.vault.banzaicloud.com
+  name: vaults.vault.banzaicloud.com
 spec:
-    group: vault.banzaicloud.com
-    names:
-        kind: Vault
-        listKind: VaultList
-        plural: vaults
-        singular: vault
-    scope: Namespaced
-    version: v1alpha1
+  group: vault.banzaicloud.com
+  names:
+    kind: Vault
+    listKind: VaultList
+    plural: vaults
+    singular: vault
+  scope: Namespaced
+  version: v1alpha1
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -32,10 +32,10 @@ spec:
           image: banzaicloud/vault-operator:latest
           imagePullPolicy: IfNotPresent
           ports:
-          - containerPort: 60000
-            name: metrics
+            - containerPort: 60000
+              name: metrics
           command:
-          - vault-operator
+            - vault-operator
           readinessProbe:
             exec:
               command:
@@ -45,9 +45,9 @@ spec:
             periodSeconds: 10
             failureThreshold: 1
           env:
-# OPERATOR_NAMESPACE is here only for backward compatibility, the new SDK uses WATCH_NAMESPACE instead
-#            - name: OPERATOR_NAMESPACE
-#              value: ""
+            # OPERATOR_NAMESPACE is here only for backward compatibility, the new SDK uses WATCH_NAMESPACE instead
+            #            - name: OPERATOR_NAMESPACE
+            #              value: ""
             - name: WATCH_NAMESPACE
               value: ""
             - name: POD_NAME
