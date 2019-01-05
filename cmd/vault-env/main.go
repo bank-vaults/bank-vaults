@@ -70,7 +70,13 @@ func main() {
 				fmt.Fprintf(os.Stderr, "path not found: %s\n", path)
 				os.Exit(1)
 			} else {
-				data := cast.ToStringMap(secret.Data)
+				var data map[string]interface{}
+				v2Data, ok := secret.Data["data"]
+				if ok {
+					data = cast.ToStringMap(v2Data)
+				} else {
+					data = cast.ToStringMap(secret.Data)
+				}
 				if value, ok := data[key]; ok {
 					environ[i] = fmt.Sprintf("%s=%s", name, value)
 				} else {
