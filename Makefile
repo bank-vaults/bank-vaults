@@ -11,7 +11,7 @@ OPERATOR_DOCKER_IMAGE = banzaicloud/vault-operator
 # Build variables
 BUILD_DIR ?= build
 BUILD_PACKAGE = ${PACKAGE}/cmd/...
-VERSION ?= $(shell git symbolic-ref -q --short HEAD || git describe --tags --exact-match)
+VERSION ?= $(shell echo `git symbolic-ref -q --short HEAD || git describe --tags --exact-match` | tr '[/]' '-')
 COMMIT_HASH ?= $(shell git rev-parse --short HEAD 2>/dev/null)
 BUILD_DATE ?= $(shell date +%FT%T%z)
 LDFLAGS += -X main.version=${VERSION} -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${BUILD_DATE}
