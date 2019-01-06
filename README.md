@@ -422,7 +422,6 @@ Currently the Kubernetes Service Account based Vault authentication mechanism is
 
 **Current limitations:**
 
-- Only Vault KV 2 is supported right now.
 - The command of the container has to be explicitly defined in the resource definition, the container's default `ENTRYPOINT` and `CMD` will not work (to overcome this is a work-in-progress).
 
 ### Deploying the webhook
