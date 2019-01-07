@@ -180,8 +180,12 @@ spec:
           persistentVolumeClaim:
             claimName: {{ template "vault.fullname" . }}-pvc
         {{- else }}
+          {{- if .Values.persistence.hostPath }}
           hostPath:
-            path: /opt/vault
+            path: {{ .Values.persistence.hostPath }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
         {{- end }}        
         {{- range .Values.vault.customSecrets }}
         - name: {{ .secretName }}

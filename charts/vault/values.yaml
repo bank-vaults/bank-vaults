@@ -38,6 +38,8 @@ persistence:
   ## set, choosing the default provisioner. (gp2 on AWS, standard on
   ## GKE, AWS & OpenStack)
   # storageClass: "-"
+  # Used for hostPath persistence if left empty, "emptyDir" will be used
+  hostPath: ""
   ## Set default PVC size
   size: 10G
   ## Set default PVC access mode: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
