@@ -68,6 +68,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: vault-operator
+    namespace: default
 roleRef:
   kind: ClusterRole
   name: vault-operator
