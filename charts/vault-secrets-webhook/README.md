@@ -9,8 +9,11 @@ $ helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/bran
 $ helm repo update
 ```
 
+The chart needs to be installed into it's own namespace to overcome recursive mutation issues, that namespace is ignored by the mutating webhook.
+See: https://github.com/banzaicloud/banzai-charts/issues/595#issuecomment-452223465 for more information.
+
 ```bash
-$ helm upgrade --install <name> banzaicloud-stable/vault-secrets-webhook
+$ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook
 ```
 
 ## Configuration

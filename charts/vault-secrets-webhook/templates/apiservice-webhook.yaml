@@ -53,3 +53,9 @@ items:
       resources:
       - pods
     failurePolicy: Fail
+    namespaceSelector:
+      matchExpressions:
+      - key: name
+        operator: NotIn
+        values:
+        - {{ .Release.Namespace }}
