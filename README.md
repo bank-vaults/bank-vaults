@@ -359,7 +359,7 @@ This repository contains several Go packages for interacting with Vault:
 
 ## Helm Charts
 
-We have some fully fledged, production ready Helm charts for deploying [Vault](https://github.com/banzaicloud/banzai-charts/tree/master/vault) using `bank-vaults` and the [Vault Operator](https://github.com/banzaicloud/banzai-charts/tree/master/vault-operator). With the help of this chart you can run a HA Vault instance with automatic initialization, unsealing and external configuration which used to be a tedious manual operation. This chart can be used easily for development purposes as well.
+We have some fully fledged, production ready Helm charts for deploying [Vault](https://github.com/banzaicloud/banzai-charts/tree/master/vault) using `bank-vaults` and the [Vault Operator](https://github.com/banzaicloud/banzai-charts/tree/master/vault-operator) and also the [Vault Secrets Webhook](https://github.com/banzaicloud/banzai-charts/tree/master/vault-secrets-webhook). With the help of this chart you can run a HA Vault instance with automatic initialization, unsealing and external configuration which used to be a tedious manual operation. Also secrets from Vault can be injected into your Pods directly as environment variables (without using Kubernetes Secrets). These charts can be used easily for development purposes as well.
 
 ## Operator
 
@@ -433,7 +433,7 @@ There is a Helm chart available to deploy the [Vault Secrets Webhook](https://gi
 ```bash
 helm init -c
 helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch/master
-helm install banzaicloud-stable/vault-secrets-webhook
+helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook
 ```
 
 For further details follow the webhook's Helm chart [repository](https://github.com/banzaicloud/banzai-charts/tree/master/vault-secrets-webhook).
