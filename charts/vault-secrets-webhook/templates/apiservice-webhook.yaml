@@ -17,20 +17,6 @@ items:
     servingKey: {{ b64enc $server.Key }}
     caCert: {{ b64enc $ca.Cert }}
 
-- apiVersion: apiregistration.k8s.io/v1beta1
-  kind: APIService
-  metadata:
-    name: {{ .Values.apiService.version }}.{{ .Values.apiService.group }}
-  spec:
-    caBundle: {{ b64enc $ca.Cert }}
-    group: {{ .Values.apiService.group }}
-    groupPriorityMinimum: 1000
-    versionPriority: 15
-    service:
-      name: {{ template "vault-secrets-webhook.fullname" . }}
-      namespace: {{ .Release.Namespace }}
-    version: {{ .Values.apiService.version }}
-
 - apiVersion: admissionregistration.k8s.io/v1beta1
   kind: MutatingWebhookConfiguration
   metadata:
