@@ -50,6 +50,7 @@ type VaultSpec struct {
 	EtcdAnnotations map[string]string `json:"etcdAnnotations,omitempty"`
 	ServiceType     string            `json:"serviceType"`
 	PodAntiAffinity string            `json:"podAntiAffinity"`
+	NodeAffinity    v1.NodeAffinity   `json:"nodeAffinity"`
 	ServiceAccount  string            `json:"serviceAccount"`
 	Volumes         []v1.Volume       `json:"volumes,omitempty"`
 	VolumeMounts    []v1.VolumeMount  `json:"volumeMounts,omitempty"`

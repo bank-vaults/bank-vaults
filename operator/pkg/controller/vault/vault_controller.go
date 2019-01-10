@@ -609,7 +609,10 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 					Annotations: v.Spec.GetAnnotations(),
 				},
 				Spec: corev1.PodSpec{
-					Affinity:           getPodAntiAffinity(v),
+					Affinity: &corev1.Affinity{
+						PodAntiAffinity: getPodAntiAffinity(v),
+						NodeAffinity:    getNodeAffinity(v),
+					},
 					ServiceAccountName: v.Spec.GetServiceAccount(),
 					Containers: withAuditLogContainer(v, string(ownerJSON), []corev1.Container{
 						{
@@ -868,24 +871,29 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, owner string, containers []co
 	return containers
 }
 
-func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.Affinity {
+func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
 	if v.Spec.PodAntiAffinity == "" {
 		return nil
 	}
 
 	ls := labelsForVault(v.Name)
-	return &corev1.Affinity{
-		PodAntiAffinity: &corev1.PodAntiAffinity{
-			RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-				{
-					LabelSelector: &metav1.LabelSelector{
-						MatchLabels: ls,
-					},
-					TopologyKey: v.Spec.PodAntiAffinity,
+	return &corev1.PodAntiAffinity{
+		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+			{
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: ls,
 				},
+				TopologyKey: v.Spec.PodAntiAffinity,
 			},
 		},
 	}
+}
+
+func getNodeAffinity(v *vaultv1alpha1.Vault) *corev1.NodeAffinity {
+	if v.Spec.NodeAffinity.Size() == 0 {
+		return nil
+	}
+	return &v.Spec.NodeAffinity
 }
 
 func withSupportUpgradeParams(v *vaultv1alpha1.Vault, params []string) []string {
