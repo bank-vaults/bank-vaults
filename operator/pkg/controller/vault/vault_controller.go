@@ -616,7 +616,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							Image:           v.Spec.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Name:            "vault",
-							Args:            []string{"server", "-log-level=debug"},
+							Args:            []string{"server"},
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: 8200,

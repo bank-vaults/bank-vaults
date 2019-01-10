@@ -34,7 +34,7 @@ We use Vault across our large Kubernetes deployments and all the projects were `
 - [Operator](#operator)
 - [Mutating Webhook](#mutating-webhook)
 - [Unseal Keys](#unseal-keys)
-- [Examples](#examples)
+- [Examples for using the library part](#examples-for-using-the-library-part)
 - [Getting and Installing](#getting-and-installing)
 - [Monitoring](#monitoring)
 - [Contributing](#contributing)
