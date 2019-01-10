@@ -29,7 +29,7 @@ spec:
   # See https://www.vaultproject.io/docs/configuration/ for more information.
   config:
     storage:
-      aws:
+      s3:
         bucket: "my-vault"
     listener:
       tcp:
