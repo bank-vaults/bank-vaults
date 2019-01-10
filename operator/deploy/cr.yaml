@@ -73,7 +73,9 @@ spec:
         description: General secrets.
         options:
           version: 2
-
+  vaultEnvsConfig:
+    - name: VAULT_LOG_LEVEL
+      value: debug
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
