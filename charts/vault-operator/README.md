@@ -43,8 +43,8 @@ The following tables lists the configurable parameters of the vault chart and th
 |       Parameter           |           Description               |                         Default                     |
 |---------------------------|-------------------------------------|-----------------------------------------------------|
 | `image.pullPolicy`        | Container pull policy               | `IfNotPresent`                                      |
-| `image.repository`        | Container image to use              | `vault`                                             |
-| `image.tag`               | Container image tag to deploy       | `0.9.1`                                             |
+| `image.repository`        | Container image to use              | `banzaicloud/vault-operator`                        |
+| `image.tag`               | Container image tag to deploy       | `0.4.2`                                             |
 | `replicaCount`            | k8s replicas                        | `1`                                                 |
 | `resources.limits.cpu`    | Container requested CPU             | `nil`                                               |
 | `resources.limits.memory` | Container requested memory          | `nil`                                               |
@@ -65,7 +65,8 @@ Once the Vault pods are ready (in HA setup always one is ready), it can be acces
 
 ```bash
 $ kubectl port-forward vault-pod 8200
-$ export VAULT_ADDR=http://127.0.0.1:8200
+$ export VAULT_ADDR=https://127.0.0.1:8200
+$ export VAULT_SKIP_VERIFY=true
 $ vault status
 ```
 
