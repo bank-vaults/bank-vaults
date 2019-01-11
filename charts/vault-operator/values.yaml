@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   repository: banzaicloud/vault-operator
-  tag: 0.3.6
+  tag: 0.4.2
   pullPolicy: IfNotPresent
 
 service:
@@ -28,6 +28,8 @@ resources:
   requests:
     cpu: 100m
     memory: 128Mi
+
+affinity: {}
 
 terminationGracePeriodSeconds: 10
 

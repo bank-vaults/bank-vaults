@@ -29,8 +29,12 @@ spec:
           command:
             - vault-operator
           env:
-            - name: OPERATOR_NAMESPACE
+            - name: WATCH_NAMESPACE
               value: {{ .Values.watchNamespace }}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           ports:
           - containerPort: {{ .Values.service.internalPort }}
           livenessProbe:
@@ -50,5 +54,7 @@ spec:
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
+      affinity:
+{{ toYaml .Values.affinity | indent 8 }}
       serviceAccount: {{ include "vault-operator.fullname" . }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
