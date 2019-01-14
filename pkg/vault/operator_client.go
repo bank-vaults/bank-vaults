@@ -400,7 +400,7 @@ func (v *vault) Configure() error {
 				return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
 			}
 			roles := authMethod["roles"].([]interface{})
-			err = v.configureKubernetesRoles(roles)
+			err = v.configureKubernetesRoles(path, roles)
 			if err != nil {
 				return fmt.Errorf("error configuring kubernetes auth roles for vault: %s", err.Error())
 			}
@@ -579,14 +579,14 @@ func (v *vault) configurePolicies() error {
 	return nil
 }
 
-func (v *vault) configureKubernetesRoles(roles []interface{}) error {
+func (v *vault) configureKubernetesRoles(path string, roles []interface{}) error {
 	for _, roleInterface := range roles {
 		role, err := cast.ToStringMapE(roleInterface)
 		if err != nil {
 			return fmt.Errorf("error converting role for kubernetes: %s", err.Error())
 		}
 
-		_, err = v.cl.Logical().Write(fmt.Sprint("auth/kubernetes/role/", role["name"]), role)
+		_, err = v.cl.Logical().Write(fmt.Sprint("auth/%s/role/%s", path, role["name"]), role)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s kubernetes role into vault: %s", role["name"], err.Error())
