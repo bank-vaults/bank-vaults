@@ -15,6 +15,10 @@ spec:
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault
 
+  # Specify how many nodes you would like to have in your etcd cluster
+  # NOTE: -1 disables automatic etcd provisioning
+  etcdSize: 1
+
   # This option allows you to annotate the ETCD Cluster that Vault Operator creates.
   # It's specifically to annotate the ETCD Cluster as 'clusterwide' for a cluster wide
   # ETCD Operator, however it can be used to set any arbitrary annotations on the ETCD Cluster.
