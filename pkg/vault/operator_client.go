@@ -586,7 +586,7 @@ func (v *vault) configureKubernetesRoles(path string, roles []interface{}) error
 			return fmt.Errorf("error converting role for kubernetes: %s", err.Error())
 		}
 
-		_, err = v.cl.Logical().Write(fmt.Sprint("auth/%s/role/%s", path, role["name"]), role)
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s kubernetes role into vault: %s", role["name"], err.Error())
