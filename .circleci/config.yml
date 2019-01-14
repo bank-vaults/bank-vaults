@@ -117,3 +117,15 @@ jobs:
           name: Start minikube
           command: |
             sudo -E minikube start --vm-driver=none --cpus 2 --memory 2048 --kubernetes-version=${K8S_VERSION}
+
+      - run:
+          name: Operator acceptance test
+          command: |
+            kubectl apply -f operator/deploy/rbac.yaml
+            kubectl apply -f operator/deploy/operator.yaml
+            kubectl describe deployment vault-operator
+            kubectl wait --for=condition=available deployment/vault-operator --timeout=120s
+            kubectl apply -f operator/deploy/cr.yaml
+            sleep 5
+            kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
+            kubectl describe pod vault-0
