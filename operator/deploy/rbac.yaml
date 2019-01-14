@@ -58,6 +58,12 @@ rules:
       - '*'
     verbs:
       - '*'
+  - apiGroups:
+      - etcd.database.coreos.com
+    resources:
+      - "*"
+    verbs:
+      - "*"
 
 ---
 
