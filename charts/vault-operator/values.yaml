@@ -17,6 +17,8 @@ service:
 nameOverride: ""
 fullnameOverride: ""
 
+crdAnnotations: {}
+
 # The namespace where the operator watches for vault CRD objects, if not defined
 # all namespaces are watched
 watchNamespace: ""
