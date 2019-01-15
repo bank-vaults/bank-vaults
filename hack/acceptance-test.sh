@@ -24,10 +24,13 @@ kubectl describe pod vault-0
 kubectl delete --wait=true vaults.vault.banzaicloud.com vault
 
 kubectl apply -f operator/deploy/cr-etcd-ha.yaml
-sleep 10
+sleep 5
+
+kubectl wait --for=condition=available etcdclusters.etcd.database.coreos.com/etcd-cluster --timeout=120s
+sleep 30
+
 # piggyback on initial leader change of the current HA setup
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
-kubectl wait --for=condition=ready pod/vault-1 --timeout=120s
 
 kubectl get pods
 kubectl logs deployment/vault-operator
