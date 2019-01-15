@@ -37,10 +37,9 @@ spec:
           command:
             - vault-operator
           readinessProbe:
-            exec:
-              command:
-                - stat
-                - /tmp/operator-sdk-ready
+            httpGet:
+              path: /
+              port: 8080
             initialDelaySeconds: 4
             periodSeconds: 10
             failureThreshold: 1
