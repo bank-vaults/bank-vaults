@@ -24,82 +24,82 @@ jobs:
     steps:
       - checkout
 
-    #   - restore_cache:
-    #       name: Restore build dependencies
-    #       keys:
-    #       - build-deps-v2-{{ .Branch }}-{{ checksum "Makefile" }}
-    #       - build-deps-v2-{{ .Branch }}
-    #       - build-deps-v2-master
-    #       - build-deps-v2
+      - restore_cache:
+          name: Restore build dependencies
+          keys:
+          - build-deps-v2-{{ .Branch }}-{{ checksum "Makefile" }}
+          - build-deps-v2-{{ .Branch }}
+          - build-deps-v2-master
+          - build-deps-v2
 
-    #   - restore_cache:
-    #       name: Restore dependencies
-    #       keys:
-    #       - gopkg-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
-    #       - gopkg-v2-{{ .Branch }}
-    #       - gopkg-v2-master
-    #       - gopkg-v2
+      - restore_cache:
+          name: Restore dependencies
+          keys:
+          - gopkg-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          - gopkg-v2-{{ .Branch }}
+          - gopkg-v2-master
+          - gopkg-v2
 
-    #   - run:
-    #       name: Install dependencies
-    #       command: make vendor
+      - run:
+          name: Install dependencies
+          command: make vendor
 
-    #   - save_cache:
-    #       name: Save dependencies
-    #       key: gopkg-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
-    #       paths:
-    #       - vendor/
+      - save_cache:
+          name: Save dependencies
+          key: gopkg-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          paths:
+          - vendor/
       
-    #   - run:
-    #       name: Install license checker
-    #       command: curl https://raw.githubusercontent.com/goph/licensei/master/install.sh | bash -s v0.0.7
+      - run:
+          name: Install license checker
+          command: curl https://raw.githubusercontent.com/goph/licensei/master/install.sh | bash -s v0.0.7
 
-    #   - restore_cache:
-    #       keys:
-    #       - licensei-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
-    #       - licensei-v2-{{ .Branch }}
-    #       - licensei-v2-master
-    #       - licensei-v2
+      - restore_cache:
+          keys:
+          - licensei-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          - licensei-v2-{{ .Branch }}
+          - licensei-v2-master
+          - licensei-v2
 
-    #   - run:
-    #       name: Download license information for dependencies
-    #       command: make license-cache
+      - run:
+          name: Download license information for dependencies
+          command: make license-cache
 
-    #   - save_cache:
-    #       key: licensei-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
-    #       paths:
-    #         - .licensei.cache
+      - save_cache:
+          key: licensei-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          paths:
+            - .licensei.cache
 
-    #   - run:
-    #       name: Check dependency licenses
-    #       command: make license-check
+      - run:
+          name: Check dependency licenses
+          command: make license-check
       
-    #   - run:
-    #       name: Setup golang
-    #       command: |
-    #         sudo rm -rf /usr/local/go
-    #         curl -Lo go.linux-amd64.tar.gz https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && sudo tar -C /usr/local -xzf go.linux-amd64.tar.gz
+      - run:
+          name: Setup golang
+          command: |
+            sudo rm -rf /usr/local/go
+            curl -Lo go.linux-amd64.tar.gz https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && sudo tar -C /usr/local -xzf go.linux-amd64.tar.gz
 
-    #   - run:
-    #       name: Start Vault
-    #       command:
-    #           docker run -d -e SKIP_SETCAP=true -e VAULT_DEV_ROOT_TOKEN_ID=227e1cce-6bf7-30bb-2d2a-acc854318caf -p 8200:8200 vault:${VAULT_VERSION}
+      - run:
+          name: Start Vault
+          command:
+              docker run -d -e SKIP_SETCAP=true -e VAULT_DEV_ROOT_TOKEN_ID=227e1cce-6bf7-30bb-2d2a-acc854318caf -p 8200:8200 vault:${VAULT_VERSION}
 
-    #   - run:
-    #       name: Run verification
-    #       command:
-    #           make check
-    #       environment:
-    #         VAULT_ADDR: http://localhost:8200
-    #         VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
+      - run:
+          name: Run verification
+          command:
+              make check
+          environment:
+            VAULT_ADDR: http://localhost:8200
+            VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
 
-    #   - run:
-    #       name: Build Docker images
-    #       command: |
-    #         make docker
-    #         make docker-operator
-    #         docker build -f Dockerfile.vault-env -t banzaicloud/vault-env:latest .
-    #         docker build -f Dockerfile.webhook -t banzaicloud/vault-secrets-webhook:latest .
+      - run:
+          name: Build Docker images
+          command: |
+            make docker
+            make docker-operator
+            docker build -f Dockerfile.vault-env -t banzaicloud/vault-env:latest .
+            docker build -f Dockerfile.webhook -t banzaicloud/vault-secrets-webhook:latest .
 
       - run:
           name: Setup kubectl

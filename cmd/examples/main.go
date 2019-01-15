@@ -109,7 +109,7 @@ func authExample() {
 // REQUIRED to start a Vault 0.9 dev server with:
 // vault server -dev &
 func main() {
-	os.Setenv("VAULT_ADDR", "https://vault:8200")
-	os.Setenv("VAULT_SKIP_VERIFY", "false")
+	os.Setenv("VAULT_ADDR", "https://vault.default:8200")
+	os.Setenv("VAULT_SKIP_VERIFY", "true")
 	vaultExample()
 }
