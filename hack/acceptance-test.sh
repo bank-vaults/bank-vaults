@@ -32,6 +32,8 @@ sleep 30
 # piggyback on initial leader change of the current HA setup
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
 
+# Give bank-vaults some time to let the Kubernetes auth backend configuration happen
+sleep 20
 
 # Run a simple client test
 go get -v github.com/banzaicloud/kurun
