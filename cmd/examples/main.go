@@ -19,10 +19,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"github.com/banzaicloud/bank-vaults/pkg/auth"
-	"github.com/banzaicloud/bank-vaults/pkg/db"
+	database "github.com/banzaicloud/bank-vaults/pkg/db"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
@@ -36,25 +35,22 @@ func vaultExample() {
 
 	log.Println("Created Vault client.")
 
-	for {
-		secret, err := client.Vault().Logical().List("secret/accesstokens")
-		if err != nil {
-			log.Println(err)
-		}
-		if secret != nil {
-			for _, v := range secret.Data {
+	secret, err := client.Vault().Logical().List("secret/accesstokens")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if secret != nil {
+		for _, v := range secret.Data {
+			log.Printf("-> %+v", v)
+			for _, v := range v.([]interface{}) {
 				log.Printf("-> %+v", v)
-				for _, v := range v.([]interface{}) {
-					log.Printf("-> %+v", v)
-				}
 			}
-
-			log.Println("Finished reading Vault.")
-
-		} else {
-			log.Println("Found nothing")
 		}
-		time.Sleep(time.Second * 5)
+
+		log.Println("Finished reading Vault.")
+
+	} else {
+		log.Println("Found nothing")
 	}
 }
 
@@ -114,8 +110,6 @@ func authExample() {
 // vault server -dev &
 func main() {
 	os.Setenv("VAULT_ADDR", "https://vault:8200")
-	os.Setenv("VAULT_SKIP_VERIFY", "true")
+	os.Setenv("VAULT_SKIP_VERIFY", "false")
 	vaultExample()
-	// // gormExample()
-	// authExample()
 }

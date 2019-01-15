@@ -4,6 +4,7 @@ set -xeo pipefail
 function finish {
     kubectl get pods
     kubectl logs deployment/vault-operator
+    kubectl describe pod vault-0 vault-1
 }
 
 trap finish EXIT
@@ -32,6 +33,8 @@ sleep 30
 # piggyback on initial leader change of the current HA setup
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
 
-kubectl get pods
-kubectl logs deployment/vault-operator
-kubectl describe pod vault-0 vault-1
+
+# Run a simple client test
+go get -v github.com/banzaicloud/kurun
+export PATH=${PATH}:${GOPATH}/bin
+kurun cmd/examples/main.go
