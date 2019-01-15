@@ -26,7 +26,6 @@ import (
 	"github.com/banzaicloud/bank-vaults/operator/pkg/controller"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
-	"github.com/operator-framework/operator-sdk/pkg/ready"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -42,7 +41,6 @@ const (
 	livenessPort      = "8080"
 )
 
-
 func printVersion() {
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
@@ -57,14 +55,6 @@ func handleLiveness() {
 	err := http.ListenAndServe(":"+livenessPort, nil)
 	if err != nil {
 		log.Error(err, "failed to start health probe: %v\n")
-	}
-}
-
-func Unset(r ready.Ready) {
-	err := r.Unset()
-	if err != nil {
-		log.Error(err, "")
-		os.Exit(1)
 	}
 }
 
@@ -105,14 +95,6 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
-
-	r := ready.NewFileReady()
-	err = r.Set()
-	if err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-	defer Unset(r)
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, manager.Options{Namespace: namespace})
