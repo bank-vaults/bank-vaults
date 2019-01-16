@@ -237,6 +237,9 @@ secrets:
     description: General secrets.
     options:
       version: 2
+    configuration:
+      config:
+        - max_versions: 100
   # Mounts non-default plugin's path
   - path: ethereum-gateway
     type: plugin
