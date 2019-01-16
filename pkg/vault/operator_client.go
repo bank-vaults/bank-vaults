@@ -37,6 +37,9 @@ import (
 // DefaultConfigFile is the name of the default config file
 const DefaultConfigFile = "vault-config.yml"
 
+// Secret engine config no need name
+var secretEngineConfigNoNeedName = map[string]bool{"ad": true, "alicloud": true, "azure": true, "gcp": true, "gcpkms": true, "kv": true}
+
 // Config holds the configuration of the Vault initialization
 type Config struct {
 	// how many key parts exist
@@ -873,7 +876,7 @@ func (v *vault) configureSecretEngines() error {
 				}
 
 				name, ok := subConfigData["name"]
-				if !ok {
+				if !ok && !isConfigNoNeedName(secretEngineType, configOption) {
 					return fmt.Errorf("error finding sub config data name for secret engine")
 				}
 
@@ -887,7 +890,12 @@ func (v *vault) configureSecretEngines() error {
 					}
 				}
 
-				configPath := fmt.Sprintf("%s/%s/%s", path, configOption, name)
+				var configPath string
+				if name != nil {
+					configPath = fmt.Sprintf("%s/%s/%s", path, configOption, name)
+				} else {
+					configPath = fmt.Sprintf("%s/%s", path, configOption)
+				}
 				_, err = v.cl.Logical().Write(configPath, subConfigData)
 
 				if err != nil {
@@ -970,4 +978,13 @@ func getMountConfigInput(secretEngine map[string]interface{}) (api.MountConfigIn
 	mountConfigInput.Options = options
 
 	return mountConfigInput, nil
+}
+
+func isConfigNoNeedName(secretEngineType string, configOption string) bool {
+	if configOption == "config" {
+		_, ok := secretEngineConfigNoNeedName[secretEngineType]
+		return ok
+	}
+
+	return false
 }
