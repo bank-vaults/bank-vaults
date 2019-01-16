@@ -983,9 +983,7 @@ func getMountConfigInput(secretEngine map[string]interface{}) (api.MountConfigIn
 func isConfigNoNeedName(secretEngineType string, configOption string) bool {
 	if configOption == "config" {
 		_, ok := secretEngineConfigNoNeedName[secretEngineType]
-		if ok {
-			return true
-		}
+		return ok
 	}
 
 	return false
