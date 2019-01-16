@@ -18,7 +18,7 @@ spec:
       cpu: "2"
 
   # A YAML representation of resource ResourceRequirements for bank-vaults container
-  bankvaultsResource:
+  bankVaultsResource:
     requests:
       memory: "64Mi"
       cpu: "100m"

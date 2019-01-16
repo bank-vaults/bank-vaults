@@ -19,7 +19,7 @@ import (
 	"reflect"
 
 	"github.com/spf13/cast"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -56,7 +56,7 @@ type VaultSpec struct {
 	VolumeMounts       []v1.VolumeMount        `json:"volumeMounts,omitempty"`
 	VaultEnvsConfig    []v1.EnvVar             `json:"vaultEnvsConfig"`
 	VaultResource      v1.ResourceRequirements `json:"vaultResource"`
-	BankVaultsResource v1.ResourceRequirements `json:"bankvaultsResource"`
+	BankVaultsResource v1.ResourceRequirements `json:"bankVaultsResource"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
