@@ -70,11 +70,15 @@ var HAStorageTypes = map[string]bool{
 	"zookeeper": true,
 }
 
-// HasHAStorage detects if Vault is configured to use a storage backend which supports High Availability
+// HasHAStorage detects if Vault is configured to use a storage backend which supports High Availability or if it has
+// ha_storage stanza, then doesn't check for ha_enabled flag
 func (spec *VaultSpec) HasHAStorage() bool {
 	storageType := spec.GetStorageType()
 	if _, ok := HAStorageTypes[storageType]; ok {
 		return spec.HasStorageHAEnabled()
+	}
+	if len(spec.getHAStorage()) != 0 {
+		return true
 	}
 	return false
 }
@@ -87,6 +91,10 @@ func (spec *VaultSpec) GetStorage() map[string]interface{} {
 
 func (spec *VaultSpec) getStorage() map[string]interface{} {
 	return cast.ToStringMap(spec.Config["storage"])
+}
+
+func (spec *VaultSpec) getHAStorage() map[string]interface{} {
+	return cast.ToStringMap(spec.Config["ha_storage"])
 }
 
 // GetStorageType returns the type of Vault's storage stanza
