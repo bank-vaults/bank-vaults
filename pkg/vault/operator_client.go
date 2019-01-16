@@ -38,7 +38,7 @@ import (
 const DefaultConfigFile = "vault-config.yml"
 
 // Secret engine config no need name
-var secretEngineConfigNoNeedName = [...]string{"ad", "alicloud", "azure", "gcp", "gcpkms", "kv"}
+var secretEngineConfigNoNeedName = map[string]bool{"ad": true, "alicloud": true, "azure": true, "gcp": true, "gcpkms": true, "kv": true}
 
 // Config holds the configuration of the Vault initialization
 type Config struct {
@@ -982,10 +982,9 @@ func getMountConfigInput(secretEngine map[string]interface{}) (api.MountConfigIn
 
 func isConfigNoNeedName(secretEngineType string, configOption string) bool {
 	if configOption == "config" {
-		for _, secretEngine := range secretEngineConfigNoNeedName {
-			if secretEngineType == secretEngine {
-				return true
-			}
+		_, ok := secretEngineConfigNoNeedName[secretEngineType]
+		if ok {
+			return true
 		}
 	}
 
