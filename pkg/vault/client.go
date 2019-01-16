@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	vaultapi "github.com/hashicorp/vault/api"
@@ -185,7 +186,12 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 				log.Println("Vault token renewal closed")
 			}()
 
-			<-initialTokenArrived
+			select {
+			case <-initialTokenArrived:
+				log.Println("Initial Vault token arrived")
+			case <-time.After(config.Timeout):
+				return nil, fmt.Errorf("")
+			}
 		}
 	}
 
