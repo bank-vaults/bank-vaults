@@ -434,6 +434,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault) *appsv1.Deployment {
 								},
 							})),
 							WorkingDir: "/config",
+							Resources:  v.Spec.BankVaultsResource,
 						},
 					},
 					Volumes: withTLSVolume(v, withCredentialsVolume(v, []corev1.Volume{
@@ -663,6 +664,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 								FailureThreshold: 2,
 							},
 							VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
+							Resources:    v.Spec.VaultResource,
 						},
 						{
 							Image:           v.Spec.GetBankVaultsImage(),
@@ -677,6 +679,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 								},
 							}))),
 							VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{})),
+							Resources:    v.Spec.BankVaultsResource,
 						},
 						{
 							Image:           v.Spec.GetStatsDImage(),
