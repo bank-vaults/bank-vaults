@@ -250,8 +250,11 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 	err = r.client.Create(context.TODO(), configurerDep)
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		return reconcile.Result{}, fmt.Errorf("failed to create configurer deployment: %v", err)
+	if err != nil && apierrors.IsAlreadyExists(err) {
+		err = r.client.Update(context.TODO(), configurerDep)
+	}
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to create/update configurer deployment: %v", err)
 	}
 
 	// Create the configmap if it doesn't exist
@@ -269,7 +272,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	// Ensure the configmap is the same as the spec
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: cm.Name, Namespace: cm.Namespace}, cm)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get configmap: %v", err)
+		return reconcile.Result{}, fmt.Errorf("failed to get configurer configmap: %v", err)
 	}
 
 	externalConfig := v.Spec.ExternalConfigJSON()
