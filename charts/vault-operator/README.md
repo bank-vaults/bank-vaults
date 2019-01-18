@@ -30,10 +30,12 @@ helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch
 helm install vault-operator
 ```
 
-To install the chart backed with an Etcd Operator, use the following:
+To install the chart backed with a cluster-wide Etcd Operator, use the following:
 
 ```bash
-helm install banzaicloud-stable/vault-operator --set etcd-operator.enabled=true
+helm upgrade --install vault-operator . \
+--set=etcd-operator.enabled=true \
+--set=etcd-operator.etcdOperator.commandArgs.cluster-wide=true
 ```
 
 ## Configuration
