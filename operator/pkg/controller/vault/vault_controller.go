@@ -35,6 +35,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -437,7 +438,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault) *appsv1.Deployment {
 								},
 							})),
 							WorkingDir: "/config",
-							Resources:  v.Spec.BankVaultsResource,
+							Resources:  *getBankVaultsResource(v),
 						},
 					},
 					Volumes: withTLSVolume(v, withCredentialsVolume(v, []corev1.Volume{
@@ -667,7 +668,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 								FailureThreshold: 2,
 							},
 							VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
-							Resources:    v.Spec.VaultResource,
+							Resources:    *getVaultResource(v),
 						},
 						{
 							Image:           v.Spec.GetBankVaultsImage(),
@@ -682,7 +683,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 								},
 							}))),
 							VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{})),
-							Resources:    v.Spec.BankVaultsResource,
+							Resources:    *getBankVaultsResource(v),
 						},
 						{
 							Image:           v.Spec.GetStatsDImage(),
@@ -708,6 +709,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 								Name:      "statsd-mapping",
 								MountPath: "/tmp/",
 							}},
+							Resources: *getPrometheusExporterResource(v),
 						},
 					}),
 					Volumes:         withVaultVolumes(v, volumes),
@@ -1012,4 +1014,58 @@ func getPodNames(pods []corev1.Pod) []string {
 		podNames = append(podNames, pod.Name)
 	}
 	return podNames
+}
+
+// getVaultResource return resource in spec or return pre-defined resource if not configurated
+func getVaultResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
+	if v.Spec.Resources != nil && v.Spec.Resources.Vault != nil {
+		return v.Spec.Resources.Vault
+	}
+
+	return &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("500m"),
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("1"),
+			corev1.ResourceMemory: resource.MustParse("512Mi"),
+		},
+	}
+}
+
+// getBankVaultsResource return resource in spec or return pre-defined resource if not configurated
+func getBankVaultsResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
+	if v.Spec.Resources != nil && v.Spec.Resources.BankVaults != nil {
+		return v.Spec.Resources.BankVaults
+	}
+
+	return &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("200m"),
+			corev1.ResourceMemory: resource.MustParse("128Mi"),
+		},
+	}
+}
+
+// getPrometheusExporterResource return resource in spec or return pre-defined resource if not configurated
+func getPrometheusExporterResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
+	if v.Spec.Resources != nil && v.Spec.Resources.PrometheusExporter != nil {
+		return v.Spec.Resources.PrometheusExporter
+	}
+
+	return &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("200m"),
+			corev1.ResourceMemory: resource.MustParse("128Mi"),
+		},
+	}
 }

@@ -7,24 +7,34 @@ spec:
   image: vault:1.0.0
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
-  # A YAML representation of resource ResourceRequirements for vault container
-  # Detail can reference: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container
-  vaultResource:
-    requests:
-      memory: "256Mi"
-      cpu: "200m"
-    limits:
-      memory: "2Gi"
-      cpu: "2"
+  resources:
+    # A YAML representation of resource ResourceRequirements for vault container
+    # Detail can reference: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container
+    vault:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "2Gi"
+        cpu: "2"
 
-  # A YAML representation of resource ResourceRequirements for bank-vaults container
-  bankVaultsResource:
-    requests:
-      memory: "64Mi"
-      cpu: "100m"
-    limits:
-      memory: "128Mi"
-      cpu: "500m"
+    # A YAML representation of resource ResourceRequirements for bank-vaults container
+    bankVaults:
+      requests:
+        memory: "64Mi"
+        cpu: "100m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+
+    # A YAML representation of resource ResourceRequirements for prometheus-exporter container
+    prometheusExporter:
+      requests:
+        memory: "64Mi"
+        cpu: "100m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
 
   # Support for custom Vault (and sidecar) pod annotations
   annotations:
