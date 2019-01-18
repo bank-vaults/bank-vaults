@@ -9,6 +9,14 @@ cd operator
 operator-sdk build banzaicloud/vault-operator
 ```
 
+Regenerate the k8s code by the *operator-sdk*:
+
+```bash
+cd operator
+ln -s ../vendor vendor
+operator-sdk generate k8s
+```
+
 ## Deploying the operator
 
 Some deployment *samples* can be found at the projects `operator/deploy` directory:
