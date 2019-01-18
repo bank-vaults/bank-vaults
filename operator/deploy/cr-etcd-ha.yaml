@@ -9,7 +9,7 @@ spec:
 
   # This option gives us the option to workaround current StatefulSet limitations around updates
   # See: https://github.com/kubernetes/kubernetes/issues/67250
-  # By default it is false.
+  # By default it is true.
   supportUpgrade: true
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
