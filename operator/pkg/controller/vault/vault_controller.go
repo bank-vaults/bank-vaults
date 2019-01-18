@@ -903,7 +903,7 @@ func getNodeAffinity(v *vaultv1alpha1.Vault) *corev1.NodeAffinity {
 }
 
 func withSupportUpgradeParams(v *vaultv1alpha1.Vault, params []string) []string {
-	if v.Spec.SupportUpgrade {
+	if v.Spec.SupportUpgrade == nil || *v.Spec.SupportUpgrade {
 		host := fmt.Sprintf("%s.%s", v.Name, v.Namespace)
 		address := fmt.Sprintf("https://%s:8200", host)
 		params = append(params, []string{"--step-down-active", "--active-node-address", address}...)
