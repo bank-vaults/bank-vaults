@@ -32,7 +32,7 @@ spec:
           command:
             - etcd-operator
             - --create-crd=false
-            # - -cluster-wide
+            - --cluster-wide=true
           env:
             - name: MY_POD_NAMESPACE
               valueFrom:
