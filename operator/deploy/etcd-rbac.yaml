@@ -5,7 +5,7 @@ metadata:
 
 ---
 
-kind: Role
+kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: etcd-operator
@@ -49,14 +49,15 @@ rules:
 
 ---
 
-kind: RoleBinding
+kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: etcd-operator
 subjects:
   - kind: ServiceAccount
     name: etcd-operator
+    namespace: default
 roleRef:
-  kind: Role
+  kind: ClusterRole
   name: etcd-operator
   apiGroup: rbac.authorization.k8s.io
