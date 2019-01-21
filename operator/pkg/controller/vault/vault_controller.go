@@ -144,8 +144,11 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 
 		err = r.client.Create(context.TODO(), etcdCluster)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return reconcile.Result{}, fmt.Errorf("failed to create etcd cluster: %v", err)
+		if err != nil && apierrors.IsAlreadyExists(err) {
+			err = r.client.Update(context.TODO(), etcdCluster)
+		}
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to create/update etcd cluster: %v", err)
 		}
 	}
 
