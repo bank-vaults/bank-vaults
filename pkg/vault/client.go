@@ -30,7 +30,8 @@ import (
 )
 
 const (
-	serviceAccountFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	serviceAccountFile  = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	initialTokenTimeout = 10 * time.Second
 )
 
 // NewData is a helper function for Vault KV Version two secret data creation
@@ -189,8 +190,8 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 			select {
 			case <-initialTokenArrived:
 				log.Println("Initial Vault token arrived")
-			case <-time.After(config.Timeout):
-				return nil, fmt.Errorf("")
+			case <-time.After(initialTokenTimeout):
+				return nil, fmt.Errorf("Timeout [%s] during waiting for Vault token", initialTokenTimeout)
 			}
 		}
 	}
