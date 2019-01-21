@@ -33,7 +33,7 @@ func vaultExample() {
 		log.Fatal(err)
 	}
 
-	log.Println("Created Vault client.")
+	log.Println("Created Vault client")
 
 	secret, err := client.Vault().Logical().List("secret/accesstokens")
 	if err != nil {
@@ -47,7 +47,7 @@ func vaultExample() {
 			}
 		}
 
-		log.Println("Finished reading Vault.")
+		log.Println("Finished reading Vault")
 
 	} else {
 		log.Println("Found nothing")
