@@ -22,19 +22,16 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 
 |               Parameter             |                Description                  |                  Default                 |
 | ----------------------------------- | ------------------------------------------- | -----------------------------------------|
-|replicaCount                         |number of replicas                           |1                                         |
-|logVerbosity                         |log verbosity level                          |8                                         |
-|apiService.group                     |group of registered api service              |vault.banzaicloud.com                 |
-|apiService.version                   |version of registered api service            |v1beta1                                   |
-|apiService.resource                  |api service endpoint where hook is available |vaultsecrets                            |
-|image.repository                     |image repo that contains the admission server|banzaicloud/vault-secrets-webhook             |
-|image.tag                            |image tag                                    |latest                                    |
-|image.pullPolicy                     |image pull policy                            |IfNotPresent                              |
-|service.name                         |webhook service name             |vault-secrets-webhook                               |
-|service.type                         |webhook service type             |ClusterIP                                 |
-|service.externalPort                 |webhook service external port    |443                                       |
-|service.internalPort                 |webhook service external port    |443                                       |
-|resources                            |resources to request                         |{}                                        |
-|nodeSelector                         |node selector to use                         |{}                                        |
-|tolerations                          |tolerations to add                           |[]                                        |
 |affinity                             |affinities to use                            |{}                                        |
+|debug                                |debug logs for webhook                       |false                                     |
+|image.pullPolicy                     |image pull policy                            |IfNotPresent                              |
+|image.repository                     |image repo that contains the admission server|banzaicloud/vault-secrets-webhook         |
+|image.tag                            |image tag                                    |latest                                    |
+|nodeSelector                         |node selector to use                         |{}                                        |
+|replicaCount                         |number of replicas                           |1                                         |
+|resources                            |resources to request                         |{}                                        |
+|service.externalPort                 |webhook service external port                |443                                       |
+|service.internalPort                 |webhook service external port                |443                                       |
+|service.name                         |webhook service name                         |vault-secrets-webhook                     |
+|service.type                         |webhook service type                         |ClusterIP                                 |
+|tolerations                          |tolerations to add                           |[]                                        |

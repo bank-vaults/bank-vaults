@@ -4,10 +4,7 @@
 
 replicaCount: 1
 
-apiService:
-  group: admission.banzaicloud.com
-  version: v1beta1
-  resource: vaultsecrets
+debug: false
 
 image:
   repository: banzaicloud/vault-secrets-webhook
