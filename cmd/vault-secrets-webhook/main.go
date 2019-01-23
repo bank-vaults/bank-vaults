@@ -309,7 +309,7 @@ func main() {
 
 	initConfig()
 
-	logger := &log.Std{Debug: true}
+	logger := &log.Std{Debug: viper.GetBool("debug")}
 
 	mutator := mutating.MutatorFunc(vaultSecretsMutator)
 
