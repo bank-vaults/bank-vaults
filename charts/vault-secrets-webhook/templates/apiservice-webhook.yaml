@@ -1,5 +1,6 @@
 {{ $ca := genCA "svc-cat-ca" 3650 }}
-{{ $cn := printf "%s-%s.%s.svc" .Release.Name .Chart.Name .Release.Namespace }}
+{{ $svcName := include "vault-secrets-webhook.fullname" . }}
+{{ $cn := printf "%s.%s.svc" $svcName .Release.Namespace }}
 {{ $server := genSignedCert $cn nil nil 365 $ca }}
 
 apiVersion: v1
