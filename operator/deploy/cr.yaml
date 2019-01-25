@@ -18,6 +18,17 @@ spec:
   # Specify the Service's type where the Vault Service is exposed
   serviceType: ClusterIP
 
+  # Request an Ingress controller with the default configuration
+  ingress:
+    # Specify Ingress object annotations here, if TLS is enabled (which is by default)
+    # the operator will add NGINX, Traefik and HAProxy Ingress compatible annotations
+    # to support TLS backends
+    annotations:
+    # Override the default Ingress specification here
+    # This follows the same format as the standard Kubernetes Ingress
+    # See: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.13/#ingressspec-v1beta1-extensions
+    spec: {}
+
   # Use local disk to store Vault file data, see config section.
   volumes:
     - name: vault-file

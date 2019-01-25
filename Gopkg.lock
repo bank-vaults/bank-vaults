@@ -647,12 +647,11 @@
   version = "v1.0.2"
 
 [[projects]]
-  digest = "1:24354085994eb9b0dacf5f912e9de493a12eb662c70225b400d3ba2fed2aa5fb"
+  digest = "1:1e71abdfde8780cf8ae3bf1473c34a12ab1033c6c39dc6babd8862af066f0af3"
   name = "github.com/operator-framework/operator-sdk"
   packages = [
     "pkg/k8sutil",
     "pkg/leader",
-    "pkg/ready",
     "version",
   ]
   pruneopts = "NUT"
@@ -1423,7 +1422,6 @@
     "github.com/mitchellh/mapstructure",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/leader",
-    "github.com/operator-framework/operator-sdk/pkg/ready",
     "github.com/operator-framework/operator-sdk/version",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
@@ -1441,12 +1439,15 @@
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/errors",
+    "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/labels",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
+    "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/intstr",
     "k8s.io/client-go/kubernetes",
+    "k8s.io/client-go/kubernetes/typed/extensions/v1beta1",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
