@@ -36,6 +36,14 @@ rules:
     verbs:
       - get
   - apiGroups:
+      - extensions
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - create
+      - update
+  - apiGroups:
       - apps
     resources:
       - deployments
