@@ -20,7 +20,9 @@ import (
 
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
+	v1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -56,6 +58,7 @@ type VaultSpec struct {
 	VolumeMounts    []v1.VolumeMount  `json:"volumeMounts,omitempty"`
 	VaultEnvsConfig []v1.EnvVar       `json:"vaultEnvsConfig"`
 	Resources       *Resources        `json:"resources,omitempty"`
+	Ingress         *Ingress          `json:"ingress,omitempty"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
@@ -215,6 +218,42 @@ func (spec *VaultSpec) ExternalConfigJSON() string {
 	return string(config)
 }
 
+// GetIngress the Ingress configuration for Vault if any
+func (vault *Vault) GetIngress() *Ingress {
+	if vault.Spec.Ingress != nil {
+		// Add the Vault Service as the default backend if not specified
+		if vault.Spec.Ingress.Spec.Backend == nil {
+			vault.Spec.Ingress.Spec.Backend = &v1beta1.IngressBackend{
+				ServiceName: vault.Name,
+				ServicePort: intstr.FromInt(8200),
+			}
+		}
+
+		if vault.Spec.Ingress.Annotations == nil {
+			vault.Spec.Ingress.Annotations = map[string]string{}
+		}
+
+		// If TLS is enabled add the Ingress TLS backend annotations
+		if !vault.Spec.GetTLSDisable() {
+			// Supporting the NGINX ingress controller with TLS backends
+			// https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#backend-protocol
+			vault.Spec.Ingress.Annotations["nginx.ingress.kubernetes.io/backend-protocol"] = "HTTPS"
+
+			// Supporting the Traefik ingress controller with TLS backends
+			// https://docs.traefik.io/configuration/backends/kubernetes/#tls-communication-between-traefik-and-backend-pods
+			vault.Spec.Ingress.Annotations["ingress.kubernetes.io/protocol"] = "https"
+
+			// Supporting the HAProxy ingress controller with TLS backends
+			// https://github.com/jcmoraisjr/haproxy-ingress#secure-backend
+			vault.Spec.Ingress.Annotations["ingress.kubernetes.io/secure-backends"] = "true"
+		}
+
+		return vault.Spec.Ingress
+	}
+
+	return nil
+}
+
 // VaultStatus defines the observed state of Vault
 type VaultStatus struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
@@ -369,6 +408,12 @@ type Resources struct {
 	Vault              *v1.ResourceRequirements `json:"vault,omitempty"`
 	BankVaults         *v1.ResourceRequirements `json:"bankVaults,omitempty"`
 	PrometheusExporter *v1.ResourceRequirements `json:"prometheusExporter,omitempty"`
+}
+
+// Ingress
+type Ingress struct {
+	Annotations map[string]string   `json:"annotations,omitempty"`
+	Spec        v1beta1.IngressSpec `json:"spec,omitempty"`
 }
 
 func init() {

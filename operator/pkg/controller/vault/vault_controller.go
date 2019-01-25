@@ -33,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -288,6 +289,22 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
+	// Create ingress if specificed
+	if ingress := ingressForVault(v); ingress != nil {
+		// Set Vault instance as the owner and controller
+		if err := controllerutil.SetControllerReference(v, ingress, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		err = r.client.Create(context.TODO(), ingress)
+		if err != nil && apierrors.IsAlreadyExists(err) {
+			err = r.client.Update(context.TODO(), ingress)
+		}
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to create/update ingress: %v", err)
+		}
+	}
+
 	return reconcile.Result{}, nil
 }
 
@@ -389,6 +406,24 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 	return service
 }
 
+func ingressForVault(v *vaultv1alpha1.Vault) *v1beta1.Ingress {
+	if ingress := v.GetIngress(); ingress != nil {
+		return &v1beta1.Ingress{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1beta1",
+				Kind:       "Ingress",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        v.Name,
+				Namespace:   v.Namespace,
+				Annotations: ingress.Annotations,
+			},
+			Spec: ingress.Spec,
+		}
+	}
+	return nil
+}
+
 func serviceType(v *vaultv1alpha1.Vault) corev1.ServiceType {
 	switch v.Spec.ServiceType {
 	case string(corev1.ServiceTypeClusterIP):
@@ -400,7 +435,7 @@ func serviceType(v *vaultv1alpha1.Vault) corev1.ServiceType {
 	case string(corev1.ServiceTypeExternalName):
 		return corev1.ServiceTypeExternalName
 	default:
-		return corev1.ServiceTypeNodePort
+		return corev1.ServiceTypeClusterIP
 	}
 }
 
