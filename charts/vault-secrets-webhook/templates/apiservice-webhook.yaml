@@ -11,7 +11,6 @@ items:
   kind: Secret
   metadata:
     name: {{ template "vault-secrets-webhook.fullname" . }}
-    type: kubernetes.io/tls
   data:
     servingCert: {{ b64enc $server.Cert }}
     servingKey: {{ b64enc $server.Key }}
