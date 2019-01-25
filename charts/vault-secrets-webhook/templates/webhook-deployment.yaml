@@ -19,6 +19,8 @@ spec:
       labels:
         app: {{ template "vault-secrets-webhook.name" . }}
         release: {{ .Release.Name }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/apiservice-webhook.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ template "vault-secrets-webhook.fullname" . }}
       volumes:
