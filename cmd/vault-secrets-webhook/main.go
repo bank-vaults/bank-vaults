@@ -66,7 +66,7 @@ func getInitContainers(vaultConfig vaultConfig) []corev1.Container {
 	if vaultConfig.useAgent {
 		containers = append(containers, corev1.Container{
 			Name:            "vault-agent",
-			Image:           "banzaicloud/vault-secrets-init:latest",
+			Image:           viper.GetString("vault_image"),
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Command:         []string{"vault", "agent", "-config=/vault-agent/config.hcl"},
 			Env: []corev1.EnvVar{
@@ -94,7 +94,7 @@ func getInitContainers(vaultConfig vaultConfig) []corev1.Container {
 
 	containers = append(containers, corev1.Container{
 		Name:            "copy-vault-env",
-		Image:           "banzaicloud/vault-env:latest",
+		Image:           viper.GetString("vault_env_image"),
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"sh", "-c", "cp /usr/local/bin/vault-env /vault/"},
 		VolumeMounts: []corev1.VolumeMount{
@@ -286,6 +286,8 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 }
 
 func initConfig() {
+	viper.SetDefault("vault_image", "vault:latest")
+	viper.SetDefault("vault_env_image", "banzaicloud/vault-env:latest")
 	viper.AutomaticEnv()
 }
 
