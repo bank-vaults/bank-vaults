@@ -5,11 +5,11 @@
 
 *Bank Vaults is a thick, tricky, shifty right with a fast and intense tube for experienced surfers only, located on Mentawai. Think heavy steel doors, secret unlocking combinations and burly guards with smack-down attitude. Watch out for clean-up sets.*
 
-*Bank Vaults is an umbrella project which provides various tools for Vault to make using and operating Hashicorp Vault easier. Its a wrapper for the official Vault client with automatic token renewal and built in Kubernetes support, dynamic database credential provider for Golang SQL based clients. It has a CLI tool to automatically initialize, unseal and configure Vault. It also provides a Kubernetes operator for provisioning, and a mutating webhook for injecting secrets.*
+*Bank-Vaults is an umbrella project which provides various tools for Vault to make using and operating Hashicorp Vault easier. Its a wrapper for the official Vault client with automatic token renewal and built in Kubernetes support, dynamic database credential provider for Golang SQL based clients. It has a CLI tool to automatically initialize, unseal and configure Vault. It also provides a Kubernetes operator for provisioning, and a mutating webhook for injecting secrets.*
 
 ---
 
-**Bank Vaults** is a core building block of the **[Banzai Cloud Pipeline](https://github.com/banzaicloud/pipeline)** platform. Some of the usage patterns are highlighted through these blog posts:
+**Bank-Vaults** is a core building block of the **[Banzai Cloud Pipeline](https://github.com/banzaicloud/pipeline)** platform. Some of the usage patterns are highlighted through these blog posts:
 
 **Securing Kubernetes deployments with Vault:**
 
@@ -26,7 +26,7 @@ We use Vault across our large Kubernetes deployments and all the projects were `
 
 >We take bank-vaults' security and our users' trust very seriously. If you believe you have found a security issue in bank-vaults, please contact us at security@banzaicloud.com.
 
-Bank Vaults is a core part of the [Banzai Cloud Pipeline](https://banzaicloud.com/), which is in public beta:
+Bank-Vaults is a core part of the [Banzai Cloud Pipeline](https://banzaicloud.com/), a Cloud Native application and devops platform that natively supports multi- and hybrid-cloud deployments. Check out the developer beta:
 <p align="center">
   <img src="https://camo.githubusercontent.com/a487fb3128bcd1ef9fc1bf97ead8d6d6a442049a/68747470733a2f2f62616e7a6169636c6f75642e636f6d2f696d672f7472795f706970656c696e655f627574746f6e2e737667">
 </p>
