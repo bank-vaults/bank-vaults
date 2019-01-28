@@ -38,6 +38,10 @@ spec:
             value: /var/serving-cert/servingKey
           - name: DEBUG
             value: {{ .Values.debug | quote }}
+          {{- range $key, $value := .Values.env }}
+          - name: {{ $key }}
+            value: {{ $value }}
+          {{- end }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.internalPort }}

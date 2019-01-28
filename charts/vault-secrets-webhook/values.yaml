@@ -17,6 +17,10 @@ service:
   externalPort: 443
   internalPort: 443
 
+env:
+  VAULT_IMAGE: vault:latest
+  VAULT_ENV_IMAGE: banzaicloud/vault-env:latest
+
 resources: {}
 
 nodeSelector: {}
