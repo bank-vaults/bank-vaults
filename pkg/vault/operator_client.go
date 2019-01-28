@@ -334,17 +334,85 @@ func (v *vault) Configure() error {
 	defer v.cl.SetToken("")
 	defer func() { rootToken = nil }()
 
+	err = v.configureAuthMethods()
+	if err != nil {
+		return fmt.Errorf("error configuring auth methods for vault: %s", err.Error())
+	}
+
+	err = v.configurePolicies()
+	if err != nil {
+		return fmt.Errorf("error configuring policies for vault: %s", err.Error())
+	}
+
+	err = v.configurePlugins()
+	if err != nil {
+		return fmt.Errorf("error configuring plugins for vault: %s", err.Error())
+	}
+
+	err = v.configureSecretEngines()
+	if err != nil {
+		return fmt.Errorf("error configuring secret engines for vault: %s", err.Error())
+	}
+
+	err = v.configureAuditDevices()
+	if err != nil {
+		return fmt.Errorf("error configuring audit devices for vault: %s", err.Error())
+	}
+
+	return err
+}
+
+func (*vault) unsealKeyForID(i int) string {
+	return fmt.Sprint("vault-unseal-", i)
+}
+
+func (*vault) rootTokenKey() string {
+	return fmt.Sprint("vault-root")
+}
+
+func (*vault) testKey() string {
+	return fmt.Sprint("vault-test")
+}
+
+func (v *vault) kubernetesAuthConfigDefault() (map[string]interface{}, error) {
+	kubernetesCACert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	if err != nil {
+		return nil, err
+	}
+	tokenReviewerJWT, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil {
+		return nil, err
+	}
+	config := map[string]interface{}{
+		"kubernetes_host":    fmt.Sprint("https://", os.Getenv("KUBERNETES_SERVICE_HOST")),
+		"kubernetes_ca_cert": string(kubernetesCACert),
+		"token_reviewer_jwt": string(tokenReviewerJWT),
+	}
+	return config, err
+}
+
+func (v *vault) kubernetesAuthConfig(path string, config map[string]interface{}) error {
+	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
+
+	if err != nil {
+		return fmt.Errorf("error putting %s kubernetes config into vault: %s", config, err.Error())
+	}
+	return nil
+}
+
+func (v *vault) configureAuthMethods() error {
+	authMethods := []map[string]interface{}{}
+	err := viper.UnmarshalKey("auth", &authMethods)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling vault auth methods config: %s", err.Error())
+	}
+
 	existingAuths, err := v.cl.Sys().ListAuth()
 
 	if err != nil {
 		return fmt.Errorf("error listing auth backends vault: %s", err.Error())
 	}
 
-	authMethods := []map[string]interface{}{}
-	err = viper.UnmarshalKey("auth", &authMethods)
-	if err != nil {
-		return fmt.Errorf("error unmarshalling vault auth methods config: %s", err.Error())
-	}
 	for _, authMethod := range authMethods {
 		authMethodType, err := cast.ToStringE(authMethod["type"])
 		if err != nil {
@@ -509,58 +577,6 @@ func (v *vault) Configure() error {
 		}
 	}
 
-	err = v.configurePolicies()
-	if err != nil {
-		return fmt.Errorf("error configuring policies for vault: %s", err.Error())
-	}
-
-	err = v.configurePlugins()
-	if err != nil {
-		return fmt.Errorf("error configuring plugins for vault: %s", err.Error())
-	}
-	err = v.configureSecretEngines()
-	if err != nil {
-		return fmt.Errorf("error configuring secret engines for vault: %s", err.Error())
-	}
-
-	return err
-}
-
-func (*vault) unsealKeyForID(i int) string {
-	return fmt.Sprint("vault-unseal-", i)
-}
-
-func (*vault) rootTokenKey() string {
-	return fmt.Sprint("vault-root")
-}
-
-func (*vault) testKey() string {
-	return fmt.Sprint("vault-test")
-}
-
-func (v *vault) kubernetesAuthConfigDefault() (map[string]interface{}, error) {
-	kubernetesCACert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
-	if err != nil {
-		return nil, err
-	}
-	tokenReviewerJWT, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
-	if err != nil {
-		return nil, err
-	}
-	config := map[string]interface{}{
-		"kubernetes_host":    fmt.Sprint("https://", os.Getenv("KUBERNETES_SERVICE_HOST")),
-		"kubernetes_ca_cert": string(kubernetesCACert),
-		"token_reviewer_jwt": string(tokenReviewerJWT),
-	}
-	return config, err
-}
-
-func (v *vault) kubernetesAuthConfig(path string, config map[string]interface{}) error {
-	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
-
-	if err != nil {
-		return fmt.Errorf("error putting %s kubernetes config into vault: %s", config, err.Error())
-	}
 	return nil
 }
 
@@ -906,6 +922,56 @@ func (v *vault) configureSecretEngines() error {
 					return fmt.Errorf("error putting %+v -> %s config into vault: %s", configData, configPath, err.Error())
 				}
 			}
+		}
+	}
+
+	return nil
+}
+
+func (v *vault) configureAuditDevices() error {
+	auditDevices := []map[string]interface{}{}
+	err := viper.UnmarshalKey("audit", &auditDevices)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling audit devices config: %s", err.Error())
+	}
+
+	for _, auditDevice := range auditDevices {
+		auditDeviceType, err := cast.ToStringE(auditDevice["type"])
+		if err != nil {
+			return fmt.Errorf("error finding type for audit device: %s", err.Error())
+		}
+
+		path := auditDeviceType
+		if pathOverwrite, ok := auditDevice["path"]; ok {
+			path, err = cast.ToStringE(pathOverwrite)
+			if err != nil {
+				return fmt.Errorf("error converting path for audit device: %s", err.Error())
+			}
+		}
+
+		mounts, err := v.cl.Sys().ListAudit()
+		if err != nil {
+			return fmt.Errorf("error reading audit mounts from vault: %s", err.Error())
+		}
+
+		logrus.Infof("Already existing audit devices: %#v\n", mounts)
+
+		if mounts[path+"/"] == nil {
+			var options api.EnableAuditOptions
+			err = mapstructure.Decode(auditDevice, &options)
+			if err != nil {
+				return fmt.Errorf("error parsing audit options: %s", err.Error())
+			}
+			logrus.Infof("Enabling audit device with options: %#v\n", options)
+			err = v.cl.Sys().EnableAuditWithOptions(path, &options)
+			if err != nil {
+				return fmt.Errorf("error enabling audit device %s in vault: %s", path, err.Error())
+			}
+
+			logrus.Infoln("mounted audit device", auditDeviceType, "to", path)
+
+		} else {
+			logrus.Infof("audit device is already mounted: %s/\n", path)
 		}
 	}
 
