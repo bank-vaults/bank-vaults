@@ -171,6 +171,20 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
+	if v.Spec.IsFluentDEnabled() {
+		cm := configMapForFluentD(v)
+
+		// Set Vault instance as the owner and controller
+		if err := controllerutil.SetControllerReference(v, cm, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		err = r.client.Create(context.TODO(), cm)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return reconcile.Result{}, fmt.Errorf("failed to create fluentd configmap: %v", err)
+		}
+	}
+
 	// Create the configmap if it doesn't exist
 	cm := configMapForStatsD(v)
 
@@ -831,6 +845,23 @@ func configMapForStatsD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	return cm
 }
 
+func configMapForFluentD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
+	ls := labelsForVault(v.Name)
+	cm := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v.Name + "-fluentd-config",
+			Namespace: v.Namespace,
+			Labels:    ls,
+		},
+		Data: map[string]string{"fluent.conf": v.Spec.FluentDConfig},
+	}
+	return cm
+}
+
 func withCredentialsEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
 	env := v.Spec.CredentialsConfig.Env
 	path := v.Spec.CredentialsConfig.Path
@@ -880,6 +911,17 @@ func withAuditLogVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 		})
+		volumes = append(volumes, corev1.Volume{
+			Name: "fluentd-config",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: v.Name + "-fluentd-config",
+					},
+				},
+			},
+		})
+
 	}
 	return volumes
 }
@@ -888,7 +930,7 @@ func withAuditLogVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.Volum
 	if v.Spec.IsFluentDEnabled() {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "vault-auditlogs",
-			MountPath: "/tmp/",
+			MountPath: "/vault/logs",
 		})
 	}
 	return volumeMounts
@@ -909,7 +951,11 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, owner string, containers []co
 			VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{
 				{
 					Name:      "vault-auditlogs",
-					MountPath: "/tmp/",
+					MountPath: "/vault/logs",
+				},
+				{
+					Name:      "fluentd-config",
+					MountPath: "/fluentd/etc",
 				},
 			})),
 		})
