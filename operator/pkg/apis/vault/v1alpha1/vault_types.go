@@ -36,6 +36,7 @@ type VaultSpec struct {
 	StatsDImage       string                 `json:"statsdImage"`
 	FluentDEnabled    bool                   `json:"fluentdEnabled"`
 	FluentDImage      string                 `json:"fluentdImage"`
+	FluentDConfig     string                 `json:"fluentdConfig"`
 	Annotations       map[string]string      `json:"annotations"`
 	Config            map[string]interface{} `json:"config"`
 	ExternalConfig    map[string]interface{} `json:"externalConfig"`
