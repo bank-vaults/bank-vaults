@@ -76,8 +76,8 @@ func main() {
 	if !isSet {
 		namespace, err = k8sutil.GetWatchNamespace()
 		if err != nil {
-			log.Error(err, "failed to get watch namespace")
-			os.Exit(1)
+			log.Info("No watched namespace found, watching the entire cluster")
+			namespace = ""
 		}
 	}
 	log.Info(fmt.Sprintf("Watched namespace: %s", namespace))
