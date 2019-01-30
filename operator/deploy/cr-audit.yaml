@@ -29,6 +29,8 @@ spec:
     <source>
       @type tail
       format json
+      keep_time_key true
+      time_format %iso8601
       path /vault/logs/vault.log
       pos_file /vault/logs/vault.log.pos
       tag s3.vault.audit
@@ -42,14 +44,28 @@ spec:
       s3_bucket bank-vaults
       s3_region eu-west-1
       path logs/
-      buffer_path /var/log/fluent/s3
 
       time_slice_format %Y%m%d%H
       time_slice_wait 10m
       utc
 
-      buffer_chunk_limit 256m
     </match>
+
+  # Pass secret to bank-vaults environment variables.
+  # kubectl create secret generic aws-access-key \
+  # --from-literal=aws-access-key-id=$AWS_ACCESS_KEY_ID \
+  # --from-literal=aws-secret-access-key=$AWS_SECRET_ACCESS_KEY
+  envsConfig:
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: aws-access-key
+          key: aws-access-key-id
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: aws-access-key
+          key: aws-secret-access-key
 
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
@@ -94,6 +110,7 @@ spec:
         description: "File based audit logging device"
         options:
           file_path: /vault/logs/vault.log
+          mode: "0640"
 
 ---
 apiVersion: v1
