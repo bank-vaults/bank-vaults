@@ -905,23 +905,24 @@ func withCredentialsVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.Vo
 
 func withAuditLogVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
 	if v.Spec.IsFluentDEnabled() {
-		volumes = append(volumes, corev1.Volume{
-			Name: "vault-auditlogs",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
+		volumes = append(volumes, []corev1.Volume{
+			{
+				Name: "vault-auditlogs",
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
 			},
-		})
-		volumes = append(volumes, corev1.Volume{
-			Name: "fluentd-config",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: v.Name + "-fluentd-config",
+			{
+				Name: "fluentd-config",
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: v.Name + "-fluentd-config",
+						},
 					},
 				},
 			},
-		})
-
+		}...)
 	}
 	return volumes
 }
@@ -942,13 +943,13 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, owner string, containers []co
 			Image:           v.Spec.GetFluentDImage(),
 			ImagePullPolicy: corev1.PullAlways,
 			Name:            "auditlog-exporter",
-			Env: withTLSEnv(v, true, withCredentialsEnv(v, []corev1.EnvVar{
+			Env: withSecretEnv(v, withCredentialsEnv(v, []corev1.EnvVar{
 				{
 					Name:  k8s.EnvK8SOwnerReference,
 					Value: owner,
 				},
 			})),
-			VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{
+			VolumeMounts: withCredentialsVolumeMount(v, []corev1.VolumeMount{
 				{
 					Name:      "vault-auditlogs",
 					MountPath: "/vault/logs",
@@ -957,7 +958,7 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, owner string, containers []co
 					Name:      "fluentd-config",
 					MountPath: "/fluentd/etc",
 				},
-			})),
+			}),
 		})
 	}
 	return containers
