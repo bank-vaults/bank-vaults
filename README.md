@@ -311,9 +311,9 @@ secrets:
   # See https://www.vaultproject.io/docs/secrets/pki/index.html for more information
   - type: pki
     description: Vault PKI Backend
-    options:
-      default_ttl: 168h
-      max_ttl: 720h
+    config:
+      default_lease_ttl: 168h
+      max_lease_ttl: 720h    
     configuration:
       config:
       - name: urls
