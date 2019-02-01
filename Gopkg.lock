@@ -647,7 +647,7 @@
   version = "v1.0.2"
 
 [[projects]]
-  digest = "1:1e71abdfde8780cf8ae3bf1473c34a12ab1033c6c39dc6babd8862af066f0af3"
+  digest = "1:b1eec60f206af78cac3610f5f534a1bfbb58d4102ae0262c387d149f784fe5f9"
   name = "github.com/operator-framework/operator-sdk"
   packages = [
     "pkg/k8sutil",
@@ -655,8 +655,8 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "15244d60ef7e328531a4f150a05b1fdabf9cc1ae"
-  version = "v0.3.0"
+  revision = "cc5fe885869c181d820557bd296f092637fa70af"
+  version = "v0.4.0"
 
 [[projects]]
   digest = "1:93b1d84c5fa6d1ea52f4114c37714cddd84d5b78f151b62bb101128dd51399bf"
@@ -1438,6 +1438,7 @@
     "google.golang.org/api/cloudkms/v1",
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
+    "k8s.io/api/extensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
@@ -1447,7 +1448,6 @@
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/intstr",
     "k8s.io/client-go/kubernetes",
-    "k8s.io/client-go/kubernetes/typed/extensions/v1beta1",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
