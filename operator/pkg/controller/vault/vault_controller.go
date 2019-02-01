@@ -33,7 +33,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1beta1 "k8s.io/api/extensions/v1beta1"
+	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -377,6 +377,9 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
 	etcdCluster.Namespace = v.Namespace
 	etcdCluster.Labels = labelsForVault(v.Name)
 	etcdCluster.Spec.Size = v.Spec.GetEtcdSize()
+	etcdCluster.Spec.Pod = &etcdV1beta2.PodPolicy{
+		PersistentVolumeClaimSpec: getEtcdPVCSpec(v),
+	}
 	etcdCluster.Spec.Version = v.Spec.GetEtcdVersion()
 	etcdCluster.Spec.TLS = &etcdV1beta2.TLSPolicy{
 		Static: &etcdV1beta2.StaticTLS{
@@ -387,7 +390,6 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
 			},
 		},
 	}
-
 	return etcdCluster, nil
 }
 
@@ -980,6 +982,13 @@ func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
 			},
 		},
 	}
+}
+
+func getEtcdPVCSpec(v *vaultv1alpha1.Vault) *corev1.PersistentVolumeClaimSpec {
+	if v.Spec.EtcdPVCSpec.Size() == 0 {
+		return nil
+	}
+	return &v.Spec.EtcdPVCSpec
 }
 
 func getNodeAffinity(v *vaultv1alpha1.Vault) *corev1.NodeAffinity {

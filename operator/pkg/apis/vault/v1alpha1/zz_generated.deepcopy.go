@@ -332,6 +332,7 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 			(*out)[key] = val
 		}
 	}
+	in.EtcdPVCSpec.DeepCopyInto(&out.EtcdPVCSpec)
 	in.NodeAffinity.DeepCopyInto(&out.NodeAffinity)
 	if in.Volumes != nil {
 		in, out := &in.Volumes, &out.Volumes

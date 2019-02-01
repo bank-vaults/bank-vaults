@@ -19,6 +19,15 @@ spec:
   # NOTE: -1 disables automatic etcd provisioning
   etcdSize: 1
 
+  # Specify the PersistentVolumeClaim Spec which will be used as a storage for etcd
+  # if it is not specified emptydir will be used
+  etcdPVCSpec:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+
   # This option allows you to annotate the ETCD Cluster that Vault Operator creates.
   # It's specifically to annotate the ETCD Cluster as 'clusterwide' for a cluster wide
   # ETCD Operator, however it can be used to set any arbitrary annotations on the ETCD Cluster.
