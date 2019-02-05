@@ -156,6 +156,12 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 					secret, err := logical.Write(fmt.Sprintf("auth/%s/login", path), data)
 					if err != nil {
 						log.Println("Failed to request new Vault token", err.Error())
+						time.Sleep(1 * time.Second)
+						continue
+					}
+					if secret == nil {
+						log.Println("Received empty answer from Vault, retrying")
+						time.Sleep(1 * time.Second)
 						continue
 					}
 
