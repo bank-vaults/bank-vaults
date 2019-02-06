@@ -339,6 +339,24 @@ plugins:
     command: ethereum-vault-plugin --ca-cert=/vault/tls/client/ca.crt --client-cert=/vault/tls/server/server.crt --client-key=/vault/tls/server/server.key
     sha256: 62fb461a8743f2a0af31d998074b58bb1a589ec1d28da3a2a5e8e5820d2c6e0a
     type: secret
+
+# Allows configuring Audit Devices in Vault (File, Syslog, Socket).
+# See https://www.vaultproject.io/docs/audit/ for more information.
+audit:
+  - type: file
+    description: "File based audit logging device"
+    options:
+      file_path: /tmp/vault.log
+
+# Allows writing some secrets to Vault (useful for development purposes).
+# See https://www.vaultproject.io/docs/secrets/kv/index.html for more information.
+startupSecrets:
+  - type: kv
+    path: secret/data/accounts/aws
+    data:
+      data:
+        AWS_ACCESS_KEY_ID: secretId
+        AWS_SECRET_ACCESS_KEY: s3cr3t
 ```
 
 ## The Go library
