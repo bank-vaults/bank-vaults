@@ -359,6 +359,11 @@ func (v *vault) Configure() error {
 		return fmt.Errorf("error configuring audit devices for vault: %s", err.Error())
 	}
 
+	err = v.configureStartupSecrets()
+	if err != nil {
+		return fmt.Errorf("TODO", err.Error())
+	}
+
 	return err
 }
 
@@ -975,6 +980,39 @@ func (v *vault) configureAuditDevices() error {
 		}
 	}
 
+	return nil
+}
+
+func (v *vault) configureStartupSecrets() error {
+	startupSecrets := make([]map[string]interface{},0)
+	err := viper.UnmarshalKey("startupSecrets", &startupSecrets)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling vault startupSecrets: %s", err.Error())
+	}
+	for _, startupSecret := range startupSecrets {
+		startupSecretType, err := cast.ToStringE(startupSecret["type"])
+		if err != nil {
+			return fmt.Errorf("error finding type for startup secret: %s", err.Error())
+		}
+
+		switch startupSecretType {
+		case "kv":
+			path, err := cast.ToStringE(startupSecret["path"])
+			if err != nil {
+				return fmt.Errorf("error findind path for startup secret: %s", err.Error())
+			}
+
+			data, err := getOrDefaultStringMap(startupSecret, "data")
+			if err != nil {
+				return fmt.Errorf("error getting data for startup secret: %s", err.Error())
+			}
+			v.keyStore.Set()
+
+		default:
+			return errors.New("other startup secret type than 'kv' is not supported yet")
+		}
+
+	}
 	return nil
 }
 
