@@ -16,6 +16,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -28,6 +29,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/consts"
+	jsonIter "github.com/json-iterator/go"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
@@ -361,7 +363,7 @@ func (v *vault) Configure() error {
 
 	err = v.configureStartupSecrets()
 	if err != nil {
-		return fmt.Errorf("TODO", err.Error())
+		return fmt.Errorf("error writing startup secrets tor vault: %s", err.Error())
 	}
 
 	return err
@@ -984,10 +986,10 @@ func (v *vault) configureAuditDevices() error {
 }
 
 func (v *vault) configureStartupSecrets() error {
-	startupSecrets := make([]map[string]interface{},0)
-	err := viper.UnmarshalKey("startupSecrets", &startupSecrets)
+	raw := viper.Get("startupSecrets")
+	startupSecrets, err := toSliceStringMapE(raw)
 	if err != nil {
-		return fmt.Errorf("error unmarshalling vault startupSecrets: %s", err.Error())
+		return fmt.Errorf("error decoding data for startup secrets: %s", err.Error())
 	}
 	for _, startupSecret := range startupSecrets {
 		startupSecretType, err := cast.ToStringE(startupSecret["type"])
@@ -1004,16 +1006,29 @@ func (v *vault) configureStartupSecrets() error {
 
 			data, err := getOrDefaultStringMap(startupSecret, "data")
 			if err != nil {
-				return fmt.Errorf("error getting data for startup secret: %s", err.Error())
+				return fmt.Errorf("error getting data for startup secret '%s': %s", path, err.Error())
 			}
-			v.keyStore.Set()
+
+			_, err = v.cl.Logical().Write(path, data)
+			if err != nil {
+				return fmt.Errorf("error writing data for startup secret '%s': %s", path, err.Error())
+			}
 
 		default:
 			return errors.New("other startup secret type than 'kv' is not supported yet")
 		}
-
 	}
 	return nil
+}
+
+// toSliceStringMapE casts []map[string]interface{} preserving nested types
+func toSliceStringMapE(o interface{}) ([]map[string]interface{}, error) {
+	data, err := jsonIter.Marshal(o)
+	if err != nil {
+		return nil, err
+	}
+	var sm []map[string]interface{}
+	return sm, json.Unmarshal(data, &sm)
 }
 
 func getOrDefaultBool(m map[string]interface{}, key string) (bool, error) {
