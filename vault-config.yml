@@ -194,9 +194,12 @@ audit:
     options:
       file_path: /tmp/vault.log
 
+# Allows writing some secrets to Vault (useful for development purposes).
+# See https://www.vaultproject.io/docs/secrets/kv/index.html for more information.
 startupSecrets:
   - type: kv
-    path: k/sasd/secrets/aws_account
+    path: secret/data/accounts/aws
     data:
-      - my-data: s3cr3t
-      - not-my-data: secret
+      data:
+        AWS_ACCESS_KEY_ID: secretId
+        AWS_SECRET_ACCESS_KEY: s3cr3t
