@@ -193,3 +193,10 @@ audit:
     description: "File based audit logging device"
     options:
       file_path: /tmp/vault.log
+
+startupSecrets:
+  - type: kv
+    path: k/sasd/secrets/aws_account
+    data:
+      - my-data: s3cr3t
+      - not-my-data: secret
