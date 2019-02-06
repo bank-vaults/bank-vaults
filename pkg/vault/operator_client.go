@@ -16,7 +16,6 @@ package vault
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -29,7 +28,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/consts"
-	jsonIter "github.com/json-iterator/go"
+	json "github.com/json-iterator/go"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
@@ -1023,7 +1022,7 @@ func (v *vault) configureStartupSecrets() error {
 
 // toSliceStringMapE casts []map[string]interface{} preserving nested types
 func toSliceStringMapE(o interface{}) ([]map[string]interface{}, error) {
-	data, err := jsonIter.Marshal(o)
+	data, err := json.Marshal(o)
 	if err != nil {
 		return nil, err
 	}
