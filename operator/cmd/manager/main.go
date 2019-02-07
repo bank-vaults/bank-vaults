@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/banzaicloud/bank-vaults/operator/pkg/apis"
 	"github.com/banzaicloud/bank-vaults/operator/pkg/controller"
@@ -59,6 +60,9 @@ func handleLiveness() {
 }
 
 func main() {
+
+	syncPeriod := flag.Duration("sync_period", 1*time.Minute, "SyncPeriod determines the minimum frequency at which watched resources are reconciled")
+
 	flag.Parse()
 
 	// The logger instantiated here can be changed to any logger
@@ -97,7 +101,10 @@ func main() {
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(cfg, manager.Options{Namespace: namespace})
+	mgr, err := manager.New(cfg, manager.Options{
+		Namespace:  namespace,
+		SyncPeriod: syncPeriod,
+	})
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
