@@ -30,6 +30,8 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
             - vault-operator
+            - -sync_period
+            - {{ .Values.syncPeriod }}
           env:
             - name: WATCH_NAMESPACE
               value: {{ .Values.watchNamespace }}

@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   repository: banzaicloud/vault-operator
-  tag: 0.4.7
+  tag: 0.4.8
   pullPolicy: IfNotPresent
 
 service:
@@ -22,6 +22,7 @@ crdAnnotations: {}
 # The namespace where the operator watches for vault CRD objects, if not defined
 # all namespaces are watched
 watchNamespace: ""
+syncPeriod: "1m"
 
 resources:
   limits:
