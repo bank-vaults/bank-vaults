@@ -38,8 +38,16 @@ import (
 // DefaultConfigFile is the name of the default config file
 const DefaultConfigFile = "vault-config.yml"
 
-// Secret engine config no need name
-var secretEngineConfigNoNeedName = map[string]bool{"ad": true, "alicloud": true, "azure": true, "gcp": true, "gcpkms": true, "kv": true}
+// secretEngineConfigNoNeedName holds the secret engine types where
+// the name shouldn't be part of the config path
+var secretEngineConfigNoNeedName = map[string]bool{
+	"ad":       true,
+	"alicloud": true,
+	"azure":    true,
+	"gcp":      true,
+	"gcpkms":   true,
+	"kv":       true,
+}
 
 // Config holds the configuration of the Vault initialization
 type Config struct {
