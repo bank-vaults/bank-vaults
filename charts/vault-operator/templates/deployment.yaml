@@ -37,6 +37,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: {{ include "vault-operator.name" . }}
+            - name: OPERATOR_LOG_LEVEL
+              value: debug
           ports:
           - containerPort: {{ .Values.service.internalPort }}
           livenessProbe:
@@ -58,5 +62,5 @@ spec:
 {{ toYaml .Values.resources | indent 12 }}
       affinity:
 {{ toYaml .Values.affinity | indent 8 }}
-      serviceAccount: {{ include "vault-operator.fullname" . }}
+      serviceAccountName: {{ include "vault-operator.fullname" . }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
