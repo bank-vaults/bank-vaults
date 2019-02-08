@@ -93,12 +93,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Start the liveness probe handler
+	go handleLiveness()
+
 	// Become the leader before proceeding
 	err = leader.Become(context.TODO(), "vault-operator-lock")
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
+
+	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		log.V(2).Info("ready")
+	})
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, manager.Options{
@@ -125,9 +132,6 @@ func main() {
 	}
 
 	log.Info("Starting the Cmd.")
-
-	// Start the health probe
-	go handleLiveness()
 
 	// Start the Cmd
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {

@@ -18,6 +18,8 @@ metadata:
   name: vault-operator
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       name: vault-operator
@@ -32,13 +34,20 @@ spec:
           image: banzaicloud/vault-operator:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 60000
+            - containerPort: 9091
               name: metrics
           command:
             - vault-operator
-          readinessProbe:
+          livenessProbe:
             httpGet:
               path: /
+              port: 8080
+            initialDelaySeconds: 4
+            periodSeconds: 10
+            failureThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /ready
               port: 8080
             initialDelaySeconds: 4
             periodSeconds: 10
