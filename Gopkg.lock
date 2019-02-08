@@ -647,7 +647,7 @@
   version = "v1.0.2"
 
 [[projects]]
-  digest = "1:b1eec60f206af78cac3610f5f534a1bfbb58d4102ae0262c387d149f784fe5f9"
+  digest = "1:a13f40e543f4386ce5a09b32ca3472514d298d583b9c7250ab39aff8fd5115e8"
   name = "github.com/operator-framework/operator-sdk"
   packages = [
     "pkg/k8sutil",
@@ -655,8 +655,8 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "cc5fe885869c181d820557bd296f092637fa70af"
-  version = "v0.4.0"
+  revision = "8e3c20e730c364f75ddc454acec79e981bb819dd"
+  version = "v0.4.1"
 
 [[projects]]
   digest = "1:93b1d84c5fa6d1ea52f4114c37714cddd84d5b78f151b62bb101128dd51399bf"
@@ -1419,6 +1419,7 @@
     "github.com/gin-gonic/gin",
     "github.com/hashicorp/vault/api",
     "github.com/hashicorp/vault/helper/consts",
+    "github.com/json-iterator/go",
     "github.com/mitchellh/mapstructure",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/leader",
