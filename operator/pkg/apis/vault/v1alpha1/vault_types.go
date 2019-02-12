@@ -47,20 +47,20 @@ type VaultSpec struct {
 	// This option gives us the option to workaround current StatefulSet limitations around updates
 	// See: https://github.com/kubernetes/kubernetes/issues/67250
 	// TODO: Should be removed once the ParallelPodManagement policy supports the broken update.
-	SupportUpgrade  *bool                        `json:"supportUpgrade"`
-	EtcdVersion     string                       `json:"etcdVersion"`
-	EtcdSize        int                          `json:"etcdSize"`
-	EtcdAnnotations map[string]string            `json:"etcdAnnotations,omitempty"`
-	EtcdPVCSpec     v1.PersistentVolumeClaimSpec `json:"etcdPVCSpec"`
-	ServiceType     string                       `json:"serviceType"`
-	PodAntiAffinity string                       `json:"podAntiAffinity"`
-	NodeAffinity    v1.NodeAffinity              `json:"nodeAffinity"`
-	ServiceAccount  string                       `json:"serviceAccount"`
-	Volumes         []v1.Volume                  `json:"volumes,omitempty"`
-	VolumeMounts    []v1.VolumeMount             `json:"volumeMounts,omitempty"`
-	VaultEnvsConfig []v1.EnvVar                  `json:"vaultEnvsConfig"`
-	Resources       *Resources                   `json:"resources,omitempty"`
-	Ingress         *Ingress                     `json:"ingress,omitempty"`
+	SupportUpgrade  *bool                         `json:"supportUpgrade"`
+	EtcdVersion     string                        `json:"etcdVersion"`
+	EtcdSize        int                           `json:"etcdSize"`
+	EtcdAnnotations map[string]string             `json:"etcdAnnotations,omitempty"`
+	EtcdPVCSpec     *v1.PersistentVolumeClaimSpec `json:"etcdPVCSpec,omitempty"`
+	ServiceType     string                        `json:"serviceType"`
+	PodAntiAffinity string                        `json:"podAntiAffinity"`
+	NodeAffinity    v1.NodeAffinity               `json:"nodeAffinity"`
+	ServiceAccount  string                        `json:"serviceAccount"`
+	Volumes         []v1.Volume                   `json:"volumes,omitempty"`
+	VolumeMounts    []v1.VolumeMount              `json:"volumeMounts,omitempty"`
+	VaultEnvsConfig []v1.EnvVar                   `json:"vaultEnvsConfig"`
+	Resources       *Resources                    `json:"resources,omitempty"`
+	Ingress         *Ingress                      `json:"ingress,omitempty"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
