@@ -378,7 +378,7 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
 	etcdCluster.Labels = labelsForVault(v.Name)
 	etcdCluster.Spec.Size = v.Spec.GetEtcdSize()
 	etcdCluster.Spec.Pod = &etcdV1beta2.PodPolicy{
-		PersistentVolumeClaimSpec: getEtcdPVCSpec(v),
+		PersistentVolumeClaimSpec: v.Spec.EtcdPVCSpec,
 	}
 	etcdCluster.Spec.Version = v.Spec.GetEtcdVersion()
 	etcdCluster.Spec.TLS = &etcdV1beta2.TLSPolicy{
@@ -982,13 +982,6 @@ func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
 			},
 		},
 	}
-}
-
-func getEtcdPVCSpec(v *vaultv1alpha1.Vault) *corev1.PersistentVolumeClaimSpec {
-	if v.Spec.EtcdPVCSpec.Size() == 0 {
-		return nil
-	}
-	return &v.Spec.EtcdPVCSpec
 }
 
 func getNodeAffinity(v *vaultv1alpha1.Vault) *corev1.NodeAffinity {
