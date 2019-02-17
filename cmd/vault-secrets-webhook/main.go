@@ -185,7 +185,7 @@ func getConfigMapForVaultAgent(obj metav1.Object, vaultConfig vaultConfig) *core
 	}
 }
 
-func getDataFromConfigmap(cmName string, obj metav1.Object) (map[string]string, error) {
+func getDataFromConfigmap(cmName string, ns string) (map[string]string, error) {
 	kubeConfig, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
@@ -195,14 +195,31 @@ func getDataFromConfigmap(cmName string, obj metav1.Object) (map[string]string, 
 	if err != nil {
 		return nil, err
 	}
-	configMap, err := clientset.CoreV1().ConfigMaps(obj.GetNamespace()).Get(cmName, metav1.GetOptions{})
+	configMap, err := clientset.CoreV1().ConfigMaps(ns).Get(cmName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 	return configMap.Data, nil
 }
 
-func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, obj metav1.Object) bool {
+func getDataFromSecret(secretName string, ns string) (map[string][]byte, error) {
+	kubeConfig, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	clientset, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		return nil, err
+	}
+	secret, err := clientset.CoreV1().Secrets(ns).Get(secretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return secret.Data, nil
+}
+
+func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns string) bool {
 	mutated := false
 	for i, container := range containers {
 		var envVars []corev1.EnvVar
@@ -211,16 +228,32 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ob
 				envVars = append(envVars, env)
 			}
 			if env.ValueFrom != nil {
-				data, err := getDataFromConfigmap(env.ValueFrom.ConfigMapKeyRef.Name, obj)
-				if err != nil {
-					continue
-				}
-				if strings.HasPrefix(data[env.ValueFrom.ConfigMapKeyRef.Key], "vault:") {
-					fromCM := corev1.EnvVar{
-						Name:  env.Name,
-						Value: data[env.ValueFrom.ConfigMapKeyRef.Key],
+				if env.ValueFrom.ConfigMapKeyRef != nil {
+					data, err := getDataFromConfigmap(env.ValueFrom.ConfigMapKeyRef.Name, ns)
+					if err != nil {
+						continue
 					}
-					envVars = append(envVars, fromCM)
+					if strings.HasPrefix(data[env.ValueFrom.ConfigMapKeyRef.Key], "vault:") {
+						fromCM := corev1.EnvVar{
+							Name:  env.Name,
+							Value: data[env.ValueFrom.ConfigMapKeyRef.Key],
+						}
+						envVars = append(envVars, fromCM)
+					}
+				}
+				if env.ValueFrom.SecretKeyRef != nil {
+					data, err := getDataFromSecret(env.ValueFrom.SecretKeyRef.Name, ns)
+					if err != nil {
+						continue
+					}
+					fmt.Println(string(data[env.ValueFrom.SecretKeyRef.Key]))
+					if strings.HasPrefix(string(data[env.ValueFrom.SecretKeyRef.Key]), "vault:") {
+						fromSecret := corev1.EnvVar{
+							Name:  env.Name,
+							Value: string(data[env.ValueFrom.SecretKeyRef.Key]),
+						}
+						envVars = append(envVars, fromSecret)
+					}
 				}
 			}
 		}
@@ -286,8 +319,8 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		return err
 	}
 
-	initContainersMutated := mutateContainers(podSpec.InitContainers, vaultConfig, obj)
-	containersMutated := mutateContainers(podSpec.Containers, vaultConfig, obj)
+	initContainersMutated := mutateContainers(podSpec.InitContainers, vaultConfig, obj.GetNamespace())
+	containersMutated := mutateContainers(podSpec.Containers, vaultConfig, obj.GetNamespace())
 
 	if initContainersMutated || containersMutated {
 
