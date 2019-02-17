@@ -223,6 +223,38 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 	mutated := false
 	for i, container := range containers {
 		var envVars []corev1.EnvVar
+		for _, envFrom := range container.EnvFrom {
+			if envFrom.ConfigMapRef != nil {
+				data, err := getDataFromConfigmap(envFrom.ConfigMapRef.Name, ns)
+				if err != nil {
+					continue
+				}
+				for key, value := range data {
+					if strings.HasPrefix(value, "vault:") {
+						envFromCM := corev1.EnvVar{
+							Name:  key,
+							Value: value,
+						}
+						envVars = append(envVars, envFromCM)
+					}
+				}
+			}
+			if envFrom.SecretRef != nil {
+				data, err := getDataFromSecret(envFrom.SecretRef.Name, ns)
+				if err != nil {
+					continue
+				}
+				for key, value := range data {
+					if strings.HasPrefix(string(value), "vault:") {
+						envFromSec := corev1.EnvVar{
+							Name:  key,
+							Value: string(value),
+						}
+						envVars = append(envVars, envFromSec)
+					}
+				}
+			}
+		}
 		for _, env := range container.Env {
 			if strings.HasPrefix(env.Value, "vault:") {
 				envVars = append(envVars, env)
