@@ -187,16 +187,10 @@ func getConfigMapForVaultAgent(obj metav1.Object, vaultConfig vaultConfig) *core
 }
 
 func getDataFromConfigmap(cmName string, ns string) (map[string]string, error) {
-	kubeConfig, err := rest.InClusterConfig()
+	clientset, err := newClientSet()
 	if err != nil {
 		return nil, err
 	}
-
-	clientset, err := kubernetes.NewForConfig(kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	configMap, err := clientset.CoreV1().ConfigMaps(ns).Get(cmName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -205,12 +199,7 @@ func getDataFromConfigmap(cmName string, ns string) (map[string]string, error) {
 }
 
 func getDataFromSecret(secretName string, ns string) (map[string][]byte, error) {
-	kubeConfig, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	clientset, err := kubernetes.NewForConfig(kubeConfig)
+	clientset, err := newClientSet()
 	if err != nil {
 		return nil, err
 	}
@@ -360,15 +349,22 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 
 	return mutated
 }
-
-func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vaultConfig, ns string) error {
-
+func newClientSet() (*kubernetes.Clientset, error) {
 	kubeConfig, err := rest.InClusterConfig()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	clientset, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		return nil, err
+	}
+	return clientset, nil
+}
+
+func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vaultConfig, ns string) error {
+
+	clientset, err := newClientSet()
 	if err != nil {
 		return err
 	}
