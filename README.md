@@ -438,6 +438,49 @@ The mutating admission webhook injects an executable to containers (in a very no
         env:
         - name: AWS_SECRET_ACCESS_KEY
           value: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
+# or
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-key-secret
+              key: AWS_SECRET_ACCESS_KEY
+#or
+        - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: aws-key-configmap
+                key: AWS_SECRET_ACCESS_KEY
+```
+
+The webhook checks if a container has envFrom and parse defined configmaps and secrets:
+
+```yaml
+        envFrom:
+          - secretRef:
+              name: aws-key-secret
+# or
+          - configMapRef:
+              name: aws-key-configmap
+```
+
+Secret and ConfigMap examples:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aws-key-secret
+data:
+  AWS_SECRET_ACCESS_KEY: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
+type: Opaque
+```
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aws-key-configmap
+data:
+  AWS_SECRET_ACCESS_KEY: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
 ```
 
 In this case the a init-container will be injected to the given Pod which copies a small binary, called `vault-env` into an in-memory volume and mounts that Volume to all the containers which have an environment variable definition like that. It also changes the `command` of the container to run `vault-env` instead of your application directly. `vault-env` starts up, connects to Vault with (currently with the [Kubernetes Auth method](https://www.vaultproject.io/docs/auth/kubernetes.html) checks the environment variables, and that has a reference to a value stored in Vault (`vault:secret/....`) will be replaced with that value read from the Secret backend, after this `vault-env` immediately executes (with `syscall.Exec()`) your process with the given arguments, replacing itself with that process.
