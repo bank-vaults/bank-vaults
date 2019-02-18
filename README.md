@@ -444,7 +444,7 @@ The mutating admission webhook injects an executable to containers (in a very no
             secretKeyRef:
               name: aws-key-secret
               key: AWS_SECRET_ACCESS_KEY
-#or
+# or
         - name: AWS_SECRET_ACCESS_KEY
             valueFrom:
               configMapKeyRef:
