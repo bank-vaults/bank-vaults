@@ -210,7 +210,7 @@ func getDataFromSecret(secretName string, ns string) (map[string][]byte, error) 
 	return secret.Data, nil
 }
 
-func lookingForEnvFrom(envFrom []corev1.EnvFromSource, ns string) []corev1.EnvVar {
+func lookForEnvFrom(envFrom []corev1.EnvFromSource, ns string) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 
 	for _, ef := range envFrom {
@@ -248,7 +248,7 @@ func lookingForEnvFrom(envFrom []corev1.EnvFromSource, ns string) []corev1.EnvVa
 	return envVars
 }
 
-func lookingForValueFrom(env corev1.EnvVar, ns string) (corev1.EnvVar, error) {
+func lookForValueFrom(env corev1.EnvVar, ns string) (corev1.EnvVar, error) {
 	if env.ValueFrom.ConfigMapKeyRef != nil {
 		data, err := getDataFromConfigmap(env.ValueFrom.ConfigMapKeyRef.Name, ns)
 		if err != nil {
@@ -284,7 +284,7 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 	for i, container := range containers {
 		var envVars []corev1.EnvVar
 		if len(container.EnvFrom) > 0 {
-			envFrom := lookingForEnvFrom(container.EnvFrom, ns)
+			envFrom := lookForEnvFrom(container.EnvFrom, ns)
 			envVars = append(envVars, envFrom...)
 		}
 
@@ -293,7 +293,7 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 				envVars = append(envVars, env)
 			}
 			if env.ValueFrom != nil {
-				valueFrom, err := lookingForValueFrom(env, ns)
+				valueFrom, err := lookForValueFrom(env, ns)
 				if err != nil {
 					continue
 				}
