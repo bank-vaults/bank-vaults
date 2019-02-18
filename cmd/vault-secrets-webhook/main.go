@@ -24,6 +24,7 @@ import (
 
 	whhttp "github.com/slok/kubewebhook/pkg/http"
 	"github.com/slok/kubewebhook/pkg/log"
+	whcontext "github.com/slok/kubewebhook/pkg/webhook/context"
 	"github.com/slok/kubewebhook/pkg/webhook/mutating"
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
@@ -136,7 +137,7 @@ func getVolumes(name string, vaultConfig vaultConfig) []corev1.Volume {
 	return volumes
 }
 
-func vaultSecretsMutator(_ context.Context, obj metav1.Object) (bool, error) {
+func vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
 	var podSpec *corev1.PodSpec
 
 	switch v := obj.(type) {
@@ -148,7 +149,7 @@ func vaultSecretsMutator(_ context.Context, obj metav1.Object) (bool, error) {
 
 	vaultConfig := parseVaultConfig(obj)
 
-	return false, mutatePodSpec(obj, podSpec, vaultConfig)
+	return false, mutatePodSpec(obj, podSpec, vaultConfig, whcontext.GetAdmissionRequest(ctx).Namespace)
 }
 
 func parseVaultConfig(obj metav1.Object) vaultConfig {
@@ -185,13 +186,118 @@ func getConfigMapForVaultAgent(obj metav1.Object, vaultConfig vaultConfig) *core
 	}
 }
 
-func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig) bool {
+func getDataFromConfigmap(cmName string, ns string) (map[string]string, error) {
+	clientset, err := newClientSet()
+	if err != nil {
+		return nil, err
+	}
+	configMap, err := clientset.CoreV1().ConfigMaps(ns).Get(cmName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return configMap.Data, nil
+}
+
+func getDataFromSecret(secretName string, ns string) (map[string][]byte, error) {
+	clientset, err := newClientSet()
+	if err != nil {
+		return nil, err
+	}
+	secret, err := clientset.CoreV1().Secrets(ns).Get(secretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return secret.Data, nil
+}
+
+func lookForEnvFrom(envFrom []corev1.EnvFromSource, ns string) []corev1.EnvVar {
+	var envVars []corev1.EnvVar
+
+	for _, ef := range envFrom {
+		if ef.ConfigMapRef != nil {
+			data, err := getDataFromConfigmap(ef.ConfigMapRef.Name, ns)
+			if err != nil {
+				continue
+			}
+			for key, value := range data {
+				if strings.HasPrefix(value, "vault:") {
+					envFromCM := corev1.EnvVar{
+						Name:  key,
+						Value: value,
+					}
+					envVars = append(envVars, envFromCM)
+				}
+			}
+		}
+		if ef.SecretRef != nil {
+			data, err := getDataFromSecret(ef.SecretRef.Name, ns)
+			if err != nil {
+				continue
+			}
+			for key, value := range data {
+				if strings.HasPrefix(string(value), "vault:") {
+					envFromSec := corev1.EnvVar{
+						Name:  key,
+						Value: string(value),
+					}
+					envVars = append(envVars, envFromSec)
+				}
+			}
+		}
+	}
+	return envVars
+}
+
+func lookForValueFrom(env corev1.EnvVar, ns string) (corev1.EnvVar, error) {
+	if env.ValueFrom.ConfigMapKeyRef != nil {
+		data, err := getDataFromConfigmap(env.ValueFrom.ConfigMapKeyRef.Name, ns)
+		if err != nil {
+			return corev1.EnvVar{}, err
+		}
+		if strings.HasPrefix(data[env.ValueFrom.ConfigMapKeyRef.Key], "vault:") {
+			fromCM := corev1.EnvVar{
+				Name:  env.Name,
+				Value: data[env.ValueFrom.ConfigMapKeyRef.Key],
+			}
+			return fromCM, nil
+		}
+	}
+	if env.ValueFrom.SecretKeyRef != nil {
+		data, err := getDataFromSecret(env.ValueFrom.SecretKeyRef.Name, ns)
+		if err != nil {
+			return corev1.EnvVar{}, err
+		}
+		fmt.Println(string(data[env.ValueFrom.SecretKeyRef.Key]))
+		if strings.HasPrefix(string(data[env.ValueFrom.SecretKeyRef.Key]), "vault:") {
+			fromSecret := corev1.EnvVar{
+				Name:  env.Name,
+				Value: string(data[env.ValueFrom.SecretKeyRef.Key]),
+			}
+			return fromSecret, nil
+		}
+	}
+	return corev1.EnvVar{}, nil
+}
+
+func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns string) bool {
 	mutated := false
 	for i, container := range containers {
 		var envVars []corev1.EnvVar
+		if len(container.EnvFrom) > 0 {
+			envFrom := lookForEnvFrom(container.EnvFrom, ns)
+			envVars = append(envVars, envFrom...)
+		}
+
 		for _, env := range container.Env {
 			if strings.HasPrefix(env.Value, "vault:") {
 				envVars = append(envVars, env)
+			}
+			if env.ValueFrom != nil {
+				valueFrom, err := lookForValueFrom(env, ns)
+				if err != nil {
+					continue
+				}
+				envVars = append(envVars, valueFrom)
 			}
 		}
 		if len(envVars) == 0 {
@@ -243,21 +349,28 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig) bo
 
 	return mutated
 }
-
-func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vaultConfig) error {
-
+func newClientSet() (*kubernetes.Clientset, error) {
 	kubeConfig, err := rest.InClusterConfig()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	clientset, err := kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
+		return nil, err
+	}
+	return clientset, nil
+}
+
+func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vaultConfig, ns string) error {
+
+	clientset, err := newClientSet()
+	if err != nil {
 		return err
 	}
 
-	initContainersMutated := mutateContainers(podSpec.InitContainers, vaultConfig)
-	containersMutated := mutateContainers(podSpec.Containers, vaultConfig)
+	initContainersMutated := mutateContainers(podSpec.InitContainers, vaultConfig, ns)
+	containersMutated := mutateContainers(podSpec.Containers, vaultConfig, ns)
 
 	if initContainersMutated || containersMutated {
 

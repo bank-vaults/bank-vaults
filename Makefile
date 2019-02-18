@@ -6,6 +6,7 @@ OS = $(shell uname)
 PACKAGE = github.com/banzaicloud/bank-vaults
 BINARY_NAME ?= bank-vaults
 DOCKER_IMAGE = banzaicloud/bank-vaults
+WEBHOOK_DOCKER_IMAGE = banzaicloud/vault-secrets-webhook
 OPERATOR_DOCKER_IMAGE = banzaicloud/vault-operator
 
 # Build variables
@@ -61,6 +62,13 @@ docker: ## Build a Docker image
 	docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile .
 ifeq (${DOCKER_LATEST}, 1)
 	docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
+endif
+
+.PHONY: docker-webhook
+docker-webhook: ## Build a Docker-webhook image
+	docker build -t ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.webhook .
+ifeq (${DOCKER_LATEST}, 1)
+	docker tag ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} ${WEBHOOK_DOCKER_IMAGE}:latest
 endif
 
 .PHONY: docker-push
