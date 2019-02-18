@@ -108,7 +108,6 @@ auth:
   # See https://www.vaultproject.io/docs/auth/jwt.html
   - type: jwt
     path: jwt
-    description: JWT Testing 
     config:
       oidc_discovery_url: https://myco.auth0.com/
     roles:
