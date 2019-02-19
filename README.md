@@ -104,6 +104,21 @@ auth:
         policies: allow_secrets
         ttl: 1h
 
+  # Allows creating roles in Vault which can be used later on for JWT based authentication
+  # See https://www.vaultproject.io/docs/auth/jwt.html
+  - type: jwt
+    path: jwt
+    config:
+      oidc_discovery_url: https://myco.auth0.com/
+    roles:
+    - name: role1
+      bound_audiences:                                                                                                                                                                                                                        
+        - https://vault.plugin.auth.jwt.test
+      user_claim: https://vault/user
+      groups_claim: https://vault/groups
+      policies: allow_secrets
+      ttl: 1h
+
   # Allows creating team mappings in Vault which can be used later on for the GitHub
   # based authentication.
   # See https://www.vaultproject.io/docs/auth/github.html#configuration for

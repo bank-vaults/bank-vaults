@@ -588,6 +588,23 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error configuring approle auth for vault: %s", err.Error())
 			}
+		case "jwt":
+			config, err := cast.ToStringMapE(authMethod["config"])
+			if err != nil {
+				return fmt.Errorf("error finding config block for jwt: %s", err.Error())
+			}
+			err = v.configureJwtConfig(path, config)
+			if err != nil {
+				return fmt.Errorf("error configuring jwt auth on path %s for vault: %s", path, err.Error())
+			}
+			roles, err := cast.ToSliceE(authMethod["roles"])
+			if err != nil {
+				return fmt.Errorf("error finding roles block for jwt: %s", err.Error())
+			}
+			err = v.configureJwtRoles(path, roles)
+			if err != nil {
+				return fmt.Errorf("error configuring jwt roles on path %s for vault: %s", path, err.Error())
+			}
 		}
 	}
 
@@ -704,6 +721,16 @@ func (v *vault) configureGcpConfig(config map[string]interface{}) error {
 	return nil
 }
 
+func (v *vault) configureJwtConfig(path string, config map[string]interface{}) error {
+	// https://www.vaultproject.io/api/auth/jwt/index.html
+	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
+
+	if err != nil {
+		return fmt.Errorf("error putting %s jwt config into vault: %s", config, err.Error())
+	}
+	return nil
+}
+
 func (v *vault) configureGcpRoles(roles []interface{}) error {
 	for _, roleInterface := range roles {
 		role, err := cast.ToStringMapE(roleInterface)
@@ -714,6 +741,21 @@ func (v *vault) configureGcpRoles(roles []interface{}) error {
 
 		if err != nil {
 			return fmt.Errorf("error putting %s gcp role into vault: %s", role["name"], err.Error())
+		}
+	}
+	return nil
+}
+
+func (v *vault) configureJwtRoles(path string, roles []interface{}) error {
+	for _, roleInterface := range roles {
+		role, err := cast.ToStringMapE(roleInterface)
+		if err != nil {
+			return fmt.Errorf("error converting roles for jwt: %s", err.Error())
+		}
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
+
+		if err != nil {
+			return fmt.Errorf("error putting %s jwt role into vault: %s", role["name"], err.Error())
 		}
 	}
 	return nil
