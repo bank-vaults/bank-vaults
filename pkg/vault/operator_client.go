@@ -497,7 +497,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding config block for github: %s", err.Error())
 			}
-			err = v.configureGithubConfig(config)
+			err = v.configureGithubConfig(path, config)
 			if err != nil {
 				return fmt.Errorf("error configuring github auth for vault: %s", err.Error())
 			}
@@ -505,7 +505,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding map block for github: %s", err.Error())
 			}
-			err = v.configureGithubMappings(mappings)
+			err = v.configureGithubMappings(path, mappings)
 			if err != nil {
 				return fmt.Errorf("error configuring github mappings for vault: %s", err.Error())
 			}
@@ -648,9 +648,9 @@ func (v *vault) configureKubernetesRoles(path string, roles []interface{}) error
 	return nil
 }
 
-func (v *vault) configureGithubConfig(config map[string]interface{}) error {
+func (v *vault) configureGithubConfig(path string, config map[string]interface{}) error {
 	// https://www.vaultproject.io/api/auth/github/index.html
-	_, err := v.cl.Logical().Write("auth/github/config", config)
+	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
 
 	if err != nil {
 		return fmt.Errorf("error putting %s github config into vault: %s", config, err.Error())
@@ -658,14 +658,14 @@ func (v *vault) configureGithubConfig(config map[string]interface{}) error {
 	return nil
 }
 
-func (v *vault) configureGithubMappings(mappings map[string]interface{}) error {
+func (v *vault) configureGithubMappings(path string, mappings map[string]interface{}) error {
 	for mappingType, mapping := range mappings {
 		mapping, err := cast.ToStringMapStringE(mapping)
 		if err != nil {
 			return fmt.Errorf("error converting mapping for github: %s", err.Error())
 		}
 		for userOrTeam, policy := range mapping {
-			_, err := v.cl.Logical().Write(fmt.Sprintf("auth/github/map/%s/%s", mappingType, userOrTeam), map[string]interface{}{"value": policy})
+			_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/map/%s/%s", path, mappingType, userOrTeam), map[string]interface{}{"value": policy})
 			if err != nil {
 				return fmt.Errorf("error putting %s github mapping into vault: %s", mappingType, err.Error())
 			}
