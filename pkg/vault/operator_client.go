@@ -471,15 +471,18 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding config block for kubernetes: %s", err.Error())
 			}
-			defaultConfig, err := v.kubernetesAuthConfigDefault()
-			if err != nil {
-				return fmt.Errorf("error getting default kubernetes auth config for vault: %s", err.Error())
+			// If kubernetes_host is defined we are probably out of cluster, so don't read the default config
+			if _, ok := config["kubernetes_host"]; !ok {
+				defaultConfig, err := v.kubernetesAuthConfigDefault()
+				if err != nil {
+					return fmt.Errorf("error getting default kubernetes auth config for vault: %s", err.Error())
+				}
+				// merge the config blocks
+				for k, v := range config {
+					defaultConfig[k] = v
+				}
+				config = defaultConfig
 			}
-			// merge the config blocks
-			for k, v := range config {
-				defaultConfig[k] = v
-			}
-			config = defaultConfig
 			err = v.kubernetesAuthConfig(path, config)
 			if err != nil {
 				return fmt.Errorf("error configuring kubernetes auth for vault: %s", err.Error())
