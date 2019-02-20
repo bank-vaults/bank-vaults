@@ -16,7 +16,6 @@ package main
 
 import (
 	"bytes"
-	"path"
 	"path/filepath"
 	"text/template"
 	"time"
@@ -43,7 +42,7 @@ var configureCmd = &cobra.Command{
 		appConfig.BindPFlag(cfgVaultConfigFile, cmd.PersistentFlags().Lookup(cfgVaultConfigFile))
 
 		unsealConfig.unsealPeriod = appConfig.GetDuration(cfgUnsealPeriod)
-		vaultConfigFile := appConfig.GetString(cfgVaultConfigFile)
+		vaultConfigFiles := appConfig.GetStringSlice(cfgVaultConfigFile)
 
 		store, err := kvStoreForConfig(appConfig)
 
@@ -69,28 +68,32 @@ var configureCmd = &cobra.Command{
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
 
-		parseConfiguration := func() {
+		parseConfiguration := func(vaultConfigFiles ...string) {
 			configTemplate := template.Must(
-				template.New(path.Base(vaultConfigFile)).
+				template.New(cfgVaultConfigFile).
 					Funcs(sprig.TxtFuncMap()).
 					Delims("${", "}").
-					ParseFiles(vaultConfigFile))
+					ParseFiles(vaultConfigFiles...))
 
-			buffer := bytes.NewBuffer(nil)
+			for _, vaultConfigFile := range vaultConfigFiles {
+				templateName := filepath.Clean(vaultConfigFile)
 
-			err := configTemplate.Execute(buffer, nil)
-			if err != nil {
-				logrus.Fatalf("error executing vault config template: %s", err.Error())
-			}
+				buffer := bytes.NewBuffer(nil)
 
-			err = viper.ReadConfig(buffer)
-			if err != nil {
-				logrus.Fatalf("error reading vault config file: %s", err.Error())
+				err := configTemplate.ExecuteTemplate(buffer, templateName, nil)
+				if err != nil {
+					logrus.Fatalf("error executing vault config template: %s", err.Error())
+				}
+
+				err = viper.MergeConfig(buffer)
+				if err != nil {
+					logrus.Fatalf("error reading vault config file: %s", err.Error())
+				}
 			}
 		}
 
 		c := make(chan fsnotify.Event, 1)
-		viper.SetConfigFile(vaultConfigFile)
+		viper.SetConfigFile(vaultConfigFiles[0])
 		go func() {
 			watcher, err := fsnotify.NewWatcher()
 			if err != nil {
@@ -98,36 +101,34 @@ var configureCmd = &cobra.Command{
 			}
 			defer watcher.Close()
 
-			// we have to watch the entire directory to pick up renames/atomic saves in a cross-platform way
-			configFile := filepath.Clean(vaultConfigFile)
-			configDir, _ := filepath.Split(configFile)
+			for _, vaultConfigFile := range vaultConfigFiles {
+				// we have to watch the entire directory to pick up renames/atomic saves in a cross-platform way
+				configFile := filepath.Clean(vaultConfigFile)
+				configDir, _ := filepath.Split(configFile)
 
-			done := make(chan bool)
-			go func() {
-				for {
-					select {
-					case event := <-watcher.Events:
-						// we only care about the config file or the ConfigMap directory (if in Kubernetes)
-						if filepath.Clean(event.Name) == configFile || filepath.Base(event.Name) == "..data" {
-							if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-								err := viper.ReadInConfig()
-								if err != nil {
-									logrus.Println("error:", err)
+				done := make(chan bool)
+				go func() {
+					for {
+						select {
+						case event := <-watcher.Events:
+							// we only care about the config file or the ConfigMap directory (if in Kubernetes)
+							if filepath.Clean(event.Name) == configFile || filepath.Base(event.Name) == "..data" {
+								if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
+									parseConfiguration(configFile)
+									c <- event
 								}
-								parseConfiguration()
-								c <- event
 							}
+						case err := <-watcher.Errors:
+							logrus.Println("error:", err)
 						}
-					case err := <-watcher.Errors:
-						logrus.Println("error:", err)
 					}
-				}
-			}()
+				}()
 
-			watcher.Add(configDir)
-			<-done
+				watcher.Add(configDir)
+				<-done
+			}
 		}()
-		parseConfiguration()
+		parseConfiguration(vaultConfigFiles...)
 
 		c <- fsnotify.Event{Name: "Initial", Op: fsnotify.Create}
 
@@ -182,7 +183,7 @@ var configureCmd = &cobra.Command{
 
 func init() {
 	configureCmd.PersistentFlags().Duration(cfgUnsealPeriod, time.Second*30, "How often to attempt to unseal the Vault instance")
-	configureCmd.PersistentFlags().String(cfgVaultConfigFile, vault.DefaultConfigFile, "The filename of the YAML/JSON Vault configuration")
+	configureCmd.PersistentFlags().StringSlice(cfgVaultConfigFile, []string{vault.DefaultConfigFile}, "The filename of the YAML/JSON Vault configuration")
 
 	rootCmd.AddCommand(configureCmd)
 }

@@ -463,7 +463,7 @@ func (v *vault) configureAuthMethods() error {
 
 			// https://www.vaultproject.io/api/system/auth.html
 			options := api.EnableAuthOptions{
-				Type: authMethodType,
+				Type:        authMethodType,
 				Description: description,
 			}
 
@@ -714,7 +714,7 @@ func (v *vault) configureAWSCrossAccountRoles(path string, crossAccountRoles []i
 		if err != nil {
 			return fmt.Errorf("error converting cross account aws roles for aws: %s", err.Error())
 		}
-		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/config/sts/%s",path, crossAccountRole["sts_account"]), crossAccountRole)
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/config/sts/%s", path, crossAccountRole["sts_account"]), crossAccountRole)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s cross account aws role into vault: %s", crossAccountRole["sts_account"], err.Error())
