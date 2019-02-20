@@ -514,7 +514,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding config block for aws: %s", err.Error())
 			}
-			err = v.configureAwsConfig(config)
+			err = v.configureAwsConfig(path, config)
 			if err != nil {
 				return fmt.Errorf("error configuring aws auth for vault: %s", err.Error())
 			}
@@ -523,7 +523,7 @@ func (v *vault) configureAuthMethods() error {
 				if err != nil {
 					return fmt.Errorf("error finding crossaccountrole block for aws: %s", err.Error())
 				}
-				err = v.configureAWSCrossAccountRoles(crossaccountrole)
+				err = v.configureAWSCrossAccountRoles(path, crossaccountrole)
 				if err != nil {
 					return fmt.Errorf("error configuring aws auth cross account roles for vault: %s", err.Error())
 				}
@@ -532,7 +532,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding roles block for aws: %s", err.Error())
 			}
-			err = v.configureAwsRoles(roles)
+			err = v.configureAwsRoles(path, roles)
 			if err != nil {
 				return fmt.Errorf("error configuring aws auth roles for vault: %s", err.Error())
 			}
@@ -674,9 +674,9 @@ func (v *vault) configureGithubMappings(path string, mappings map[string]interfa
 	return nil
 }
 
-func (v *vault) configureAwsConfig(config map[string]interface{}) error {
+func (v *vault) configureAwsConfig(path string, config map[string]interface{}) error {
 	// https://www.vaultproject.io/api/auth/aws/index.html
-	_, err := v.cl.Logical().Write("auth/aws/config/client", config)
+	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config/client", path), config)
 
 	if err != nil {
 		return fmt.Errorf("error putting %s aws config into vault: %s", config, err.Error())
@@ -684,13 +684,13 @@ func (v *vault) configureAwsConfig(config map[string]interface{}) error {
 	return nil
 }
 
-func (v *vault) configureAwsRoles(roles []interface{}) error {
+func (v *vault) configureAwsRoles(path string, roles []interface{}) error {
 	for _, roleInterface := range roles {
 		role, err := cast.ToStringMapE(roleInterface)
 		if err != nil {
 			return fmt.Errorf("error converting roles for aws: %s", err.Error())
 		}
-		_, err = v.cl.Logical().Write(fmt.Sprint("auth/aws/role/", role["name"]), role)
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s aws role into vault: %s", role["name"], err.Error())
@@ -699,13 +699,13 @@ func (v *vault) configureAwsRoles(roles []interface{}) error {
 	return nil
 }
 
-func (v *vault) configureAWSCrossAccountRoles(crossAccountRoles []interface{}) error {
+func (v *vault) configureAWSCrossAccountRoles(path string, crossAccountRoles []interface{}) error {
 	for _, roleInterface := range crossAccountRoles {
 		crossAccountRole, err := cast.ToStringMapE(roleInterface)
 		if err != nil {
 			return fmt.Errorf("error converting cross account aws roles for aws: %s", err.Error())
 		}
-		_, err = v.cl.Logical().Write(fmt.Sprint("auth/aws/config/sts/", crossAccountRole["sts_account"]), crossAccountRole)
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/config/sts/%s",path, crossAccountRole["sts_account"]), crossAccountRole)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s cross account aws role into vault: %s", crossAccountRole["sts_account"], err.Error())
