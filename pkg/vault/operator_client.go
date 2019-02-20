@@ -587,7 +587,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding role block for approle: %s", err.Error())
 			}
-			err = v.configureApproleRoles(roles)
+			err = v.configureApproleRoles(path, roles)
 			if err != nil {
 				return fmt.Errorf("error configuring approle auth for vault: %s", err.Error())
 			}
@@ -774,13 +774,13 @@ func (v *vault) configureLdapConfig(path string, config map[string]interface{}) 
 	return nil
 }
 
-func (v *vault) configureApproleRoles(roles []interface{}) error {
+func (v *vault) configureApproleRoles(path string, roles []interface{}) error {
 	for _, roleInterface := range roles {
 		role, err := cast.ToStringMapE(roleInterface)
 		if err != nil {
 			return fmt.Errorf("error converting role for approle: %s", err.Error())
 		}
-		_, err = v.cl.Logical().Write(fmt.Sprint("auth/approle/role/", role["name"]), role)
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s approle role into vault: %s", role["name"], err.Error())
