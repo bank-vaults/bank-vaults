@@ -541,7 +541,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding config block for gcp: %s", err.Error())
 			}
-			err = v.configureGcpConfig(config)
+			err = v.configureGcpConfig(path, config)
 			if err != nil {
 				return fmt.Errorf("error configuring gcp auth for vault: %s", err.Error())
 			}
@@ -549,7 +549,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding roles block for gcp: %s", err.Error())
 			}
-			err = v.configureGcpRoles(roles)
+			err = v.configureGcpRoles(path, roles)
 			if err != nil {
 				return fmt.Errorf("error configuring gcp auth roles for vault: %s", err.Error())
 			}
@@ -714,9 +714,9 @@ func (v *vault) configureAWSCrossAccountRoles(path string, crossAccountRoles []i
 	return nil
 }
 
-func (v *vault) configureGcpConfig(config map[string]interface{}) error {
+func (v *vault) configureGcpConfig(path string, config map[string]interface{}) error {
 	// https://www.vaultproject.io/api/auth/gcp/index.html
-	_, err := v.cl.Logical().Write("auth/gcp/config", config)
+	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
 
 	if err != nil {
 		return fmt.Errorf("error putting %s gcp config into vault: %s", config, err.Error())
@@ -734,13 +734,13 @@ func (v *vault) configureJwtConfig(path string, config map[string]interface{}) e
 	return nil
 }
 
-func (v *vault) configureGcpRoles(roles []interface{}) error {
+func (v *vault) configureGcpRoles(path string, roles []interface{}) error {
 	for _, roleInterface := range roles {
 		role, err := cast.ToStringMapE(roleInterface)
 		if err != nil {
-			return fmt.Errorf("error converting roles for aws: %s", err.Error())
+			return fmt.Errorf("error converting roles for gcp: %s", err.Error())
 		}
-		_, err = v.cl.Logical().Write(fmt.Sprint("auth/gcp/role/", role["name"]), role)
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path), role["name"]), role)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s gcp role into vault: %s", role["name"], err.Error())
