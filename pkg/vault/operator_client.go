@@ -441,6 +441,14 @@ func (v *vault) configureAuthMethods() error {
 			}
 		}
 
+		description := fmt.Sprintf("%s backend", authMethodType)
+		if descriptionOverwrite, ok := authMethod["description"]; ok {
+			description, err = cast.ToStringE(descriptionOverwrite)
+			if err != nil {
+				return fmt.Errorf("error converting description for auth method: %s", err.Error())
+			}
+		}
+
 		// Check and skip existing auth mounts
 		exists := false
 		if authMount, ok := existingAuths[path+"/"]; ok {
@@ -456,6 +464,7 @@ func (v *vault) configureAuthMethods() error {
 			// https://www.vaultproject.io/api/system/auth.html
 			options := api.EnableAuthOptions{
 				Type: authMethodType,
+				Description: description,
 			}
 
 			err := v.cl.Sys().EnableAuthWithOptions(path, &options)
@@ -497,7 +506,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding config block for github: %s", err.Error())
 			}
-			err = v.configureGithubConfig(config)
+			err = v.configureGithubConfig(path, config)
 			if err != nil {
 				return fmt.Errorf("error configuring github auth for vault: %s", err.Error())
 			}
@@ -505,7 +514,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding map block for github: %s", err.Error())
 			}
-			err = v.configureGithubMappings(mappings)
+			err = v.configureGithubMappings(path, mappings)
 			if err != nil {
 				return fmt.Errorf("error configuring github mappings for vault: %s", err.Error())
 			}
@@ -514,7 +523,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding config block for aws: %s", err.Error())
 			}
-			err = v.configureAwsConfig(config)
+			err = v.configureAwsConfig(path, config)
 			if err != nil {
 				return fmt.Errorf("error configuring aws auth for vault: %s", err.Error())
 			}
@@ -523,7 +532,7 @@ func (v *vault) configureAuthMethods() error {
 				if err != nil {
 					return fmt.Errorf("error finding crossaccountrole block for aws: %s", err.Error())
 				}
-				err = v.configureAWSCrossAccountRoles(crossaccountrole)
+				err = v.configureAWSCrossAccountRoles(path, crossaccountrole)
 				if err != nil {
 					return fmt.Errorf("error configuring aws auth cross account roles for vault: %s", err.Error())
 				}
@@ -532,7 +541,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding roles block for aws: %s", err.Error())
 			}
-			err = v.configureAwsRoles(roles)
+			err = v.configureAwsRoles(path, roles)
 			if err != nil {
 				return fmt.Errorf("error configuring aws auth roles for vault: %s", err.Error())
 			}
@@ -541,7 +550,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding config block for gcp: %s", err.Error())
 			}
-			err = v.configureGcpConfig(config)
+			err = v.configureGcpConfig(path, config)
 			if err != nil {
 				return fmt.Errorf("error configuring gcp auth for vault: %s", err.Error())
 			}
@@ -549,7 +558,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding roles block for gcp: %s", err.Error())
 			}
-			err = v.configureGcpRoles(roles)
+			err = v.configureGcpRoles(path, roles)
 			if err != nil {
 				return fmt.Errorf("error configuring gcp auth roles for vault: %s", err.Error())
 			}
@@ -558,7 +567,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding config block for ldap: %s", err.Error())
 			}
-			err = v.configureLdapConfig(config)
+			err = v.configureLdapConfig(path, config)
 			if err != nil {
 				return fmt.Errorf("error configuring ldap auth for vault: %s", err.Error())
 			}
@@ -567,7 +576,7 @@ func (v *vault) configureAuthMethods() error {
 				if err != nil {
 					return fmt.Errorf("error finding groups block for ldap: %s", err.Error())
 				}
-				err = v.configureLdapMappings("groups", groups)
+				err = v.configureLdapMappings(path, "groups", groups)
 				if err != nil {
 					return fmt.Errorf("error configuring ldap groups for vault: %s", err.Error())
 				}
@@ -577,7 +586,7 @@ func (v *vault) configureAuthMethods() error {
 				if err != nil {
 					return fmt.Errorf("error finding users block for ldap: %s", err.Error())
 				}
-				err = v.configureLdapMappings("users", users)
+				err = v.configureLdapMappings(path, "users", users)
 				if err != nil {
 					return fmt.Errorf("error configuring ldap users for vault: %s", err.Error())
 				}
@@ -587,7 +596,7 @@ func (v *vault) configureAuthMethods() error {
 			if err != nil {
 				return fmt.Errorf("error finding role block for approle: %s", err.Error())
 			}
-			err = v.configureApproleRoles(roles)
+			err = v.configureApproleRoles(path, roles)
 			if err != nil {
 				return fmt.Errorf("error configuring approle auth for vault: %s", err.Error())
 			}
@@ -648,9 +657,9 @@ func (v *vault) configureKubernetesRoles(path string, roles []interface{}) error
 	return nil
 }
 
-func (v *vault) configureGithubConfig(config map[string]interface{}) error {
+func (v *vault) configureGithubConfig(path string, config map[string]interface{}) error {
 	// https://www.vaultproject.io/api/auth/github/index.html
-	_, err := v.cl.Logical().Write("auth/github/config", config)
+	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
 
 	if err != nil {
 		return fmt.Errorf("error putting %s github config into vault: %s", config, err.Error())
@@ -658,14 +667,14 @@ func (v *vault) configureGithubConfig(config map[string]interface{}) error {
 	return nil
 }
 
-func (v *vault) configureGithubMappings(mappings map[string]interface{}) error {
+func (v *vault) configureGithubMappings(path string, mappings map[string]interface{}) error {
 	for mappingType, mapping := range mappings {
 		mapping, err := cast.ToStringMapStringE(mapping)
 		if err != nil {
 			return fmt.Errorf("error converting mapping for github: %s", err.Error())
 		}
 		for userOrTeam, policy := range mapping {
-			_, err := v.cl.Logical().Write(fmt.Sprintf("auth/github/map/%s/%s", mappingType, userOrTeam), map[string]interface{}{"value": policy})
+			_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/map/%s/%s", path, mappingType, userOrTeam), map[string]interface{}{"value": policy})
 			if err != nil {
 				return fmt.Errorf("error putting %s github mapping into vault: %s", mappingType, err.Error())
 			}
@@ -674,9 +683,9 @@ func (v *vault) configureGithubMappings(mappings map[string]interface{}) error {
 	return nil
 }
 
-func (v *vault) configureAwsConfig(config map[string]interface{}) error {
+func (v *vault) configureAwsConfig(path string, config map[string]interface{}) error {
 	// https://www.vaultproject.io/api/auth/aws/index.html
-	_, err := v.cl.Logical().Write("auth/aws/config/client", config)
+	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config/client", path), config)
 
 	if err != nil {
 		return fmt.Errorf("error putting %s aws config into vault: %s", config, err.Error())
@@ -684,13 +693,13 @@ func (v *vault) configureAwsConfig(config map[string]interface{}) error {
 	return nil
 }
 
-func (v *vault) configureAwsRoles(roles []interface{}) error {
+func (v *vault) configureAwsRoles(path string, roles []interface{}) error {
 	for _, roleInterface := range roles {
 		role, err := cast.ToStringMapE(roleInterface)
 		if err != nil {
 			return fmt.Errorf("error converting roles for aws: %s", err.Error())
 		}
-		_, err = v.cl.Logical().Write(fmt.Sprint("auth/aws/role/", role["name"]), role)
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s aws role into vault: %s", role["name"], err.Error())
@@ -699,13 +708,13 @@ func (v *vault) configureAwsRoles(roles []interface{}) error {
 	return nil
 }
 
-func (v *vault) configureAWSCrossAccountRoles(crossAccountRoles []interface{}) error {
+func (v *vault) configureAWSCrossAccountRoles(path string, crossAccountRoles []interface{}) error {
 	for _, roleInterface := range crossAccountRoles {
 		crossAccountRole, err := cast.ToStringMapE(roleInterface)
 		if err != nil {
 			return fmt.Errorf("error converting cross account aws roles for aws: %s", err.Error())
 		}
-		_, err = v.cl.Logical().Write(fmt.Sprint("auth/aws/config/sts/", crossAccountRole["sts_account"]), crossAccountRole)
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/config/sts/%s",path, crossAccountRole["sts_account"]), crossAccountRole)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s cross account aws role into vault: %s", crossAccountRole["sts_account"], err.Error())
@@ -714,9 +723,9 @@ func (v *vault) configureAWSCrossAccountRoles(crossAccountRoles []interface{}) e
 	return nil
 }
 
-func (v *vault) configureGcpConfig(config map[string]interface{}) error {
+func (v *vault) configureGcpConfig(path string, config map[string]interface{}) error {
 	// https://www.vaultproject.io/api/auth/gcp/index.html
-	_, err := v.cl.Logical().Write("auth/gcp/config", config)
+	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
 
 	if err != nil {
 		return fmt.Errorf("error putting %s gcp config into vault: %s", config, err.Error())
@@ -734,13 +743,13 @@ func (v *vault) configureJwtConfig(path string, config map[string]interface{}) e
 	return nil
 }
 
-func (v *vault) configureGcpRoles(roles []interface{}) error {
+func (v *vault) configureGcpRoles(path string, roles []interface{}) error {
 	for _, roleInterface := range roles {
 		role, err := cast.ToStringMapE(roleInterface)
 		if err != nil {
-			return fmt.Errorf("error converting roles for aws: %s", err.Error())
+			return fmt.Errorf("error converting roles for gcp: %s", err.Error())
 		}
-		_, err = v.cl.Logical().Write(fmt.Sprint("auth/gcp/role/", role["name"]), role)
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s gcp role into vault: %s", role["name"], err.Error())
@@ -764,9 +773,9 @@ func (v *vault) configureJwtRoles(path string, roles []interface{}) error {
 	return nil
 }
 
-func (v *vault) configureLdapConfig(config map[string]interface{}) error {
+func (v *vault) configureLdapConfig(path string, config map[string]interface{}) error {
 	// https://www.vaultproject.io/api/auth/ldap/index.html
-	_, err := v.cl.Logical().Write("auth/ldap/config", config)
+	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
 
 	if err != nil {
 		return fmt.Errorf("error putting %s ldap config into vault: %s", config, err.Error())
@@ -774,13 +783,13 @@ func (v *vault) configureLdapConfig(config map[string]interface{}) error {
 	return nil
 }
 
-func (v *vault) configureApproleRoles(roles []interface{}) error {
+func (v *vault) configureApproleRoles(path string, roles []interface{}) error {
 	for _, roleInterface := range roles {
 		role, err := cast.ToStringMapE(roleInterface)
 		if err != nil {
 			return fmt.Errorf("error converting role for approle: %s", err.Error())
 		}
-		_, err = v.cl.Logical().Write(fmt.Sprint("auth/approle/role/", role["name"]), role)
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s approle role into vault: %s", role["name"], err.Error())
@@ -789,13 +798,13 @@ func (v *vault) configureApproleRoles(roles []interface{}) error {
 	return nil
 }
 
-func (v *vault) configureLdapMappings(mappingType string, mappings map[string]interface{}) error {
+func (v *vault) configureLdapMappings(path string, mappingType string, mappings map[string]interface{}) error {
 	for userOrGroup, policy := range mappings {
 		mapping, err := cast.ToStringMapE(policy)
 		if err != nil {
 			return fmt.Errorf("error converting mapping for ldap: %s", err.Error())
 		}
-		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/ldap/%s/%s", mappingType, userOrGroup), mapping)
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/%s/%s", path, mappingType, userOrGroup), mapping)
 		if err != nil {
 			return fmt.Errorf("error putting %s ldap mapping into vault: %s", mappingType, err.Error())
 		}
