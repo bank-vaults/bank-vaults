@@ -441,6 +441,14 @@ func (v *vault) configureAuthMethods() error {
 			}
 		}
 
+		description := fmt.Sprintf("%s backend", authMethodType)
+		if descriptionOverwrite, ok := authMethod["description"]; ok {
+			description, err = cast.ToStringE(descriptionOverwrite)
+			if err != nil {
+				return fmt.Errorf("error converting description for auth method: %s", err.Error())
+			}
+		}
+
 		// Check and skip existing auth mounts
 		exists := false
 		if authMount, ok := existingAuths[path+"/"]; ok {
@@ -456,6 +464,7 @@ func (v *vault) configureAuthMethods() error {
 			// https://www.vaultproject.io/api/system/auth.html
 			options := api.EnableAuthOptions{
 				Type: authMethodType,
+				Description: description,
 			}
 
 			err := v.cl.Sys().EnableAuthWithOptions(path, &options)
