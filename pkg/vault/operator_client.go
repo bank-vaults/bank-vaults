@@ -740,7 +740,7 @@ func (v *vault) configureGcpRoles(path string, roles []interface{}) error {
 		if err != nil {
 			return fmt.Errorf("error converting roles for gcp: %s", err.Error())
 		}
-		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path), role["name"]), role)
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
 
 		if err != nil {
 			return fmt.Errorf("error putting %s gcp role into vault: %s", role["name"], err.Error())
