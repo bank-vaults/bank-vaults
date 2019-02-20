@@ -89,9 +89,12 @@ auth:
     # If you want to configure with specific kubernets service account instead of default service account
     # https://www.vaultproject.io/docs/auth/kubernetes.html
     # config:
-    #  token_reviewer_jwt: your_service_account_jwt
-    #  kubernetes_ca_cert: -----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----
-    #  kubernetes_host: https://192.168.99.100:8443
+    #   token_reviewer_jwt: eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9....
+    #   kubernetes_ca_cert: |
+    #     -----BEGIN CERTIFICATE-----
+    #     ...
+    #     -----END CERTIFICATE-----
+    #   kubernetes_host: https://192.168.64.42:8443
     # Allows creating roles in Vault which can be used later on for the Kubernetes based
     # authentication.
     #  See https://www.vaultproject.io/docs/auth/kubernetes.html#creating-a-role for
