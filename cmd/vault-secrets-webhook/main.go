@@ -210,14 +210,14 @@ func getDataFromSecret(secretName string, ns string) (map[string][]byte, error) 
 	return secret.Data, nil
 }
 
-func lookForEnvFrom(envFrom []corev1.EnvFromSource, ns string) []corev1.EnvVar {
+func lookForEnvFrom(envFrom []corev1.EnvFromSource, ns string) ([]corev1.EnvVar, error) {
 	var envVars []corev1.EnvVar
 
 	for _, ef := range envFrom {
 		if ef.ConfigMapRef != nil {
 			data, err := getDataFromConfigmap(ef.ConfigMapRef.Name, ns)
 			if err != nil {
-				continue
+				return envVars, err
 			}
 			for key, value := range data {
 				if strings.HasPrefix(value, "vault:") {
@@ -232,7 +232,7 @@ func lookForEnvFrom(envFrom []corev1.EnvFromSource, ns string) []corev1.EnvVar {
 		if ef.SecretRef != nil {
 			data, err := getDataFromSecret(ef.SecretRef.Name, ns)
 			if err != nil {
-				continue
+				return envVars, err
 			}
 			for key, value := range data {
 				if strings.HasPrefix(string(value), "vault:") {
@@ -245,46 +245,48 @@ func lookForEnvFrom(envFrom []corev1.EnvFromSource, ns string) []corev1.EnvVar {
 			}
 		}
 	}
-	return envVars
+	return envVars, nil
 }
 
-func lookForValueFrom(env corev1.EnvVar, ns string) (corev1.EnvVar, error) {
+func lookForValueFrom(env corev1.EnvVar, ns string) (*corev1.EnvVar, error) {
 	if env.ValueFrom.ConfigMapKeyRef != nil {
 		data, err := getDataFromConfigmap(env.ValueFrom.ConfigMapKeyRef.Name, ns)
 		if err != nil {
-			return corev1.EnvVar{}, err
+			return nil, err
 		}
 		if strings.HasPrefix(data[env.ValueFrom.ConfigMapKeyRef.Key], "vault:") {
 			fromCM := corev1.EnvVar{
 				Name:  env.Name,
 				Value: data[env.ValueFrom.ConfigMapKeyRef.Key],
 			}
-			return fromCM, nil
+			return &fromCM, nil
 		}
 	}
 	if env.ValueFrom.SecretKeyRef != nil {
 		data, err := getDataFromSecret(env.ValueFrom.SecretKeyRef.Name, ns)
 		if err != nil {
-			return corev1.EnvVar{}, err
+			return nil, err
 		}
-		fmt.Println(string(data[env.ValueFrom.SecretKeyRef.Key]))
 		if strings.HasPrefix(string(data[env.ValueFrom.SecretKeyRef.Key]), "vault:") {
 			fromSecret := corev1.EnvVar{
 				Name:  env.Name,
 				Value: string(data[env.ValueFrom.SecretKeyRef.Key]),
 			}
-			return fromSecret, nil
+			return &fromSecret, nil
 		}
 	}
-	return corev1.EnvVar{}, nil
+	return nil, nil
 }
 
-func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns string) bool {
+func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns string) (bool, error) {
 	mutated := false
 	for i, container := range containers {
 		var envVars []corev1.EnvVar
 		if len(container.EnvFrom) > 0 {
-			envFrom := lookForEnvFrom(container.EnvFrom, ns)
+			envFrom, err := lookForEnvFrom(container.EnvFrom, ns)
+			if err != nil {
+				return false, err
+			}
 			envVars = append(envVars, envFrom...)
 		}
 
@@ -295,9 +297,12 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 			if env.ValueFrom != nil {
 				valueFrom, err := lookForValueFrom(env, ns)
 				if err != nil {
+					return false, err
+				}
+				if valueFrom == nil {
 					continue
 				}
-				envVars = append(envVars, valueFrom)
+				envVars = append(envVars, *valueFrom)
 			}
 		}
 		if len(envVars) == 0 {
@@ -347,7 +352,7 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 		containers[i] = container
 	}
 
-	return mutated
+	return mutated, nil
 }
 func newClientSet() (*kubernetes.Clientset, error) {
 	kubeConfig, err := rest.InClusterConfig()
@@ -369,8 +374,14 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		return err
 	}
 
-	initContainersMutated := mutateContainers(podSpec.InitContainers, vaultConfig, ns)
-	containersMutated := mutateContainers(podSpec.Containers, vaultConfig, ns)
+	initContainersMutated, err := mutateContainers(podSpec.InitContainers, vaultConfig, ns)
+	if err != nil {
+		return err
+	}
+	containersMutated, err := mutateContainers(podSpec.Containers, vaultConfig, ns)
+	if err != nil {
+		return err
+	}
 
 	if initContainersMutated || containersMutated {
 
