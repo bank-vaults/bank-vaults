@@ -22,10 +22,6 @@ RUN apk add --update libcap && rm -rf /var/cache/apk/*
 COPY --from=builder /go/bin/vault-secrets-webhook /usr/local/bin/vault-secrets-webhook
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-RUN adduser -D vault-secrets-webhook
-RUN setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/vault-secrets-webhook
-USER vault-secrets-webhook
-
 ENV DEBUG false
 
 ENTRYPOINT ["/usr/local/bin/vault-secrets-webhook"]
