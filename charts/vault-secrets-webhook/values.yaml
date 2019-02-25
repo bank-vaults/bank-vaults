@@ -8,7 +8,7 @@ debug: false
 
 image:
   repository: banzaicloud/vault-secrets-webhook
-  tag: latest
+  tag: 0.4.11
   pullPolicy: IfNotPresent
 
 service:
