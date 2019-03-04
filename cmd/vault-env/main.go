@@ -84,7 +84,13 @@ func main() {
 		split := strings.SplitN(env, "=", 2)
 		name := split[0]
 		value := split[1]
-
+		var update bool
+		if strings.HasPrefix(value, ">>") {
+			value := strings.TrimPrefix(value, ">>")
+			update = True
+		} else {
+			update = False
+		}
 		if strings.HasPrefix(value, "vault:") {
 			path := strings.TrimPrefix(value, "vault:")
 			split := strings.SplitN(path, "#", 2)
@@ -94,8 +100,12 @@ func main() {
 			if len(split) > 0 {
 				key = split[1]
 			}
-
-			secret, err := client.Vault().Logical().Read(path)
+			
+			if update {
+				secret, err := client.Vault().Logical().Write(path)
+			} else {
+				secret, err := client.Vault().Logical().Read(path)
+			}
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "failed to read secret '%s': %s\n", path, err.Error())
 				os.Exit(1)
