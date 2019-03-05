@@ -112,7 +112,7 @@ secrets:
       version: 2
 
   # Mounts kv with extra configuration
-  - path: leaderelecetion
+  - path: leaderelection
     type: kv
     description: kv secret engine used for leader election logic
     options:
