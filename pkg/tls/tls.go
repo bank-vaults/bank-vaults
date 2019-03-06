@@ -37,7 +37,7 @@ func init() {
 
 const (
 	defaultValidity = 365 * 24 * time.Hour
-	defaultKeyBits  = 2038
+	defaultKeyBits  = 2048
 )
 
 // CertificateChain represents a full certificate chain with a root CA, a server, client and peer certificate
