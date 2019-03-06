@@ -81,7 +81,7 @@ type Vault interface {
 	Active() (bool, error)
 	Unseal() error
 	Leader() (bool, error)
-	Configure() error
+	Configure(config *viper.Viper) error
 	StepDownActive(string) error
 }
 
@@ -328,7 +328,7 @@ func (v *vault) StepDownActive(address string) error {
 	return tmpClient.Sys().StepDown()
 }
 
-func (v *vault) Configure() error {
+func (v *vault) Configure(config *viper.Viper) error {
 	logrus.Debugf("retrieving key from kms service...")
 
 	rootToken, err := v.keyStore.Get(v.rootTokenKey())
@@ -343,32 +343,32 @@ func (v *vault) Configure() error {
 	defer v.cl.SetToken("")
 	defer func() { rootToken = nil }()
 
-	err = v.configureAuthMethods()
+	err = v.configureAuthMethods(config)
 	if err != nil {
 		return fmt.Errorf("error configuring auth methods for vault: %s", err.Error())
 	}
 
-	err = v.configurePolicies()
+	err = v.configurePolicies(config)
 	if err != nil {
 		return fmt.Errorf("error configuring policies for vault: %s", err.Error())
 	}
 
-	err = v.configurePlugins()
+	err = v.configurePlugins(config)
 	if err != nil {
 		return fmt.Errorf("error configuring plugins for vault: %s", err.Error())
 	}
 
-	err = v.configureSecretEngines()
+	err = v.configureSecretEngines(config)
 	if err != nil {
 		return fmt.Errorf("error configuring secret engines for vault: %s", err.Error())
 	}
 
-	err = v.configureAuditDevices()
+	err = v.configureAuditDevices(config)
 	if err != nil {
 		return fmt.Errorf("error configuring audit devices for vault: %s", err.Error())
 	}
 
-	err = v.configureStartupSecrets()
+	err = v.configureStartupSecrets(config)
 	if err != nil {
 		return fmt.Errorf("error writing startup secrets tor vault: %s", err.Error())
 	}
@@ -414,9 +414,9 @@ func (v *vault) kubernetesAuthConfig(path string, config map[string]interface{})
 	return nil
 }
 
-func (v *vault) configureAuthMethods() error {
+func (v *vault) configureAuthMethods(config *viper.Viper) error {
 	authMethods := []map[string]interface{}{}
-	err := viper.UnmarshalKey("auth", &authMethods)
+	err := config.UnmarshalKey("auth", &authMethods)
 	if err != nil {
 		return fmt.Errorf("error unmarshalling vault auth methods config: %s", err.Error())
 	}
@@ -623,9 +623,9 @@ func (v *vault) configureAuthMethods() error {
 	return nil
 }
 
-func (v *vault) configurePolicies() error {
+func (v *vault) configurePolicies(config *viper.Viper) error {
 	policies := []map[string]string{}
-	err := viper.UnmarshalKey("policies", &policies)
+	err := config.UnmarshalKey("policies", &policies)
 	if err != nil {
 		return fmt.Errorf("error unmarshalling vault policy config: %s", err.Error())
 	}
@@ -812,9 +812,9 @@ func (v *vault) configureLdapMappings(path string, mappingType string, mappings 
 	return nil
 }
 
-func (v *vault) configurePlugins() error {
+func (v *vault) configurePlugins(config *viper.Viper) error {
 	plugins := []map[string]interface{}{}
-	err := viper.UnmarshalKey("plugins", &plugins)
+	err := config.UnmarshalKey("plugins", &plugins)
 	if err != nil {
 		return fmt.Errorf("error unmarshalling vault plugins config: %s", err.Error())
 	}
@@ -867,9 +867,9 @@ func (v *vault) configurePlugins() error {
 	return nil
 }
 
-func (v *vault) configureSecretEngines() error {
+func (v *vault) configureSecretEngines(config *viper.Viper) error {
 	secretsEngines := []map[string]interface{}{}
-	err := viper.UnmarshalKey("secrets", &secretsEngines)
+	err := config.UnmarshalKey("secrets", &secretsEngines)
 	if err != nil {
 		return fmt.Errorf("error unmarshalling vault secrets config: %s", err.Error())
 	}
@@ -996,9 +996,9 @@ func (v *vault) configureSecretEngines() error {
 	return nil
 }
 
-func (v *vault) configureAuditDevices() error {
+func (v *vault) configureAuditDevices(config *viper.Viper) error {
 	auditDevices := []map[string]interface{}{}
-	err := viper.UnmarshalKey("audit", &auditDevices)
+	err := config.UnmarshalKey("audit", &auditDevices)
 	if err != nil {
 		return fmt.Errorf("error unmarshalling audit devices config: %s", err.Error())
 	}
@@ -1046,8 +1046,8 @@ func (v *vault) configureAuditDevices() error {
 	return nil
 }
 
-func (v *vault) configureStartupSecrets() error {
-	raw := viper.Get("startupSecrets")
+func (v *vault) configureStartupSecrets(config *viper.Viper) error {
+	raw := config.Get("startupSecrets")
 	startupSecrets, err := toSliceStringMapE(raw)
 	if err != nil {
 		return fmt.Errorf("error decoding data for startup secrets: %s", err.Error())

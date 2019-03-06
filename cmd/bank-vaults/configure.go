@@ -68,32 +68,40 @@ var configureCmd = &cobra.Command{
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
 
-		parseConfiguration := func(vaultConfigFiles ...string) {
-			configTemplate := template.Must(
-				template.New(cfgVaultConfigFile).
-					Funcs(sprig.TxtFuncMap()).
-					Delims("${", "}").
-					ParseFiles(vaultConfigFiles...))
+		parseConfiguration := func(vaultConfigFile string) *viper.Viper {
 
-			for _, vaultConfigFile := range vaultConfigFiles {
-				templateName := filepath.Clean(vaultConfigFile)
+			config := viper.New()
 
-				buffer := bytes.NewBuffer(nil)
+			templateName := filepath.Base(vaultConfigFile)
 
-				err := configTemplate.ExecuteTemplate(buffer, templateName, nil)
-				if err != nil {
-					logrus.Fatalf("error executing vault config template: %s", err.Error())
-				}
+			configTemplate, err := template.New(templateName).
+				Funcs(sprig.TxtFuncMap()).
+				Delims("${", "}").
+				ParseFiles(vaultConfigFile)
 
-				err = viper.MergeConfig(buffer)
-				if err != nil {
-					logrus.Fatalf("error reading vault config file: %s", err.Error())
-				}
+			if err != nil {
+				logrus.Fatalf("error parsing vault config template: %s", err.Error())
 			}
+
+			buffer := bytes.NewBuffer(nil)
+
+			err = configTemplate.ExecuteTemplate(buffer, templateName, nil)
+			if err != nil {
+				logrus.Fatalf("error executing vault config template: %s", err.Error())
+			}
+
+			config.SetConfigFile(vaultConfigFile)
+
+			err = config.ReadConfig(buffer)
+			if err != nil {
+				logrus.Fatalf("error reading vault config file: %s", err.Error())
+			}
+
+			return config
 		}
 
-		c := make(chan fsnotify.Event, 1)
-		viper.SetConfigFile(vaultConfigFiles[0])
+		configurations := make(chan *viper.Viper, len(vaultConfigFiles))
+
 		go func() {
 			watcher, err := fsnotify.NewWatcher()
 			if err != nil {
@@ -114,12 +122,11 @@ var configureCmd = &cobra.Command{
 							// we only care about the config file or the ConfigMap directory (if in Kubernetes)
 							if filepath.Clean(event.Name) == configFile || filepath.Base(event.Name) == "..data" {
 								if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-									parseConfiguration(configFile)
-									c <- event
+									configurations <- parseConfiguration(configFile)
 								}
 							}
 						case err := <-watcher.Errors:
-							logrus.Println("error:", err)
+							logrus.Error(err)
 						}
 					}
 				}()
@@ -128,12 +135,15 @@ var configureCmd = &cobra.Command{
 				<-done
 			}
 		}()
-		parseConfiguration(vaultConfigFiles...)
 
-		c <- fsnotify.Event{Name: "Initial", Op: fsnotify.Create}
+		for _, vaultConfigFile := range vaultConfigFiles {
+			configurations <- parseConfiguration(vaultConfigFile)
+		}
 
-		for e := range c {
-			logrus.Infoln("New config file change", e.String())
+		for config := range configurations {
+
+			logrus.Infoln("New config file change", config.ConfigFileUsed())
+
 			func() {
 				for {
 					logrus.Infof("checking if vault is sealed...")
@@ -168,7 +178,7 @@ var configureCmd = &cobra.Command{
 
 					logrus.Infof("vault is unsealed and active, configuring...")
 
-					if err = v.Configure(); err != nil {
+					if err = v.Configure(config); err != nil {
 						logrus.Errorf("error configuring vault: %s", err.Error())
 						return
 					}

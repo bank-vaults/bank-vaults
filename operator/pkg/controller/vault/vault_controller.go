@@ -262,20 +262,6 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, fmt.Errorf("failed to create service: %v", err)
 	}
 
-	// Create the deployment if it doesn't exist
-	configurerDep := deploymentForConfigurer(v)
-	// Set Vault instance as the owner and controller
-	if err := controllerutil.SetControllerReference(v, configurerDep, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-	err = r.client.Create(context.TODO(), configurerDep)
-	if err != nil && apierrors.IsAlreadyExists(err) {
-		err = r.client.Update(context.TODO(), configurerDep)
-	}
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to create/update configurer deployment: %v", err)
-	}
-
 	// Create the configmap if it doesn't exist
 	cm = configMapForConfigurer(v)
 
@@ -301,6 +287,28 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to update configurer configmap: %v", err)
 		}
+	}
+
+	externalConfigMaps := corev1.ConfigMapList{}
+	externalConfigMapsFilter := client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(labelsForVaultConfigurer(v.Name)),
+	}
+	if err = r.client.List(context.TODO(), &externalConfigMapsFilter, &externalConfigMaps); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to list configmaps: %v", err)
+	}
+
+	// Create the deployment if it doesn't exist
+	configurerDep := deploymentForConfigurer(v, externalConfigMaps)
+	// Set Vault instance as the owner and controller
+	if err := controllerutil.SetControllerReference(v, configurerDep, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
+	err = r.client.Create(context.TODO(), configurerDep)
+	if err != nil && apierrors.IsAlreadyExists(err) {
+		err = r.client.Update(context.TODO(), configurerDep)
+	}
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to create/update configurer deployment: %v", err)
 	}
 
 	// Create ingress if specificed
@@ -455,8 +463,35 @@ func serviceType(v *vaultv1alpha1.Vault) corev1.ServiceType {
 	}
 }
 
-func deploymentForConfigurer(v *vaultv1alpha1.Vault) *appsv1.Deployment {
+func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMapList) *appsv1.Deployment {
 	ls := labelsForVaultConfigurer(v.Name)
+
+	volumes := []corev1.Volume{}
+	volumeMounts := []corev1.VolumeMount{}
+	configArgs := []string{}
+
+	sort.Slice(configmaps.Items, func(i, j int) bool { return configmaps.Items[i].Name < configmaps.Items[j].Name })
+
+	for _, cm := range configmaps.Items {
+		if _, ok := cm.Data[vault.DefaultConfigFile]; ok {
+			volumes = append(volumes, corev1.Volume{
+				Name: cm.Name,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{Name: cm.Name},
+					},
+				},
+			})
+
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      cm.Name,
+				MountPath: "/config/" + cm.Name,
+			})
+
+			configArgs = append(configArgs, "--vault-config-file", "/config/"+cm.Name+"/"+vault.DefaultConfigFile)
+		}
+	}
+
 	dep := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -483,28 +518,14 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault) *appsv1.Deployment {
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Name:            "bank-vaults",
 							Command:         []string{"bank-vaults", "configure"},
-							Args:            v.Spec.UnsealConfig.ToArgs(v),
+							Args:            append(v.Spec.UnsealConfig.ToArgs(v), configArgs...),
 							Env:             withSecretEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{}))),
-							VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{
-								{
-									Name:      "config",
-									MountPath: "/config",
-								},
-							})),
-							WorkingDir: "/config",
-							Resources:  *getBankVaultsResource(v),
+							VolumeMounts:    withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
+							WorkingDir:      "/config",
+							Resources:       *getBankVaultsResource(v),
 						},
 					},
-					Volumes: withTLSVolume(v, withCredentialsVolume(v, []corev1.Volume{
-						{
-							Name: "config",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{Name: v.Name + "-configurer"},
-								},
-							},
-						},
-					})),
+					Volumes:         withTLSVolume(v, withCredentialsVolume(v, volumes)),
 					SecurityContext: withSecurityContext(v),
 				},
 			},
