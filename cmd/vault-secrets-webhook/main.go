@@ -220,7 +220,7 @@ func lookForEnvFrom(envFrom []corev1.EnvFromSource, ns string) ([]corev1.EnvVar,
 				return envVars, err
 			}
 			for key, value := range data {
-				if strings.HasPrefix(value, "vault:") {
+				if (strings.HasPrefix(value, "vault:") || strings.HasPrefix(value, ">>vault:")){
 					envFromCM := corev1.EnvVar{
 						Name:  key,
 						Value: value,
@@ -235,7 +235,7 @@ func lookForEnvFrom(envFrom []corev1.EnvFromSource, ns string) ([]corev1.EnvVar,
 				return envVars, err
 			}
 			for key, value := range data {
-				if strings.HasPrefix(string(value), "vault:") {
+				if (strings.HasPrefix(string(value), "vault:") || strings.HasPrefix(string(value), ">>vault:")){
 					envFromSec := corev1.EnvVar{
 						Name:  key,
 						Value: string(value),

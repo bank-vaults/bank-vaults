@@ -97,7 +97,7 @@ func main() {
 			path = split[0]
 
 			var key string
-			if len(split) > 0 {
+			if len(split) > 1 {
 				key = split[1]
 			}
 			
