@@ -111,6 +111,17 @@ secrets:
     options:
       version: 2
 
+  # Mounts kv with extra configuration
+  - path: leaderelection
+    type: kv
+    description: kv secret engine used for leader election logic
+    options:
+      version: 2
+    configuration:
+      config:
+        - cas_required: true
+          max_versions: 1
+
   # Mounts non-default plugin's path
   - path: ethereum-gateway
     type: plugin

@@ -444,8 +444,8 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/pods", podHandler)
 
-	logger.Infof("Listening on :443")
-	err := http.ListenAndServeTLS(":443", viper.GetString("tls_cert_file"), viper.GetString("tls_private_key_file"), mux)
+	logger.Infof("Listening on :8443")
+	err := http.ListenAndServeTLS(":8443", viper.GetString("tls_cert_file"), viper.GetString("tls_private_key_file"), mux)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error serving webhook: %s", err)
 		os.Exit(1)
