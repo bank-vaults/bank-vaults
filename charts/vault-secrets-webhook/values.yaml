@@ -8,14 +8,14 @@ debug: false
 
 image:
   repository: banzaicloud/vault-secrets-webhook
-  tag: 0.4.11
+  tag: 0.4.12
   pullPolicy: IfNotPresent
 
 service:
   name: vault-secrets-webhook
   type: ClusterIP
   externalPort: 443
-  internalPort: 443
+  internalPort: 8443
 
 env:
   VAULT_IMAGE: vault:latest
