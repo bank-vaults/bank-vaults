@@ -84,22 +84,41 @@ func main() {
 		split := strings.SplitN(env, "=", 2)
 		name := split[0]
 		value := split[1]
-
+		var update bool
+		if strings.HasPrefix(value, ">>") {
+			value = strings.TrimPrefix(value, ">>")
+			update = true
+		} else {
+			update = false
+		}
 		if strings.HasPrefix(value, "vault:") {
 			path := strings.TrimPrefix(value, "vault:")
 			split := strings.SplitN(path, "#", 2)
 			path = split[0]
 
 			var key string
-			if len(split) > 0 {
+			if len(split) > 1 {
 				key = split[1]
 			}
-
-			secret, err := client.Vault().Logical().Read(path)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "failed to read secret '%s': %s\n", path, err.Error())
-				os.Exit(1)
+			
+			var secret *vaultapi.Secret
+			var err error
+			
+			if update {
+				var empty map[string]interface{}
+				secret, err = client.Vault().Logical().Write(path, empty)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "failed to write secret '%s': %s\n", path, err.Error())
+					os.Exit(1)
+				}
+			} else {
+				secret, err = client.Vault().Logical().Read(path)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "failed to read secret '%s': %s\n", path, err.Error())
+					os.Exit(1)
+				}
 			}
+		
 
 			if secret == nil {
 				fmt.Fprintf(os.Stderr, "path not found: %s\n", path)
