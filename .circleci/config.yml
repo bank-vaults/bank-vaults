@@ -56,10 +56,6 @@ jobs:
               - licensei-v1      
 
       - run:
-          name: Install license checker
-          command: curl https://raw.githubusercontent.com/goph/licensei/master/install.sh | bash -s v0.0.7
-
-      - run:
           name: Download license information for dependencies
           command: make license-cache
 
