@@ -29,7 +29,7 @@ DOCKER_TAG ?= ${VERSION}
 DEP_VERSION = 0.5.0
 GOTESTSUM_VERSION = 0.3.2
 GOLANGCI_VERSION = 1.12.2
-LICENSEI_VERSION = 0.0.7
+LICENSEI_VERSION = 0.1.0
 
 GOLANG_VERSION = 1.11
 
@@ -37,7 +37,7 @@ GOLANG_VERSION = 1.11
 include main-targets.mk
 
 .PHONY: up
-up: vendor ## Set up the development environment
+up: ## Set up the development environment
 
 
 .PHONY: down
