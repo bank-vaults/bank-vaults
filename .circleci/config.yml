@@ -9,7 +9,7 @@ jobs:
       docker_layer_caching: true
 
     environment:
-      GO_VERSION: "1.11.4"
+      GO_VERSION: "1.12"
       K8S_VERSION: v1.12.0
       VAULT_VERSION: "1.0.0"
       KUBECONFIG: /home/circleci/.kube/config
@@ -20,65 +20,58 @@ jobs:
       CHANGE_MINIKUBE_NONE_USER: true
       GOPATH: /home/circleci/go
 
-    working_directory: /home/circleci/go/src/github.com/banzaicloud/bank-vaults
     steps:
       - checkout
 
       - restore_cache:
-          name: Restore build dependencies
+          name: Restore Go module cache
           keys:
-          - build-deps-v2-{{ .Branch }}-{{ checksum "Makefile" }}
-          - build-deps-v2-{{ .Branch }}
-          - build-deps-v2-master
-          - build-deps-v2
+          - gomod-v1-{{ .Branch }}-{{ checksum "go.sum" }}
+          - gomod-v1-{{ .Branch }}
+          - gomod-v1-master
+          - gomod-v1
 
-      - restore_cache:
-          name: Restore dependencies
-          keys:
-          - gopkg-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
-          - gopkg-v2-{{ .Branch }}
-          - gopkg-v2-master
-          - gopkg-v2
+      - run:
+          name: Setup golang
+          command: |
+            sudo rm -rf /usr/local/go
+            curl -Lo go.linux-amd64.tar.gz https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && sudo tar -C /usr/local -xzf go.linux-amd64.tar.gz
 
       - run:
           name: Install dependencies
-          command: make vendor
+          command: go mod download
 
       - save_cache:
-          name: Save dependencies
-          key: gopkg-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          name: Save Go module cache
+          key: gomod-v1-{{ .Branch }}-{{ checksum "go.sum" }}
           paths:
-          - vendor/
-      
+              - /home/circleci/go
+
+      - restore_cache:
+          name: Restore license cache
+          keys:
+              - licensei-v1-{{ .Branch }}-{{ checksum "go.sum" }}
+              - licensei-v1-{{ .Branch }}
+              - licensei-v1-master
+              - licensei-v1      
+
       - run:
           name: Install license checker
           command: curl https://raw.githubusercontent.com/goph/licensei/master/install.sh | bash -s v0.0.7
-
-      - restore_cache:
-          keys:
-          - licensei-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
-          - licensei-v2-{{ .Branch }}
-          - licensei-v2-master
-          - licensei-v2
 
       - run:
           name: Download license information for dependencies
           command: make license-cache
 
       - save_cache:
-          key: licensei-v2-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          name: Save license cache
+          key: licensei-v1-{{ .Branch }}-{{ checksum "go.sum" }}
           paths:
-            - .licensei.cache
+              - .licensei.cache
 
       - run:
           name: Check dependency licenses
           command: make license-check
-      
-      - run:
-          name: Setup golang
-          command: |
-            sudo rm -rf /usr/local/go
-            curl -Lo go.linux-amd64.tar.gz https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && sudo tar -C /usr/local -xzf go.linux-amd64.tar.gz
 
       - run:
           name: Start Vault
