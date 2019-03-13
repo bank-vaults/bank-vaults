@@ -1,7 +1,32 @@
-[![Docker Automated build](https://img.shields.io/docker/automated/banzaicloud/bank-vaults.svg)](https://hub.docker.com/r/banzaicloud/bank-vaults/)
-[![GoDoc](https://godoc.org/github.com/banzaicloud/bank-vaults?status.svg)](https://godoc.org/github.com/banzaicloud/bank-vaults)
-[![CircleCI](https://circleci.com/gh/banzaicloud/bank-vaults/tree/master.svg?style=shield)](https://circleci.com/gh/banzaicloud/bank-vaults/tree/master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/banzaicloud/bank-vaults)](https://goreportcard.com/report/github.com/banzaicloud/bank-vaults)
+
+
+<p align="center"><img src="docs/images/logo.png" width="260"></p>
+
+<p align="center">
+
+  <a href="https://hub.docker.com/r/banzaicloud/bank-vaults/">
+    <img src="https://img.shields.io/docker/automated/banzaicloud/bank-vaults.svg" alt="Docker Automated build">
+  </a>
+
+  <a href="https://hub.docker.com/r/banzaicloud/bank-vaults/">
+    <img src="https://img.shields.io/docker/pulls/banzaicloud/bank-vaults.svg?style=shield" alt="Docker Pulls">
+  </a>
+  
+  <a href="https://godoc.org/github.com/banzaicloud/bank-vaults">
+    <img src="https://godoc.org/github.com/banzaicloud/bank-vaults?status.svg" alt="GoDoc">
+  </a>
+
+  <a href="https://circleci.com/gh/banzaicloud/bank-vaults">
+    <img src="https://circleci.com/gh/banzaicloud/bank-vaults.svg?style=shield" alt="CircleCI">
+  </a>
+
+  <a href="https://goreportcard.com/badge/github.com/banzaicloud/bank-vaults">
+    <img src="https://goreportcard.com/badge/github.com/banzaicloud/bank-vaults" alt="Go Report Card">
+  </a>
+
+
+</p>
+
 
 *Bank Vaults is a thick, tricky, shifty right with a fast and intense tube for experienced surfers only, located on Mentawai. Think heavy steel doors, secret unlocking combinations and burly guards with smack-down attitude. Watch out for clean-up sets.*
 
