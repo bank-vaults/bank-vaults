@@ -61,7 +61,7 @@ func handleLiveness() {
 
 func main() {
 
-	syncPeriod := flag.Duration("sync_period", 1*time.Minute, "SyncPeriod determines the minimum frequency at which watched resources are reconciled")
+	syncPeriod := flag.Duration("sync_period", 10*time.Second, "SyncPeriod determines the minimum frequency at which watched resources are reconciled")
 
 	flag.Parse()
 
