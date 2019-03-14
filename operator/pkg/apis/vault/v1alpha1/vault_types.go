@@ -47,7 +47,6 @@ type VaultSpec struct {
 	// This option gives us the option to workaround current StatefulSet limitations around updates
 	// See: https://github.com/kubernetes/kubernetes/issues/67250
 	// TODO: Should be removed once the ParallelPodManagement policy supports the broken update.
-	SupportUpgrade  *bool                         `json:"supportUpgrade"`
 	EtcdVersion     string                        `json:"etcdVersion"`
 	EtcdSize        int                           `json:"etcdSize"`
 	EtcdAnnotations map[string]string             `json:"etcdAnnotations,omitempty"`
@@ -207,9 +206,6 @@ func (spec *VaultSpec) IsFluentDEnabled() bool {
 
 // ConfigJSON returns the Config field as a JSON string
 func (spec *VaultSpec) ConfigJSON() string {
-	if _, ok := spec.Config["disable_clustering"]; !ok {
-		spec.Config["disable_clustering"] = true
-	}
 	config, _ := json.Marshal(spec.Config)
 	return string(config)
 }
