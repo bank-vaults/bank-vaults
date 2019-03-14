@@ -320,11 +320,6 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 		}
 	}
 	in.SecurityContext.DeepCopyInto(&out.SecurityContext)
-	if in.SupportUpgrade != nil {
-		in, out := &in.SupportUpgrade, &out.SupportUpgrade
-		*out = new(bool)
-		**out = **in
-	}
 	if in.EtcdAnnotations != nil {
 		in, out := &in.EtcdAnnotations, &out.EtcdAnnotations
 		*out = make(map[string]string, len(*in))
