@@ -144,8 +144,15 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			return reconcile.Result{}, err
 		}
 
-		err = r.client.Create(context.TODO(), etcdCluster)
-		if err != nil && apierrors.IsAlreadyExists(err) {
+		var previousEtcd etcdV1beta2.EtcdCluster
+
+		err = r.client.Get(context.TODO(), client.ObjectKey{Name: etcdCluster.Name, Namespace: etcdCluster.Namespace}, &previousEtcd)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				err = r.client.Create(context.TODO(), etcdCluster)
+			}
+		} else {
+			etcdCluster.ResourceVersion = previousEtcd.ResourceVersion
 			err = r.client.Update(context.TODO(), etcdCluster)
 		}
 		if err != nil {
