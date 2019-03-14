@@ -16,17 +16,20 @@ package vault
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
 	vaultv1alpha1 "github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
-	"github.com/banzaicloud/bank-vaults/pkg/tls"
+	bvtls "github.com/banzaicloud/bank-vaults/pkg/tls"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	etcdV1beta2 "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
 	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
@@ -62,7 +65,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileVault{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileVault{client: mgr.GetClient(), scheme: mgr.GetScheme(), httpClient: newHTTPClient()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -88,8 +91,9 @@ var _ reconcile.Reconciler = &ReconcileVault{}
 type ReconcileVault struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client     client.Client
+	scheme     *runtime.Scheme
+	httpClient *http.Client
 }
 
 // Reconcile reads that state of the cluster for a Vault object and makes changes based on the state read
@@ -241,23 +245,6 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
-	// Update the Vault status with the pod names
-	podList := podList()
-	labelSelector := labels.SelectorFromSet(labelsForVault(v.Name))
-	listOps := &client.ListOptions{LabelSelector: labelSelector}
-	err = r.client.List(context.TODO(), listOps, podList)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to list pods: %v", err)
-	}
-	podNames := getPodNames(podList.Items)
-	if !reflect.DeepEqual(podNames, v.Status.Nodes) {
-		v.Status.Nodes = podNames
-		err := r.client.Update(context.TODO(), v)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to update vault status: %v", err)
-		}
-	}
-
 	// Create the service if it doesn't exist
 	ser := serviceForVault(v)
 	// Set Vault instance as the owner and controller
@@ -349,7 +336,50 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
+	// Update the Vault status with the pod names
+	podList := podList()
+	labelSelector := labels.SelectorFromSet(labelsForVault(v.Name))
+	listOps := &client.ListOptions{LabelSelector: labelSelector}
+	err = r.client.List(context.TODO(), listOps, podList)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to list pods: %v", err)
+	}
+	podNames := getPodNames(podList.Items)
+
+	var leader string
+	for _, podName := range podNames {
+		url := fmt.Sprintf("%s://%s.%s:8200/v1/sys/health", strings.ToLower(string(getVaultURIScheme(v))), podName, v.Namespace)
+		resp, err := r.httpClient.Get(url)
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				leader = podName
+				break
+			}
+		}
+	}
+
+	if !reflect.DeepEqual(podNames, v.Status.Nodes) || !reflect.DeepEqual(leader, v.Status.Leader) {
+		v.Status.Nodes = podNames
+		v.Status.Leader = leader
+		err := r.client.Update(context.TODO(), v)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to update vault status: %v", err)
+		}
+	}
+
 	return reconcile.Result{}, nil
+}
+
+func newHTTPClient() *http.Client {
+	return &http.Client{
+		Timeout: 2 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
 }
 
 func secretForEtcd(e *etcdV1beta2.EtcdCluster) (*corev1.Secret, error) {
@@ -360,7 +390,7 @@ func secretForEtcd(e *etcdV1beta2.EtcdCluster) (*corev1.Secret, error) {
 		e.Name + "-client." + e.Namespace + ".svc",
 		"localhost",
 	}
-	chain, err := tls.GenerateTLS(strings.Join(hosts, ","), "8760h")
+	chain, err := bvtls.GenerateTLS(strings.Join(hosts, ","), "8760h")
 	if err != nil {
 		return nil, err
 	}
@@ -618,7 +648,7 @@ func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 
 func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, error) {
 	hostsAndIPs := om.Name + "." + om.Namespace + ",127.0.0.1"
-	chain, err := tls.GenerateTLS(hostsAndIPs, "8760h")
+	chain, err := bvtls.GenerateTLS(hostsAndIPs, "8760h")
 	if err != nil {
 		return nil, err
 	}
@@ -778,10 +808,6 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 								{
 									Name:  "VAULT_LOCAL_CONFIG",
 									Value: configJSON,
-								},
-								{
-									Name:  "VAULT_LOG_LEVEL",
-									Value: "trace",
 								},
 							}))),
 							SecurityContext: &corev1.SecurityContext{
