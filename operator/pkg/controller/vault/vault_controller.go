@@ -809,6 +809,11 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 									Name:  "VAULT_LOCAL_CONFIG",
 									Value: configJSON,
 								},
+								// https://github.com/hashicorp/docker-vault/blob/master/0.X/docker-entrypoint.sh#L12
+								{
+									Name:  "VAULT_CLUSTER_INTERFACE",
+									Value: "eth0",
+								},
 							}))),
 							SecurityContext: &corev1.SecurityContext{
 								Capabilities: &corev1.Capabilities{
