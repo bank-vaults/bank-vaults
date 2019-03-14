@@ -4,13 +4,8 @@ metadata:
   name: "vault"
 spec:
   size: 2
-  image: vault:1.0.0
+  image: vault:1.0.3
   bankVaultsImage: banzaicloud/bank-vaults:latest
-
-  # This option gives us the option to workaround current StatefulSet limitations around updates
-  # See: https://github.com/kubernetes/kubernetes/issues/67250
-  # By default it is true.
-  supportUpgrade: true
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault

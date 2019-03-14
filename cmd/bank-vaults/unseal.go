@@ -27,15 +27,11 @@ import (
 const cfgUnsealPeriod = "unseal-period"
 const cfgInit = "init"
 const cfgOnce = "once"
-const cfgStepDownActive = "step-down-active"
-const cfgActiveNodeAddress = "active-node-address"
 
 type unsealCfg struct {
-	unsealPeriod      time.Duration
-	proceedInit       bool
-	runOnce           bool
-	stepDownActive    bool
-	activeNodeAddress string
+	unsealPeriod time.Duration
+	proceedInit  bool
+	runOnce      bool
 }
 
 var unsealConfig unsealCfg
@@ -55,17 +51,9 @@ from one of the followings:
 		appConfig.BindPFlag(cfgOnce, cmd.PersistentFlags().Lookup(cfgOnce))
 		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))
 		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))
-		appConfig.BindPFlag(cfgStepDownActive, cmd.PersistentFlags().Lookup(cfgStepDownActive))
-		appConfig.BindPFlag(cfgActiveNodeAddress, cmd.PersistentFlags().Lookup(cfgActiveNodeAddress))
 		unsealConfig.unsealPeriod = appConfig.GetDuration(cfgUnsealPeriod)
 		unsealConfig.proceedInit = appConfig.GetBool(cfgInit)
 		unsealConfig.runOnce = appConfig.GetBool(cfgOnce)
-		unsealConfig.stepDownActive = appConfig.GetBool(cfgStepDownActive)
-		unsealConfig.activeNodeAddress = appConfig.GetString(cfgActiveNodeAddress)
-
-		if unsealConfig.stepDownActive && unsealConfig.activeNodeAddress == "" {
-			logrus.Fatalf("'%s' should be also set if '%s' is enabled", cfgActiveNodeAddress, cfgStepDownActive)
-		}
 
 		store, err := kvStoreForConfig(appConfig)
 
@@ -129,13 +117,6 @@ from one of the followings:
 
 				logrus.Infof("successfully unsealed vault")
 
-				if unsealConfig.stepDownActive {
-					err = v.StepDownActive(unsealConfig.activeNodeAddress)
-					if err != nil {
-						logrus.Warnf("failed to tell active instance to step down: %s", err.Error())
-					}
-				}
-
 				exitIfNecessary(0)
 			}()
 
@@ -157,8 +138,6 @@ func init() {
 	unsealCmd.PersistentFlags().Bool(cfgOnce, false, "Run unseal only once")
 	unsealCmd.PersistentFlags().String(cfgInitRootToken, "", "root token for the new vault cluster (only if -init=true)")
 	unsealCmd.PersistentFlags().Bool(cfgStoreRootToken, true, "should the root token be stored in the key store (only if -init=true)")
-	unsealCmd.PersistentFlags().Bool(cfgStepDownActive, false, "should the active node be asked to step down")
-	unsealCmd.PersistentFlags().String(cfgActiveNodeAddress, "", "the address of the active Vault node")
 
 	rootCmd.AddCommand(unsealCmd)
 }
