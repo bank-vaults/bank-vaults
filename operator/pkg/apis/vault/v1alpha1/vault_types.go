@@ -255,7 +255,8 @@ func (vault *Vault) GetIngress() *Ingress {
 // VaultStatus defines the observed state of Vault
 type VaultStatus struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	Nodes []string `json:"nodes"`
+	Nodes  []string `json:"nodes"`
+	Leader string   `json:"leader"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -281,11 +282,11 @@ type VaultList struct {
 
 // UnsealConfig represents the UnsealConfig field of a VaultSpec Kubernetes object
 type UnsealConfig struct {
-	Kubernetes *KubernetesUnsealConfig `json:"kubernetes"`
-	Google     *GoogleUnsealConfig     `json:"google"`
-	Alibaba    *AlibabaUnsealConfig    `json:"alibaba"`
-	Azure      *AzureUnsealConfig      `json:"azure"`
-	AWS        *AWSUnsealConfig        `json:"aws"`
+	Kubernetes *KubernetesUnsealConfig `json:"kubernetes,omitempty"`
+	Google     *GoogleUnsealConfig     `json:"google,omitempty"`
+	Alibaba    *AlibabaUnsealConfig    `json:"alibaba,omitempty"`
+	Azure      *AzureUnsealConfig      `json:"azure,omitempty"`
+	AWS        *AWSUnsealConfig        `json:"aws,omitempty"`
 }
 
 // ToArgs returns the UnsealConfig as and argument array for bank-vaults
