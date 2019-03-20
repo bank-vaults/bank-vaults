@@ -1,4 +1,4 @@
-// Copyright © 2018 Banzai Cloud
+// Copyright © 2019 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -161,22 +161,7 @@ var configureCmd = &cobra.Command{
 						continue
 					}
 
-					logrus.Infof("checking if vault is active...")
-					active, err := v.Active()
-					if err != nil {
-						logrus.Errorf("error checking if vault is active: %s, waiting %s before trying again...", err.Error(), 5*time.Second)
-						time.Sleep(5 * time.Second)
-						continue
-					}
-
-					// If vault is not active, we stop here and wait another 5 seconds
-					if !active {
-						logrus.Infof("vault is not active, waiting %s before trying again...", 5*time.Second)
-						time.Sleep(5 * time.Second)
-						continue
-					}
-
-					logrus.Infof("vault is unsealed and active, configuring...")
+					logrus.Infof("vault is unsealed, configuring...")
 
 					if err = v.Configure(config); err != nil {
 						logrus.Errorf("error configuring vault: %s", err.Error())
