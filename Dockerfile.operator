@@ -20,7 +20,6 @@ RUN apk add --no-cache ca-certificates
 
 COPY --from=builder /go/bin/manager /usr/local/bin/vault-operator
 
-RUN adduser -D vault-operator
-USER vault-operator
+USER 65534
 
 ENTRYPOINT ["/usr/local/bin/vault-operator"]
