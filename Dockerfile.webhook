@@ -21,6 +21,6 @@ COPY --from=builder /go/bin/vault-secrets-webhook /usr/local/bin/vault-secrets-w
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 ENV DEBUG false
-USER nobody
+USER 65534
 
 ENTRYPOINT ["/usr/local/bin/vault-secrets-webhook"]
