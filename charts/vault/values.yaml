@@ -6,8 +6,8 @@ strategy:
   type: RollingUpdate
 image:
   repository: vault
-  tag: 0.11.1
-  pullPolicy: Always
+  tag: 1.1.0
+  pullPolicy: IfNotPresent
 service:
   name: vault
   type: ClusterIP
@@ -148,7 +148,7 @@ vault:
 unsealer:
   image:
     repository: banzaicloud/bank-vaults
-    tag: "0.3.4"
+    tag: 0.4.13
     pullPolicy: IfNotPresent
   args: [
       "--mode",
@@ -165,7 +165,7 @@ unsealer:
     type: ClusterIP
     port: 9091
     serviceMonitor:
-      enabled: true
+      enabled: false
       additionalLabels: {}
     annotations:
       prometheus.io/scrape: "true"
@@ -177,7 +177,7 @@ statsd:
     enabled: true
     port: 9102
     serviceMonitor:
-      enabled: true
+      enabled: false
       additionalLabels: {}
   config:
     mappings:

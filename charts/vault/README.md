@@ -17,6 +17,8 @@ be deployed beforehand and configured with the `vault.config` option. YAML
 provided under this option will be converted to JSON for the final vault
 `config.json` file.
 
+Please also note that scaling to more than 1 replicas can be made successfully only with a configured HA Storage backend. By default this chart uses `file` backend, which is not HA.
+
 > See https://www.vaultproject.io/docs/configuration/ for more information.
 
 ## Installing the Chart
@@ -66,7 +68,7 @@ The following tables lists the configurable parameters of the vault chart and th
 |-------------------------|-------------------------------------|-----------------------------------------------------|
 | `image.pullPolicy`      | Container pull policy               | `IfNotPresent`                                      |
 | `image.repository`      | Container image to use              | `vault`                                             |
-| `image.tag`             | Container image tag to deploy       | `0.9.1`                                             |
+| `image.tag`             | Container image tag to deploy       | `1.0.3`                                             |
 | `vault.customSecrets`   | Custom secrets available to Vault   | `[]`                                                |
 | `vault.config`          | Vault configuration                 | No default backend                                  |
 | `vault.externalConfig`  | Vault API based configuration       | No default backend                                  |

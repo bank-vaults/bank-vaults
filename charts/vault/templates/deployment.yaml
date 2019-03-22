@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ template "vault.fullname" . }}
   labels:
@@ -70,7 +70,7 @@ spec:
             {{ else }}
             scheme: HTTPS
             {{ end }}
-            path: /v1/sys/health
+            path: /v1/sys/health?standbyok&perfstandbyok
             port: vault
         securityContext:
           readOnlyRootFilesystem: true
