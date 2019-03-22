@@ -19,5 +19,6 @@ FROM alpine:3.7
 RUN apk add --no-cache ca-certificates
 
 COPY --from=builder /go/bin/bank-vaults /usr/local/bin/bank-vaults
+USER 65534
 
 ENTRYPOINT ["/usr/local/bin/bank-vaults"]
