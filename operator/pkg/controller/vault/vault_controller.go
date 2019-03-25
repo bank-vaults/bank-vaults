@@ -306,8 +306,16 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, fmt.Errorf("failed to list configmaps: %v", err)
 	}
 
+	externalSecrets := corev1.SecretList{}
+	externalSecretsFilter := client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(labelsForVaultConfigurer(v.Name)),
+	}
+	if err = r.client.List(context.TODO(), &externalSecretsFilter, &externalSecrets); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to list secrets: %v", err)
+	}
+
 	// Create the deployment if it doesn't exist
-	configurerDep := deploymentForConfigurer(v, externalConfigMaps)
+	configurerDep := deploymentForConfigurer(v, externalConfigMaps, externalSecrets)
 	// Set Vault instance as the owner and controller
 	if err := controllerutil.SetControllerReference(v, configurerDep, r.scheme); err != nil {
 		return reconcile.Result{}, err
@@ -558,7 +566,7 @@ func serviceType(v *vaultv1alpha1.Vault) corev1.ServiceType {
 	}
 }
 
-func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMapList) *appsv1.Deployment {
+func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMapList, secrets corev1.SecretList) *appsv1.Deployment {
 	ls := labelsForVaultConfigurer(v.Name)
 
 	volumes := []corev1.Volume{}
@@ -566,6 +574,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	configArgs := []string{}
 
 	sort.Slice(configmaps.Items, func(i, j int) bool { return configmaps.Items[i].Name < configmaps.Items[j].Name })
+	sort.Slice(secrets.Items, func(i, j int) bool { return secrets.Items[i].Name < secrets.Items[j].Name })
 
 	for _, cm := range configmaps.Items {
 		if _, ok := cm.Data[vault.DefaultConfigFile]; ok {
@@ -586,6 +595,27 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			configArgs = append(configArgs, "--vault-config-file", "/config/"+cm.Name+"/"+vault.DefaultConfigFile)
 		}
 	}
+
+	for _, secret := range secrets.Items {
+		if _, ok := secret.Data[vault.DefaultConfigFile]; ok {
+			volumes = append(volumes, corev1.Volume{
+				Name: secret.Name,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secret.Name,
+					},
+				},
+			})
+
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      secret.Name,
+				MountPath: "/config/" + secret.Name,
+			})
+
+			configArgs = append(configArgs, "--vault-config-file", "/config/"+secret.Name+"/"+vault.DefaultConfigFile)
+		}
+	}
+
 
 	dep := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
