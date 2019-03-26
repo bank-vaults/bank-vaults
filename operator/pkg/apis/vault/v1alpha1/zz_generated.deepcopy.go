@@ -332,6 +332,13 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 		*out = new(v1.PersistentVolumeClaimSpec)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ServicePorts != nil {
+		in, out := &in.ServicePorts, &out.ServicePorts
+		*out = make(map[string]int32, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	in.NodeAffinity.DeepCopyInto(&out.NodeAffinity)
 	if in.Volumes != nil {
 		in, out := &in.Volumes, &out.Volumes
