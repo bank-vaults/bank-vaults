@@ -514,6 +514,7 @@ func getServicePorts(v *vaultv1alpha1.Vault) []corev1.ServicePort {
 
 func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 	var services []*corev1.Service
+	ports := getServicePorts(v)
 
 	for i := 0; i < int(v.Spec.Size); i++ {
 
@@ -535,16 +536,7 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 			Spec: corev1.ServiceSpec{
 				Type:     serviceType(v),
 				Selector: ls,
-				Ports: []corev1.ServicePort{
-					{
-						Name: "api-port",
-						Port: 8200,
-					},
-					{
-						Name: "cluster-port",
-						Port: 8201,
-					},
-				},
+				Ports: ports,
 			},
 		}
 
