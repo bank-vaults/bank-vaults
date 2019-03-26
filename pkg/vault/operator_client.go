@@ -699,8 +699,8 @@ func (v *vault) configureAwsRoles(path string, roles []interface{}) error {
 		if err != nil {
 			return fmt.Errorf("error converting roles for aws: %s", err.Error())
 		}
-		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
 
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
 		if err != nil {
 			return fmt.Errorf("error putting %s aws role into vault: %s", role["name"], err.Error())
 		}
@@ -714,10 +714,12 @@ func (v *vault) configureAWSCrossAccountRoles(path string, crossAccountRoles []i
 		if err != nil {
 			return fmt.Errorf("error converting cross account aws roles for aws: %s", err.Error())
 		}
-		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/config/sts/%s", path, crossAccountRole["sts_account"]), crossAccountRole)
 
+		stsAccount := fmt.Sprint(crossAccountRole["sts_account"])
+
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/config/sts/%s", path, stsAccount), crossAccountRole)
 		if err != nil {
-			return fmt.Errorf("error putting %s cross account aws role into vault: %s", crossAccountRole["sts_account"], err.Error())
+			return fmt.Errorf("error putting %s cross account aws role into vault: %s", stsAccount, err.Error())
 		}
 	}
 	return nil
