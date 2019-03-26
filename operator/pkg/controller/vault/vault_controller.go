@@ -463,6 +463,7 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
 
 func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 	ls := labelsForVault(v.Name)
+	serviceports, _ := getServicePorts(v)
 	service := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -476,23 +477,62 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Type:     serviceType(v),
 			Selector: ls,
-			Ports: []corev1.ServicePort{
-				{
-					Name: "api-port",
-					Port: 8200,
-				},
-				{
-					Name: "cluster-port",
-					Port: 8201,
-				},
-			},
+			Ports: serviceports,
 		},
 	}
 	return service
 }
 
+func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.ContainerPort) {
+	var serviceports []corev1.ServicePort
+	var containerports []corev1.ContainerPort
+
+	if len(v.Spec.ServicePorts) == 0 {
+		return []corev1.ServicePort{
+			{
+				Name: "api-port",
+				Port: 8200,
+			},
+			{
+				Name: "cluster-port",
+				Port: 8201,
+			},
+		}, []corev1.ContainerPort{
+			{
+				ContainerPort: 8200,
+				Name:          "api-port",
+			},
+			{
+				ContainerPort: 8201,
+				Name:          "cluster-port",
+			},
+		}
+	}
+
+	for k, i := range v.Spec.ServicePorts {
+		serviceport := []corev1.ServicePort{
+			{
+				Name: k,
+				Port: i,
+			},
+		}
+		serviceports = append(serviceport)
+
+		containerport := []corev1.ContainerPort{
+			{
+				ContainerPort: 	i,
+				Name:          	k,
+			},
+		}
+		containerports = append(containerport)
+	}
+
+	return serviceports, containerports
+}
+
 func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 	var services []*corev1.Service
+	serviceports, _ := getServicePorts(v)
 
 	for i := 0; i < int(v.Spec.Size); i++ {
 
@@ -514,16 +554,7 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 			Spec: corev1.ServiceSpec{
 				Type:     serviceType(v),
 				Selector: ls,
-				Ports: []corev1.ServicePort{
-					{
-						Name: "api-port",
-						Port: 8200,
-					},
-					{
-						Name: "cluster-port",
-						Port: 8201,
-					},
-				},
+				Ports: serviceports,
 			},
 		}
 
@@ -790,6 +821,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 		return nil, err
 	}
 
+	_, containerports := getServicePorts(v)
+
 	dep := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -825,15 +858,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Name:            "vault",
 							Args:            []string{"server"},
-							Ports: []corev1.ContainerPort{
-								{
-									ContainerPort: 8200,
-									Name:          "api-port",
-								},
-								{
-									ContainerPort: 8201,
-									Name:          "cluster-port",
-								}},
+							Ports: containerports,
 							Env: withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
 								{
 									Name:  "VAULT_LOCAL_CONFIG",

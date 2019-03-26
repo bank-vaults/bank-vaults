@@ -52,6 +52,7 @@ type VaultSpec struct {
 	EtcdAnnotations map[string]string             `json:"etcdAnnotations,omitempty"`
 	EtcdPVCSpec     *v1.PersistentVolumeClaimSpec `json:"etcdPVCSpec,omitempty"`
 	ServiceType     string                        `json:"serviceType"`
+	ServicePorts    map[string]int32              `json:"servicePorts"`
 	PodAntiAffinity string                        `json:"podAntiAffinity"`
 	NodeAffinity    v1.NodeAffinity               `json:"nodeAffinity"`
 	ServiceAccount  string                        `json:"serviceAccount"`
