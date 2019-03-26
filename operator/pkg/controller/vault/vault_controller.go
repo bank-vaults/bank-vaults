@@ -463,6 +463,7 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
 
 func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 	ls := labelsForVault(v.Name)
+	ports := getServicePorts()
 	service := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -476,19 +477,39 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Type:     serviceType(v),
 			Selector: ls,
-			Ports: []corev1.ServicePort{
-				{
-					Name: "api-port",
-					Port: 8200,
-				},
-				{
-					Name: "cluster-port",
-					Port: 8201,
-				},
-			},
-		},
+			Ports: ports
+		}
 	}
 	return service
+}
+
+func getServicePorts(v *vaultv1alpha1.Vault) *corev1.ServicePort {
+	var ports []corev1.ServicePort{}
+
+	if v.Spec.ServicePorts == "" {
+		ports = []corev1.ServicePort{
+			{
+				Name: "api-port",
+				Port: 8200,
+			},
+			{
+				Name: "cluster-port",
+				Port: 8201,
+			},
+		}
+		return ports
+	} else {
+		for k, v := range .Spec.ServicePorts {
+			port :=  []corev1.ServicePort{
+		        {
+			        Name: k,
+			        Port: v,
+		        },
+		    }
+			ports = append(port)
+		}
+		return ports
+	}
 }
 
 func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
