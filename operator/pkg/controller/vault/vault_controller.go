@@ -486,8 +486,8 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 func getServicePorts(v *vaultv1alpha1.Vault) *corev1.ServicePort {
 	var ports []corev1.ServicePort{}
 
-	if v.Spec.ServicePorts == "" {
-		ports = []corev1.ServicePort{
+	if len(v.Spec.ServicePorts) == 0 {
+		return []corev1.ServicePort{
 			{
 				Name: "api-port",
 				Port: 8200,
@@ -497,19 +497,19 @@ func getServicePorts(v *vaultv1alpha1.Vault) *corev1.ServicePort {
 				Port: 8201,
 			},
 		}
-		return ports
-	} else {
-		for k, v := range .Spec.ServicePorts {
-			port :=  []corev1.ServicePort{
-		        {
-			        Name: k,
-			        Port: v,
-		        },
-		    }
-			ports = append(port)
-		}
-		return ports
 	}
+
+	for k, v := range .Spec.ServicePorts {
+		port := []corev1.ServicePort{
+			{
+				Name: k,
+				Port: v,
+			},
+		}
+		ports = append(port)
+	}
+
+	return ports
 }
 
 func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
