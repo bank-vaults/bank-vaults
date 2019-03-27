@@ -510,21 +510,17 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 	}
 
 	for k, i := range v.Spec.ServicePorts {
-		serviceport := []corev1.ServicePort{
-			{
+		serviceport := corev1.ServicePort{
 				Name: k,
 				Port: i,
-			},
 		}
-		serviceports = append(serviceport)
+		serviceports = append(serviceports, serviceport)
 
-		containerport := []corev1.ContainerPort{
-			{
-				ContainerPort: 	i,
-				Name:          	k,
-			},
+		containerport := corev1.ContainerPort{
+			ContainerPort: 	i,
+			Name:          	k,
 		}
-		containerports = append(containerport)
+		containerports = append(containerports, containerport)
 	}
 
 	return serviceports, containerports
