@@ -23,7 +23,7 @@ spec:
   servicePorts:
     api-port: 8200
     cluster-port: 8201
-    external-api-port: 8300
+    external-port: 8300
 
   # Request an Ingress controller with the default configuration
   ingress:
