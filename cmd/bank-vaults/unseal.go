@@ -79,7 +79,7 @@ from one of the followings:
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
 
-		metrics := prometheusExporter{Vault: v}
+		metrics := prometheusExporter{Vault: v, Mode: "unseal"}
 		go metrics.Run()
 
 		for {

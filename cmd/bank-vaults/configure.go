@@ -68,7 +68,7 @@ var configureCmd = &cobra.Command{
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
 
-		metrics := prometheusExporter{Vault: v}
+		metrics := prometheusExporter{Vault: v, Mode: "configure"}
 		go metrics.Run()
 
 		parseConfiguration := func(vaultConfigFile string) *viper.Viper {
@@ -143,6 +143,7 @@ var configureCmd = &cobra.Command{
 			configurations <- parseConfiguration(vaultConfigFile)
 		}
 
+		failedLastConfigure.Set(0)
 		for config := range configurations {
 
 			logrus.Infoln("New config file change", config.ConfigFileUsed())
@@ -168,11 +169,11 @@ var configureCmd = &cobra.Command{
 
 					if err = v.Configure(config); err != nil {
 						logrus.Errorf("error configuring vault: %s", err.Error())
-						failedConfigure.Inc()
+
+						failedLastConfigure.Set(1)
 						return
 					}
 
-					successConfigure.Inc()
 					logrus.Infof("successfully configured vault")
 					return
 				}
