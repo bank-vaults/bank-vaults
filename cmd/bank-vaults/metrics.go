@@ -18,6 +18,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 )
@@ -40,6 +41,16 @@ var (
 		"Is the Vault node the leader.",
 		nil, nil,
 	)
+  successConfigure = promauto.NewCounter(
+    prometheus.CounterOpts{
+    Name: prometheus.BuildFQName(prometheusNS, "configure", "success"),
+    Help: "The total number of successful configure events from bank-vaults",
+    })
+  failedConfigure = promauto.NewCounter(
+    prometheus.CounterOpts{
+    Name: prometheus.BuildFQName(prometheusNS, "configure", "failures"),
+    Help: "The total number of failed configure events from bank-vaults",
+    })
 )
 
 type prometheusExporter struct {
