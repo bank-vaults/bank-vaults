@@ -60,6 +60,35 @@ kubectl create secret generic aws --from-literal=AWS_ACCESS_KEY_ID=$AWS_ACCESS_K
 helm install banzaicloud-stable/vault --set "vault.customSecrets[0].secretName=aws" --set "vault.customSecrets[0].mountPath=/vault/aws"
 ```
 
+## Google Storage and KMS example
+
+```
+# Create a google secret with your Secret Account Key file in json fromat.
+kubectl create secret generic google --from-literal=GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp/service-account.json --from-file=service-account.json=./service-account.json
+
+# Tell the chart to pass these vars to Vault and as a file mount if needed
+helm install banzaicloud-stable/vault \
+--set "vault.customSecrets[0].secretName=google" \
+--set "vault.customSecrets[0].mountPath=/etc/gcp" \
+--set "vault.config.storage.gcs.bucket=[google-bucket-name]" \
+--set "vault.config.seal.gcpckms.project=[google-project-id]" \
+--set "vault.config.seal.gcpckms.region=[google-kms-region]" \
+--set "vault.config.seal.gcpckms.key_ring=[google-kms-key-ring]" \
+--set "vault.config.seal.gcpckms.crypto_key=[google-kms-crypto-key]" \
+--set "unsealer.args[0]=--mode" \
+--set "unsealer.args[1]=google-cloud-kms-gcs" \
+--set "unsealer.args[2]=--google-cloud-kms-key-ring" \
+--set "unsealer.args[3]=[google-kms-key-ring]" \
+--set "unsealer.args[4]=--google-cloud-kms-crypto-key" \
+--set "unsealer.args[5]=[google-kms-crypto-key]" \
+--set "unsealer.args[6]=--google-cloud-kms-location" \
+--set "unsealer.args[7]=global" \
+--set "unsealer.args[8]=--google-cloud-kms-project" \
+--set "unsealer.args[9]=[google-project-id]" \
+--set "unsealer.args[10]=--google-cloud-storage-bucket" \
+--set "unsealer.args[11]=[google-bucket-name]"
+```
+
 ## Configuration
 
 The following tables lists the configurable parameters of the vault chart and their default values.
