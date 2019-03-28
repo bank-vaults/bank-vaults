@@ -38,9 +38,11 @@ var configureCmd = &cobra.Command{
 			https://www.vaultproject.io/docs/configuration/index.html. With this it is possible to
 			configure secret engines, auth methods, etc...`,
 	Run: func(cmd *cobra.Command, args []string) {
+		appConfig.BindPFlag(cfgOnce, cmd.PersistentFlags().Lookup(cfgOnce))
 		appConfig.BindPFlag(cfgUnsealPeriod, cmd.PersistentFlags().Lookup(cfgUnsealPeriod))
 		appConfig.BindPFlag(cfgVaultConfigFile, cmd.PersistentFlags().Lookup(cfgVaultConfigFile))
 
+		runOnce := appConfig.GetBool(cfgOnce)
 		unsealConfig.unsealPeriod = appConfig.GetDuration(cfgUnsealPeriod)
 		vaultConfigFiles := appConfig.GetStringSlice(cfgVaultConfigFile)
 
@@ -68,85 +70,21 @@ var configureCmd = &cobra.Command{
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
 
-		metrics := prometheusExporter{Vault: v, Mode: "configure"}
-		go metrics.Run()
-
-		parseConfiguration := func(vaultConfigFile string) *viper.Viper {
-
-			config := viper.New()
-
-			templateName := filepath.Base(vaultConfigFile)
-
-			configTemplate, err := template.New(templateName).
-				Funcs(sprig.TxtFuncMap()).
-				Delims("${", "}").
-				ParseFiles(vaultConfigFile)
-
-			if err != nil {
-				logrus.Fatalf("error parsing vault config template: %s", err.Error())
-			}
-
-			buffer := bytes.NewBuffer(nil)
-
-			err = configTemplate.ExecuteTemplate(buffer, templateName, nil)
-			if err != nil {
-				logrus.Fatalf("error executing vault config template: %s", err.Error())
-			}
-
-			config.SetConfigFile(vaultConfigFile)
-
-			err = config.ReadConfig(buffer)
-			if err != nil {
-				logrus.Fatalf("error reading vault config file: %s", err.Error())
-			}
-
-			return config
-		}
-
 		configurations := make(chan *viper.Viper, len(vaultConfigFiles))
-
-		go func() {
-			watcher, err := fsnotify.NewWatcher()
-			if err != nil {
-				logrus.Fatal(err)
-			}
-			defer watcher.Close()
-
-			for _, vaultConfigFile := range vaultConfigFiles {
-				// we have to watch the entire directory to pick up renames/atomic saves in a cross-platform way
-				configFile := filepath.Clean(vaultConfigFile)
-				configDir, _ := filepath.Split(configFile)
-
-				done := make(chan bool)
-				go func() {
-					for {
-						select {
-						case event := <-watcher.Events:
-							// we only care about the config file or the ConfigMap directory (if in Kubernetes)
-							if filepath.Clean(event.Name) == configFile || filepath.Base(event.Name) == "..data" {
-								if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-									configurations <- parseConfiguration(configFile)
-								}
-							}
-						case err := <-watcher.Errors:
-							logrus.Error(err)
-						}
-					}
-				}()
-
-				watcher.Add(configDir)
-				<-done
-			}
-		}()
 
 		for _, vaultConfigFile := range vaultConfigFiles {
 			configurations <- parseConfiguration(vaultConfigFile)
 		}
 
-		failedLastConfigure.Set(0)
+		if !runOnce {
+			go watchConfigurations(vaultConfigFiles, configurations)
+		} else {
+			close(configurations)
+		}
+
 		for config := range configurations {
 
-			logrus.Infoln("New config file change", config.ConfigFileUsed())
+			logrus.Infoln("config file has changed:", config.ConfigFileUsed())
 
 			func() {
 				for {
@@ -182,7 +120,74 @@ var configureCmd = &cobra.Command{
 	},
 }
 
+func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.Viper) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	defer watcher.Close()
+
+	for _, vaultConfigFile := range vaultConfigFiles {
+		// we have to watch the entire directory to pick up renames/atomic saves in a cross-platform way
+		configFile := filepath.Clean(vaultConfigFile)
+		configDir, _ := filepath.Split(configFile)
+
+		done := make(chan bool)
+		go func() {
+			for {
+				select {
+				case event := <-watcher.Events:
+					// we only care about the config file or the ConfigMap directory (if in Kubernetes)
+					if filepath.Clean(event.Name) == configFile || filepath.Base(event.Name) == "..data" {
+						if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
+							configurations <- parseConfiguration(configFile)
+						}
+					}
+				case err := <-watcher.Errors:
+					logrus.Error(err)
+				}
+			}
+		}()
+
+		watcher.Add(configDir)
+		<-done
+	}
+}
+
+func parseConfiguration(vaultConfigFile string) *viper.Viper {
+
+	config := viper.New()
+
+	templateName := filepath.Base(vaultConfigFile)
+
+	configTemplate, err := template.New(templateName).
+		Funcs(sprig.TxtFuncMap()).
+		Delims("${", "}").
+		ParseFiles(vaultConfigFile)
+
+	if err != nil {
+		logrus.Fatalf("error parsing vault config template: %s", err.Error())
+	}
+
+	buffer := bytes.NewBuffer(nil)
+
+	err = configTemplate.ExecuteTemplate(buffer, templateName, nil)
+	if err != nil {
+		logrus.Fatalf("error executing vault config template: %s", err.Error())
+	}
+
+	config.SetConfigFile(vaultConfigFile)
+
+	err = config.ReadConfig(buffer)
+	if err != nil {
+		logrus.Fatalf("error reading vault config file: %s", err.Error())
+	}
+
+	return config
+}
+
 func init() {
+	configureCmd.PersistentFlags().Bool(cfgOnce, false, "Run configure only once")
 	configureCmd.PersistentFlags().Duration(cfgUnsealPeriod, time.Second*30, "How often to attempt to unseal the Vault instance")
 	configureCmd.PersistentFlags().StringSlice(cfgVaultConfigFile, []string{vault.DefaultConfigFile}, "The filename of the YAML/JSON Vault configuration")
 
