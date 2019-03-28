@@ -110,11 +110,11 @@ var configureCmd = &cobra.Command{
 
 					if err = v.Configure(config); err != nil {
 						logrus.Errorf("error configuring vault: %s", err.Error())
-						successfulConfigurationsCount++
+					  failedConfigurationsCount++
 						return
 					}
 
-					failedConfigurationsCount++
+					successfulConfigurationsCount++
 					logrus.Infof("successfully configured vault")
 					return
 				}
