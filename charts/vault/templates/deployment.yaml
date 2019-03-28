@@ -117,6 +117,10 @@ spec:
         volumeMounts:
         - name: vault-tls
           mountPath: /vault/tls
+        {{- range .Values.vault.customSecrets }}
+        - name: {{ .secretName }}
+          mountPath: {{ .mountPath }}
+        {{- end }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}
       - name: vault-configurer
@@ -144,6 +148,10 @@ spec:
           mountPath: /vault/tls
         - name: vault-config
           mountPath: /config/
+        {{- range .Values.vault.customSecrets }}
+        - name: {{ .secretName }}
+          mountPath: {{ .mountPath }}
+        {{- end }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}
       - name: prometheus-statsd-exporter
