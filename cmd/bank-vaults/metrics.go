@@ -18,7 +18,6 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 )
@@ -41,10 +40,18 @@ var (
 		"Is the Vault node the leader.",
 		nil, nil,
 	)
-	failedLastConfigure = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: prometheus.BuildFQName(prometheusNS, "configure", "failed"),
-		Help: "Was there any error in the last configuration attempt. ( 0 for false , 1 for true )",
-	})
+	successfulConfigurationsCount float64
+	successfulConfigurationsDesc = prometheus.NewDesc(
+		prometheus.BuildFQName(prometheusNS, "config", "successful"),
+		"Number of successful configurations files applied",
+		nil, nil,
+	)
+	failedConfigurationsCount float64
+	failedConfigurationsDesc = prometheus.NewDesc(
+		prometheus.BuildFQName(prometheusNS, "config", "failed"),
+		"Number of configurations files applied that failed",
+		nil, nil,
+	)
 )
 
 type prometheusExporter struct {
@@ -57,6 +64,9 @@ func (e *prometheusExporter) Describe(ch chan<- *prometheus.Desc) {
 		ch <- initializedDesc
 		ch <- sealedDesc
 		ch <- leaderDesc
+	} else if e.Mode == "configure" {
+		ch <- successfulConfigurationsDesc
+		ch <- failedConfigurationsDesc
 	}
 }
 
@@ -90,6 +100,13 @@ func (e *prometheusExporter) Collect(ch chan<- prometheus.Metric) {
 		)
 		ch <- prometheus.MustNewConstMetric(
 			leaderDesc, prometheus.GaugeValue, bToF(leader),
+		)
+	} else if e.Mode == "configure" {
+		ch <- prometheus.MustNewConstMetric(
+			successfulConfigurationsDesc, prometheus.GaugeValue, successfulConfigurationsCount,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			failedConfigurationsDesc, prometheus.GaugeValue, failedConfigurationsCount,
 		)
 	}
 }
