@@ -334,7 +334,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	if err := controllerutil.SetControllerReference(v, configurerSer, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
-	err = r.client.Create(context.TODO(), ser)
+	err = r.client.Create(context.TODO(), configurerSer)
 	if err != nil && !apierrors.IsAlreadyExists(err) {
 		return reconcile.Result{}, fmt.Errorf("failed to create service: %v", err)
 	}
@@ -584,13 +584,15 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 	ls := labelsForVaultConfigurer(v.Name)
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
 
+	serviceName := fmt.Sprintf("%s-configurer", v.Name)
+
 	service := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.Name + "-configurer",
+			Name:      serviceName,
 			Namespace: v.Namespace,
 			Labels:    ls,
 		},
