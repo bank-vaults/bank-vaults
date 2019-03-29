@@ -27,12 +27,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
 	vaultv1alpha1 "github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
 	bvtls "github.com/banzaicloud/bank-vaults/pkg/tls"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
-	etcdV1beta2 "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
+	etcdv1beta2 "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
 	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
+	monitorv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/hashicorp/vault/api"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -148,7 +150,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			return reconcile.Result{}, err
 		}
 
-		var previousEtcd etcdV1beta2.EtcdCluster
+		var previousEtcd etcdv1beta2.EtcdCluster
 
 		err = r.client.Get(context.TODO(), client.ObjectKey{Name: etcdCluster.Name, Namespace: etcdCluster.Namespace}, &previousEtcd)
 		if err != nil {
@@ -242,6 +244,19 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		err = r.client.Update(context.TODO(), statefulSet)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to update StatefulSet: %v", err)
+		}
+	}
+
+	if v.Spec.ServiceMonitorEnabled {
+		// Create the ServiceMonitor if it doesn't exist
+		serviceMonitor := serviceMonitorForVault(v)
+		// Set Vault instance as the owner and controller
+		if err := controllerutil.SetControllerReference(v, serviceMonitor, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
+		err = r.client.Create(context.TODO(), serviceMonitor)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return reconcile.Result{}, fmt.Errorf("failed to create serviceMonitor: %v", err)
 		}
 	}
 
@@ -390,7 +405,7 @@ func newHTTPClient() *http.Client {
 	}
 }
 
-func secretForEtcd(e *etcdV1beta2.EtcdCluster) (*corev1.Secret, error) {
+func secretForEtcd(e *etcdv1beta2.EtcdCluster) (*corev1.Secret, error) {
 	hosts := []string{
 		e.Name,
 		e.Name + "." + e.Namespace,
@@ -429,7 +444,7 @@ func secretForEtcd(e *etcdV1beta2.EtcdCluster) (*corev1.Secret, error) {
 	return secret, nil
 }
 
-func etcdForVault(v *vaultv1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
+func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
 	storage := v.Spec.GetStorage()
 	etcdAddress := storage["address"].(string)
 	etcdURL, err := url.Parse(etcdAddress)
@@ -437,22 +452,22 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
 		return nil, err
 	}
 	etcdName := etcdURL.Hostname()
-	etcdCluster := &etcdV1beta2.EtcdCluster{}
-	etcdCluster.APIVersion = etcdV1beta2.SchemeGroupVersion.String()
-	etcdCluster.Kind = etcdV1beta2.EtcdClusterResourceKind
+	etcdCluster := &etcdv1beta2.EtcdCluster{}
+	etcdCluster.APIVersion = etcdv1beta2.SchemeGroupVersion.String()
+	etcdCluster.Kind = etcdv1beta2.EtcdClusterResourceKind
 	etcdCluster.Annotations = v.Spec.EtcdAnnotations
 	etcdCluster.Name = etcdName
 	etcdCluster.Namespace = v.Namespace
 	etcdCluster.Labels = labelsForVault(v.Name)
 	etcdCluster.Spec.Size = v.Spec.GetEtcdSize()
-	etcdCluster.Spec.Pod = &etcdV1beta2.PodPolicy{
+	etcdCluster.Spec.Pod = &etcdv1beta2.PodPolicy{
 		PersistentVolumeClaimSpec: v.Spec.EtcdPVCSpec,
 	}
 	etcdCluster.Spec.Version = v.Spec.GetEtcdVersion()
-	etcdCluster.Spec.TLS = &etcdV1beta2.TLSPolicy{
-		Static: &etcdV1beta2.StaticTLS{
+	etcdCluster.Spec.TLS = &etcdv1beta2.TLSPolicy{
+		Static: &etcdv1beta2.StaticTLS{
 			OperatorSecret: etcdName + "-tls",
-			Member: &etcdV1beta2.MemberSecret{
+			Member: &etcdv1beta2.MemberSecret{
 				ServerSecret: etcdName + "-tls",
 				PeerSecret:   etcdName + "-tls",
 			},
@@ -481,6 +496,49 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 		},
 	}
 	return service
+}
+
+func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
+	ls := labelsForVault(v.Name)
+	serviceMonitor := &monitorv1.ServiceMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v.Name,
+			Namespace: v.Namespace,
+			Labels:    ls,
+		},
+		Spec: monitorv1.ServiceMonitorSpec{
+			JobLabel: v.Name,
+			Selector: metav1.LabelSelector{
+				MatchLabels: ls,
+			},
+			NamespaceSelector: monitorv1.NamespaceSelector{
+				MatchNames: []string{v.Namespace},
+			},
+		},
+	}
+
+	vaultVersionWithPrometheus := semver.MustParse("1.1.0")
+	version, err := v.Spec.GetVersion()
+	if err == nil && !version.LessThan(vaultVersionWithPrometheus) {
+		serviceMonitor.Spec.Endpoints = []monitorv1.Endpoint{{
+			Interval: "30s",
+			Port:     "api-port",
+			Scheme:   strings.ToLower(string(getVaultURIScheme(v))),
+			Params:   map[string][]string{"format": []string{"prometheus"}},
+			Path:     "/v1/sys/metrics",
+			TLSConfig: &monitorv1.TLSConfig{
+				InsecureSkipVerify: true,
+			},
+			BearerTokenFile: fmt.Sprintf("/etc/prometheus/secrets/%s/vault.token", v.Name),
+		}}
+	} else {
+		serviceMonitor.Spec.Endpoints = []monitorv1.Endpoint{{
+			Interval: "30s",
+			Port:     "prometheus",
+		}}
+	}
+
+	return serviceMonitor
 }
 
 func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.ContainerPort) {
