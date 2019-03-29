@@ -5,6 +5,7 @@ function finish {
     kubectl get pods
     kubectl logs deployment/vault-operator
     kubectl describe pod vault-0 vault-1
+    kubectl describe pod -l app=vault-configurator
 }
 
 trap finish EXIT
