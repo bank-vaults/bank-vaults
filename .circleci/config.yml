@@ -19,6 +19,7 @@ jobs:
       MINIKUBE_HOME: /home/circleci
       CHANGE_MINIKUBE_NONE_USER: true
       GOPATH: /home/circleci/go
+      DOCKER_LATEST: 1
 
     steps:
       - checkout
