@@ -40,16 +40,34 @@ var (
 		"Is the Vault node the leader.",
 		nil, nil,
 	)
+	successfulConfigurationsCount float64
+	successfulConfigurationsDesc = prometheus.NewDesc(
+		prometheus.BuildFQName(prometheusNS, "config", "successful"),
+		"Number of successful configurations files applied",
+		nil, nil,
+	)
+	failedConfigurationsCount float64
+	failedConfigurationsDesc = prometheus.NewDesc(
+		prometheus.BuildFQName(prometheusNS, "config", "failed"),
+		"Number of configurations files applied that failed",
+		nil, nil,
+	)
 )
 
 type prometheusExporter struct {
 	Vault vault.Vault
+	Mode  string
 }
 
 func (e *prometheusExporter) Describe(ch chan<- *prometheus.Desc) {
-	ch <- initializedDesc
-	ch <- sealedDesc
-	ch <- leaderDesc
+	if e.Mode == "unseal" {
+		ch <- initializedDesc
+		ch <- sealedDesc
+		ch <- leaderDesc
+	} else if e.Mode == "configure" {
+		ch <- successfulConfigurationsDesc
+		ch <- failedConfigurationsDesc
+	}
 }
 
 func bToF(b bool) float64 {
@@ -61,27 +79,36 @@ func bToF(b bool) float64 {
 
 func (e *prometheusExporter) Collect(ch chan<- prometheus.Metric) {
 
-	sealed, err := e.Vault.Sealed()
-	if err != nil {
-		logrus.Errorf("error checking if vault is sealed: %s", err.Error())
-		return
-	}
+	if e.Mode == "unseal" {
+		sealed, err := e.Vault.Sealed()
+		if err != nil {
+			logrus.Errorf("error checking if vault is sealed: %s", err.Error())
+			return
+		}
 
-	leader, err := e.Vault.Leader()
-	if err != nil {
-		logrus.Errorf("error checking if vault is leader: %s", err.Error())
-		return
-	}
+		leader, err := e.Vault.Leader()
+		if err != nil {
+			logrus.Errorf("error checking if vault is leader: %s", err.Error())
+			return
+		}
 
-	ch <- prometheus.MustNewConstMetric(
-		initializedDesc, prometheus.GaugeValue, bToF(true),
-	)
-	ch <- prometheus.MustNewConstMetric(
-		sealedDesc, prometheus.GaugeValue, bToF(sealed),
-	)
-	ch <- prometheus.MustNewConstMetric(
-		leaderDesc, prometheus.GaugeValue, bToF(leader),
-	)
+		ch <- prometheus.MustNewConstMetric(
+			initializedDesc, prometheus.GaugeValue, bToF(true),
+		)
+		ch <- prometheus.MustNewConstMetric(
+			sealedDesc, prometheus.GaugeValue, bToF(sealed),
+		)
+		ch <- prometheus.MustNewConstMetric(
+			leaderDesc, prometheus.GaugeValue, bToF(leader),
+		)
+	} else if e.Mode == "configure" {
+		ch <- prometheus.MustNewConstMetric(
+			successfulConfigurationsDesc, prometheus.GaugeValue, successfulConfigurationsCount,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			failedConfigurationsDesc, prometheus.GaugeValue, failedConfigurationsCount,
+		)
+	}
 }
 
 func (e prometheusExporter) Run() {
