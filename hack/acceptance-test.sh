@@ -8,6 +8,7 @@ function finish {
     kubectl describe pod vault-0 vault-1
     kubectl describe pod -l app=vault-configurator
     kubectl get services --show-labels -l vault_cr=vault
+    kubectl get ep --show-labels -l vault_cr=vault
 }
 
 trap finish EXIT

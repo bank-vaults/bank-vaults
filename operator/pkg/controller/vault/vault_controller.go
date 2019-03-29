@@ -474,6 +474,8 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdV1beta2.EtcdCluster, error) {
 
 func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 	ls := labelsForVault(v.Name)
+	selectorLs := ls
+
 	// Label to differentiate per-instance service and global service via label selection
 	ls["global_service"] = "true"
 	servicePorts, _ := getServicePorts(v)
@@ -490,7 +492,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     serviceType(v),
-			Selector: ls,
+			Selector: selectorLs,
 			Ports:    servicePorts,
 		},
 	}
