@@ -5,13 +5,33 @@ metadata:
   name: {{ template "vault-secrets-webhook.fullname" . }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: ClusterRole
 metadata:
   name: {{ template "vault-secrets-webhook.fullname" . }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+      - configmaps
+    verbs:
+      - "get"
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - "create"
+      - "update"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ template "vault-secrets-webhook.fullname" . }}-limited
 roleRef:
   kind: ClusterRole
   apiGroup: rbac.authorization.k8s.io
-  name: cluster-admin
+  name: {{ template "vault-secrets-webhook.fullname" . }}
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
