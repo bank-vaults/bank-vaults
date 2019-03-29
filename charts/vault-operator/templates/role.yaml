@@ -44,3 +44,11 @@ rules:
   - etcdclusters
   verbs:
   - "*"
+- apiGroups:
+    - extensions
+  resources:
+    - ingresses
+  verbs:
+    - get
+    - create
+    - update
