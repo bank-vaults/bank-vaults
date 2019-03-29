@@ -328,6 +328,17 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, fmt.Errorf("failed to create/update configurer deployment: %v", err)
 	}
 
+	// Create the Configurer service if it doesn't exist
+	configurerSer := serviceForVaultConfigurer(v)
+	// Set Vault instance as the owner and controller
+	if err := controllerutil.SetControllerReference(v, configurerSer, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
+	err = r.client.Create(context.TODO(), ser)
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		return reconcile.Result{}, fmt.Errorf("failed to create service: %v", err)
+	}
+
 	// Create ingress if specificed
 	if ingress := ingressForVault(v); ingress != nil {
 		// Set Vault instance as the owner and controller
@@ -566,6 +577,32 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 
 	return services
 }
+
+func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
+	var servicePorts []corev1.ServicePort
+
+	ls := labelsForVaultConfigurer(v.Name)
+	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
+
+	service := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v.Name + "-configurer",
+			Namespace: v.Namespace,
+			Labels:    ls,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeClusterIP,
+			Selector: ls,
+			Ports:    servicePorts,
+		},
+	}
+	return service
+}
+
 
 func ingressForVault(v *vaultv1alpha1.Vault) *v1beta1.Ingress {
 	if ingress := v.GetIngress(); ingress != nil {
