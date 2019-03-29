@@ -16,8 +16,11 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"errors"
 	"reflect"
+	"strings"
 
+	"github.com/Masterminds/semver"
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
@@ -47,20 +50,21 @@ type VaultSpec struct {
 	// This option gives us the option to workaround current StatefulSet limitations around updates
 	// See: https://github.com/kubernetes/kubernetes/issues/67250
 	// TODO: Should be removed once the ParallelPodManagement policy supports the broken update.
-	EtcdVersion     string                        `json:"etcdVersion"`
-	EtcdSize        int                           `json:"etcdSize"`
-	EtcdAnnotations map[string]string             `json:"etcdAnnotations,omitempty"`
-	EtcdPVCSpec     *v1.PersistentVolumeClaimSpec `json:"etcdPVCSpec,omitempty"`
-	ServiceType     string                        `json:"serviceType"`
-	ServicePorts    map[string]int32              `json:"servicePorts"`
-	PodAntiAffinity string                        `json:"podAntiAffinity"`
-	NodeAffinity    v1.NodeAffinity               `json:"nodeAffinity"`
-	ServiceAccount  string                        `json:"serviceAccount"`
-	Volumes         []v1.Volume                   `json:"volumes,omitempty"`
-	VolumeMounts    []v1.VolumeMount              `json:"volumeMounts,omitempty"`
-	VaultEnvsConfig []v1.EnvVar                   `json:"vaultEnvsConfig"`
-	Resources       *Resources                    `json:"resources,omitempty"`
-	Ingress         *Ingress                      `json:"ingress,omitempty"`
+	EtcdVersion           string                        `json:"etcdVersion"`
+	EtcdSize              int                           `json:"etcdSize"`
+	EtcdAnnotations       map[string]string             `json:"etcdAnnotations,omitempty"`
+	EtcdPVCSpec           *v1.PersistentVolumeClaimSpec `json:"etcdPVCSpec,omitempty"`
+	ServiceType           string                        `json:"serviceType"`
+	ServicePorts          map[string]int32              `json:"servicePorts"`
+	PodAntiAffinity       string                        `json:"podAntiAffinity"`
+	NodeAffinity          v1.NodeAffinity               `json:"nodeAffinity"`
+	ServiceAccount        string                        `json:"serviceAccount"`
+	Volumes               []v1.Volume                   `json:"volumes,omitempty"`
+	VolumeMounts          []v1.VolumeMount              `json:"volumeMounts,omitempty"`
+	VaultEnvsConfig       []v1.EnvVar                   `json:"vaultEnvsConfig"`
+	Resources             *Resources                    `json:"resources,omitempty"`
+	Ingress               *Ingress                      `json:"ingress,omitempty"`
+	ServiceMonitorEnabled bool                          `json:"serviceMonitorEnabled,omitempty"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
@@ -105,6 +109,15 @@ func (spec *VaultSpec) getHAStorage() map[string]interface{} {
 func (spec *VaultSpec) GetStorageType() string {
 	storage := spec.getStorage()
 	return reflect.ValueOf(storage).MapKeys()[0].String()
+}
+
+// GetVersion returns the version of Vault
+func (spec *VaultSpec) GetVersion() (*semver.Version, error) {
+	version := strings.Split(spec.Image, ":")
+	if len(version) != 2 {
+		return nil, errors.New("failed to find Vault version")
+	}
+	return semver.NewVersion(version[1])
 }
 
 // GetEtcdVersion returns the etcd version to use
@@ -201,7 +214,6 @@ func (spec *VaultSpec) GetFluentDImage() string {
 
 // IsFluentDEnabled returns true if fluentd sidecar is to be deployed
 func (spec *VaultSpec) IsFluentDEnabled() bool {
-	// zero value for bool is false
 	return spec.FluentDEnabled
 }
 
