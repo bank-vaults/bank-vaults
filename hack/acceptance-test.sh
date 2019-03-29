@@ -4,7 +4,11 @@ set -xeo pipefail
 function finish {
     kubectl get pods
     kubectl logs deployment/vault-operator
+    kubectl describe pod -l name=vault-operator
     kubectl describe pod vault-0 vault-1
+    kubectl describe pod -l app=vault-configurator
+    kubectl get services --show-labels -l vault_cr=vault
+    kubectl get ep --show-labels -l vault_cr=vault
 }
 
 trap finish EXIT

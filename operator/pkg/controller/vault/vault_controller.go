@@ -343,6 +343,17 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, fmt.Errorf("failed to create/update configurer deployment: %v", err)
 	}
 
+	// Create the Configurer service if it doesn't exist
+	configurerSer := serviceForVaultConfigurer(v)
+	// Set Vault instance as the owner and controller
+	if err := controllerutil.SetControllerReference(v, configurerSer, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
+	err = r.client.Create(context.TODO(), configurerSer)
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		return reconcile.Result{}, fmt.Errorf("failed to create service: %v", err)
+	}
+
 	// Create ingress if specificed
 	if ingress := ingressForVault(v); ingress != nil {
 		// Set Vault instance as the owner and controller
@@ -478,7 +489,11 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
 
 func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 	ls := labelsForVault(v.Name)
+	selectorLs := labelsForVault(v.Name)
+	// Label to differentiate per-instance service and global service via label selection
+	ls["global_service"] = "true"
 	servicePorts, _ := getServicePorts(v)
+	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
 	service := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -491,7 +506,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     serviceType(v),
-			Selector: ls,
+			Selector: selectorLs,
 			Ports:    servicePorts,
 		},
 	}
@@ -590,6 +605,7 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 	var services []*corev1.Service
 	servicePorts, _ := getServicePorts(v)
+	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
 
 	for i := 0; i < int(v.Spec.Size); i++ {
 
@@ -620,6 +636,34 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 
 	return services
 }
+
+func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
+	var servicePorts []corev1.ServicePort
+
+	ls := labelsForVaultConfigurer(v.Name)
+	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
+
+	serviceName := fmt.Sprintf("%s-configurer", v.Name)
+
+	service := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceName,
+			Namespace: v.Namespace,
+			Labels:    ls,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeClusterIP,
+			Selector: ls,
+			Ports:    servicePorts,
+		},
+	}
+	return service
+}
+
 
 func ingressForVault(v *vaultv1alpha1.Vault) *v1beta1.Ingress {
 	if ingress := v.GetIngress(); ingress != nil {
@@ -731,10 +775,15 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 							Name:            "bank-vaults",
 							Command:         []string{"bank-vaults", "configure"},
 							Args:            append(v.Spec.UnsealConfig.ToArgs(v), configArgs...),
-							Env:             withSecretEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{}))),
-							VolumeMounts:    withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
-							WorkingDir:      "/config",
-							Resources:       *getBankVaultsResource(v),
+							Ports:           []corev1.ContainerPort{{
+								Name:          "metrics",
+								ContainerPort: 9091,
+								Protocol:      "TCP",
+							}},
+							Env:          withSecretEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{}))),
+							VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
+							WorkingDir:   "/config",
+							Resources:    *getBankVaultsResource(v),
 						},
 					},
 					Volumes:         withTLSVolume(v, withCredentialsVolume(v, volumes)),
@@ -968,6 +1017,11 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 									Value: string(ownerJSON),
 								},
 							}))),
+							Ports: []corev1.ContainerPort{{
+								Name:          "metrics",
+								ContainerPort: 9091,
+								Protocol:      "TCP",
+							}},
 							VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{})),
 							Resources:    *getBankVaultsResource(v),
 						},
