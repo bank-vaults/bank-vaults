@@ -13,6 +13,8 @@ spec:
   # Specify the Service's type where the Vault Service is exposed
   serviceType: ClusterIP
 
+  statsdDisabled: true
+
   # Use local disk to store Vault file data, see config section.
   volumes:
     - name: vault-file
