@@ -196,7 +196,7 @@ auth:
     config:
       # Credentials context is service account's key. Can download when you create a key for service account. 
       # No need to manually create it. Just paste the json context as multiline yaml.
-      credentials: |
+      credentials: -|
         {
           "type": "service_account",
           "project_id": "PROJECT_ID",
@@ -371,6 +371,22 @@ secrets:
         allow_subdomains: true
         generate_lease: true
         ttl: 30m
+
+  # The AWS secrets engine generates AWS access credentials dynamically based on IAM policies.
+  # https://www.vaultproject.io/docs/secrets/aws/index.html
+  - type: aws
+    path: aws
+    description: AWS Secret Backend
+    configuration:
+        config: 
+          - name: root
+            access_key: "${env `AWS_ACCESS_KEY_ID`}"
+            secret_key: "${env `AWS_SECRET_ACCESS_KEY`}"
+            region: us-east-1
+        roles: 
+          - credential_type: iam_user
+            policy_arns: arn-of-policy
+            name: my-aws-role
 
 # Registers a new plugin in Vault's plugin catalog. "plugin_directory" setting should be set it Vault server configuration
 # and plugin binary should be present in plugin directory. Also, for some plugins readOnlyRootFilesystem Pod Security Policy
