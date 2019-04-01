@@ -289,7 +289,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Create the configmap if it doesn't exist
-	cm = configMapForConfigurer(v)
+	cm := configMapForConfigurer(v)
 
 	// Set Vault instance as the owner and controller
 	if err := controllerutil.SetControllerReference(v, cm, r.scheme); err != nil {
