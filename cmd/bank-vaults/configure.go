@@ -30,8 +30,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-const cfgVaultConfigFile = "vault-config-file"
-const cfgFatal = "fatal"
+const (
+	cfgVaultConfigFile = "vault-config-file"
+	cfgFatal           = "fatal"
+)
 
 var configureCmd = &cobra.Command{
 	Use:   "configure",
@@ -115,9 +117,9 @@ var configureCmd = &cobra.Command{
 					if err = v.Configure(config); err != nil {
 						logrus.Errorf("error configuring vault: %s", err.Error())
 						if errorFatal {
-						 os.Exit(1)
+							os.Exit(1)
 						}
-					  failedConfigurationsCount++
+						failedConfigurationsCount++
 						return
 					}
 

@@ -36,6 +36,7 @@ type VaultSpec struct {
 	Size              int32                  `json:"size"`
 	Image             string                 `json:"image"`
 	BankVaultsImage   string                 `json:"bankVaultsImage"`
+	StatsdDisabled    bool                   `json:"statsdDisabled"`
 	StatsDImage       string                 `json:"statsdImage"`
 	FluentDEnabled    bool                   `json:"fluentdEnabled"`
 	FluentDImage      string                 `json:"fluentdImage"`
@@ -215,6 +216,11 @@ func (spec *VaultSpec) GetFluentDImage() string {
 // IsFluentDEnabled returns true if fluentd sidecar is to be deployed
 func (spec *VaultSpec) IsFluentDEnabled() bool {
 	return spec.FluentDEnabled
+}
+
+// IsStatsdDisabled returns false if statsd sidecar is to be deployed
+func (spec *VaultSpec) IsStatsdDisabled() bool {
+	return spec.StatsdDisabled
 }
 
 // ConfigJSON returns the Config field as a JSON string
