@@ -10,10 +10,10 @@ jobs:
 
     environment:
       GO_VERSION: "1.12"
-      K8S_VERSION: v1.12.0
+      K8S_VERSION: v1.13.3
       VAULT_VERSION: "1.0.0"
       KUBECONFIG: /home/circleci/.kube/config
-      MINIKUBE_VERSION: v0.31.0
+      MINIKUBE_VERSION: v1.0.0
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       MINIKUBE_HOME: /home/circleci
