@@ -28,25 +28,25 @@ import (
 
 type sanitizedEnviron []string
 
-var sanitizeEnvmap = map[string]bool {
-	"VAULT_TOKEN": true,
-	"VAULT_ADDR": true,
-	"VAULT_CACERT": true,
-	"VAULT_CAPATH": true,
-	"VAULT_CLIENT_CERT": true,
-	"VAULT_CLIENT_KEY": true,
-	"VAULT_CLIENT_TIMEOUT": true,
-	"VAULT_CLUSTER_ADDR": true,
-	"VAULT_MAX_RETRIES": true,
-	"VAULT_REDIRECT_ADDR": true,
-	"VAULT_SKIP_VERIFY": true,
+var sanitizeEnvmap = map[string]bool{
+	"VAULT_TOKEN":           true,
+	"VAULT_ADDR":            true,
+	"VAULT_CACERT":          true,
+	"VAULT_CAPATH":          true,
+	"VAULT_CLIENT_CERT":     true,
+	"VAULT_CLIENT_KEY":      true,
+	"VAULT_CLIENT_TIMEOUT":  true,
+	"VAULT_CLUSTER_ADDR":    true,
+	"VAULT_MAX_RETRIES":     true,
+	"VAULT_REDIRECT_ADDR":   true,
+	"VAULT_SKIP_VERIFY":     true,
 	"VAULT_TLS_SERVER_NAME": true,
-	"VAULT_CLI_NO_COLOR": true,
-	"VAULT_RATE_LIMIT": true,
-	"VAULT_NAMESPACE": true,
-	"VAULT_MFA": true,
-	"VAULT_ROLE": true,
-	"VAULT_PATH": true,
+	"VAULT_CLI_NO_COLOR":    true,
+	"VAULT_RATE_LIMIT":      true,
+	"VAULT_NAMESPACE":       true,
+	"VAULT_MFA":             true,
+	"VAULT_ROLE":            true,
+	"VAULT_PATH":            true,
 }
 
 // Appends variable an entry (name=value) into the environ list.
@@ -57,7 +57,6 @@ func (environ *sanitizedEnviron) append(iname interface{}, ivalue interface{}) {
 		*environ = append(*environ, fmt.Sprintf("%s=%s", name, value))
 	}
 }
-
 
 func main() {
 
@@ -100,10 +99,10 @@ func main() {
 			if len(split) > 1 {
 				key = split[1]
 			}
-			
+
 			var secret *vaultapi.Secret
 			var err error
-			
+
 			if update {
 				var empty map[string]interface{}
 				secret, err = client.Vault().Logical().Write(path, empty)
@@ -118,7 +117,6 @@ func main() {
 					os.Exit(1)
 				}
 			}
-		
 
 			if secret == nil {
 				fmt.Fprintf(os.Stderr, "path not found: %s\n", path)

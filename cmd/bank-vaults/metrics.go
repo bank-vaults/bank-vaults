@@ -41,13 +41,13 @@ var (
 		nil, nil,
 	)
 	successfulConfigurationsCount float64
-	successfulConfigurationsDesc = prometheus.NewDesc(
+	successfulConfigurationsDesc  = prometheus.NewDesc(
 		prometheus.BuildFQName(prometheusNS, "config", "successful"),
 		"Number of successful configurations files applied",
 		nil, nil,
 	)
 	failedConfigurationsCount float64
-	failedConfigurationsDesc = prometheus.NewDesc(
+	failedConfigurationsDesc  = prometheus.NewDesc(
 		prometheus.BuildFQName(prometheusNS, "config", "failed"),
 		"Number of configurations files applied that failed",
 		nil, nil,
