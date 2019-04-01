@@ -197,6 +197,7 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 			case <-initialTokenArrived:
 				log.Println("Initial Vault token arrived")
 			case <-time.After(initialTokenTimeout):
+				client.Close()
 				return nil, fmt.Errorf("Timeout [%s] during waiting for Vault token", initialTokenTimeout)
 			}
 		}
