@@ -766,6 +766,16 @@ func (v *vault) configureJwtRoles(path string, roles []interface{}) error {
 		if err != nil {
 			return fmt.Errorf("error converting roles for jwt: %s", err.Error())
 		}
+		// role can have have a bound_claims or claim_mappings child dict. But it will cause:
+		// `json: unsupported type: map[interface {}]interface {}`
+		// So check and replace by `map[string]interface{}` before using it.
+		if val, ok := role["bound_claims"]; ok {
+			role["bound_claims"] = cast.ToStringMap(val)
+		}
+		if val, ok := role["claim_mappings"]; ok {
+			role["claim_mappings"] = cast.ToStringMap(val)
+		}
+
 		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
 
 		if err != nil {
