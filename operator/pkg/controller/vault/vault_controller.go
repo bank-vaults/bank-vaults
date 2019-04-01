@@ -198,17 +198,19 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
-	// Create the configmap if it doesn't exist
-	cm := configMapForStatsD(v)
+	if !v.Spec.IsStatsdDisabled() {
+		// Create the configmap if it doesn't exist
+		cm := configMapForStatsD(v)
 
-	// Set Vault instance as the owner and controller
-	if err := controllerutil.SetControllerReference(v, cm, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
+		// Set Vault instance as the owner and controller
+		if err := controllerutil.SetControllerReference(v, cm, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
 
-	err = r.client.Create(context.TODO(), cm)
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		return reconcile.Result{}, fmt.Errorf("failed to create statsd configmap: %v", err)
+		err = r.client.Create(context.TODO(), cm)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return reconcile.Result{}, fmt.Errorf("failed to create statsd configmap: %v", err)
+		}
 	}
 
 	// Create the StatefulSet if it doesn't exist
@@ -857,17 +859,9 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 		},
-		{
-			Name: "statsd-mapping",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: v.Name + "-statsd-mapping"},
-				},
-			},
-		},
 	}))
 
-	volumes = withAuditLogVolume(v, volumes)
+	volumes = withStatsdVolume(v, withAuditLogVolume(v, volumes))
 
 	volumeMounts := withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{
 		{
@@ -956,7 +950,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 						NodeAffinity:    getNodeAffinity(v),
 					},
 					ServiceAccountName: v.Spec.GetServiceAccount(),
-					Containers: withAuditLogContainer(v, string(ownerJSON), []corev1.Container{
+					Containers: withStatsdContainer(v, string(ownerJSON), withAuditLogContainer(v, string(ownerJSON), []corev1.Container{
 						{
 							Image:           v.Spec.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
@@ -1024,33 +1018,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{})),
 							Resources:    *getBankVaultsResource(v),
 						},
-						{
-							Image:           v.Spec.GetStatsDImage(),
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Name:            "prometheus-exporter",
-							Args:            []string{"--statsd.mapping-config=/tmp/statsd-mapping.conf"},
-							Env: withTLSEnv(v, true, withCredentialsEnv(v, []corev1.EnvVar{
-								{
-									Name:  k8s.EnvK8SOwnerReference,
-									Value: string(ownerJSON),
-								},
-							})),
-							Ports: []corev1.ContainerPort{{
-								Name:          "statsd",
-								ContainerPort: 9125,
-								Protocol:      "UDP",
-							}, {
-								Name:          "prometheus",
-								ContainerPort: 9102,
-								Protocol:      "TCP",
-							}},
-							VolumeMounts: []corev1.VolumeMount{{
-								Name:      "statsd-mapping",
-								MountPath: "/tmp/",
-							}},
-							Resources: *getPrometheusExporterResource(v),
-						},
-					}),
+					})),
 					Volumes:         withVaultVolumes(v, volumes),
 					SecurityContext: withSecurityContext(v),
 				},
@@ -1188,6 +1156,54 @@ func withCredentialsVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.Vo
 		})
 	}
 	return volumeMounts
+}
+
+func withStatsdVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
+	if !v.Spec.IsStatsdDisabled() {
+		volumes = append(volumes, []corev1.Volume{
+			{
+				Name: "statsd-mapping",
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{Name: v.Name + "-statsd-mapping"},
+					},
+				},
+			},
+		}...)
+	}
+	return volumes
+}
+
+func withStatsdContainer(v *vaultv1alpha1.Vault, owner string, containers []corev1.Container) []corev1.Container {
+	if !v.Spec.IsStatsdDisabled() {
+		containers = append(containers, corev1.Container{
+			Image:           v.Spec.GetStatsDImage(),
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Name:            "prometheus-exporter",
+			Args:            []string{"--statsd.mapping-config=/tmp/statsd-mapping.conf"},
+			Env: withTLSEnv(v, true, withCredentialsEnv(v, []corev1.EnvVar{
+				{
+					Name:  k8s.EnvK8SOwnerReference,
+					Value: owner,
+				},
+			})),
+			Ports: []corev1.ContainerPort{{
+				Name:          "statsd",
+				ContainerPort: 9125,
+				Protocol:      "UDP",
+			}, {
+				Name:          "prometheus",
+				ContainerPort: 9102,
+				Protocol:      "TCP",
+			}},
+			VolumeMounts: []corev1.VolumeMount{{
+				Name:      "statsd-mapping",
+				MountPath: "/tmp/",
+			}},
+			Resources: *getPrometheusExporterResource(v),
+		})
+	}
+	return containers
 }
 
 func withAuditLogVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
