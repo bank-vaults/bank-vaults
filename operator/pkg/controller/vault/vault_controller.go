@@ -664,7 +664,6 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 	return service
 }
 
-
 func ingressForVault(v *vaultv1alpha1.Vault) *v1beta1.Ingress {
 	if ingress := v.GetIngress(); ingress != nil {
 		return &v1beta1.Ingress{
@@ -775,7 +774,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 							Name:            "bank-vaults",
 							Command:         []string{"bank-vaults", "configure"},
 							Args:            append(v.Spec.UnsealConfig.ToArgs(v), configArgs...),
-							Ports:           []corev1.ContainerPort{{
+							Ports: []corev1.ContainerPort{{
 								Name:          "metrics",
 								ContainerPort: 9091,
 								Protocol:      "TCP",
