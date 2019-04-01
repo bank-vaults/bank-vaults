@@ -30,8 +30,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-const cfgVaultConfigFile = "vault-config-file"
-const cfgFatal = "fatal"
+const (
+	cfgVaultConfigFile = "vault-config-file"
+	cfgFatal           = "fatal"
+)
 
 var configureCmd = &cobra.Command{
 	Use:   "configure",
