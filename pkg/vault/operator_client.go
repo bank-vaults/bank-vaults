@@ -440,6 +440,7 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 			if err != nil {
 				return fmt.Errorf("error converting path for auth method: %s", err.Error())
 			}
+			path = strings.Trim(path, "/")
 		}
 
 		description := fmt.Sprintf("%s backend", authMethodType)
@@ -899,6 +900,7 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 			if err != nil {
 				return fmt.Errorf("error converting path for secret engine: %s", err.Error())
 			}
+			path = strings.Trim(path, "/")
 		}
 
 		mounts, err := v.cl.Sys().ListMounts()
@@ -1028,6 +1030,7 @@ func (v *vault) configureAuditDevices(config *viper.Viper) error {
 			if err != nil {
 				return fmt.Errorf("error converting path for audit device: %s", err.Error())
 			}
+			path = strings.Trim(path, "/")
 		}
 
 		mounts, err := v.cl.Sys().ListAudit()
