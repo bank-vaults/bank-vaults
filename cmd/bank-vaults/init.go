@@ -16,7 +16,6 @@ package main
 
 import (
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
-	"github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -42,7 +41,7 @@ It will not unseal the Vault instance after initialising.`,
 			logrus.Fatalf("error creating kv store: %s", err.Error())
 		}
 
-		cl, err := api.NewClient(nil)
+		cl, err := vault.NewRawClient()
 
 		if err != nil {
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
