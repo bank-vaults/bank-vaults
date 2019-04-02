@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/hashicorp/vault/api"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
@@ -236,4 +237,10 @@ func (client *Client) Close() {
 	if client.watch != nil {
 		client.watch.Close()
 	}
+}
+
+func NewRawClient() (*api.Client, error) {
+	config := vaultapi.DefaultConfig()
+	config.HttpClient.Timeout = 5 * time.Second
+	return vaultapi.NewClient(config)
 }

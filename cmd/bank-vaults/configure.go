@@ -24,7 +24,6 @@ import (
 	"github.com/Masterminds/sprig"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	"github.com/fsnotify/fsnotify"
-	"github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -60,7 +59,7 @@ var configureCmd = &cobra.Command{
 			logrus.Fatalf("error creating kv store: %s", err.Error())
 		}
 
-		cl, err := api.NewClient(nil)
+		cl, err := vault.NewRawClient()
 
 		if err != nil {
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
