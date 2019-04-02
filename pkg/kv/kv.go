@@ -50,5 +50,5 @@ func (t Tester) Test(key string) error {
 		}
 	}
 
-	return t.Service.Set(key, []byte{})
+	return t.Service.Set(key, []byte(key))
 }
