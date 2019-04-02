@@ -46,7 +46,3 @@ func (f *file) Get(key string) ([]byte, error) {
 
 	return val, err
 }
-
-func (f *file) Test(key string) error {
-	return nil
-}

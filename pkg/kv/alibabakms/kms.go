@@ -15,8 +15,6 @@
 package alibabakms
 
 import (
-	"fmt"
-
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/kms"
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
@@ -76,29 +74,4 @@ func (a *alibabaKMS) Set(key string, val []byte) error {
 	}
 
 	return a.store.Set(key, cipherText)
-}
-
-func (a *alibabaKMS) Test(key string) error {
-	inputString := "test"
-
-	err := a.store.Test(key)
-	if err != nil {
-		return fmt.Errorf("test of backend store failed: %s", err.Error())
-	}
-
-	cipherText, err := a.encrypt([]byte(inputString))
-	if err != nil {
-		return err
-	}
-
-	plainText, err := a.decrypt(cipherText)
-	if err != nil {
-		return err
-	}
-
-	if string(plainText) != inputString {
-		return fmt.Errorf("encrypted and decryped text doesn't match: exp: '%v', act: '%v'", inputString, string(plainText))
-	}
-
-	return nil
 }
