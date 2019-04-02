@@ -20,7 +20,7 @@ import (
 	"os"
 
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -118,8 +118,4 @@ func (k *k8sStorage) Get(key string) ([]byte, error) {
 	}
 
 	return val, nil
-}
-
-func (k *k8sStorage) Test(key string) error {
-	return nil
 }

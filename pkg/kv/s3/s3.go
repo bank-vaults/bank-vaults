@@ -95,8 +95,3 @@ func (s3 *s3Storage) Get(key string) ([]byte, error) {
 func objectNameWithPrefix(prefix, key string) string {
 	return fmt.Sprintf("%s%s", prefix, key)
 }
-
-func (s3 *s3Storage) Test(key string) error {
-	// TODO: Implement me properly
-	return nil
-}

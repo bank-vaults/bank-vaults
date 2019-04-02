@@ -74,8 +74,3 @@ func (a *azureKeyVault) Set(key string, val []byte) error {
 
 	return err
 }
-
-func (a *azureKeyVault) Test(key string) error {
-	// TODO: Implement me properly
-	return nil
-}

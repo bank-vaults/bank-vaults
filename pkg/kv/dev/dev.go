@@ -56,7 +56,3 @@ func (d *dev) Get(key string) ([]byte, error) {
 
 	return nil, kv.NewNotFoundError("key '%s' is not present in secret", key)
 }
-
-func (d *dev) Test(key string) error {
-	return nil
-}
