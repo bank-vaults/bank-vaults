@@ -47,6 +47,8 @@ var configureCmd = &cobra.Command{
 		appConfig.BindPFlag(cfgUnsealPeriod, cmd.PersistentFlags().Lookup(cfgUnsealPeriod))
 		appConfig.BindPFlag(cfgVaultConfigFile, cmd.PersistentFlags().Lookup(cfgVaultConfigFile))
 
+		var unsealConfig unsealCfg
+
 		runOnce := appConfig.GetBool(cfgOnce)
 		errorFatal := appConfig.GetBool(cfgFatal)
 		unsealConfig.unsealPeriod = appConfig.GetDuration(cfgUnsealPeriod)
@@ -112,7 +114,7 @@ var configureCmd = &cobra.Command{
 						continue
 					}
 
-					logrus.Infof("vault is unsealed, configuring...")
+					logrus.Info("vault is unsealed, configuring...")
 
 					if err = v.Configure(config); err != nil {
 						logrus.Errorf("error configuring vault: %s", err.Error())
@@ -124,7 +126,7 @@ var configureCmd = &cobra.Command{
 					}
 
 					successfulConfigurationsCount++
-					logrus.Infof("successfully configured vault")
+					logrus.Info("successfully configured vault")
 					return
 				}
 			}()
@@ -201,7 +203,7 @@ func parseConfiguration(vaultConfigFile string) *viper.Viper {
 func init() {
 	configureCmd.PersistentFlags().Bool(cfgOnce, false, "Run configure only once")
 	configureCmd.PersistentFlags().Bool(cfgFatal, false, "Make configuration errors fatal to the configurator")
-	configureCmd.PersistentFlags().Duration(cfgUnsealPeriod, time.Second*30, "How often to attempt to unseal the Vault instance")
+	configureCmd.PersistentFlags().Duration(cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the Vault instance")
 	configureCmd.PersistentFlags().StringSlice(cfgVaultConfigFile, []string{vault.DefaultConfigFile}, "The filename of the YAML/JSON Vault configuration")
 
 	rootCmd.AddCommand(configureCmd)
