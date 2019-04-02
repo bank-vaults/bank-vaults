@@ -95,28 +95,3 @@ func (a *awsKMS) Set(key string, val []byte) error {
 
 	return a.store.Set(key, cipherText)
 }
-
-func (a *awsKMS) Test(key string) error {
-	inputString := "test"
-
-	err := a.store.Test(key)
-	if err != nil {
-		return fmt.Errorf("test of backend store failed: %s", err.Error())
-	}
-
-	cipherText, err := a.encrypt([]byte(inputString))
-	if err != nil {
-		return err
-	}
-
-	plainText, err := a.decrypt(cipherText)
-	if err != nil {
-		return err
-	}
-
-	if string(plainText) != inputString {
-		return fmt.Errorf("encrypted and decryped text doesn't match: exp: '%v', act: '%v'", inputString, string(plainText))
-	}
-
-	return nil
-}

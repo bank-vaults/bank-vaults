@@ -199,7 +199,8 @@ func (v *vault) Init() error {
 	logrus.Info("initializing vault")
 
 	// test backend first
-	err = v.keyStore.Test(v.testKey())
+	tester := kv.Tester{Service: v.keyStore}
+	err = tester.Test(v.testKey())
 	if err != nil {
 		return fmt.Errorf("error testing keystore before init: %s", err.Error())
 	}
