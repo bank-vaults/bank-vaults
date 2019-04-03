@@ -19,10 +19,11 @@ kubectl apply -f operator/deploy/etcd-operator.yaml
 kubectl wait --for=condition=available deployment/etcd-operator --timeout=120s
 sleep 5
 
-kubectl apply -f operator/deploy/rbac.yaml
+kubectl apply -f operator/deploy/operator-rbac.yaml
 kubectl apply -f operator/deploy/operator.yaml
 kubectl wait --for=condition=available deployment/vault-operator --timeout=120s
 
+kubectl apply -f operator/deploy/rbac.yaml
 kubectl apply -f operator/deploy/cr.yaml
 sleep 5
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
