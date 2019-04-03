@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
@@ -244,6 +245,6 @@ func NewRawClient() (*api.Client, error) {
 	if config.Error != nil {
 		return nil, config.Error
 	}
-	config.HttpClient.Timeout = 5 * time.Second
+	config.HttpClient.Transport.(*http.Transport).TLSHandshakeTimeout = 5 * time.Second
 	return vaultapi.NewClient(config)
 }
