@@ -241,6 +241,9 @@ func (client *Client) Close() {
 
 func NewRawClient() (*api.Client, error) {
 	config := vaultapi.DefaultConfig()
+	if config.Error != nil {
+		return nil, config.Error
+	}
 	config.HttpClient.Timeout = 5 * time.Second
 	return vaultapi.NewClient(config)
 }
