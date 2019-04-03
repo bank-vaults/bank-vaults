@@ -22,19 +22,21 @@ operator-sdk generate k8s
 Some deployment *samples* can be found at the projects `operator/deploy` directory:
 
 ```bash
-kubectl apply -f operator/deploy/rbac.yaml     # If you have an RBAC enabled cluster
+kubectl apply -f operator/deploy/operator-rbac.yaml     # If you have an RBAC enabled cluster
 kubectl apply -f operator/deploy/operator.yaml
 ```
 
 This will create a Kubernetes `CustomResourceDefinition` called Vault (and a PersistentVolume for it). A documented example of this CRD can be found in operator/deploy/cr.yaml:
 
 ```bash
+kubectl apply -f operator/deploy/rbac.yaml
 kubectl apply -f operator/deploy/cr.yaml
 ```
 
-Delete Vault and the PersistentVolume:
+Delete Vault and the PersistentVolume and RBAC:
 
 ```bash
+kubectl delete -f operator/deploy/rbac.yaml
 kubectl delete -f operator/deploy/cr.yaml
 ```
 
