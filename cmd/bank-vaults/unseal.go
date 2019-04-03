@@ -83,6 +83,13 @@ from one of the followings:
 		metrics := prometheusExporter{Vault: v, Mode: "unseal"}
 		go metrics.Run()
 
+		if unsealConfig.proceedInit {
+			logrus.Info("initializing vault...")
+			if err := v.Init(); err != nil {
+				logrus.Fatalf("error initializing vault: %s", err.Error())
+			}
+		}
+
 		for {
 			unseal(unsealConfig, v)
 
@@ -93,15 +100,6 @@ from one of the followings:
 }
 
 func unseal(unsealConfig unsealCfg, v vault.Vault) {
-	if unsealConfig.proceedInit {
-		logrus.Info("initializing vault...")
-		if err := v.Init(); err != nil {
-			logrus.Fatalf("error initializing vault: %s", err.Error())
-		} else {
-			unsealConfig.proceedInit = false
-		}
-	}
-
 	logrus.Debug("checking if vault is sealed...")
 	sealed, err := v.Sealed()
 	if err != nil {
