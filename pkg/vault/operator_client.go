@@ -221,7 +221,7 @@ func (v *vault) Init() error {
 		if notFound && err != nil {
 			return fmt.Errorf("error before init: checking key '%s' failed: %s", key, err.Error())
 		} else if !notFound && err == nil {
-			return fmt.Errorf("error before init: keystore value for '%s' already exists", key)
+			return fmt.Errorf("error before init: value for key '%s' already exists", key)
 		}
 	}
 
