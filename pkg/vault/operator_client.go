@@ -60,6 +60,9 @@ type Config struct {
 	InitRootToken string
 	// should the root token be stored in the keyStore
 	StoreRootToken bool
+
+	// should the KV backend be tested first to validate access rights
+	PreFlightChecks bool
 }
 
 // vault is an implementation of the Vault interface that will perform actions
@@ -199,10 +202,12 @@ func (v *vault) Init() error {
 	logrus.Info("initializing vault")
 
 	// test backend first
-	tester := kv.Tester{Service: v.keyStore}
-	err = tester.Test(v.testKey())
-	if err != nil {
-		return fmt.Errorf("error testing keystore before init: %s", err.Error())
+	if v.config.PreFlightChecks {
+		tester := kv.Tester{Service: v.keyStore}
+		err = tester.Test(v.testKey())
+		if err != nil {
+			return fmt.Errorf("error testing keystore before init: %s", err.Error())
+		}
 	}
 
 	// test for an existing keys
