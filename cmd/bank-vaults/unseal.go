@@ -49,6 +49,7 @@ from one of the followings:
 		appConfig.BindPFlag(cfgOnce, cmd.PersistentFlags().Lookup(cfgOnce))
 		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))
 		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))
+		appConfig.BindPFlag(cfgPreFlightChecks, cmd.PersistentFlags().Lookup(cfgPreFlightChecks))
 
 		var unsealConfig unsealCfg
 
@@ -140,6 +141,7 @@ func init() {
 	unsealCmd.PersistentFlags().Bool(cfgOnce, false, "Run unseal only once")
 	unsealCmd.PersistentFlags().String(cfgInitRootToken, "", "Root token for the new vault cluster (only if -init=true)")
 	unsealCmd.PersistentFlags().Bool(cfgStoreRootToken, true, "Should the root token be stored in the key store (only if -init=true)")
+	unsealCmd.PersistentFlags().Bool(cfgPreFlightChecks, false, "should the key store be tested first to validate access rights")
 
 	rootCmd.AddCommand(unsealCmd)
 }
