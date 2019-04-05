@@ -20,6 +20,7 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190308093441-53f19b3c6bee
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20171213061034-52de7239022c
 	github.com/aokoli/goutils v1.0.1 // indirect
+	github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30 // indirect
 	github.com/araddon/gou v0.0.0-20190110011759-c797efecbb61 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf // indirect
@@ -75,7 +76,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/martian v2.1.0+incompatible // indirect
-	github.com/google/uuid v0.0.0-20161128191214-064e2069ce9c // indirect
+	github.com/google/uuid v0.0.0-20171113160352-8c31c18f31ed // indirect
 	github.com/googleapis/gnostic v0.1.0 // indirect
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75 // indirect
 	github.com/gosimple/slug v1.1.1 // indirect
@@ -121,7 +122,6 @@ require (
 	github.com/keybase/go-crypto v0.0.0-20181127160227-255a5089e85a // indirect
 	github.com/lib/pq v1.0.0 // indirect
 	github.com/mattbaird/elastigo v0.0.0-20170123220020-2fe47fd29e4b // indirect
-	github.com/mattbaird/jsonpatch v0.0.0-20171005235357-81af80346b1a // indirect
 	github.com/mattn/go-sqlite3 v1.10.0 // indirect
 	github.com/michaelklishin/rabbit-hole v1.5.0 // indirect
 	github.com/microcosm-cc/bluemonday v0.0.0-20180327211928-995366fdf961 // indirect
@@ -136,7 +136,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v0.1.1 // indirect
-	github.com/operator-framework/operator-sdk v0.4.1
+	github.com/operator-framework/operator-sdk v0.6.0
 	github.com/ory-am/common v0.4.0 // indirect
 	github.com/ory/dockertest v3.3.4+incompatible // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
@@ -165,6 +165,7 @@ require (
 	go.opencensus.io v0.18.0 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.9.1 // indirect
+	golang.org/x/net v0.0.0-20190206173232-65e2d4e15006 // indirect
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
 	golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2 // indirect
 	google.golang.org/api v0.0.0-20180910000450-7ca32eb868bf
@@ -179,15 +180,14 @@ require (
 	gopkg.in/ory-am/dockertest.v2 v2.2.3 // indirect
 	gopkg.in/square/go-jose.v2 v2.3.0 // indirect
 	gotest.tools v2.2.0+incompatible // indirect
-	k8s.io/api v0.0.0-20181128191700-6db15a15d2d3
+	k8s.io/api v0.0.0-20181213150558-05914d821849
 	k8s.io/apiextensions-apiserver v0.0.0-20190308081736-3a66ae4d2f93 // indirect
-	k8s.io/apimachinery v0.0.0-20181128191346-49ce2735e507
-	k8s.io/client-go v0.0.0-20181126152608-d082d5923d3c
-	k8s.io/code-generator v0.0.0-20190311155051-e4c2b1329cf7 // indirect
-	k8s.io/gengo v0.0.0-20190327210449-e17681d19d3a // indirect
+	k8s.io/apimachinery v0.0.0-20181127025237-2b1284ed4c93
+	k8s.io/client-go v2.0.0-alpha.0.0.20181213151034-8d9ed539ba31+incompatible
 	k8s.io/klog v0.2.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20181114233023-0317810137be // indirect
+	k8s.io/kube-openapi v0.0.0-20190228160746-b3a7cee44a30 // indirect
 	layeh.com/radius v0.0.0-20190118135028-0f678f039617 // indirect
-	sigs.k8s.io/controller-runtime v0.1.8
+	sigs.k8s.io/controller-runtime v0.1.10
 	sigs.k8s.io/testing_frameworks v0.1.1 // indirect
+	sigs.k8s.io/yaml v1.1.0 // indirect
 )
