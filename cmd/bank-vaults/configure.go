@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 	"time"
 
@@ -82,7 +83,8 @@ var configureCmd = &cobra.Command{
 
 		configurations := make(chan *viper.Viper, len(vaultConfigFiles))
 
-		for _, vaultConfigFile := range vaultConfigFiles {
+		for i, vaultConfigFile := range vaultConfigFiles {
+			vaultConfigFiles[i] = filepath.Clean(vaultConfigFile)
 			configurations <- parseConfiguration(vaultConfigFile)
 		}
 
@@ -133,8 +135,20 @@ var configureCmd = &cobra.Command{
 	},
 }
 
+func stringInSlice(match string, list []string) bool {
+	for _, item := range list {
+		if item == match {
+			return true
+		}
+	}
+	return false
+}
+
 func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.Viper) {
 	watcher, err := fsnotify.NewWatcher()
+	// Map used to match on kubernetes ..data to files inside of directory
+	configFileDirs := make(map[string][]string)
+
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -142,29 +156,42 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.V
 
 	for _, vaultConfigFile := range vaultConfigFiles {
 		// we have to watch the entire directory to pick up renames/atomic saves in a cross-platform way
-		configFile := filepath.Clean(vaultConfigFile)
+		configFile := vaultConfigFile
 		configDir, _ := filepath.Split(configFile)
 
-		done := make(chan bool)
-		go func() {
-			for {
-				select {
-				case event := <-watcher.Events:
-					// we only care about the config file or the ConfigMap directory (if in Kubernetes)
-					if filepath.Clean(event.Name) == configFile || filepath.Base(event.Name) == "..data" {
-						if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-							configurations <- parseConfiguration(configFile)
-						}
-					}
-				case err := <-watcher.Errors:
-					logrus.Error(err)
+		files := make([]string, 0)
+		if len(configFileDirs[strings.TrimRight(configDir, "/")]) != 0 {
+			files = configFileDirs[strings.TrimRight(configDir, "/")]
+		}
+		files = append(files, configFile)
+
+		configFileDirs[strings.TrimRight(configDir, "/")] = files
+
+		logrus.Debugf("Watching Directory for changes: %s", configDir)
+		watcher.Add(configDir)
+	}
+
+	for {
+		select {
+		case event := <-watcher.Events:
+			// we only care about the config file or the ConfigMap directory (if in Kubernetes)
+			// For real Files we only need to watch thw WRITE Event # TODO: Sometimes it triggers 2 WRITE when a file is edited and saved
+			// For Kubernetes configMaps we need to watch for CREATE on the "..data"
+			if event.Op&fsnotify.Write == fsnotify.Write && stringInSlice(filepath.Clean(event.Name), vaultConfigFiles) {
+				logrus.Infof("File has changed: %s", event.Name)
+				configurations <- parseConfiguration(filepath.Clean(event.Name))
+			} else if event.Op&fsnotify.Create == fsnotify.Create && filepath.Base(event.Name) == "..data" {
+				logrus.Infof("Files : %v", configFileDirs[filepath.Dir(event.Name)])
+				for _, fileName := range configFileDirs[filepath.Dir(event.Name)] {
+					logrus.Infof("ConfgMap has changed, reparsing: %s", fileName)
+					configurations <- parseConfiguration(fileName)
 				}
 			}
-		}()
-
-		watcher.Add(configDir)
-		<-done
+		case err := <-watcher.Errors:
+			logrus.Errorf("Watcher Event Error: %s", err.Error())
+		}
 	}
+
 }
 
 func parseConfiguration(vaultConfigFile string) *viper.Viper {
