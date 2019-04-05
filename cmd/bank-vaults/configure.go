@@ -181,7 +181,6 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.V
 				logrus.Infof("File has changed: %s", event.Name)
 				configurations <- parseConfiguration(filepath.Clean(event.Name))
 			} else if event.Op&fsnotify.Create == fsnotify.Create && filepath.Base(event.Name) == "..data" {
-				logrus.Infof("Files : %v", configFileDirs[filepath.Dir(event.Name)])
 				for _, fileName := range configFileDirs[filepath.Dir(event.Name)] {
 					logrus.Infof("ConfgMap has changed, reparsing: %s", fileName)
 					configurations <- parseConfiguration(fileName)
