@@ -167,7 +167,7 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.V
 
 		configFileDirs[strings.TrimRight(configDir, "/")] = files
 
-		logrus.Debugf("Watching Directory for changes: %s", configDir)
+		logrus.Infof("Watching Directory for changes: %s", configDir)
 		watcher.Add(configDir)
 	}
 
