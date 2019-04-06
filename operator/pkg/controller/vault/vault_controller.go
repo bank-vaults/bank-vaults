@@ -475,6 +475,7 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
 	etcdCluster.Spec.Size = v.Spec.GetEtcdSize()
 	etcdCluster.Spec.Pod = &etcdv1beta2.PodPolicy{
 		PersistentVolumeClaimSpec: v.Spec.EtcdPVCSpec,
+		Resources:                 *getEtcdResource(v),
 	}
 	etcdCluster.Spec.Version = v.Spec.GetEtcdVersion()
 	etcdCluster.Spec.TLS = &etcdv1beta2.TLSPolicy{
@@ -1417,6 +1418,24 @@ func getVaultResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
 func getBankVaultsResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
 	if v.Spec.Resources != nil && v.Spec.Resources.BankVaults != nil {
 		return v.Spec.Resources.BankVaults
+	}
+
+	return &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("200m"),
+			corev1.ResourceMemory: resource.MustParse("128Mi"),
+		},
+	}
+}
+
+// getEtcdResource return resource in spec or return pre-defined resource if not configurated
+func getEtcdResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
+	if v.Spec.Resources != nil && v.Spec.Resources.Etcd != nil {
+		return v.Spec.Resources.Etcd
 	}
 
 	return &corev1.ResourceRequirements{
