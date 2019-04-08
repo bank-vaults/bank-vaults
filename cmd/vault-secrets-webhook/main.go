@@ -280,6 +280,9 @@ func lookForValueFrom(env corev1.EnvVar, ns string) (*corev1.EnvVar, error) {
 
 func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns string) (bool, error) {
 	mutated := false
+	ctConfigFound := false
+	veConfigFound := false
+
 	for i, container := range containers {
 		var envVars []corev1.EnvVar
 		if len(container.EnvFrom) > 0 {
@@ -288,6 +291,7 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 				return false, err
 			}
 			envVars = append(envVars, envFrom...)
+			veConfigFound = true
 		}
 
 		for _, env := range container.Env {
@@ -303,18 +307,27 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 					continue
 				}
 				envVars = append(envVars, *valueFrom)
+				veConfigFound = true
 			}
 		}
-		if len(envVars) == 0 {
+
+		for key, _ := range container.Env {
+			if key == 'CT_LOCAL_CONFIG' {
+				ctConfigFound = true
+		    }
+		}
+		if ! veConfigFound || ! ctConfigFound  {
 			continue
 		}
 
 		mutated = true
 
-		args := append(container.Command, container.Args...)
+		if veConfigFound {
+			args := append(container.Command, container.Args...)
 
-		container.Command = []string{"/vault/vault-env"}
-		container.Args = args
+			container.Command = []string{"/vault/vault-env"}
+			container.Args = args
+		}
 
 		container.VolumeMounts = append(container.VolumeMounts, []corev1.VolumeMount{
 			{
@@ -412,6 +425,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 func initConfig() {
 	viper.SetDefault("vault_image", "vault:latest")
 	viper.SetDefault("vault_env_image", "banzaicloud/vault-env:latest")
+	viper.SetDefault("vault_ct_image", "hashicorp/consul-template:0.20.0-scratch")
 	viper.AutomaticEnv()
 }
 
