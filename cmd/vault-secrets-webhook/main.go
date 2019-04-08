@@ -40,6 +40,7 @@ type vaultConfig struct {
 	path       string
 	skipVerify string
 	useAgent   bool
+	ctConfigMap string
 }
 
 var vaultAgentConfig = `
@@ -185,6 +186,7 @@ func vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
 func parseVaultConfig(obj metav1.Object) vaultConfig {
 	var vaultConfig vaultConfig
 	annotations := obj.GetAnnotations()
+
 	vaultConfig.addr = annotations["vault.security.banzaicloud.io/vault-addr"]
 	vaultConfig.role = annotations["vault.security.banzaicloud.io/vault-role"]
 	if vaultConfig.role == "" {
@@ -196,6 +198,12 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	}
 	vaultConfig.skipVerify = annotations["vault.security.banzaicloud.io/vault-skip-verify"]
 	vaultConfig.useAgent, _ = strconv.ParseBool(annotations["vault.security.banzaicloud.io/vault-agent"])
+
+	if val, ok := annotations["vault.security.banzaicloud.io/ct-configmap"]; ok {
+		vaultConfig.ctConfigMap = val
+	} else {
+		vaultConfig.ctConfigMap = nil
+	}
 	return vaultConfig
 }
 
@@ -308,10 +316,8 @@ func lookForValueFrom(env corev1.EnvVar, ns string) (*corev1.EnvVar, error) {
 	return nil, nil
 }
 
-func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns string) (bool, error, bool, bool) {
+func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns string) (bool, error) {
 	mutated := false
-	ctConfigFound := false
-	veConfigFound := false
 
 	for i, container := range containers {
 		var envVars []corev1.EnvVar
@@ -321,8 +327,7 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 				return false, err
 			}
 			envVars = append(envVars, envFrom...)
-			veConfigFound = true
-		}
+					}
 
 		for _, env := range container.Env {
 			if strings.HasPrefix(env.Value, "vault:") {
@@ -337,27 +342,20 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 					continue
 				}
 				envVars = append(envVars, *valueFrom)
-				veConfigFound = true
-			}
+							}
 		}
 
-		for key, _ := range container.Env {
-			if key == 'CT_LOCAL_CONFIG' {
-				ctConfigFound = true
-		    }
-		}
-		if ! veConfigFound || ! ctConfigFound  {
+		if len(envVars) == 0 {
 			continue
 		}
 
 		mutated = true
 
-		if veConfigFound {
-			args := append(container.Command, container.Args...)
+		args := append(container.Command, container.Args...)
 
-			container.Command = []string{"/vault/vault-env"}
-			container.Args = args
-		}
+		container.Command = []string{"/vault/vault-env"}
+		container.Args = args
+
 
 		container.VolumeMounts = append(container.VolumeMounts, []corev1.VolumeMount{
 			{
@@ -395,7 +393,7 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 		containers[i] = container
 	}
 
-	return mutated, nil, veConfigFound, ctConfigFound
+	return mutated, nil
 }
 func newClientSet() (*kubernetes.Clientset, error) {
 	kubeConfig, err := rest.InClusterConfig()
@@ -417,11 +415,11 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		return err
 	}
 
-	initContainersMutated, err, veConfigFound, ctConfigFound := mutateContainers(podSpec.InitContainers, vaultConfig, ns)
+	initContainersMutated, err := mutateContainers(podSpec.InitContainers, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
-	containersMutated, err, veConfigFound, ctConfigFound := mutateContainers(podSpec.Containers, vaultConfig, ns)
+	containersMutated, err := mutateContainers(podSpec.Containers, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
@@ -446,7 +444,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		}
 
 		podSpec.InitContainers = append(getInitContainers(vaultConfig, veConfigFound), podSpec.InitContainers...)
-		if ctConfigFound {
+		if vaultConfig.ctConfigMap != nil {
 			podSpec.Containers = append(getContainers(vaultConfig), podSpec.Containers...)
 		}
 		podSpec.Volumes = append(podSpec.Volumes, getVolumes(obj.GetName(), vaultConfig)...)
