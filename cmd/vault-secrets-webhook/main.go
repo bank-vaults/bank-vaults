@@ -492,9 +492,8 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 
 		podSpec.InitContainers = append(getInitContainers(vaultConfig), podSpec.InitContainers...)
 		if vaultConfig.ctConfigMap != "" {
-			apiVersion, err := clientset.Discovery().ServerVersion()
-			versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.10.0", apiVersion)
-
+			apiVersion, _ := clientset.Discovery().ServerVersion()
+			versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.10.0", apiVersion.String())
 			if versionCompared < 0 {
 				sharePorcessNamespace := true
 				podSpec.ShareProcessNamespace = &sharePorcessNamespace
