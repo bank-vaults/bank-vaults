@@ -62,7 +62,7 @@ auto_auth {
 	}
 }`
 
-func getInitContainers(vaultConfig vaultConfig, veConfigFound bool) []corev1.Container {
+func getInitContainers(vaultConfig vaultConfig) []corev1.Container {
 	containers := []corev1.Container{}
 
 	if vaultConfig.useAgent {
@@ -94,20 +94,18 @@ func getInitContainers(vaultConfig vaultConfig, veConfigFound bool) []corev1.Con
 		})
 	}
 
-	if veConfigFound {
-		containers = append(containers, corev1.Container{
-			Name:            "copy-vault-env",
-			Image:           viper.GetString("vault_env_image"),
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			Command:         []string{"sh", "-c", "cp /usr/local/bin/vault-env /vault/"},
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      "vault-env",
-					MountPath: "/vault/",
-				},
+	containers = append(containers, corev1.Container{
+		Name:            "copy-vault-env",
+		Image:           viper.GetString("vault_env_image"),
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"sh", "-c", "cp /usr/local/bin/vault-env /vault/"},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      "vault-env",
+				MountPath: "/vault/",
 			},
-		})
-	}
+		},
+	})
 
 	return containers
 }
@@ -443,7 +441,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 			}
 		}
 
-		podSpec.InitContainers = append(getInitContainers(vaultConfig, veConfigFound), podSpec.InitContainers...)
+		podSpec.InitContainers = append(getInitContainers(vaultConfig), podSpec.InitContainers...)
 		if vaultConfig.ctConfigMap != nil {
 			podSpec.Containers = append(getContainers(vaultConfig), podSpec.Containers...)
 		}
