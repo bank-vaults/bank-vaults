@@ -158,14 +158,15 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.V
 		// we have to watch the entire directory to pick up renames/atomic saves in a cross-platform way
 		configFile := vaultConfigFile
 		configDir, _ := filepath.Split(configFile)
+		configDirTrimmed := strings.TrimRight(configDir, "/")
 
 		files := make([]string, 0)
-		if len(configFileDirs[strings.TrimRight(configDir, "/")]) != 0 {
-			files = configFileDirs[strings.TrimRight(configDir, "/")]
+		if len(configFileDirs[configDirTrimmed]) != 0 {
+			files = configFileDirs[configDirTrimmed]
 		}
 		files = append(files, configFile)
 
-		configFileDirs[strings.TrimRight(configDir, "/")] = files
+		configFileDirs[configDirTrimmed] = files
 
 		logrus.Infof("Watching Directory for changes: %s", configDir)
 		watcher.Add(configDir)
