@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
+	hclPrinter "github.com/hashicorp/hcl/hcl/printer"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/consts"
 	json "github.com/json-iterator/go"
@@ -632,16 +633,23 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 
 func (v *vault) configurePolicies(config *viper.Viper) error {
 	policies := []map[string]string{}
+
 	err := config.UnmarshalKey("policies", &policies)
 	if err != nil {
 		return fmt.Errorf("error unmarshalling vault policy config: %s", err.Error())
 	}
 
 	for _, policy := range policies {
-		err := v.cl.Sys().PutPolicy(policy["name"], policy["rules"])
 
+		policyName := policy["name"]
+		policyRules, err := hclPrinter.Format([]byte(policy["rules"]))
 		if err != nil {
-			return fmt.Errorf("error putting %s policy into vault: %s", policy["name"], err.Error())
+			return fmt.Errorf("error formatting %s policy rules: %s", policyName, err.Error())
+		}
+
+		err = v.cl.Sys().PutPolicy(policyName, string(policyRules))
+		if err != nil {
+			return fmt.Errorf("error putting %s policy into vault: %s", policyName, err.Error())
 		}
 	}
 
