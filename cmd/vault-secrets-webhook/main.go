@@ -30,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metaVer "k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -116,7 +117,7 @@ func getContainers(vaultConfig vaultConfig) []corev1.Container {
 	containers = append(containers, corev1.Container{
 		Name:			"consul-template",
 		Image:			viper.GetString("vault_ct_image"),
-		Args: 			['-config','/etc/ct-config/config.hcl'],
+		Args: 			[]string{"-config","/etc/ct-config/config.hcl"},
 		ImagePullPolicy:	corev1.PullIfNotPresent,
 		Env: []corev1.EnvVar{
 			{
@@ -141,7 +142,7 @@ func getContainers(vaultConfig vaultConfig) []corev1.Container {
 				Name:		"ct-config",
 				MountPath:	"/etc/ct-config/config.hcl",
 				ReadOnly:	true,
-				subPath:	"config.hcl"
+				SubPath:	"config.hcl",
 			},
 		},
 	})
@@ -191,14 +192,14 @@ func getVolumes(name string, vaultConfig vaultConfig) []corev1.Volume {
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: vaultConfig.ctConfigMap,
 							DefaultMode: 420,
-							Items: [
-								'key':	'config.hcl'
-								'path':	'config.hcl'
-							],
+							Items: []string{
+								"key":  "config.hcl",
+								"path": "config.hcl",
+							},
 						},
 					},
 				},
-			}
+			},
 		})
 	}
 
@@ -482,6 +483,20 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 
 		podSpec.InitContainers = append(getInitContainers(vaultConfig), podSpec.InitContainers...)
 		if vaultConfig.ctConfigMap != nil {
+			apiVersion, err := clientset.Discovery().ServerVersion()
+			versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.10.0", apiVersion)
+			if versionCompared > 0 {
+				podSpec.ShareProcessNamespace = true
+				podSpec.SecurityContext = corev1.SecurityContext{
+					corev1.Capabilities{
+						Add{
+							corev1.Capability{
+								"SYS_PTRACE",
+							},
+						},
+					},
+				}
+			}
 			podSpec.Containers = append(getContainers(vaultConfig), podSpec.Containers...)
 		}
 		podSpec.Volumes = append(podSpec.Volumes, getVolumes(obj.GetName(), vaultConfig)...)
