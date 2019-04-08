@@ -118,7 +118,15 @@ func getContainers(vaultConfig vaultConfig) []corev1.Container {
 		Name:			"consul-template",
 		Image:			viper.GetString("vault_ct_image"),
 		Args: 			[]string{"-config","/etc/ct-config/config.hcl"},
-		ImagePullPolicy:	corev1.PullIfNotPresent,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		SecurityContext: &corev1.SecurityContext{
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{
+					"SYS_PTRACE",
+				},
+			},
+
+		},
 		Env: []corev1.EnvVar{
 			{
 				Name:	"VAULT_ADDR",
@@ -175,9 +183,11 @@ func getVolumes(name string, vaultConfig vaultConfig) []corev1.Volume {
 		})
 	}
 
-	if vaultConfig.ctConfigMap != nil {
-		volumes = append(volumes, []corev1.Volume{
-			{
+	if vaultConfig.ctConfigMap != "" {
+		defaultMode := int32(420)
+
+		volumes = append(volumes,
+			corev1.Volume{
 				Name: "ct-secrets",
 				VolumeSource: corev1.VolumeSource{
 					EmptyDir: &corev1.EmptyDirVolumeSource{
@@ -185,22 +195,21 @@ func getVolumes(name string, vaultConfig vaultConfig) []corev1.Volume {
 					},
 				},
 			},
-			{
+			corev1.Volume{
 				Name: "ct-configmap",
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: vaultConfig.ctConfigMap,
-							DefaultMode: 420,
-							Items: []string{
-								"key":  "config.hcl",
-								"path": "config.hcl",
+						LocalObjectReference: corev1.LocalObjectReference{},
+						DefaultMode: &defaultMode,
+						Items: []corev1.KeyToPath{
+							{
+								Key:  "config.hcl",
+								Path: "config.hcl",
 							},
 						},
 					},
 				},
-			},
-		})
+			})
 	}
 
 	return volumes
@@ -240,7 +249,7 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	if val, ok := annotations["vault.security.banzaicloud.io/ct-configmap"]; ok {
 		vaultConfig.ctConfigMap = val
 	} else {
-		vaultConfig.ctConfigMap = nil
+		vaultConfig.ctConfigMap = ""
 	}
 	return vaultConfig
 }
@@ -482,20 +491,13 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		}
 
 		podSpec.InitContainers = append(getInitContainers(vaultConfig), podSpec.InitContainers...)
-		if vaultConfig.ctConfigMap != nil {
+		if vaultConfig.ctConfigMap != "" {
 			apiVersion, err := clientset.Discovery().ServerVersion()
 			versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.10.0", apiVersion)
-			if versionCompared > 0 {
-				podSpec.ShareProcessNamespace = true
-				podSpec.SecurityContext = corev1.SecurityContext{
-					corev1.Capabilities{
-						Add{
-							corev1.Capability{
-								"SYS_PTRACE",
-							},
-						},
-					},
-				}
+
+			if versionCompared < 0 {
+				sharePorcessNamespace := true
+				podSpec.ShareProcessNamespace = &sharePorcessNamespace
 			}
 			podSpec.Containers = append(getContainers(vaultConfig), podSpec.Containers...)
 		}
