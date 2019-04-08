@@ -92,6 +92,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.0.0-20180531211321-3b087ef2d313 // indirect
 	github.com/hashicorp/go-rootcerts v0.0.0-20160503143440-6bb64b370b90 // indirect
 	github.com/hashicorp/go-version v1.1.0 // indirect
+	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad v0.8.7 // indirect
 	github.com/hashicorp/raft v1.0.0 // indirect
 	github.com/hashicorp/serf v0.8.2 // indirect
