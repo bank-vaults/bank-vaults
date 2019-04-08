@@ -23,6 +23,33 @@ import (
 	"testing"
 )
 
+func TestWildCardValidation(t *testing.T) {
+	tests := []struct {
+		name  string
+		hosts string
+	}{
+		{
+			name:  "Not a valid host name",
+			hosts: "*.banzaicloud.com,127.0.0.1,beta.banzaicloud.com",
+		},
+		{
+			name:  "Valid host name",
+			hosts: "*.banzaicloud.com,127.0.0.1,alpha.beta.banzaicloud.com",
+		},
+	}
+	for _, test := range tests {
+		sHosts := NewSeparatedCertHosts(test.hosts)
+		t.Run(test.name, func(t *testing.T) {
+			err := sHosts.validate()
+			if err != nil {
+				if err.Error() != InvalidHostNameError.Error() {
+					t.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateTLS(t *testing.T) {
 	cc, err := GenerateTLS("localhost,127.0.0.1", "1h")
 	if err != nil {

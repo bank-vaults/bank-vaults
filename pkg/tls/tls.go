@@ -40,6 +40,8 @@ const (
 	defaultKeyBits  = 2048
 )
 
+var InvalidHostNameError = errors.New("invalid host name, this has been already covered by the wildcard")
+
 // CertificateChain represents a full certificate chain with a root CA, a server, client and peer certificate
 // All values are in PEM format
 type CertificateChain struct {
@@ -53,6 +55,48 @@ type CertificateChain struct {
 	PeerCert   string `mapstructure:"peerCert"`
 }
 
+type separatedCertHosts struct {
+	WildCardHost string
+	Hosts        []string
+	IPs          []net.IP
+}
+
+// NewSeparatedCertHosts creates a new seperatedCertsHosts struct by parsing and separating the comma-separated
+// host names and IPs.
+func NewSeparatedCertHosts(hosts string) *separatedCertHosts {
+	sHosts := separatedCertHosts{}
+	for _, h := range strings.Split(hosts, ",") {
+		if ip := net.ParseIP(h); ip != nil {
+			sHosts.IPs = append(sHosts.IPs, ip)
+		} else {
+			if strings.HasPrefix(h, "*.") {
+				sHosts.WildCardHost = h
+			} else {
+				sHosts.Hosts = append(sHosts.Hosts, h)
+			}
+		}
+	}
+	return &sHosts
+}
+
+// validate validates the hostnames in case of wildCard host is present
+// eg.: *.foo.bar boo.foo.bar is not allowed, but coo.boo.foo.bar is valid
+func (sh *separatedCertHosts) validate() error {
+	if sh.WildCardHost == "" {
+		return nil
+	} else {
+		hostWithoutWildCard := strings.ReplaceAll(sh.WildCardHost, "*", "")
+		for _, host := range sh.Hosts {
+			if strings.Contains(host, hostWithoutWildCard) {
+				if !strings.Contains(strings.ReplaceAll(host, hostWithoutWildCard, ""), ".") {
+					return errors.WithStack(InvalidHostNameError)
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // GenerateTLS generates ca, server, client and peer TLS certificates.
 // hosts: Comma-separated hostnames and IPs to generate a certificate for
 // validity: Duration that certificate is valid for, in Go Duration format
@@ -64,6 +108,13 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 	}
 
 	notAfter := notBefore.Add(validityDuration)
+
+	sHosts := NewSeparatedCertHosts(hosts)
+
+	err = sHosts.validate()
+	if err != nil {
+		return nil, err
+	}
 
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
@@ -111,13 +162,12 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 		Validity:  validityDuration,
 		notBefore: notBefore,
 	}
-	for _, h := range strings.Split(hosts, ",") {
-		if ip := net.ParseIP(h); ip != nil {
-			serverCertRequest.IPAddresses = append(serverCertRequest.IPAddresses, ip)
-		} else {
-			serverCertRequest.DNSNames = append(serverCertRequest.DNSNames, h)
-		}
+	if sHosts.WildCardHost != "" {
+		serverCertRequest.Subject.CommonName = sHosts.WildCardHost
+		serverCertRequest.DNSNames = append(serverCertRequest.DNSNames, sHosts.WildCardHost)
 	}
+	serverCertRequest.IPAddresses = append(serverCertRequest.IPAddresses, sHosts.IPs...)
+	serverCertRequest.DNSNames = append(serverCertRequest.DNSNames, sHosts.Hosts...)
 
 	serverCert, err := GenerateServerCertificate(serverCertRequest, &caCertTemplate, caKey)
 	if err != nil {
@@ -146,13 +196,13 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 		Validity:  validityDuration,
 		notBefore: notBefore,
 	}
-	for _, h := range strings.Split(hosts, ",") {
-		if ip := net.ParseIP(h); ip != nil {
-			peerCertRequest.IPAddresses = append(peerCertRequest.IPAddresses, ip)
-		} else {
-			peerCertRequest.DNSNames = append(peerCertRequest.DNSNames, h)
-		}
+
+	if sHosts.WildCardHost != "" {
+		peerCertRequest.Subject.CommonName = sHosts.WildCardHost
+		peerCertRequest.DNSNames = append(peerCertRequest.DNSNames, sHosts.WildCardHost)
 	}
+	peerCertRequest.IPAddresses = append(peerCertRequest.IPAddresses, sHosts.IPs...)
+	peerCertRequest.DNSNames = append(peerCertRequest.DNSNames, sHosts.Hosts...)
 
 	peerCert, err := GeneratePeerCertificate(peerCertRequest, &caCertTemplate, caKey)
 	if err != nil {
