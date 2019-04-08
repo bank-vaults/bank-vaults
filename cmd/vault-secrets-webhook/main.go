@@ -61,7 +61,7 @@ auto_auth {
 	}
 }`
 
-func getInitContainers(vaultConfig vaultConfig) []corev1.Container {
+func getInitContainers(vaultConfig vaultConfig, veConfigFound bool) []corev1.Container {
 	containers := []corev1.Container{}
 
 	if vaultConfig.useAgent {
@@ -93,11 +93,41 @@ func getInitContainers(vaultConfig vaultConfig) []corev1.Container {
 		})
 	}
 
+	if veConfigFound {
+		containers = append(containers, corev1.Container{
+			Name:            "copy-vault-env",
+			Image:           viper.GetString("vault_env_image"),
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Command:         []string{"sh", "-c", "cp /usr/local/bin/vault-env /vault/"},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      "vault-env",
+					MountPath: "/vault/",
+				},
+			},
+		})
+	}
+
+	return containers
+}
+
+func getContainers(vaultConfig vaultConfig) []corev1.Container {
+	containers := []corev1.Container{}
+
 	containers = append(containers, corev1.Container{
-		Name:            "copy-vault-env",
-		Image:           viper.GetString("vault_env_image"),
+		Name:            "consul-template",
+		Image:           viper.GetString("vault_ct_image"),
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         []string{"sh", "-c", "cp /usr/local/bin/vault-env /vault/"},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "VAULT_ADDR",
+				Value: vaultConfig.addr,
+			},
+			{
+				Name:  "HOME",
+				Value: "/vault/",
+			},
+		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      "vault-env",
@@ -278,7 +308,7 @@ func lookForValueFrom(env corev1.EnvVar, ns string) (*corev1.EnvVar, error) {
 	return nil, nil
 }
 
-func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns string) (bool, error) {
+func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns string) (bool, error, bool, bool) {
 	mutated := false
 	ctConfigFound := false
 	veConfigFound := false
@@ -365,7 +395,7 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 		containers[i] = container
 	}
 
-	return mutated, nil
+	return mutated, nil, veConfigFound, ctConfigFound
 }
 func newClientSet() (*kubernetes.Clientset, error) {
 	kubeConfig, err := rest.InClusterConfig()
@@ -387,11 +417,11 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		return err
 	}
 
-	initContainersMutated, err := mutateContainers(podSpec.InitContainers, vaultConfig, ns)
+	initContainersMutated, err, veConfigFound, ctConfigFound := mutateContainers(podSpec.InitContainers, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
-	containersMutated, err := mutateContainers(podSpec.Containers, vaultConfig, ns)
+	containersMutated, err, veConfigFound, ctConfigFound := mutateContainers(podSpec.Containers, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
@@ -415,7 +445,10 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 			}
 		}
 
-		podSpec.InitContainers = append(getInitContainers(vaultConfig), podSpec.InitContainers...)
+		podSpec.InitContainers = append(getInitContainers(vaultConfig, veConfigFound), podSpec.InitContainers...)
+		if ctConfigFound {
+			podSpec.Containers = append(getContainers(vaultConfig), podSpec.Containers...)
+		}
 		podSpec.Volumes = append(podSpec.Volumes, getVolumes(obj.GetName(), vaultConfig)...)
 	}
 
@@ -425,7 +458,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 func initConfig() {
 	viper.SetDefault("vault_image", "vault:latest")
 	viper.SetDefault("vault_env_image", "banzaicloud/vault-env:latest")
-	viper.SetDefault("vault_ct_image", "hashicorp/consul-template:0.20.0-scratch")
+	viper.SetDefault("vault_ct_image", "hashicorp/consul-template:latest")
 	viper.AutomaticEnv()
 }
 
