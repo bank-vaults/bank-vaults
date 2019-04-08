@@ -114,23 +114,34 @@ func getContainers(vaultConfig vaultConfig) []corev1.Container {
 	containers := []corev1.Container{}
 
 	containers = append(containers, corev1.Container{
-		Name:            "consul-template",
-		Image:           viper.GetString("vault_ct_image"),
-		ImagePullPolicy: corev1.PullIfNotPresent,
+		Name:			"consul-template",
+		Image:			viper.GetString("vault_ct_image"),
+		Args: 			['-config','/etc/ct-config/config.hcl'],
+		ImagePullPolicy:	corev1.PullIfNotPresent,
 		Env: []corev1.EnvVar{
 			{
-				Name:  "VAULT_ADDR",
-				Value: vaultConfig.addr,
+				Name:	"VAULT_ADDR",
+				Value:	vaultConfig.addr,
 			},
 			{
-				Name:  "HOME",
-				Value: "/vault/",
+				Name:	"HOME",
+				Value:	"/vault/",
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
-				Name:      "vault-env",
-				MountPath: "/vault/",
+				Name:		"vault-env",
+				MountPath:	"/vault",
+			},
+			{
+				Name:		"secrets",
+				MountPath:	"/etc/secrets",
+			},
+			{
+				Name:		"ct-config",
+				MountPath:	"/etc/ct-config/config.hcl",
+				ReadOnly:	true,
+				subPath:	"config.hcl"
 			},
 		},
 	})
@@ -160,6 +171,34 @@ func getVolumes(name string, vaultConfig vaultConfig) []corev1.Volume {
 					},
 				},
 			},
+		})
+	}
+
+	if vaultConfig.ctConfigMap != nil {
+		volumes = append(volumes, []corev1.Volume{
+			{
+				Name: "ct-secrets",
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{
+						Medium: corev1.StorageMediumMemory,
+					},
+				},
+			},
+			{
+				Name: "ct-configmap",
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: vaultConfig.ctConfigMap,
+							DefaultMode: 420,
+							Items: [
+								'key':	'config.hcl'
+								'path':	'config.hcl'
+							],
+						},
+					},
+				},
+			}
 		})
 	}
 
