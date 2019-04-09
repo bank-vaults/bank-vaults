@@ -256,10 +256,8 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	} else {
 		vaultConfig.ctConfigMap = ""
 	}
-	if _, ok := annotations["vault.security.banzaicloud.io/ct-sharePorcessNamespace"]; ok {
-		vaultConfig.ctShareProcess = true
-	} else {
-		vaultConfig.ctShareProcess = false
+	if val, ok := annotations["vault.security.banzaicloud.io/ct-share-process-namespace"]; ok {
+		vaultConfig.ctShareProcess = val
 	}
 	return vaultConfig
 }
