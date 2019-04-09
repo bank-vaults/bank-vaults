@@ -42,6 +42,7 @@ type vaultConfig struct {
 	skipVerify string
 	useAgent   bool
 	ctConfigMap string
+	ctShareProcess bool
 }
 
 var vaultAgentConfig = `
@@ -111,22 +112,26 @@ func getInitContainers(vaultConfig vaultConfig) []corev1.Container {
 	return containers
 }
 
-func getContainers(vaultConfig vaultConfig) []corev1.Container {
+func getContainers(vaultConfig vaultConfig, versionCompared int) []corev1.Container {
 	containers := []corev1.Container{}
+	securityContext := &corev1.SecurityContext{}
+
+	if versionCompared < 0 || vaultConfig.ctShareProcess {
+		securityContext = &corev1.SecurityContext{
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{
+					"SYS_PTRACE",
+				},
+			},
+		}
+	}
 
 	containers = append(containers, corev1.Container{
 		Name:			"consul-template",
 		Image:			viper.GetString("vault_ct_image"),
 		Args: 			[]string{"-config","/etc/ct-config/config.hcl"},
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		SecurityContext: &corev1.SecurityContext{
-			Capabilities: &corev1.Capabilities{
-				Add: []corev1.Capability{
-					"SYS_PTRACE",
-				},
-			},
-
-		},
+		SecurityContext: securityContext,
 		Env: []corev1.EnvVar{
 			{
 				Name:	"VAULT_ADDR",
@@ -250,6 +255,11 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.ctConfigMap = val
 	} else {
 		vaultConfig.ctConfigMap = ""
+	}
+	if _, ok := annotations["vault.security.banzaicloud.io/ct-sharePorcessNamespace"]; ok {
+		vaultConfig.ctShareProcess = true
+	} else {
+		vaultConfig.ctShareProcess = false
 	}
 	return vaultConfig
 }
@@ -493,12 +503,12 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		podSpec.InitContainers = append(getInitContainers(vaultConfig), podSpec.InitContainers...)
 		if vaultConfig.ctConfigMap != "" {
 			apiVersion, _ := clientset.Discovery().ServerVersion()
-			versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.10.0", apiVersion.String())
-			if versionCompared < 0 {
+			versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
+			if versionCompared < 0 || vaultConfig.ctShareProcess {
 				sharePorcessNamespace := true
 				podSpec.ShareProcessNamespace = &sharePorcessNamespace
 			}
-			podSpec.Containers = append(getContainers(vaultConfig), podSpec.Containers...)
+			podSpec.Containers = append(getContainers(vaultConfig, versionCompared), podSpec.Containers...)
 		}
 		podSpec.Volumes = append(podSpec.Volumes, getVolumes(obj.GetName(), vaultConfig)...)
 	}
