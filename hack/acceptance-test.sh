@@ -14,6 +14,7 @@ function finish {
 
 trap finish EXIT
 
+# Install the operators and companion
 kubectl apply -f operator/deploy/etcd-rbac.yaml
 kubectl apply -f operator/deploy/etcd-operator.yaml
 kubectl wait --for=condition=available deployment/etcd-operator --timeout=120s
@@ -24,11 +25,15 @@ kubectl apply -f operator/deploy/operator.yaml
 kubectl wait --for=condition=available deployment/vault-operator --timeout=120s
 
 kubectl apply -f operator/deploy/rbac.yaml
+
+# First test: single node cluster
 kubectl apply -f operator/deploy/cr.yaml
 sleep 5
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
-kubectl delete --wait=true vaults.vault.banzaicloud.com vault
+kubectl delete --wait=true -f operator/deploy/cr.yaml
 
+
+# Second test: HA setup with etcd
 kubectl apply -f operator/deploy/cr-etcd-ha.yaml
 sleep 5
 
@@ -38,10 +43,11 @@ sleep 30
 # piggyback on initial leader change of the current HA setup
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
 
+# Run a client test
+
 # Give bank-vaults some time to let the Kubernetes auth backend configuration happen
 sleep 20
 
-# Run a simple client test
 go get -v github.com/banzaicloud/kurun
 export PATH=${PATH}:${GOPATH}/bin
 kurun cmd/examples/main.go
