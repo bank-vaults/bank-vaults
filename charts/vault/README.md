@@ -122,12 +122,13 @@ The following tables lists the configurable parameters of the vault chart and th
 | `image.repository`      | Container image to use              | `vault`                                             |
 | `image.tag`             | Container image tag to deploy       | `1.0.3`                                             |
 | `vault.customSecrets`   | Custom secrets available to Vault   | `[]`                                                |
+| `vault.envSecrets`      | Custom secrets available to Vault as env vars | `[]`                                    |
 | `vault.config`          | Vault configuration                 | No default backend                                  |
 | `vault.externalConfig`  | Vault API based configuration       | No default backend                                  |
 | `replicaCount`          | k8s replicas                        | `1`                                                 |
 | `resources.limits.cpu`  | Container requested CPU             | `nil`                                               |
 | `resources.limits.memory` | Container requested memory        | `nil`                                               |
-| `unsealer.args` | Bank Vaults args | `["--mode", "k8s", "--k8s-secret-namespace", "default", "--k8s-secret-name", "bank-vaults"]` |
+| `unsealer.args`         | Bank Vaults args | `["--mode", "k8s", "--k8s-secret-namespace", "default", "--k8s-secret-name", "bank-vaults"]` |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
