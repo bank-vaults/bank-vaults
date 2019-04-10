@@ -380,6 +380,11 @@ func (v *vault) Configure(config *viper.Viper) error {
 		return fmt.Errorf("error writing startup secrets tor vault: %s", err.Error())
 	}
 
+	err = v.configureIdentityGroups(config)
+	if err != nil {
+		return fmt.Errorf("error writing groups configurations for vault: %s", err.Error())
+	}
+
 	return err
 }
 
@@ -1111,6 +1116,67 @@ func (v *vault) configureStartupSecrets(config *viper.Viper) error {
 	return nil
 }
 
+func readVaultGroup(group string, client *api.Client) (secret *api.Secret, err error) {
+  secret, err = client.Logical().Read(fmt.Sprintf("identity/group/name/%s", group))
+  if err != nil {
+    return nil, fmt.Errorf("Failed to read group %s by name: %v", group, err)
+  }
+  if secret == nil {
+    // No Data returned, Group does not exist
+    return nil, nil
+  }
+  return secret, nil
+}
+
+func (v *vault) configureIdentityGroups(config *viper.Viper) error {
+	groups := []map[string]interface{}{}
+	groupAliases := []map[string]interface{}{}
+
+	err := config.UnmarshalKey("groups", &groups)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling vault groups config: %s", err.Error())
+	}
+
+	err = config.UnmarshalKey("group-aliases", &groupAliases)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling vault group aliases config: %s", err.Error())
+	}
+
+	for _, group := range groups {
+		g, err := readVaultGroup(cast.ToString(group["name"]), v.cl)
+		if err != nil {
+			return fmt.Errorf("error reading group: %s", err)
+		}
+
+		// Currently does not support specifyin members directly in the group config
+		config := map[string]interface{}{
+			"name":    cast.ToString(group["name"]),
+			"type": cast.ToString(group["type"]),
+			"policies": cast.ToStringSlice(group["policies"]),
+			"metadata": cast.ToStringMap(group["metadata"]),
+		}
+
+		if g == nil {
+			logrus.Infof("creating group: %s", group["name"])
+			_, err = v.cl.Logical().Write("identity/group", config)
+			if err != nil {
+				return fmt.Errorf("Failed to create group %s : %v", group["name"], err)
+			}
+		} else {
+			logrus.Infof("tuning already existing group: %s", group["name"])
+			_, err = v.cl.Logical().Write(fmt.Sprintf("identity/group/name/%s", group["name"]), config)
+			if err != nil {
+				return fmt.Errorf("Failed to tune group %s : %v", group["name"], err)
+			}
+		}
+	}
+
+
+	return nil
+}
+
+
+
 // toSliceStringMapE casts []map[string]interface{} preserving nested types
 func toSliceStringMapE(o interface{}) ([]map[string]interface{}, error) {
 	data, err := json.Marshal(o)
@@ -1196,4 +1262,13 @@ func isConfigNoNeedName(secretEngineType string, configOption string) bool {
 	}
 
 	return false
+}
+
+func StringInSlice(match string, list []string) bool {
+  for _, item := range list {
+    if item == match {
+      return true
+    }
+  }
+  return false
 }
