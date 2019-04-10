@@ -1128,6 +1128,42 @@ func readVaultGroup(group string, client *api.Client) (secret *api.Secret, err e
   return secret, nil
 }
 
+func readVaultGroupAlias(groupAlias string, client *api.Client) (secret *api.Secret, err error) {
+  secret, err = client.Logical().Read(fmt.Sprintf("identity/group-alias/name/%s", groupAlias))
+  if err != nil {
+    return nil, fmt.Errorf("Failed to read group alias %s by name: %v", groupAlias, err)
+  }
+  if secret == nil {
+    // No Data returned, Group does not exist
+    return nil, nil
+  }
+  return secret, nil
+}
+
+func getVaultAuthMountAccessor(path string, client *api.Client) (accessor string, err error) {
+  path = strings.TrimRight(path, "/")+"/"
+  mounts, err := client.Sys().ListAuth()
+
+  if err != nil {
+    return "", fmt.Errorf("failed to read auth mounts from vault: %s", err)
+  }
+  if mounts[path] == nil {
+    return "", fmt.Errorf("auth mount path %s does not exist on vaut", path)
+  }
+  return mounts[path].Accessor, nil
+}
+
+func getVaultGroupId(group string, client *api.Client) (id string, err error) {
+	g, err := readVaultGroup(group, client)
+	if err != nil {
+		return "", fmt.Errorf("error reading group %s: %s", group, err)
+	}
+  if g == nil {
+    return "", fmt.Errorf("group %s does not exist", group)
+  }
+  return g.Data["id"].(string), nil
+}
+
 func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 	groups := []map[string]interface{}{}
 	groupAliases := []map[string]interface{}{}
@@ -1172,6 +1208,42 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 		}
 	}
 
+	for _, groupAlias := range groupAliases {
+		ga, err := readVaultGroupAlias(cast.ToString(groupAlias["name"]), v.cl)
+		if err != nil {
+			return fmt.Errorf("error reading group-alias: %s", err)
+		}
+
+		accessor, err := getVaultAuthMountAccessor(cast.ToString(groupAlias["mountpath"]), v.cl)
+		if err != nil {
+			return fmt.Errorf("error getting mount accessor for %s: %s", groupAlias["mountpath"], err)
+		}
+
+		id, err := getVaultGroupId(cast.ToString(groupAlias["group"]), v.cl)
+		if err != nil {
+			return fmt.Errorf("error getting canonical_id for group %s: %s", groupAlias["group"], err)
+		}
+
+		config := map[string]interface{}{
+			"name":    cast.ToString(groupAlias["name"]),
+			"mount_accessor": accessor,
+			"canonical_id": id,
+		}
+
+		if ga == nil {
+			logrus.Infof("creating group-alias: %s", groupAlias["name"])
+			_, err = v.cl.Logical().Write("identity/group-alias", config)
+			if err != nil {
+				return fmt.Errorf("Failed to create group-alias %s : %v", groupAlias["name"], err)
+			}
+		} else {
+			logrus.Infof("tuning already existing group-alias: %s", groupAlias["name"])
+			_, err = v.cl.Logical().Write(fmt.Sprintf("identity/group-alias/name/%s", groupAlias["name"]), config)
+			if err != nil {
+				return fmt.Errorf("Failed to tune group-alias %s : %v", groupAlias["name"], err)
+			}
+		}
+	}
 
 	return nil
 }
