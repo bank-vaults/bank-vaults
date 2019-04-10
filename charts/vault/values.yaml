@@ -68,6 +68,15 @@ vault:
   customSecrets: []
     # - secretName: vault-tls
     #   mountPath: /vault/tls
+  # Allows the mounting of various custom secrets to enable production vault
+  # configurations. The comments show an example usage for mounting a TLS
+  # secret. The two fields required are a secretName indicating the name of
+  # the Kuberentes secret (created outside of this chart), and the mountPath
+  # at which it should be mounted in the Vault container.
+  secretEnvs: []
+    # - secretName: mysql
+    #   secretKey: mysql-username
+    #   envName: "MYSQL_USERNAME"
   externalConfig:
     # Allows creating policies in Vault which can be used later on in roles
     # for the Kubernetes based authentication.
@@ -148,7 +157,7 @@ vault:
 unsealer:
   image:
     repository: banzaicloud/bank-vaults
-    tag: 0.4.13
+    tag: 0.4.14
     pullPolicy: IfNotPresent
   args: [
       "--mode",

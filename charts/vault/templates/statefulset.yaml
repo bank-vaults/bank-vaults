@@ -24,6 +24,35 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
     spec:
+      initContainers:
+      - name: vault-config
+        image: "jwilder/dockerize:latest"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args:
+          - "-delims"
+          - "[[:]]"
+          - "-template"
+          - "/vault/raw-config/config.json:/vault/config/config.json"
+          - "-template"
+          - "/vault/raw-config/vault-config.yml:/vault/config/vault-config.yml"
+        envFrom:
+        {{- range .Values.vault.customSecrets }}
+        - secretRef:
+            name: {{ .secretName }}
+        {{- end }}
+        env:
+        {{- range .Values.vault.envSecrets }}
+        - name: {{ .envName }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .secretName }}
+              key: {{ .secretKey }}
+        {{- end }}
+        volumeMounts:
+        - name: vault-raw-config
+          mountPath: /vault/raw-config/
+        - name: vault-config
+          mountPath: /vault/config/
       containers:
       - name: vault
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -106,6 +135,13 @@ spec:
            {{ else }}
             value: https://127.0.0.1:{{ .Values.service.port }}
            {{ end }}
+          {{- range .Values.vault.envSecrets }}
+          - name: {{ .envName }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .secretName }}
+                key: {{ .secretKey }}
+          {{- end }}
         envFrom:
         {{- range .Values.vault.customSecrets }}
         - secretRef:
@@ -137,6 +173,13 @@ spec:
            {{ else }}
             value: https://127.0.0.1:{{ .Values.service.port }}
            {{ end }}
+          {{- range .Values.vault.envSecrets }}
+          - name: {{ .envName }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .secretName }}
+                key: {{ .secretKey }}
+          {{- end }}
         envFrom:
         {{- range .Values.vault.customSecrets }}
         - secretRef:
@@ -178,9 +221,11 @@ spec:
                   release: {{ .Release.Name | quote }}
       serviceAccountName: {{ template "vault.fullname" . }}
       volumes:
-        - name: vault-config
+        - name: vault-raw-config
           secret:
             secretName: "{{ template "vault.fullname" . }}-config"
+        - name: vault-config
+          emptyDir: {}
         - name: vault-root
           emptyDir: {}
         - name: vault-file
