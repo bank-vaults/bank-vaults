@@ -68,11 +68,11 @@ vault:
   customSecrets: []
     # - secretName: vault-tls
     #   mountPath: /vault/tls
-  # Allows the mounting of various custom secrets to enable production vault
-  # configurations. The comments show an example usage for mounting a TLS
-  # secret. The two fields required are a secretName indicating the name of
-  # the Kuberentes secret (created outside of this chart), and the mountPath
-  # at which it should be mounted in the Vault container.
+  # Allows creating various custom environment variables from secrets to enable
+  # production vault configurations. The comments show an example usage for
+  # passing a MySQL secret. The three fields required are a secretName indicating
+  # the name of the Kuberentes secret (created outside of this chart), secretKey
+  # in this secret and envName which will be the name of the env var in the containers.
   secretEnvs: []
     # - secretName: mysql
     #   secretKey: mysql-username
