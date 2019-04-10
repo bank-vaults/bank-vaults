@@ -91,6 +91,27 @@ helm install banzaicloud-stable/vault \
 --set "unsealer.args[11]=[google-bucket-name]"
 ```
 
+## Vault HA with MySQL backend
+
+You can set up a HA Vault to use MySQL for storing your encrypted secrets. MySQL supports the HA coordination of Vault, see the [official docs](https://www.vaultproject.io/docs/configuration/storage/mysql.html) for more details.
+
+See the complete working Helm example below:
+
+```bash
+# Install MySQL first with the official Helm chart, tell to create a user and a database called 'vault':
+helm install --name mysql stable/mysql --set mysqlUser=vault --set mysqlDatabase=vault
+
+# Install the Vault chart, tell it to use MySQL as the storage backend, also specify where the 'vault' user's password should be coming from (the MySQL chart generates a secret called 'mysql' holding the password):
+helm install --name vault banzaicloud-stable/vault \
+--set replicaCount=2 \
+--set vault.config.storage.mysql.address=mysql:3306 \
+--set vault.config.storage.mysql.username=vault \
+--set vault.config.storage.mysql.password="[[.Env.MYSQL_PASSWORD]]" \
+--set "vault.envSecrets[0].secretName=mysql" \
+--set "vault.envSecrets[0].secretKey=mysql-password" \
+--set "vault.envSecrets[0].envName=MYSQL_PASSWORD"
+```
+
 ## Configuration
 
 The following tables lists the configurable parameters of the vault chart and their default values.
