@@ -42,7 +42,7 @@ type vaultConfig struct {
 	skipVerify string
 	useAgent   bool
 	ctConfigMap string
-	ctShareProcess bool
+	ctShareProcess string
 }
 
 var vaultAgentConfig = `
@@ -116,7 +116,7 @@ func getContainers(vaultConfig vaultConfig, versionCompared int) []corev1.Contai
 	containers := []corev1.Container{}
 	securityContext := &corev1.SecurityContext{}
 
-	if versionCompared < 0 || vaultConfig.ctShareProcess {
+	if versionCompared < 0 || vaultConfig.ctShareProcess == "true" {
 		securityContext = &corev1.SecurityContext{
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{
@@ -256,8 +256,8 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	} else {
 		vaultConfig.ctConfigMap = ""
 	}
-	if val, ok := annotations["vault.security.banzaicloud.io/ct-share-process-namespace"]; ok {
-		vaultConfig.ctShareProcess = val
+	if value, ok := annotations["vault.security.banzaicloud.io/ct-share-process-namespace"]; ok {
+		vaultConfig.ctShareProcess = value
 	}
 	return vaultConfig
 }
@@ -502,7 +502,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		if vaultConfig.ctConfigMap != "" {
 			apiVersion, _ := clientset.Discovery().ServerVersion()
 			versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
-			if versionCompared < 0 || vaultConfig.ctShareProcess {
+			if versionCompared < 0 || vaultConfig.ctShareProcess == "true" {
 				sharePorcessNamespace := true
 				podSpec.ShareProcessNamespace = &sharePorcessNamespace
 			}
