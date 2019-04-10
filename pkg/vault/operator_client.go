@@ -1148,7 +1148,8 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 			return fmt.Errorf("error reading group: %s", err)
 		}
 
-		// Currently does not support specifyin members directly in the group config
+		// Currently does not support specifing members directly in the group config
+		// Use group aliases for that
 		config := map[string]interface{}{
 			"name":    cast.ToString(group["name"]),
 			"type": cast.ToString(group["type"]),
