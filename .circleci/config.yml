@@ -112,3 +112,9 @@ jobs:
           name: Operator acceptance test
           command:
             hack/acceptance-test.sh
+
+workflows:
+    version: 2
+    ci:
+        jobs:
+            - build
