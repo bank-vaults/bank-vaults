@@ -1182,7 +1182,7 @@ func findVaultGroupAliasIdFromName(name string, client *api.Client) (id string, 
 		return "", fmt.Errorf("error listing group aliases: %s", err)
 	}
   if aliases == nil {
-    return "", fmt.Errorf("no aliases defined")
+    return "", nil
   }
 
   for _, alias := range aliases.Data["keys"].([]interface{}) {
