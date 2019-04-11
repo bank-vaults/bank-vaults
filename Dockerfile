@@ -14,7 +14,7 @@ COPY . /build
 RUN go install ./cmd/bank-vaults
 
 
-FROM alpine:3.7
+FROM alpine:3.9
 
 RUN apk add --no-cache ca-certificates
 

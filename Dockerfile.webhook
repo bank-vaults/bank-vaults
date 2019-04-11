@@ -13,7 +13,7 @@ RUN go mod download
 COPY . /build
 RUN go install ./cmd/vault-secrets-webhook
 
-FROM alpine:3.8
+FROM alpine:3.9
 
 RUN apk add --update libcap && rm -rf /var/cache/apk/*
 
