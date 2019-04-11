@@ -1222,6 +1222,10 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 
 		// Currently does not support specifing members directly in the group config
 		// Use group aliases for that
+		if cast.ToString(group["type"]) != "external" {
+			return fmt.Errorf("Only external groups are supported for now")
+		}
+
 		config := map[string]interface{}{
 			"name":    cast.ToString(group["name"]),
 			"type": cast.ToString(group["type"]),
