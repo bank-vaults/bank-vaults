@@ -14,6 +14,9 @@ spec:
   # Describe where you would like to store the Vault unseal keys and root token
   # in S3 encrypted with KMS.
   unsealConfig:
+    options:
+      # The preFlightChecks flag enables unseal and root token storage tests
+      preFlightChecks: true
     aws:
       kmsKeyId: "94c836b9-4907-47a7-928e-85d5d5518eff"
       kmsRegion: "us-east-1"

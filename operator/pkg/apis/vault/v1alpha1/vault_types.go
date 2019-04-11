@@ -301,6 +301,7 @@ type VaultList struct {
 
 // UnsealConfig represents the UnsealConfig field of a VaultSpec Kubernetes object
 type UnsealConfig struct {
+	Options    UnsealOptions           `json:"options,omitempty"`
 	Kubernetes *KubernetesUnsealConfig `json:"kubernetes,omitempty"`
 	Google     *GoogleUnsealConfig     `json:"google,omitempty"`
 	Alibaba    *AlibabaUnsealConfig    `json:"alibaba,omitempty"`
@@ -308,9 +309,19 @@ type UnsealConfig struct {
 	AWS        *AWSUnsealConfig        `json:"aws,omitempty"`
 }
 
+// UnsealOptions represents the common options to all unsealing backends
+type UnsealOptions struct {
+	PreFlightChecks bool `json:"preFlightChecks,omitempty"`
+}
+
 // ToArgs returns the UnsealConfig as and argument array for bank-vaults
 func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
+	var args []string
+	if usc.Options.PreFlightChecks {
+		args = append(args, "--pre-flight-checks", "true")
+	}
 	if usc.Kubernetes != nil {
+
 		secretNamespace := vault.Namespace
 		if usc.Kubernetes.SecretNamespace != "" {
 			secretNamespace = usc.Kubernetes.SecretNamespace
@@ -319,10 +330,18 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 		if usc.Kubernetes.SecretName != "" {
 			secretName = usc.Kubernetes.SecretName
 		}
-		return []string{"--mode", "k8s", "--k8s-secret-namespace", secretNamespace, "--k8s-secret-name", secretName}
-	}
-	if usc.Google != nil {
-		return []string{
+		args = append(args,
+			"--mode",
+			"k8s",
+			"--k8s-secret-namespace",
+			secretNamespace,
+			"--k8s-secret-name",
+			secretName,
+		)
+
+	} else if usc.Google != nil {
+
+		args = append(args,
 			"--mode",
 			"google-cloud-kms-gcs",
 			"--google-cloud-kms-key-ring",
@@ -335,13 +354,20 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			usc.Google.KMSProject,
 			"--google-cloud-storage-bucket",
 			usc.Google.StorageBucket,
-		}
-	}
-	if usc.Azure != nil {
-		return []string{"--mode", "azure-key-vault", "--azure-key-vault-name", usc.Azure.KeyVaultName}
-	}
-	if usc.AWS != nil {
-		return []string{
+		)
+
+	} else if usc.Azure != nil {
+
+		args = append(args,
+			"--mode",
+			"azure-key-vault",
+			"--azure-key-vault-name",
+			usc.Azure.KeyVaultName,
+		)
+
+	} else if usc.AWS != nil {
+
+		args = append(args,
 			"--mode",
 			"aws-kms-s3",
 			"--aws-kms-key-id",
@@ -354,10 +380,11 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			usc.AWS.S3Prefix,
 			"--aws-s3-region",
 			usc.AWS.S3Region,
-		}
-	}
-	if usc.Alibaba != nil {
-		return []string{
+		)
+
+	} else if usc.Alibaba != nil {
+
+		args = append(args,
 			"--mode",
 			"alibaba-kms-oss",
 			"--alibaba-kms-region",
@@ -370,9 +397,10 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			usc.Alibaba.OSSBucket,
 			"--alibaba-oss-prefix",
 			usc.Alibaba.OSSPrefix,
-		}
+		)
+
 	}
-	return []string{}
+	return args
 }
 
 // KubernetesUnsealConfig holds the parameters for Kubernetes based unsealing
@@ -429,7 +457,7 @@ type Resources struct {
 	PrometheusExporter *v1.ResourceRequirements `json:"prometheusExporter,omitempty"`
 }
 
-// Ingress
+// Ingress specification for the Vault cluster
 type Ingress struct {
 	Annotations map[string]string   `json:"annotations,omitempty"`
 	Spec        v1beta1.IngressSpec `json:"spec,omitempty"`
