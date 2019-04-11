@@ -1128,10 +1128,10 @@ func readVaultGroup(group string, client *api.Client) (secret *api.Secret, err e
   return secret, nil
 }
 
-func readVaultGroupAlias(groupAlias string, client *api.Client) (secret *api.Secret, err error) {
-  secret, err = client.Logical().Read(fmt.Sprintf("identity/group-alias/name/%s", groupAlias))
+func readVaultGroupAlias(id string, client *api.Client) (secret *api.Secret, err error) {
+  secret, err = client.Logical().Read(fmt.Sprintf("identity/group-alias/id/%s", id))
   if err != nil {
-    return nil, fmt.Errorf("Failed to read group alias %s by name: %v", groupAlias, err)
+    return nil, fmt.Errorf("Failed to read group alias %s by id: %v", id, err)
   }
   if secret == nil {
     // No Data returned, Group does not exist
@@ -1162,6 +1162,42 @@ func getVaultGroupId(group string, client *api.Client) (id string, err error) {
     return "", fmt.Errorf("group %s does not exist", group)
   }
   return g.Data["id"].(string), nil
+}
+
+func getVaultGroupAliasName(aliasId string, client *api.Client) (id string, err error) {
+  alias, err := readVaultGroupAlias(aliasId, client)
+	if err != nil {
+		return "", fmt.Errorf("error reading group alias %s: %s", aliasId, err)
+	}
+  if alias == nil {
+    return "", fmt.Errorf("group alias %s does not exist", aliasId)
+  }
+  return alias.Data["name"].(string), nil
+}
+
+func findVaultGroupAliasIdFromName(name string, client *api.Client) (id string, err error) {
+  aliases, err := client.Logical().List("identity/group-alias/id")
+
+	if err != nil {
+		return "", fmt.Errorf("error listing group aliases: %s", err)
+	}
+  if aliases == nil {
+    return "", fmt.Errorf("no aliases defined")
+  }
+
+  for _, alias := range aliases.Data["keys"].([]interface{}) {
+		aliasName, err := getVaultGroupAliasName(cast.ToString(alias), client)
+		if err != nil {
+			return "", fmt.Errorf("Error fetching name for alias id: %s", alias)
+		}
+		if aliasName == name {
+			return cast.ToString(alias), nil
+		}
+  }
+
+	// Did not find any alias matching ID to Name
+	return "", nil
+
 }
 
 func (v *vault) configureIdentityGroups(config *viper.Viper) error {
@@ -1209,9 +1245,9 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 	}
 
 	for _, groupAlias := range groupAliases {
-		ga, err := readVaultGroupAlias(cast.ToString(groupAlias["name"]), v.cl)
+		ga, err := findVaultGroupAliasIdFromName(cast.ToString(groupAlias["name"]), v.cl)
 		if err != nil {
-			return fmt.Errorf("error reading group-alias: %s", err)
+			return fmt.Errorf("error finding group-alias: %s", err)
 		}
 
 		accessor, err := getVaultAuthMountAccessor(cast.ToString(groupAlias["mountpath"]), v.cl)
@@ -1230,17 +1266,17 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 			"canonical_id": id,
 		}
 
-		if ga == nil {
+		if ga == "" {
 			logrus.Infof("creating group-alias: %s", groupAlias["name"])
 			_, err = v.cl.Logical().Write("identity/group-alias", config)
 			if err != nil {
 				return fmt.Errorf("Failed to create group-alias %s : %v", groupAlias["name"], err)
 			}
 		} else {
-			logrus.Infof("tuning already existing group-alias: %s", groupAlias["name"])
-			_, err = v.cl.Logical().Write(fmt.Sprintf("identity/group-alias/name/%s", groupAlias["name"]), config)
+			logrus.Infof("tuning already existing group-alias: %s - ID: %s", groupAlias["name"], ga)
+			_, err = v.cl.Logical().Write(fmt.Sprintf("identity/group-alias/id/%s", ga), config)
 			if err != nil {
-				return fmt.Errorf("Failed to tune group-alias %s : %v", groupAlias["name"], err)
+				return fmt.Errorf("Failed to tune group-alias %s : %v", ga, err)
 			}
 		}
 	}
