@@ -36,7 +36,7 @@ jobs:
           name: Setup golang
           command: |
             sudo rm -rf /usr/local/go
-            curl -Lo go.linux-amd64.tar.gz https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && sudo tar -C /usr/local -xzf go.linux-amd64.tar.gz
+            curl -Lo go.linux-amd64.tar.gz https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && sudo tar -C /usr/local -xzf go.linux-amd64.tar.gz && rm go.linux-amd64.tar.gz
 
       - run:
           name: Install dependencies
