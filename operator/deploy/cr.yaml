@@ -41,6 +41,9 @@ spec:
 
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
+    options:
+      # The preFlightChecks flag enables unseal and root token storage tests
+      preFlightChecks: true
     kubernetes:
       secretNamespace: default
 
