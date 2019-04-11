@@ -17,6 +17,6 @@ COPY . /go/src/${PACKAGE}
 RUN CGO_ENABLED=0 go install ./cmd/vault-env
 
 
-FROM vault:0.11.5
+FROM vault:1.1.0
 
 COPY --from=builder /go/bin/vault-env /usr/local/bin/vault-env

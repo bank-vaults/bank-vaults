@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 2
-  image: vault:1.0.3
+  image: vault:1.1.0
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running

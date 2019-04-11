@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 3
-  image: vault:1.0.0
+  image: vault:1.1.0
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # A YAML representation of nodeAffinity
