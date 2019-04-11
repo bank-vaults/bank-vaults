@@ -316,7 +316,7 @@ type UnsealOptions struct {
 
 // ToArgs returns the UnsealConfig as and argument array for bank-vaults
 func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
-	var args []string
+	args := []string{}
 	if usc.Options.PreFlightChecks {
 		args = append(args, "--pre-flight-checks", "true")
 	}
