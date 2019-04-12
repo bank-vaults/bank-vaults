@@ -1004,7 +1004,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Name:            "bank-vaults",
 							Command:         []string{"bank-vaults", "unseal", "--init"},
-							Args:            v.Spec.UnsealConfig.ToArgs(v),
+							Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
 							Env: withSecretEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, []corev1.EnvVar{
 								{
 									Name:  k8s.EnvK8SOwnerReference,
