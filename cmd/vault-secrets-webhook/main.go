@@ -64,10 +64,10 @@ auto_auth {
 	}
 }`
 
-func getInitContainers(vaultConfig vaultConfig) []corev1.Container {
+func getInitContainers(vaultConfig vaultConfig, initContainersMutated bool, containersMutated bool) []corev1.Container {
 	containers := []corev1.Container{}
 
-	if vaultConfig.useAgent {
+	if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
 		containers = append(containers, corev1.Container{
 			Name:            "vault-agent",
 			Image:           viper.GetString("vault_image"),
@@ -96,18 +96,20 @@ func getInitContainers(vaultConfig vaultConfig) []corev1.Container {
 		})
 	}
 
-	containers = append(containers, corev1.Container{
-		Name:            "copy-vault-env",
-		Image:           viper.GetString("vault_env_image"),
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         []string{"sh", "-c", "cp /usr/local/bin/vault-env /vault/"},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      "vault-env",
-				MountPath: "/vault/",
+	if initContainersMutated || containersMutated {
+		containers = append(containers, corev1.Container{
+			Name:            "copy-vault-env",
+			Image:           viper.GetString("vault_env_image"),
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Command:         []string{"sh", "-c", "cp /usr/local/bin/vault-env /vault/"},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      "vault-env",
+					MountPath: "/vault/",
+				},
 			},
-		},
-	})
+		})
+	}
 
 	return containers
 }
@@ -116,7 +118,7 @@ func getContainers(vaultConfig vaultConfig, versionCompared int) []corev1.Contai
 	containers := []corev1.Container{}
 	securityContext := &corev1.SecurityContext{}
 
-	if versionCompared < 0 || vaultConfig.ctShareProcess == "true" {
+	if versionCompared >= 0 || vaultConfig.ctShareProcess == "true" {
 		securityContext = &corev1.SecurityContext{
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{
@@ -148,11 +150,11 @@ func getContainers(vaultConfig vaultConfig, versionCompared int) []corev1.Contai
 				MountPath:	"/vault",
 			},
 			{
-				Name:		"secrets",
+				Name:		"ct-secrets",
 				MountPath:	"/etc/secrets",
 			},
 			{
-				Name:		"ct-config",
+				Name:		"ct-configmap",
 				MountPath:	"/etc/ct-config/config.hcl",
 				ReadOnly:	true,
 				SubPath:	"config.hcl",
@@ -163,7 +165,9 @@ func getContainers(vaultConfig vaultConfig, versionCompared int) []corev1.Contai
 	return containers
 }
 
-func getVolumes(name string, vaultConfig vaultConfig) []corev1.Volume {
+func getVolumes(name string, vaultConfig vaultConfig, logger log.Logger) []corev1.Volume {
+	logger.Infof("Add generic volumes to podspec")
+
 	volumes := []corev1.Volume{
 		{
 			Name: "vault-env",
@@ -175,7 +179,8 @@ func getVolumes(name string, vaultConfig vaultConfig) []corev1.Volume {
 		},
 	}
 
-	if vaultConfig.useAgent {
+	if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
+		logger.Infof("Add vault agent volumes to podspec")
 		volumes = append(volumes, corev1.Volume{
 			Name: "vault-agent-config",
 			VolumeSource: corev1.VolumeSource{
@@ -189,8 +194,9 @@ func getVolumes(name string, vaultConfig vaultConfig) []corev1.Volume {
 	}
 
 	if vaultConfig.ctConfigMap != "" {
-		defaultMode := int32(420)
+		logger.Infof("Add consul template volumes to podspec")
 
+		defaultMode := int32(420)
 		volumes = append(volumes,
 			corev1.Volume{
 				Name: "ct-secrets",
@@ -204,7 +210,9 @@ func getVolumes(name string, vaultConfig vaultConfig) []corev1.Volume {
 				Name: "ct-configmap",
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{},
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: vaultConfig.ctConfigMap,
+						},
 						DefaultMode: &defaultMode,
 						Items: []corev1.KeyToPath{
 							{
@@ -232,7 +240,7 @@ func vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
 
 	vaultConfig := parseVaultConfig(obj)
 
-	return false, mutatePodSpec(obj, podSpec, vaultConfig, whcontext.GetAdmissionRequest(ctx).Namespace)
+	return false, mutatePodSpec(obj, podSpec, vaultConfig, whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.GetAdmissionRequest(ctx).Name)
 }
 
 func parseVaultConfig(obj metav1.Object) vaultConfig {
@@ -262,10 +270,10 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	return vaultConfig
 }
 
-func getConfigMapForVaultAgent(obj metav1.Object, vaultConfig vaultConfig) *corev1.ConfigMap {
+func getConfigMapForVaultAgent(deploymentName string, vaultConfig vaultConfig) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: obj.GetName() + "-vault-agent-config",
+			Name: deploymentName + "-vault-agent-config",
 			// OwnerReferences: []metav1.OwnerReference{
 			// 	{
 			// 		Name: obj.GetName(),
@@ -463,32 +471,54 @@ func newClientSet() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vaultConfig, ns string) error {
+func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vaultConfig, ns string, name string) error {
+
+	logger := &log.Std{Debug: viper.GetBool("debug")}
 
 	clientset, err := newClientSet()
 	if err != nil {
 		return err
 	}
 
+	logger.Infof("Successfully connected to the API")
+
 	initContainersMutated, err := mutateContainers(podSpec.InitContainers, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
+
+	if initContainersMutated {
+		logger.Infof("Successfully mutated pod init containers")
+	} else {
+		logger.Infof("No pod init containers were mutated")
+	}
+
 	containersMutated, err := mutateContainers(podSpec.Containers, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
 
-	if initContainersMutated || containersMutated {
+	if containersMutated {
+		logger.Infof("Successfully mutated pod containers")
+	} else {
+		logger.Infof("No pod containers were mutated")
+	}
 
-		if vaultConfig.useAgent {
+	deploymentName := obj.GetName()
+	if deploymentName == "" {
+		generateNameSlice := strings.Split(obj.GetGenerateName(), "-")
+        deploymentName = strings.Join(generateNameSlice[:len(generateNameSlice)-2], "-")
+	}
+	logger.Infof("My name is %s", deploymentName)
 
-			configMap := getConfigMapForVaultAgent(obj, vaultConfig)
+	if initContainersMutated || containersMutated || vaultConfig.ctConfigMap != "" {
+		if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
+			configMap := getConfigMapForVaultAgent(deploymentName, vaultConfig)
 
-			_, err := clientset.CoreV1().ConfigMaps(obj.GetNamespace()).Create(configMap)
+			_, err := clientset.CoreV1().ConfigMaps(ns).Create(configMap)
 			if err != nil {
 				if errors.IsAlreadyExists(err) {
-					_, err = clientset.CoreV1().ConfigMaps(obj.GetNamespace()).Update(configMap)
+					_, err = clientset.CoreV1().ConfigMaps(ns).Update(configMap)
 					if err != nil {
 						return err
 					}
@@ -498,17 +528,28 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 			}
 		}
 
-		podSpec.InitContainers = append(getInitContainers(vaultConfig), podSpec.InitContainers...)
-		if vaultConfig.ctConfigMap != "" {
-			apiVersion, _ := clientset.Discovery().ServerVersion()
-			versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
-			if versionCompared < 0 || vaultConfig.ctShareProcess == "true" {
-				sharePorcessNamespace := true
-				podSpec.ShareProcessNamespace = &sharePorcessNamespace
-			}
-			podSpec.Containers = append(getContainers(vaultConfig, versionCompared), podSpec.Containers...)
+		podSpec.InitContainers = append(getInitContainers(vaultConfig, initContainersMutated, containersMutated), podSpec.InitContainers...)
+		logger.Infof("Successfully appended pod init containers to spec")
+	}
+
+	if vaultConfig.ctConfigMap != "" {
+		logger.Infof("Consul template config found")
+
+		apiVersion, _ := clientset.Discovery().ServerVersion()
+		versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
+		logger.Infof("Kuberentes API version detected: %s", apiVersion.String())
+		if versionCompared >= 0 || vaultConfig.ctShareProcess == "true" {
+			logger.Infof("Detected shared process namespace")
+			sharePorcessNamespace := true
+			podSpec.ShareProcessNamespace = &sharePorcessNamespace
 		}
-		podSpec.Volumes = append(podSpec.Volumes, getVolumes(obj.GetName(), vaultConfig)...)
+		podSpec.Containers = append(getContainers(vaultConfig, versionCompared), podSpec.Containers...)
+		logger.Infof("Successfully appended pod containers to spec")
+	}
+
+	if initContainersMutated || containersMutated || vaultConfig.ctConfigMap != "" {
+		podSpec.Volumes = append(podSpec.Volumes, getVolumes(deploymentName, vaultConfig, logger)...)
+		logger.Infof("Successfully appended pod spec volumes")
 	}
 
 	return nil
