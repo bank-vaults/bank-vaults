@@ -314,12 +314,17 @@ type UnsealOptions struct {
 	PreFlightChecks bool `json:"preFlightChecks,omitempty"`
 }
 
+func (uso UnsealOptions) ToArgs() []string {
+	args := []string{}
+	if uso.PreFlightChecks {
+		args = append(args, "--pre-flight-checks", "true")
+	}
+	return args
+}
+
 // ToArgs returns the UnsealConfig as and argument array for bank-vaults
 func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 	args := []string{}
-	if usc.Options.PreFlightChecks {
-		args = append(args, "--pre-flight-checks", "true")
-	}
 	if usc.Kubernetes != nil {
 
 		secretNamespace := vault.Namespace
