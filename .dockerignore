@@ -1,2 +1,6 @@
 Dockerfile*
-vendor/*
+.git/
+bin/
+docs/
+operator/build/
+vendor/
