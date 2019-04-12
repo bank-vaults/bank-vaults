@@ -48,7 +48,7 @@ exit_after_auth = true
 
 auto_auth {
 	method "kubernetes" {
-		mount_path = "%s"
+		mount_path = "auth/%s"
 		config = {
 			role = "%s"
 		}
@@ -61,10 +61,23 @@ auto_auth {
 	}
 }`
 
-func getInitContainers(vaultConfig vaultConfig) []corev1.Container {
+func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultConfig) []corev1.Container {
 	containers := []corev1.Container{}
 
 	if vaultConfig.useAgent {
+
+		var serviceAccountMount corev1.VolumeMount
+
+	mountSearch:
+		for _, container := range originalContainers {
+			for _, mount := range container.VolumeMounts {
+				if mount.MountPath == "/var/run/secrets/kubernetes.io/serviceaccount" {
+					serviceAccountMount = mount
+					break mountSearch
+				}
+			}
+		}
+
 		containers = append(containers, corev1.Container{
 			Name:            "vault-agent",
 			Image:           viper.GetString("vault_image"),
@@ -89,6 +102,7 @@ func getInitContainers(vaultConfig vaultConfig) []corev1.Container {
 					Name:      "vault-env",
 					MountPath: "/vault/",
 				},
+				serviceAccountMount,
 			},
 		})
 	}
@@ -109,7 +123,7 @@ func getInitContainers(vaultConfig vaultConfig) []corev1.Container {
 	return containers
 }
 
-func getVolumes(name string, vaultConfig vaultConfig) []corev1.Volume {
+func getVolumes(agentConfigMapName string, vaultConfig vaultConfig) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
 			Name: "vault-env",
@@ -127,7 +141,7 @@ func getVolumes(name string, vaultConfig vaultConfig) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: name + "-vault-agent-config",
+						Name: agentConfigMapName,
 					},
 				},
 			},
@@ -170,15 +184,18 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 }
 
 func getConfigMapForVaultAgent(obj metav1.Object, vaultConfig vaultConfig) *corev1.ConfigMap {
+	var ownerReferences []metav1.OwnerReference
+	name := obj.GetName()
+	if name == "" {
+		ownerReferences = obj.GetOwnerReferences()
+		if len(ownerReferences) > 0 {
+			name = ownerReferences[0].Name
+		}
+	}
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: obj.GetName() + "-vault-agent-config",
-			// OwnerReferences: []metav1.OwnerReference{
-			// 	{
-			// 		Name: obj.GetName(),
-			// 		// UID:  obj.GetUID(),
-			// 	},
-			// },
+			Name:            name + "-vault-agent-config",
+			OwnerReferences: ownerReferences,
 		},
 		Data: map[string]string{
 			"config.hcl": fmt.Sprintf(vaultAgentConfig, vaultConfig.path, vaultConfig.role),
@@ -385,14 +402,16 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 
 	if initContainersMutated || containersMutated {
 
+		var agentConfigMapName string
 		if vaultConfig.useAgent {
 
 			configMap := getConfigMapForVaultAgent(obj, vaultConfig)
+			agentConfigMapName = configMap.Name
 
-			_, err := clientset.CoreV1().ConfigMaps(obj.GetNamespace()).Create(configMap)
+			_, err := clientset.CoreV1().ConfigMaps(ns).Create(configMap)
 			if err != nil {
 				if errors.IsAlreadyExists(err) {
-					_, err = clientset.CoreV1().ConfigMaps(obj.GetNamespace()).Update(configMap)
+					_, err = clientset.CoreV1().ConfigMaps(ns).Update(configMap)
 					if err != nil {
 						return err
 					}
@@ -402,8 +421,8 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 			}
 		}
 
-		podSpec.InitContainers = append(getInitContainers(vaultConfig), podSpec.InitContainers...)
-		podSpec.Volumes = append(podSpec.Volumes, getVolumes(obj.GetName(), vaultConfig)...)
+		podSpec.InitContainers = append(getInitContainers(podSpec.Containers, vaultConfig), podSpec.InitContainers...)
+		podSpec.Volumes = append(podSpec.Volumes, getVolumes(agentConfigMapName, vaultConfig)...)
 	}
 
 	return nil
