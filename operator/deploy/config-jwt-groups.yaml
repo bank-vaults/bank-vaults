@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: vault-configurator
+    vault_cr: vault
+  name: jwt-full-example
+data:
+  vault-config.yml: |
+    auth:
+      - type: jwt
+        path: jwt
+        config:
+          oidc_discovery_url: https://dex.svc.example.com
+          bound_issuer: https://dex.svc.example.com
+          default_role: default
+        roles:
+          - name: admin
+            role_type: jwt
+            bound_audiences:
+              - dex
+            user_claim: email
+            groups_claim: "groups"
+            policies: ""
+            ttl: 10m
+            max_ttl: 60m
+            num_uses: 3
+    policies:
+      - name: admin_access
+        rules: |
+          # Manage auth backends broadly across Vault
+          path "auth/*"
+          {
+            capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+          }
+          # List, create, update, and delete auth backends
+          path "sys/auth/*"
+          {
+            capabilities = ["create", "read", "update", "delete", "sudo"]
+          }
+          # To list policies
+          path "sys/policy"
+          {
+            capabilities = ["read"]
+          }
+          # Create and manage ACL policies broadly across Vault
+          path "sys/policy/*"
+          {
+            capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+          }
+          # List, create, update, and delete key/value secrets
+          #path "secret/*"
+          #{
+          #  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+          #}
+          # Manage and manage secret backends broadly across Vault.
+          path "sys/mounts/*"
+          {
+            capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+          }
+          # Read health checks
+          path "sys/health"
+          {
+            capabilities = ["read", "sudo"]
+          }
+          # Read metrics
+          path "sys/metrics"
+          {
+            capabilities = ["read"]
+          }
+          # To perform
+          path "sys/capabilities"
+          {
+            capabilities = ["create", "update"]
+          }
+          # To perform
+          path "sys/capabilities-self"
+          {
+            capabilities = ["create", "update"]
+          }
+    groups:
+      - name: admin
+        policies:
+          - admin_access
+        metadata:
+          privileged: "true"
+        type: external
+    group-aliases:
+      - name: admin
+        mountpath: jwt
+        group: admin

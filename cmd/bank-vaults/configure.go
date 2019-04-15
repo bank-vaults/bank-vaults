@@ -135,15 +135,6 @@ var configureCmd = &cobra.Command{
 	},
 }
 
-func stringInSlice(match string, list []string) bool {
-	for _, item := range list {
-		if item == match {
-			return true
-		}
-	}
-	return false
-}
-
 func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.Viper) {
 	watcher, err := fsnotify.NewWatcher()
 	// Map used to match on kubernetes ..data to files inside of directory
@@ -178,7 +169,7 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.V
 			// we only care about the config file or the ConfigMap directory (if in Kubernetes)
 			// For real Files we only need to watch the WRITE Event # TODO: Sometimes it triggers 2 WRITE when a file is edited and saved
 			// For Kubernetes configMaps we need to watch for CREATE on the "..data"
-			if event.Op&fsnotify.Write == fsnotify.Write && stringInSlice(filepath.Clean(event.Name), vaultConfigFiles) {
+			if event.Op&fsnotify.Write == fsnotify.Write && vault.StringInSlice(filepath.Clean(event.Name), vaultConfigFiles) {
 				logrus.Infof("File has changed: %s", event.Name)
 				configurations <- parseConfiguration(filepath.Clean(event.Name))
 			} else if event.Op&fsnotify.Create == fsnotify.Create && filepath.Base(event.Name) == "..data" {

@@ -388,6 +388,26 @@ secrets:
             policy_arns: arn-of-policy
             name: my-aws-role
 
+# Identity Groups
+# NOTE: Only external groups are supported at the moment through the use of group-aliases
+# for supported authentication backends, like for example JWT, which will automatically match those aliases to groups returned by the backend
+# the configuration files for the groups and group-aliases need to be parsed after the 
+# authentication backend has already mounted. Ideally they should be in the same file to avoid 
+# risk of errors
+groups: 
+  - name: admin
+    policies:
+      - admin
+    metadata:
+      admin: "true"
+      priviliged: "true"
+    type: external
+
+group-aliases:
+  - name: admin
+    mountpath: jwt
+    group: admin
+
 # Registers a new plugin in Vault's plugin catalog. "plugin_directory" setting should be set it Vault server configuration
 # and plugin binary should be present in plugin directory. Also, for some plugins readOnlyRootFilesystem Pod Security Policy
 # should be disabled to allow RPC communication between plugin and Vault server via Unix socket
