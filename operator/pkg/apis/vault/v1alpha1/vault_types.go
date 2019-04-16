@@ -278,6 +278,9 @@ type VaultStatus struct {
 	Leader string   `json:"leader"`
 }
 
+// +genclient
+// +genclient:noStatus
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Vault is the Schema for the vaults API

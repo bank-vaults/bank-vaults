@@ -26,7 +26,8 @@ trap finish EXIT
 
 CODEGEN_DIR=$(mktemp -d)
 
-git clone --depth 1 git@github.com:kubernetes/code-generator.git ${CODEGEN_DIR}
+git clone git@github.com:kubernetes/code-generator.git ${CODEGEN_DIR}
+cd ${CODEGEN_DIR} && git checkout kubernetes-1.13.1 && cd -
 
 SCRIPT_ROOT=$(dirname ${BASH_SOURCE})/..
 
