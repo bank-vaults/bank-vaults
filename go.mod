@@ -119,7 +119,7 @@ require (
 	github.com/jinzhu/now v0.0.0-20180511015916-ed742868f2ae // indirect
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
-	github.com/jpillora/backoff v0.0.0-20180909062703-3050d21c67d7 // indirect
+	github.com/jpillora/backoff v0.0.0-20180909062703-3050d21c67d7
 	github.com/json-iterator/go v1.1.5
 	github.com/keybase/go-crypto v0.0.0-20181127160227-255a5089e85a // indirect
 	github.com/lib/pq v1.0.0 // indirect
