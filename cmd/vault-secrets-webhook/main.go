@@ -261,6 +261,7 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	if vaultConfig.role == "" {
 		vaultConfig.role = "default"
 	}
+
 	vaultConfig.path = annotations["vault.security.banzaicloud.io/vault-path"]
 	if vaultConfig.path == "" {
 		vaultConfig.path = "kubernetes"
@@ -289,11 +290,13 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	} else {
 		vaultConfig.ctConfigMap = ""
 	}
+
 	if val, ok := annotations["vault.security.banzaicloud.io/ct-share-process-namespace"]; ok {
 		vaultConfig.ctShareProcess, _ = strconv.ParseBool(val)
 	} else {
 		vaultConfig.ctShareProcess, _ = strconv.ParseBool(viper.GetString("vault_ct_share_process_namespace"))
 	}
+
 	return vaultConfig
 }
 
