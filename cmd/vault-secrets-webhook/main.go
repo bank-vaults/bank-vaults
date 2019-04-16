@@ -40,9 +40,10 @@ type vaultConfig struct {
 	role       string
 	path       string
 	skipVerify string
+	tlsConfigMap string
 	useAgent   bool
 	ctConfigMap string
-	ctShareProcess string
+	ctShareProcess bool
 }
 
 var vaultAgentConfig = `
@@ -64,10 +65,10 @@ auto_auth {
 	}
 }`
 
-func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultConfig, initContainersMutated bool, containersMutated bool) []corev1.Container {
+func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	containers := []corev1.Container{}
 
-	if vaultConfig.useAgent {
+	if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
 
 		var serviceAccountMount corev1.VolumeMount
 
@@ -81,33 +82,18 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 			}
 		}
 
-	if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
+		containerVolMounts = append(containerVolMounts, serviceAccountMount, corev1.VolumeMount{
+			Name:      "vault-agent-config",
+			MountPath: "/vault/agent/",
+		})
+
 		containers = append(containers, corev1.Container{
 			Name:            "vault-agent",
 			Image:           viper.GetString("vault_image"),
 			ImagePullPolicy: corev1.PullIfNotPresent,
-			Command:         []string{"vault", "agent", "-config=/vault-agent/config.hcl"},
-			Env: []corev1.EnvVar{
-				{
-					Name:  "VAULT_ADDR",
-					Value: vaultConfig.addr,
-				},
-				{
-					Name:  "VAULT_SKIP_VERIFY",
-					Value: vaultConfig.skipVerify,
-				},
-			},
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      "vault-agent-config",
-					MountPath: "/vault-agent/",
-				},
-				{
-					Name:      "vault-env",
-					MountPath: "/vault/",
-				},
-				serviceAccountMount,
-			},
+			Command:         []string{"vault", "agent", "-config=/vault/agent/config.hcl"},
+			Env: containerEnvVars,
+			VolumeMounts: containerVolMounts,
 		})
 	}
 
@@ -129,11 +115,11 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 	return containers
 }
 
-func getContainers(vaultConfig vaultConfig, versionCompared int) []corev1.Container {
+func getContainers(vaultConfig vaultConfig, versionCompared int, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	containers := []corev1.Container{}
 	securityContext := &corev1.SecurityContext{}
 
-	if versionCompared >= 0 || vaultConfig.ctShareProcess == "true" {
+	if versionCompared >= 0 || vaultConfig.ctShareProcess {
 		securityContext = &corev1.SecurityContext{
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{
@@ -143,38 +129,30 @@ func getContainers(vaultConfig vaultConfig, versionCompared int) []corev1.Contai
 		}
 	}
 
+	containerEnvVars = append(containerEnvVars, corev1.EnvVar{
+		Name:  "HOME",
+		Value: "/vault/",
+	})
+
+	containerVolMounts = append(containerVolMounts, corev1.VolumeMount{
+			Name:		"ct-secrets",
+			MountPath:	"/vault/secrets",
+		}, corev1.VolumeMount{
+			Name:		"ct-configmap",
+			MountPath:	"/vault/ct-config/config.hcl",
+			ReadOnly:	true,
+			SubPath:	"config.hcl",
+		},
+	)
+
 	containers = append(containers, corev1.Container{
 		Name:			"consul-template",
 		Image:			viper.GetString("vault_ct_image"),
-		Args: 			[]string{"-config","/etc/ct-config/config.hcl"},
+		Args: 			[]string{"-config","/vault/ct-config/config.hcl"},
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: securityContext,
-		Env: []corev1.EnvVar{
-			{
-				Name:	"VAULT_ADDR",
-				Value:	vaultConfig.addr,
-			},
-			{
-				Name:	"HOME",
-				Value:	"/vault/",
-			},
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:		"vault-env",
-				MountPath:	"/vault",
-			},
-			{
-				Name:		"ct-secrets",
-				MountPath:	"/etc/secrets",
-			},
-			{
-				Name:		"ct-configmap",
-				MountPath:	"/etc/ct-config/config.hcl",
-				ReadOnly:	true,
-				SubPath:	"config.hcl",
-			},
-		},
+		Env: containerEnvVars,
+		VolumeMounts: containerVolMounts,
 	})
 
 	return containers
@@ -208,6 +186,17 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger log.L
 		})
 	}
 
+	if vaultConfig.tlsConfigMap != "" {
+		logger.Infof("Add vault TLS volume to podspec")
+		volumes = append(volumes, corev1.Volume{
+			Name: "vault-tls",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: vaultConfig.tlsConfigMap,
+				},
+			},
+		})
+	}
 	if vaultConfig.ctConfigMap != "" {
 		logger.Infof("Add consul template volumes to podspec")
 
@@ -262,7 +251,12 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	var vaultConfig vaultConfig
 	annotations := obj.GetAnnotations()
 
-	vaultConfig.addr = annotations["vault.security.banzaicloud.io/vault-addr"]
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-addr"]; ok {
+		vaultConfig.addr = val
+	} else {
+		vaultConfig.addr = viper.GetString("vault_addr")
+	}
+
 	vaultConfig.role = annotations["vault.security.banzaicloud.io/vault-role"]
 	if vaultConfig.role == "" {
 		vaultConfig.role = "default"
@@ -271,16 +265,34 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	if vaultConfig.path == "" {
 		vaultConfig.path = "kubernetes"
 	}
-	vaultConfig.skipVerify = annotations["vault.security.banzaicloud.io/vault-skip-verify"]
-	vaultConfig.useAgent, _ = strconv.ParseBool(annotations["vault.security.banzaicloud.io/vault-agent"])
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-skip-verify"]; ok {
+		vaultConfig.skipVerify = val
+	} else {
+		vaultConfig.skipVerify = viper.GetString("vault_skip_verify")
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-tls-configmap"]; ok {
+		vaultConfig.tlsConfigMap = val
+	} else {
+		vaultConfig.tlsConfigMap = viper.GetString("vault_tls_configmap")
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-agent"]; ok {
+		vaultConfig.useAgent, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.useAgent,_  = strconv.ParseBool(viper.GetString("vault_agent"))
+	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/ct-configmap"]; ok {
 		vaultConfig.ctConfigMap = val
 	} else {
 		vaultConfig.ctConfigMap = ""
 	}
-	if value, ok := annotations["vault.security.banzaicloud.io/ct-share-process-namespace"]; ok {
-		vaultConfig.ctShareProcess = value
+	if val, ok := annotations["vault.security.banzaicloud.io/ct-share-process-namespace"]; ok {
+		vaultConfig.ctShareProcess, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.ctShareProcess, _ = strconv.ParseBool(viper.GetString("vault_ct_share_process_namespace"))
 	}
 	return vaultConfig
 }
@@ -522,9 +534,35 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		logger.Infof("No pod containers were mutated")
 	}
 
+	containerEnvVars := []corev1.EnvVar{
+		{
+			Name:  "VAULT_ADDR",
+			Value: vaultConfig.addr,
+		},
+		{
+			Name:  "VAULT_SKIP_VERIFY",
+			Value: vaultConfig.skipVerify,
+		},
+	}
+	containerVolMounts := []corev1.VolumeMount{
+		{
+			Name:      "vault-env",
+			MountPath: "/vault/",
+		},
+	}
+    if vaultConfig.tlsConfigMap != "" {
+		containerEnvVars = append(containerEnvVars, corev1.EnvVar{
+				Name:  "VAULT_CACERT",
+				Value: "/vault/tls/ca.crt",
+		})
+		containerVolMounts = append(containerVolMounts, corev1.VolumeMount{
+				Name:      "vault-tls",
+				MountPath: "/vault/tls",
+		})
+	}
 
+	var agentConfigMapName string
 	if initContainersMutated || containersMutated || vaultConfig.ctConfigMap != "" {
-		var agentConfigMapName string
 		if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
 			configMap := getConfigMapForVaultAgent(obj, vaultConfig)
 			agentConfigMapName = configMap.Name
@@ -542,7 +580,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 			}
 		}
 
-		podSpec.InitContainers = append(getInitContainers(vaultConfig, initContainersMutated, containersMutated), podSpec.InitContainers...)
+		podSpec.InitContainers = append(getInitContainers(podSpec.Containers, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), podSpec.InitContainers...)
 		logger.Infof("Successfully appended pod init containers to spec")
 	}
 
@@ -552,17 +590,21 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		apiVersion, _ := clientset.Discovery().ServerVersion()
 		versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
 		logger.Infof("Kuberentes API version detected: %s", apiVersion.String())
-		if versionCompared >= 0 || vaultConfig.ctShareProcess == "true" {
+		if versionCompared >= 0 || vaultConfig.ctShareProcess {
 			logger.Infof("Detected shared process namespace")
 			sharePorcessNamespace := true
 			podSpec.ShareProcessNamespace = &sharePorcessNamespace
 		}
-		podSpec.Containers = append(getContainers(vaultConfig, versionCompared), podSpec.Containers...)
+		podSpec.Containers = append(getContainers(vaultConfig, versionCompared, containerEnvVars, containerVolMounts), podSpec.Containers...)
+
+		fsGroup := int64(1000)
+		podSpec.SecurityContext.FSGroup = &fsGroup
+
 		logger.Infof("Successfully appended pod containers to spec")
 	}
 
 	if initContainersMutated || containersMutated || vaultConfig.ctConfigMap != "" {
-		podSpec.Volumes = append(podSpec.Volumes, getVolumes(agentConfigMapName,, vaultConfig, logger)...)
+		podSpec.Volumes = append(podSpec.Volumes, getVolumes(agentConfigMapName, vaultConfig, logger)...)
 		logger.Infof("Successfully appended pod spec volumes")
 	}
 
@@ -573,6 +615,11 @@ func initConfig() {
 	viper.SetDefault("vault_image", "vault:latest")
 	viper.SetDefault("vault_env_image", "banzaicloud/vault-env:latest")
 	viper.SetDefault("vault_ct_image", "hashicorp/consul-template:latest")
+	viper.SetDefault("vault_addr", "https://127.0.0.1:8200")
+	viper.SetDefault("vault_skip_verify", "false")
+	viper.SetDefault("vault_tls_configmap", "")
+	viper.SetDefault("vault_agent", "true")
+	viper.SetDefault("vault_ct_share_process_namespace", "false")
 	viper.AutomaticEnv()
 }
 
