@@ -115,11 +115,11 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 	return containers
 }
 
-func getContainers(vaultConfig vaultConfig, versionCompared int, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
+func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	containers := []corev1.Container{}
 	securityContext := &corev1.SecurityContext{}
 
-	if versionCompared >= 0 || vaultConfig.ctShareProcess {
+	if vaultConfig.ctShareProcess {
 		securityContext = &corev1.SecurityContext{
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{
@@ -589,17 +589,27 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 	}
 
 	if vaultConfig.ctConfigMap != "" {
-		logger.Infof("Consul template config found")
+		logger.Infof("Consul Template config found")
 
-		apiVersion, _ := clientset.Discovery().ServerVersion()
-		versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
-		logger.Infof("Kuberentes API version detected: %s", apiVersion.String())
-		if versionCompared >= 0 || vaultConfig.ctShareProcess {
+		if vaultConfig.ctShareProcess == "" {
+			logger.Infof("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
+			apiVersion, _ := clientset.Discovery().ServerVersion()
+			versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
+			logger.Infof("Kuberentes API version detected: %s", apiVersion.String())
+
+			if versionCompared >= 0 {
+				vaultConfig.ctShareProcess = true
+			} else {
+				vaultConfig.ctShareProcess = false
+			}
+		}
+
+		if vaultConfig.ctShareProcess {
 			logger.Infof("Detected shared process namespace")
 			sharePorcessNamespace := true
 			podSpec.ShareProcessNamespace = &sharePorcessNamespace
 		}
-		podSpec.Containers = append(getContainers(vaultConfig, versionCompared, containerEnvVars, containerVolMounts), podSpec.Containers...)
+		podSpec.Containers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), podSpec.Containers...)
 
 		fsGroup := int64(1000)
 		podSpec.SecurityContext.FSGroup = &fsGroup
@@ -623,7 +633,7 @@ func initConfig() {
 	viper.SetDefault("vault_skip_verify", "false")
 	viper.SetDefault("vault_tls_configmap", "")
 	viper.SetDefault("vault_agent", "true")
-	viper.SetDefault("vault_ct_share_process_namespace", "false")
+	viper.SetDefault("vault_ct_share_process_namespace", "")
 	viper.AutomaticEnv()
 }
 
