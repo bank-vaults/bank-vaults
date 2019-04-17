@@ -69,7 +69,6 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 	containers := []corev1.Container{}
 
 	if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
-
 		var serviceAccountMount corev1.VolumeMount
 
 	mountSearch:
