@@ -159,7 +159,7 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 }
 
 func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger log.Logger) []corev1.Volume {
-	logger.Infof("Add generic volumes to podspec")
+	logger.Debugf("Add generic volumes to podspec")
 
 	volumes := []corev1.Volume{
 		{
@@ -173,7 +173,7 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger log.L
 	}
 
 	if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
-		logger.Infof("Add vault agent volumes to podspec")
+		logger.Debugf("Add vault agent volumes to podspec")
 		volumes = append(volumes, corev1.Volume{
 			Name: "vault-agent-config",
 			VolumeSource: corev1.VolumeSource{
@@ -187,7 +187,7 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger log.L
 	}
 
 	if vaultConfig.tlsConfigMap != "" {
-		logger.Infof("Add vault TLS volume to podspec")
+		logger.Debugf("Add vault TLS volume to podspec")
 		volumes = append(volumes, corev1.Volume{
 			Name: "vault-tls",
 			VolumeSource: corev1.VolumeSource{
@@ -198,7 +198,7 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger log.L
 		})
 	}
 	if vaultConfig.ctConfigMap != "" {
-		logger.Infof("Add consul template volumes to podspec")
+		logger.Debugf("Add consul template volumes to podspec")
 
 		defaultMode := int32(420)
 		volumes = append(volumes,
@@ -513,7 +513,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		return err
 	}
 
-	logger.Infof("Successfully connected to the API")
+	logger.Debugf("Successfully connected to the API")
 
 	initContainersMutated, err := mutateContainers(podSpec.InitContainers, vaultConfig, ns)
 	if err != nil {
@@ -521,9 +521,9 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 	}
 
 	if initContainersMutated {
-		logger.Infof("Successfully mutated pod init containers")
+		logger.Debugf("Successfully mutated pod init containers")
 	} else {
-		logger.Infof("No pod init containers were mutated")
+		logger.Debugf("No pod init containers were mutated")
 	}
 
 	containersMutated, err := mutateContainers(podSpec.Containers, vaultConfig, ns)
@@ -532,9 +532,9 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 	}
 
 	if containersMutated {
-		logger.Infof("Successfully mutated pod containers")
+		logger.Debugf("Successfully mutated pod containers")
 	} else {
-		logger.Infof("No pod containers were mutated")
+		logger.Debugf("No pod containers were mutated")
 	}
 
 	containerEnvVars := []corev1.EnvVar{
@@ -584,17 +584,17 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		}
 
 		podSpec.InitContainers = append(getInitContainers(podSpec.Containers, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), podSpec.InitContainers...)
-		logger.Infof("Successfully appended pod init containers to spec")
+		logger.Debugf("Successfully appended pod init containers to spec")
 	}
 
 	if vaultConfig.ctConfigMap != "" {
-		logger.Infof("Consul Template config found")
+		logger.Debugf("Consul Template config found")
 
 		if vaultConfig.ctShareProcess == "" {
-			logger.Infof("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
+			logger.Debugf("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
 			apiVersion, _ := clientset.Discovery().ServerVersion()
 			versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
-			logger.Infof("Kuberentes API version detected: %s", apiVersion.String())
+			logger.Debugf("Kuberentes API version detected: %s", apiVersion.String())
 
 			if versionCompared >= 0 {
 				vaultConfig.ctShareProcess = true
@@ -604,7 +604,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		}
 
 		if vaultConfig.ctShareProcess {
-			logger.Infof("Detected shared process namespace")
+			logger.Debugf("Detected shared process namespace")
 			sharePorcessNamespace := true
 			podSpec.ShareProcessNamespace = &sharePorcessNamespace
 		}
@@ -613,12 +613,12 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		fsGroup := int64(1000)
 		podSpec.SecurityContext.FSGroup = &fsGroup
 
-		logger.Infof("Successfully appended pod containers to spec")
+		logger.Debugf("Successfully appended pod containers to spec")
 	}
 
 	if initContainersMutated || containersMutated || vaultConfig.ctConfigMap != "" {
 		podSpec.Volumes = append(podSpec.Volumes, getVolumes(agentConfigMapName, vaultConfig, logger)...)
-		logger.Infof("Successfully appended pod spec volumes")
+		logger.Debugf("Successfully appended pod spec volumes")
 	}
 
 	return nil
