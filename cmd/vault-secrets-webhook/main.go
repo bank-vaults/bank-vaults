@@ -36,13 +36,13 @@ import (
 )
 
 type vaultConfig struct {
-	addr       string
-	role       string
-	path       string
-	skipVerify string
-	tlsConfigMap string
-	useAgent   bool
-	ctConfigMap string
+	addr           string
+	role           string
+	path           string
+	skipVerify     string
+	tlsConfigMap   string
+	useAgent       bool
+	ctConfigMap    string
 	ctShareProcess bool
 }
 
@@ -92,8 +92,8 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 			Image:           viper.GetString("vault_image"),
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Command:         []string{"vault", "agent", "-config=/vault/agent/config.hcl"},
-			Env: containerEnvVars,
-			VolumeMounts: containerVolMounts,
+			Env:             containerEnvVars,
+			VolumeMounts:    containerVolMounts,
 		})
 	}
 
@@ -135,24 +135,24 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 	})
 
 	containerVolMounts = append(containerVolMounts, corev1.VolumeMount{
-			Name:		"ct-secrets",
-			MountPath:	"/vault/secrets",
-		}, corev1.VolumeMount{
-			Name:		"ct-configmap",
-			MountPath:	"/vault/ct-config/config.hcl",
-			ReadOnly:	true,
-			SubPath:	"config.hcl",
-		},
+		Name:      "ct-secrets",
+		MountPath: "/vault/secrets",
+	}, corev1.VolumeMount{
+		Name:      "ct-configmap",
+		MountPath: "/vault/ct-config/config.hcl",
+		ReadOnly:  true,
+		SubPath:   "config.hcl",
+	},
 	)
 
 	containers = append(containers, corev1.Container{
-		Name:			"consul-template",
-		Image:			viper.GetString("vault_ct_image"),
-		Args: 			[]string{"-config","/vault/ct-config/config.hcl"},
+		Name:            "consul-template",
+		Image:           viper.GetString("vault_ct_image"),
+		Args:            []string{"-config", "/vault/ct-config/config.hcl"},
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: securityContext,
-		Env: containerEnvVars,
-		VolumeMounts: containerVolMounts,
+		Env:             containerEnvVars,
+		VolumeMounts:    containerVolMounts,
 	})
 
 	return containers
@@ -282,7 +282,7 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-agent"]; ok {
 		vaultConfig.useAgent, _ = strconv.ParseBool(val)
 	} else {
-		vaultConfig.useAgent,_  = strconv.ParseBool(viper.GetString("vault_agent"))
+		vaultConfig.useAgent, _ = strconv.ParseBool(viper.GetString("vault_agent"))
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-configmap"]; ok {
@@ -424,7 +424,7 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 				return false, err
 			}
 			envVars = append(envVars, envFrom...)
-					}
+		}
 
 		for _, env := range container.Env {
 			if strings.HasPrefix(env.Value, "vault:") {
@@ -439,7 +439,7 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 					continue
 				}
 				envVars = append(envVars, *valueFrom)
-							}
+			}
 		}
 
 		if len(envVars) == 0 {
@@ -452,7 +452,6 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 
 		container.Command = []string{"/vault/vault-env"}
 		container.Args = args
-
 
 		container.VolumeMounts = append(container.VolumeMounts, []corev1.VolumeMount{
 			{
@@ -554,14 +553,14 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 			MountPath: "/vault/",
 		},
 	}
-    if vaultConfig.tlsConfigMap != "" {
+	if vaultConfig.tlsConfigMap != "" {
 		containerEnvVars = append(containerEnvVars, corev1.EnvVar{
-				Name:  "VAULT_CACERT",
-				Value: "/vault/tls/ca.crt",
+			Name:  "VAULT_CACERT",
+			Value: "/vault/tls/ca.crt",
 		})
 		containerVolMounts = append(containerVolMounts, corev1.VolumeMount{
-				Name:      "vault-tls",
-				MountPath: "/vault/tls",
+			Name:      "vault-tls",
+			MountPath: "/vault/tls",
 		})
 	}
 
