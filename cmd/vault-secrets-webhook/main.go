@@ -36,14 +36,15 @@ import (
 )
 
 type vaultConfig struct {
-	addr           string
-	role           string
-	path           string
-	skipVerify     string
-	tlsConfigMap   string
-	useAgent       bool
-	ctConfigMap    string
-	ctShareProcess bool
+	addr                  string
+	role                  string
+	path                  string
+	skipVerify            string
+	tlsConfigMap          string
+	useAgent              bool
+	ctConfigMap           string
+	ctShareProcess        bool
+	ctShareProcessDefault string
 }
 
 var vaultAgentConfig = `
@@ -291,9 +292,11 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-share-process-namespace"]; ok {
+		vaultConfig.ctShareProcessDefault = "found"
 		vaultConfig.ctShareProcess, _ = strconv.ParseBool(val)
 	} else {
-		vaultConfig.ctShareProcess, _ = strconv.ParseBool(viper.GetString("vault_ct_share_process_namespace"))
+		vaultConfig.ctShareProcessDefault = "empty"
+		vaultConfig.ctShareProcess, _ = false
 	}
 
 	return vaultConfig
@@ -593,7 +596,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 	if vaultConfig.ctConfigMap != "" {
 		logger.Debugf("Consul Template config found")
 
-		if vaultConfig.ctShareProcess == "" {
+		if vaultConfig.ctShareProcessDefault == "empty" {
 			logger.Debugf("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
 			apiVersion, _ := clientset.Discovery().ServerVersion()
 			versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
