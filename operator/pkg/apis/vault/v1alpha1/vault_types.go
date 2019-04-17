@@ -28,6 +28,29 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+// Vault is the Schema for the vaults API
+
+// +genclient
+// +genclient:noStatus
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:openapi-gen=true
+type Vault struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   VaultSpec   `json:"spec,omitempty"`
+	Status VaultStatus `json:"status,omitempty"`
+}
+
+// VaultList contains a list of Vault
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type VaultList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Vault `json:"items"`
+}
+
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // VaultSpec defines the desired state of Vault
@@ -280,27 +303,6 @@ type VaultStatus struct {
 	Leader string   `json:"leader"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// Vault is the Schema for the vaults API
-// +k8s:openapi-gen=true
-type Vault struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   VaultSpec   `json:"spec,omitempty"`
-	Status VaultStatus `json:"status,omitempty"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// VaultList contains a list of Vault
-type VaultList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Vault `json:"items"`
-}
-
 // UnsealConfig represents the UnsealConfig field of a VaultSpec Kubernetes object
 type UnsealConfig struct {
 	Options    UnsealOptions           `json:"options,omitempty"`
@@ -468,8 +470,4 @@ type Resources struct {
 type Ingress struct {
 	Annotations map[string]string   `json:"annotations,omitempty"`
 	Spec        v1beta1.IngressSpec `json:"spec,omitempty"`
-}
-
-func init() {
-	SchemeBuilder.Register(&Vault{}, &VaultList{})
 }
