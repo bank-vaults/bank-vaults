@@ -19,7 +19,7 @@ spec:
       labels:
         app: {{ include "vault-operator.name" . }}
         release: {{ .Release.Name }}
- {{- if .Values.podAnnotations }}
+{{- if .Values.podAnnotations }}
       annotations:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}       
@@ -64,5 +64,13 @@ spec:
 {{ toYaml .Values.resources | indent 12 }}
       affinity:
 {{ toYaml .Values.affinity | indent 8 }}
+{{- if .Values.tolerations }}
+      tolerations:
+{{ toYaml .Values.tolerations | indent 8 }}
+{{- end }}
+{{- if .Values.tolerations }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}
+{{- end }}
       serviceAccountName: {{ include "vault-operator.fullname" . }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
