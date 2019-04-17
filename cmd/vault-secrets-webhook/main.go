@@ -565,21 +565,19 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 	}
 
 	var agentConfigMapName string
-	if initContainersMutated || containersMutated || vaultConfig.ctConfigMap != "" {
-		if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
-			configMap := getConfigMapForVaultAgent(obj, vaultConfig)
-			agentConfigMapName = configMap.Name
+	if (initContainersMutated || containersMutated || vaultConfig.ctConfigMap != "") && vaultConfig.useAgent {
+		configMap := getConfigMapForVaultAgent(obj, vaultConfig)
+		agentConfigMapName = configMap.Name
 
-			_, err := clientset.CoreV1().ConfigMaps(ns).Create(configMap)
-			if err != nil {
-				if errors.IsAlreadyExists(err) {
-					_, err = clientset.CoreV1().ConfigMaps(ns).Update(configMap)
-					if err != nil {
-						return err
-					}
-				} else {
+		_, err := clientset.CoreV1().ConfigMaps(ns).Create(configMap)
+		if err != nil {
+			if errors.IsAlreadyExists(err) {
+				_, err = clientset.CoreV1().ConfigMaps(ns).Update(configMap)
+				if err != nil {
 					return err
 				}
+			} else {
+				return err
 			}
 		}
 
