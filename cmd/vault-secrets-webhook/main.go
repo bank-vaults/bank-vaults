@@ -564,25 +564,31 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		})
 	}
 
-	var agentConfigMapName string
-	if (initContainersMutated || containersMutated || vaultConfig.ctConfigMap != "") && vaultConfig.useAgent {
-		configMap := getConfigMapForVaultAgent(obj, vaultConfig)
-		agentConfigMapName = configMap.Name
+	if (initContainersMutated || containersMutated || vaultConfig.ctConfigMap != "" {
+		var agentConfigMapName string
 
-		_, err := clientset.CoreV1().ConfigMaps(ns).Create(configMap)
-		if err != nil {
-			if errors.IsAlreadyExists(err) {
-				_, err = clientset.CoreV1().ConfigMaps(ns).Update(configMap)
-				if err != nil {
-					return err
-				}
-			} else {
+		if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
+			configMap := getConfigMapForVaultAgent(obj, vaultConfig)
+			agentConfigMapName = configMap.Name
+
+			_, err := clientset.CoreV1().ConfigMaps(ns).Create(configMap)
+			if err != nil {
+				if errors.IsAlreadyExists(err) {
+					_, err = clientset.CoreV1().ConfigMaps(ns).Update(configMap)
+			if err != nil {
 				return err
 			}
+				} else {
+					return err
+				}
+			}
+
+			podSpec.InitContainers = append(getInitContainers(podSpec.Containers, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), podSpec.InitContainers...)
+			logger.Debugf("Successfully appended pod init containers to spec")
 		}
 
-		podSpec.InitContainers = append(getInitContainers(podSpec.Containers, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), podSpec.InitContainers...)
-		logger.Debugf("Successfully appended pod init containers to spec")
+		podSpec.Volumes = append(podSpec.Volumes, getVolumes(agentConfigMapName, vaultConfig, logger)...)
+		logger.Debugf("Successfully appended pod spec volumes")
 	}
 
 	if vaultConfig.ctConfigMap != "" {
@@ -614,10 +620,6 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		logger.Debugf("Successfully appended pod containers to spec")
 	}
 
-	if initContainersMutated || containersMutated || vaultConfig.ctConfigMap != "" {
-		podSpec.Volumes = append(podSpec.Volumes, getVolumes(agentConfigMapName, vaultConfig, logger)...)
-		logger.Debugf("Successfully appended pod spec volumes")
-	}
 
 	return nil
 }
