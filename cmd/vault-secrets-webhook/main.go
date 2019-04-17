@@ -285,13 +285,13 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.useAgent,_  = strconv.ParseBool(viper.GetString("vault_agent"))
 	}
 
-	if val, ok := annotations["vault.security.banzaicloud.io/ct-configmap"]; ok {
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-configmap"]; ok {
 		vaultConfig.ctConfigMap = val
 	} else {
 		vaultConfig.ctConfigMap = ""
 	}
 
-	if val, ok := annotations["vault.security.banzaicloud.io/ct-share-process-namespace"]; ok {
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-share-process-namespace"]; ok {
 		vaultConfig.ctShareProcess, _ = strconv.ParseBool(val)
 	} else {
 		vaultConfig.ctShareProcess, _ = strconv.ParseBool(viper.GetString("vault_ct_share_process_namespace"))
