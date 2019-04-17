@@ -296,7 +296,7 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.ctShareProcess, _ = strconv.ParseBool(val)
 	} else {
 		vaultConfig.ctShareProcessDefault = "empty"
-		vaultConfig.ctShareProcess, _ = false
+		vaultConfig.ctShareProcess = false
 	}
 
 	return vaultConfig
