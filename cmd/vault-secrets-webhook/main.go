@@ -564,7 +564,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		})
 	}
 
-	if (initContainersMutated || containersMutated || vaultConfig.ctConfigMap != "" {
+	if initContainersMutated || containersMutated || vaultConfig.ctConfigMap != "" {
 		var agentConfigMapName string
 
 		if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
@@ -575,9 +575,9 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 			if err != nil {
 				if errors.IsAlreadyExists(err) {
 					_, err = clientset.CoreV1().ConfigMaps(ns).Update(configMap)
-			if err != nil {
-				return err
-			}
+					if err != nil {
+						return err
+					}
 				} else {
 					return err
 				}
@@ -619,7 +619,6 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 
 		logger.Debugf("Successfully appended pod containers to spec")
 	}
-
 
 	return nil
 }
