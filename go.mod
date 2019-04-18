@@ -186,6 +186,8 @@ require (
 	k8s.io/apiextensions-apiserver v0.0.0-20190308081736-3a66ae4d2f93 // indirect
 	k8s.io/apimachinery v0.0.0-20181127025237-2b1284ed4c93
 	k8s.io/client-go v0.0.0-20190115164855-701b91367003
+	k8s.io/code-generator v0.0.0-20190416052311-01a054e913a9
+	k8s.io/gengo v0.0.0-20190327210449-e17681d19d3a // indirect
 	k8s.io/klog v0.2.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20190228160746-b3a7cee44a30
 	layeh.com/radius v0.0.0-20190118135028-0f678f039617 // indirect
