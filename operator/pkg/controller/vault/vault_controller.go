@@ -766,7 +766,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      ls,
-					Annotations: v.Spec.Annotations,
+					Annotations: v.Spec.GetAnnotations(),
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: v.Spec.GetServiceAccount(),
