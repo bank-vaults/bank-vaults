@@ -119,6 +119,7 @@ require (
 	github.com/jinzhu/now v0.0.0-20180511015916-ed742868f2ae // indirect
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
+	github.com/jpillora/backoff v0.0.0-20180909062703-3050d21c67d7
 	github.com/json-iterator/go v1.1.5
 	github.com/keybase/go-crypto v0.0.0-20181127160227-255a5089e85a // indirect
 	github.com/lib/pq v1.0.0 // indirect
@@ -185,6 +186,8 @@ require (
 	k8s.io/apiextensions-apiserver v0.0.0-20190308081736-3a66ae4d2f93 // indirect
 	k8s.io/apimachinery v0.0.0-20181127025237-2b1284ed4c93
 	k8s.io/client-go v0.0.0-20190115164855-701b91367003
+	k8s.io/code-generator v0.0.0-20190416052311-01a054e913a9
+	k8s.io/gengo v0.0.0-20190327210449-e17681d19d3a // indirect
 	k8s.io/klog v0.2.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20190228160746-b3a7cee44a30
 	layeh.com/radius v0.0.0-20190118135028-0f678f039617 // indirect
