@@ -99,7 +99,7 @@ var configureCmd = &cobra.Command{
 		// Handle backoff for configuration errors
 		b := &backoff.Backoff{
 			Min:    500 * time.Millisecond,
-			Max:    30 * time.Second,
+			Max:    60 * time.Second,
 			Factor: 2,
 			Jitter: false,
 		}
@@ -133,10 +133,12 @@ var configureCmd = &cobra.Command{
 							os.Exit(1)
 						}
 						failedConfigurationsCount++
+						// Failed configuration handler - Increase the backoff sleep
 						go handleConfigurationError(config.ConfigFileUsed(), configurations, b.Duration())
 						return
 					}
 
+					// On *any* successful configuration reset the backoff 
 					b.Reset()
 					successfulConfigurationsCount++
 					logrus.Info("successfully configured vault")
@@ -148,6 +150,10 @@ var configureCmd = &cobra.Command{
 }
 
 func handleConfigurationError(vaultConfigFile string, configurations chan *viper.Viper, sleepTime time.Duration) {
+	// This handler will sleep for a exponential backoff amount of time and re-inject the failed configuration into the 
+	// configurations channel to be re-applied to vault
+	// Eventually consistent model - all recovarable errors (5xx and configs that depend on other configs) will be eventually fixed
+	// non recovarable errors will be retried and keep failing every MAX BACKOFF seconds, increasing the error counters ont he vault-configurator pod. 
 	logrus.Infof("Failed applying configuration file: %s , sleeping for %s before trying again", vaultConfigFile, sleepTime)
 	time.Sleep(sleepTime)
 	configurations <- parseConfiguration(vaultConfigFile)
