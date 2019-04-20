@@ -25,7 +25,7 @@ kubectl apply -f operator/deploy/operator.yaml
 
 This will create a Kubernetes [CustomResourceDefinition](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/) called `Vault`.
 
-A documented example of this CRD can be found in [operator/deploy/cr.yaml](https://github.com/banzaicloud/bank-vaults/operator/deploy/cr.yaml).
+A documented example of this CRD can be found in [operator/deploy/cr.yaml](https://github.com/banzaicloud/bank-vaults/blob/master/operator/deploy/cr.yaml).
 
 ### Helm chart
 

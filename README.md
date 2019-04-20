@@ -58,7 +58,20 @@ Bank-Vaults is a core part of [Banzai Cloud Pipeline](https://banzaicloud.com/),
   </a>
 </p>
 
-#[Documentations](./docs/README.md)
+
+## Basic Installing:
+```shell
+go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
+go get github.com/banzaicloud/bank-vaults/cmd/vault-env
+```
+
+If compilation is failed, you should try to enable go modules:
+```shell
+GOPATH=/tmp/gopath-for-bank-vaults GO111MODULE=on go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
+GOPATH=/tmp/gopath-for-bank-vaults GO111MODULE=on go get github.com/banzaicloud/bank-vaults/cmd/vault-env
+```
+
+Read more about usage of bank-vaults in [detailed documentation](docs/README.md)
 
 ## Credits
 
