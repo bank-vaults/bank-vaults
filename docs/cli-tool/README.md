@@ -17,7 +17,7 @@ Features:
   - If the configuration is updated Vault will be reconfigured
   - It supports configuring Vault secret engines, plugins, auth methods, and policies
 
-The `bank-vaults` CLI command needs certain [cloud permissions](./cloud-permissions/README.md) to function properly (init, unseal, configuration).
+The `bank-vaults` CLI command needs certain [cloud permissions](../cloud-permissions/README.md) to function properly (init, unseal, configuration).
 
 ## Example external Vault configuration
 

@@ -8,9 +8,9 @@ We have a Vault operator built on bank-vaults features as:
 
 The operator flow is the following:
 
-![operator](docs/images/vaultoperator.png)
+![operator](images/vaultoperator.png)
 
-The source code can be found inside the [operator](operator/) directory.
+The source code can be found inside the [operator](https://github.com/banzaicloud/bank-vaults/operator/) directory.
 
 ## Deploying the operator
 
@@ -25,7 +25,7 @@ kubectl apply -f operator/deploy/operator.yaml
 
 This will create a Kubernetes [CustomResourceDefinition](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/) called `Vault`.
 
-A documented example of this CRD can be found in [operator/deploy/cr.yaml](operator/deploy/cr.yaml).
+A documented example of this CRD can be found in [operator/deploy/cr.yaml](https://github.com/banzaicloud/bank-vaults/operator/deploy/cr.yaml).
 
 ### Helm chart
 
