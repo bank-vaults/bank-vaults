@@ -101,11 +101,11 @@ spec:
     metadata:
       labels:
         app: vault
-    annotations:
-      vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
-      vault.security.banzaicloud.io/vault-role: "default"
-      vault.security.banzaicloud.io/vault-skip-verify: "true"
-      vault.security.banzaicloud.io/vault-path: "kubernetes"
+      annotations:
+        vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
+        vault.security.banzaicloud.io/vault-role: "default"
+        vault.security.banzaicloud.io/vault-skip-verify: "true"
+        vault.security.banzaicloud.io/vault-path: "kubernetes"
     spec:
       serviceAccountName: default
       containers:
