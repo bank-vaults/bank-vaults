@@ -59,7 +59,7 @@ Bank-Vaults is a core part of [Banzai Cloud Pipeline](https://banzaicloud.com/),
 </p>
 
 
-## Basic Installing:
+## Installing:
 ```shell
 go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
 go get github.com/banzaicloud/bank-vaults/cmd/vault-env
