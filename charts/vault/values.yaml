@@ -77,6 +77,10 @@ vault:
     # - secretName: mysql
     #   secretKey: mysql-username
     #   envName: "MYSQL_USERNAME"
+  # Allows adding various custom eenvironment variables directly.
+  envs: []
+    # - name: GOOGLE_APPLICATION_CREDENTIALS
+    #   value: /etc/gcp/service-account.json
   externalConfig:
     # Allows creating policies in Vault which can be used later on in roles
     # for the Kubernetes based authentication.

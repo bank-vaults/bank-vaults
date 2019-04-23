@@ -48,6 +48,10 @@ spec:
               name: {{ .secretName }}
               key: {{ .secretKey }}
         {{- end }}
+        {{- range .Values.vault.envs }}
+        - name: {{ .name }}
+          value: {{ .value}}
+        {{- end }}
         volumeMounts:
         - name: vault-raw-config
           mountPath: /vault/raw-config/
@@ -59,16 +63,20 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["vault", "server", "-config", "/vault/config/config.json"]
         env:
-          - name: VAULT_CACERT
-            value: /vault/tls/ca.crt
-          - name: VAULT_LOG_LEVEL
-            value: {{ .Values.vault.logLevel }}
-          - name: VAULT_ADDR
-          {{ if .Values.vault.config.listener.tcp.tls_disable }}
-            value: http://127.0.0.1:{{ .Values.service.port }}
-           {{ else }}
-            value: https://127.0.0.1:{{ .Values.service.port }}
-           {{ end }}
+        - name: VAULT_CACERT
+          value: /vault/tls/ca.crt
+        - name: VAULT_LOG_LEVEL
+          value: {{ .Values.vault.logLevel }}
+        - name: VAULT_ADDR
+        {{ if .Values.vault.config.listener.tcp.tls_disable }}
+          value: http://127.0.0.1:{{ .Values.service.port }}
+          {{ else }}
+          value: https://127.0.0.1:{{ .Values.service.port }}
+          {{ end }}
+        {{- range .Values.vault.envs }}
+        - name: {{ .name }}
+          value: {{ .value}}
+        {{- end }}
         envFrom:
         {{- range .Values.vault.customSecrets }}
         - secretRef:
@@ -127,21 +135,25 @@ spec:
         command: ["bank-vaults", "unseal", "--init"]
         args: {{ toJson .Values.unsealer.args }}
         env:
-          - name: VAULT_CACERT
-            value: /vault/tls/ca.crt
-          - name: VAULT_ADDR
-          {{ if .Values.vault.config.listener.tcp.tls_disable }}
-            value: http://127.0.0.1:{{ .Values.service.port }}
-           {{ else }}
-            value: https://127.0.0.1:{{ .Values.service.port }}
-           {{ end }}
-          {{- range .Values.vault.envSecrets }}
-          - name: {{ .envName }}
-            valueFrom:
-              secretKeyRef:
-                name: {{ .secretName }}
-                key: {{ .secretKey }}
-          {{- end }}
+        - name: VAULT_CACERT
+          value: /vault/tls/ca.crt
+        - name: VAULT_ADDR
+        {{ if .Values.vault.config.listener.tcp.tls_disable }}
+          value: http://127.0.0.1:{{ .Values.service.port }}
+          {{ else }}
+          value: https://127.0.0.1:{{ .Values.service.port }}
+          {{ end }}
+        {{- range .Values.vault.envSecrets }}
+        - name: {{ .envName }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .secretName }}
+              key: {{ .secretKey }}
+        {{- end }}
+        {{- range .Values.vault.envs }}
+        - name: {{ .name }}
+          value: {{ .value}}
+        {{- end }}
         envFrom:
         {{- range .Values.vault.customSecrets }}
         - secretRef:
@@ -165,21 +177,25 @@ spec:
         command: ["bank-vaults", "configure"]
         args: {{ toJson .Values.unsealer.args }}
         env:
-          - name: VAULT_CACERT
-            value: /vault/tls/ca.crt
-          - name: VAULT_ADDR
-          {{ if .Values.vault.config.listener.tcp.tls_disable }}
-            value: http://127.0.0.1:{{ .Values.service.port }}
-           {{ else }}
-            value: https://127.0.0.1:{{ .Values.service.port }}
-           {{ end }}
-          {{- range .Values.vault.envSecrets }}
-          - name: {{ .envName }}
-            valueFrom:
-              secretKeyRef:
-                name: {{ .secretName }}
-                key: {{ .secretKey }}
-          {{- end }}
+        - name: VAULT_CACERT
+          value: /vault/tls/ca.crt
+        - name: VAULT_ADDR
+        {{ if .Values.vault.config.listener.tcp.tls_disable }}
+          value: http://127.0.0.1:{{ .Values.service.port }}
+          {{ else }}
+          value: https://127.0.0.1:{{ .Values.service.port }}
+          {{ end }}
+        {{- range .Values.vault.envSecrets }}
+        - name: {{ .envName }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .secretName }}
+              key: {{ .secretKey }}
+        {{- end }}
+        {{- range .Values.vault.envs }}
+        - name: {{ .name }}
+          value: {{ .value}}
+        {{- end }}
         envFrom:
         {{- range .Values.vault.customSecrets }}
         - secretRef:
