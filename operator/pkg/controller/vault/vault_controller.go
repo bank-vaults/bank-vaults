@@ -766,7 +766,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      ls,
-					Annotations: v.Spec.Annotations,
+					Annotations: v.Spec.GetAnnotations("9091"),
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: v.Spec.GetServiceAccount(),
@@ -790,6 +790,8 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 					},
 					Volumes:         withTLSVolume(v, withCredentialsVolume(v, volumes)),
 					SecurityContext: withSecurityContext(v),
+					NodeSelector:    v.Spec.NodeSelector,
+					Tolerations:     v.Spec.Tolerations,
 				},
 			},
 		},
@@ -943,7 +945,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      ls,
-					Annotations: v.Spec.GetAnnotations(),
+					Annotations: v.Spec.GetAnnotations("9102"),
 				},
 				Spec: corev1.PodSpec{
 					Affinity: &corev1.Affinity{
@@ -1022,6 +1024,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 					})),
 					Volumes:         withVaultVolumes(v, volumes),
 					SecurityContext: withSecurityContext(v),
+					NodeSelector:    v.Spec.NodeSelector,
+					Tolerations:     v.Spec.Tolerations,
 				},
 			},
 		},

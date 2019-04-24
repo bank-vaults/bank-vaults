@@ -253,6 +253,17 @@ func (v *vault) Init() error {
 		logrus.WithField("key", keyID).Info("unseal key stored in key store")
 	}
 
+	for i, k := range resp.RecoveryKeys {
+		keyID := v.recoveryKeyForID(i)
+		err := v.keyStoreSet(keyID, []byte(k))
+
+		if err != nil {
+			return fmt.Errorf("error storing recovery key '%s': %s", keyID, err.Error())
+		}
+
+		logrus.WithField("key", keyID).Info("recovery key stored in key store")
+	}
+
 	rootToken := resp.RootToken
 
 	// this sets up a predefined root token
@@ -390,6 +401,10 @@ func (v *vault) Configure(config *viper.Viper) error {
 
 func (*vault) unsealKeyForID(i int) string {
 	return fmt.Sprint("vault-unseal-", i)
+}
+
+func (*vault) recoveryKeyForID(i int) string {
+	return fmt.Sprint("vault-recovery-", i)
 }
 
 func (*vault) rootTokenKey() string {

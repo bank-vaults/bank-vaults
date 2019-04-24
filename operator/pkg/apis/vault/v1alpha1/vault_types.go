@@ -28,6 +28,29 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+// Vault is the Schema for the vaults API
+
+// +genclient
+// +genclient:noStatus
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:openapi-gen=true
+type Vault struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   VaultSpec   `json:"spec,omitempty"`
+	Status VaultStatus `json:"status,omitempty"`
+}
+
+// VaultList contains a list of Vault
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type VaultList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Vault `json:"items"`
+}
+
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // VaultSpec defines the desired state of Vault
@@ -59,6 +82,8 @@ type VaultSpec struct {
 	ServicePorts          map[string]int32              `json:"servicePorts"`
 	PodAntiAffinity       string                        `json:"podAntiAffinity"`
 	NodeAffinity          v1.NodeAffinity               `json:"nodeAffinity"`
+	NodeSelector          map[string]string             `json:"nodeSelector"`
+	Tolerations           []v1.Toleration               `json:"tolerations"`
 	ServiceAccount        string                        `json:"serviceAccount"`
 	Volumes               []v1.Volume                   `json:"volumes,omitempty"`
 	VolumeMounts          []v1.VolumeMount              `json:"volumeMounts,omitempty"`
@@ -195,13 +220,18 @@ func (spec *VaultSpec) GetStatsDImage() string {
 }
 
 // GetAnnotations returns the Annotations
-func (spec *VaultSpec) GetAnnotations() map[string]string {
+func (spec *VaultSpec) GetAnnotations(promPort string) map[string]string {
 	if spec.Annotations == nil {
 		spec.Annotations = map[string]string{}
 	}
+
+	if promPort == "" {
+		promPort = "9102"
+	}
+
 	spec.Annotations["prometheus.io/scrape"] = "true"
 	spec.Annotations["prometheus.io/path"] = "/metrics"
-	spec.Annotations["prometheus.io/port"] = "9102"
+	spec.Annotations["prometheus.io/port"] = promPort
 	return spec.Annotations
 }
 
@@ -276,27 +306,6 @@ type VaultStatus struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	Nodes  []string `json:"nodes"`
 	Leader string   `json:"leader"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// Vault is the Schema for the vaults API
-// +k8s:openapi-gen=true
-type Vault struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   VaultSpec   `json:"spec,omitempty"`
-	Status VaultStatus `json:"status,omitempty"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// VaultList contains a list of Vault
-type VaultList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Vault `json:"items"`
 }
 
 // UnsealConfig represents the UnsealConfig field of a VaultSpec Kubernetes object
@@ -466,8 +475,4 @@ type Resources struct {
 type Ingress struct {
 	Annotations map[string]string   `json:"annotations,omitempty"`
 	Spec        v1beta1.IngressSpec `json:"spec,omitempty"`
-}
-
-func init() {
-	SchemeBuilder.Register(&Vault{}, &VaultList{})
 }
