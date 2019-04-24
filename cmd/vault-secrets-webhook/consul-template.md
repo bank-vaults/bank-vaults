@@ -31,6 +31,8 @@ Based on various publications and tools ([Kuernetes Authenticator](https://githu
 As of Kuberentes 1.10 you can [share](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) the process list of all containers in a pod, please check your Kuberentes API server FeatureGates configuration to find if it is on or not, it is default on in 1.12. The webhook will disable it by default in any version less than 1.12 and enable it by default for version 1.12 and above. You can override this confirguration using the `vault.security.banzaicloud.io/ct-share-process-namespace` annotation or webhook `vault_ct_share_process_namespace` environment variable.
 
 ### consul template
+note, at this point in time consul-template 0.20.0 is [broken](https://github.com/hashicorp/consul-template/pull/1182#issuecomment-486047781), do not use this version.
+
 If you wish to use Vault TTLs you need a way that you can HUP your application on configuration file change, consul template can be [configured](https://github.com/hashicorp/consul-template#configuration-file-format) with a 'command' attribute which it will run when it writes a new configuration file. You can find a basic example below (adapted from [here](https://github.com/sethvargo/vault-kubernetes-workshop/blob/master/k8s/db-sidecar.yaml#L79-L100)) which uses/requires the ShareProcessNamespace feature:
 
 ```
