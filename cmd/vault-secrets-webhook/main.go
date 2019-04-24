@@ -67,8 +67,8 @@ auto_auth {
 }`
 
 func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
-	containers := []corev1.Container{}
-	securityContext := &corev1.SecurityContext{}
+	var containers = []corev1.Container{}
+	var securityContext = &corev1.SecurityContext{}
 
 	if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
 		var serviceAccountMount corev1.VolumeMount
@@ -123,9 +123,9 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 }
 
 func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
-	containers := []corev1.Container{}
-	securityContext := &corev1.SecurityContext{}
-
+	var containers = []corev1.Container{}
+	var securityContext = &corev1.SecurityContext{}
+	
 	if vaultConfig.ctShareProcess {
 		securityContext = &corev1.SecurityContext{
 			Capabilities: &corev1.Capabilities{
