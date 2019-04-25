@@ -3,7 +3,69 @@
 # Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2
 jobs:
-  build:
+  check:
+    docker:
+      - image: circleci/golang:1.12
+        environment:
+          GOFLAG: -mod=readonly
+      - image: vault:1.1.0
+        environment:
+          SKIP_SETCAP: true
+          VAULT_DEV_ROOT_TOKEN_ID: 227e1cce-6bf7-30bb-2d2a-acc854318caf
+
+    resource_class: small
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          name: Restore Go module cache
+          keys:
+          - gomod-v2-{{ .Branch }}-{{ checksum "go.sum" }}
+          - gomod-v2-{{ .Branch }}
+          - gomod-v2-master
+          - gomod-v2
+
+      - run:
+          name: Install dependencies
+          command: go mod download
+
+      - save_cache:
+          name: Save Go module cache
+          key: gomod-v2-{{ .Branch }}-{{ checksum "go.sum" }}
+          paths:
+              - /go/pkg/mod
+
+      - restore_cache:
+          name: Restore license cache
+          keys:
+              - licensei-v2-{{ .Branch }}-{{ checksum "go.sum" }}
+              - licensei-v2-{{ .Branch }}
+              - licensei-v2-master
+              - licensei-v2
+
+      - run:
+          name: Download license information for dependencies
+          command: make license-cache
+
+      - save_cache:
+          name: Save license cache
+          key: licensei-v2-{{ .Branch }}-{{ checksum "go.sum" }}
+          paths:
+              - .licensei.cache
+
+      - run:
+          name: Check dependency licenses
+          command: make license-check
+
+      - run:
+          name: Run verification
+          environment:
+            VAULT_ADDR: http://localhost:8200
+            VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
+          command: make check
+
+  acceptance-test:
     machine:
       image: circleci/classic:201808-01
       docker_layer_caching: true
@@ -18,79 +80,32 @@ jobs:
       MINIKUBE_WANTREPORTERRORPROMPT: false
       MINIKUBE_HOME: /home/circleci
       CHANGE_MINIKUBE_NONE_USER: true
-      GOPATH: /home/circleci/go
+      GOPATH: /go
       DOCKER_LATEST: 1
       GIN_MODE: release
 
     steps:
       - checkout
 
+      - run:
+          name: Create modules directory
+          command: |
+            sudo mkdir /go
+            sudo chmod 777 /go
+
       - restore_cache:
           name: Restore Go module cache
           keys:
-          - gomod-v1-{{ .Branch }}-{{ checksum "go.sum" }}
-          - gomod-v1-{{ .Branch }}
-          - gomod-v1-master
-          - gomod-v1
+          - gomod-v2-{{ .Branch }}-{{ checksum "go.sum" }}
+          - gomod-v2-{{ .Branch }}
+          - gomod-v2-master
+          - gomod-v2
 
       - run:
           name: Setup golang
           command: |
             sudo rm -rf /usr/local/go
             curl -Lo go.linux-amd64.tar.gz https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && sudo tar -C /usr/local -xzf go.linux-amd64.tar.gz && rm go.linux-amd64.tar.gz
-
-      - run:
-          name: Install dependencies
-          command: go mod download
-
-      - save_cache:
-          name: Save Go module cache
-          key: gomod-v1-{{ .Branch }}-{{ checksum "go.sum" }}
-          paths:
-              - /home/circleci/go
-
-      - restore_cache:
-          name: Restore license cache
-          keys:
-              - licensei-v1-{{ .Branch }}-{{ checksum "go.sum" }}
-              - licensei-v1-{{ .Branch }}
-              - licensei-v1-master
-              - licensei-v1      
-
-      - run:
-          name: Download license information for dependencies
-          command: make license-cache
-
-      - save_cache:
-          name: Save license cache
-          key: licensei-v1-{{ .Branch }}-{{ checksum "go.sum" }}
-          paths:
-              - .licensei.cache
-
-      - run:
-          name: Check dependency licenses
-          command: make license-check
-
-      - run:
-          name: Start Vault
-          command:
-              docker run -d -e SKIP_SETCAP=true -e VAULT_DEV_ROOT_TOKEN_ID=227e1cce-6bf7-30bb-2d2a-acc854318caf -p 8200:8200 vault:${VAULT_VERSION}
-
-      - run:
-          name: Run verification
-          command:
-              make check
-          environment:
-            VAULT_ADDR: http://localhost:8200
-            VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
-
-      - run:
-          name: Build Docker images
-          command: |
-            make docker
-            make docker-operator
-            docker build -f Dockerfile.vault-env -t banzaicloud/vault-env:latest .
-            docker build -f Dockerfile.webhook -t banzaicloud/vault-secrets-webhook:latest .
 
       - run:
           name: Setup kubectl
@@ -110,12 +125,23 @@ jobs:
             sudo -E minikube start --vm-driver=none --cpus 2 --memory 4096 --kubernetes-version=${K8S_VERSION}
 
       - run:
+          name: Build Docker images
+          command: |
+            make docker
+            make docker-operator
+            docker build -f Dockerfile.vault-env -t banzaicloud/vault-env:latest .
+            docker build -f Dockerfile.webhook -t banzaicloud/vault-secrets-webhook:latest .
+
+      - run:
           name: Operator acceptance test
           command:
             hack/acceptance-test.sh
 
 workflows:
-    version: 2
-    ci:
-        jobs:
-            - build
+  version: 2
+  ci:
+    jobs:
+      - check
+      - acceptance-test:
+          requires:
+            - check
