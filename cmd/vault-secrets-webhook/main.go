@@ -277,7 +277,7 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.skipVerify = viper.GetString("vault_skip_verify")
 	}
 
-	if val, ok := annotations["vault.security.banzaicloud.io/vault-tls-configmap"]; ok {
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-tls-secret"]; ok {
 		vaultConfig.tlsSecret = val
 	} else {
 		vaultConfig.tlsSecret = viper.GetString("vault_tls_configmap")
