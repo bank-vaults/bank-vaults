@@ -40,7 +40,7 @@ type vaultConfig struct {
 	role                  string
 	path                  string
 	skipVerify            string
-	tlsConfigMap          string
+	tlsSecret             string
 	useAgent              bool
 	ctConfigMap           string
 	ctShareProcess        bool
@@ -190,13 +190,13 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger log.L
 		})
 	}
 
-	if vaultConfig.tlsConfigMap != "" {
+	if vaultConfig.tlsSecret != "" {
 		logger.Debugf("Add vault TLS volume to podspec")
 		volumes = append(volumes, corev1.Volume{
 			Name: "vault-tls",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: vaultConfig.tlsConfigMap,
+					SecretName: vaultConfig.tlsSecret,
 				},
 			},
 		})
@@ -278,9 +278,9 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-tls-configmap"]; ok {
-		vaultConfig.tlsConfigMap = val
+		vaultConfig.tlsSecret = val
 	} else {
-		vaultConfig.tlsConfigMap = viper.GetString("vault_tls_configmap")
+		vaultConfig.tlsSecret = viper.GetString("vault_tls_configmap")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-agent"]; ok {
@@ -559,7 +559,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 			MountPath: "/vault/",
 		},
 	}
-	if vaultConfig.tlsConfigMap != "" {
+	if vaultConfig.tlsSecret != "" {
 		containerEnvVars = append(containerEnvVars, corev1.EnvVar{
 			Name:  "VAULT_CACERT",
 			Value: "/vault/tls/ca.crt",
