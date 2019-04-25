@@ -20,7 +20,7 @@ below features only available with 'ShareProcessNamespace' available.
   (to do this you need to have a ready/live probe that can send a HUP to consul-template when the current details fail).
 
 ## General concept
-Based on various publications and tools ([Kuernetes Authenticator](https://github.com/sethvargo/vault-kubernetes-authenticator), [consul-template](https://github.com/hashicorp/consul-template)) released and maintained by Hashicorp and [Seth Vargo](https://github.com/sethvargo).
+Based on various publications and tools ([Kubernetes Authenticator](https://github.com/sethvargo/vault-kubernetes-authenticator), [consul-template](https://github.com/hashicorp/consul-template)) released and maintained by Hashicorp and [Seth Vargo](https://github.com/sethvargo).
 
 * Your pod starts up, the webhook will inject one init container and one container into the pods lifecycle.
 * The init container is running vault, using the [vault agent](https://www.vaultproject.io/docs/agent/) that will login and retreieve a Vault token based on the configured VAULT_ROLE and Kuberentes Service Account.
