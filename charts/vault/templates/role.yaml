@@ -15,5 +15,5 @@ rules:
 - apiGroups: ["extensions"]
   resources: ["podsecuritypolicies"]
   verbs: ["use"]
-  resourceNames: [{{ template "vault-secrets-webhook.fullname" . }}]
+  resourceNames: [{{ template "vault.fullname" . }}]
 {{- end }}
