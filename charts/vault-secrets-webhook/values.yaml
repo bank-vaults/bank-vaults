@@ -28,3 +28,6 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+podSecurityPolicy:
+  enabled: true

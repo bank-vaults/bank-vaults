@@ -129,6 +129,7 @@ The following tables lists the configurable parameters of the vault chart and th
 | `resources.limits.cpu`  | Container requested CPU             | `nil`                                               |
 | `resources.limits.memory` | Container requested memory        | `nil`                                               |
 | `unsealer.args`         | Bank Vaults args | `["--mode", "k8s", "--k8s-secret-namespace", "default", "--k8s-secret-name", "bank-vaults"]` |
+| `podSecurityPolicy.enabled` | Use pod security policy         | `true`                                              |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 

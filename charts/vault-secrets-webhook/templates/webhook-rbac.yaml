@@ -23,6 +23,16 @@ rules:
     verbs:
       - "create"
       - "update"
+{{- if .Values.podSecurityPolicy.enabled }}
+  - apiGroups:
+      - extensions
+    resources:
+      - podsecuritypolicies
+    verbs:
+      - use
+    resourceNames:
+      - {{ template "vault-secrets-webhook.fullname" . }}
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

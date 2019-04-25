@@ -11,3 +11,9 @@ rules:
 - apiGroups: [""]
   resources: ["secrets"]
   verbs: ["*"]
+{{- if .Values.podSecurityPolicy.enabled }}
+- apiGroups: ["extensions"]
+  resources: ["podsecuritypolicies"]
+  verbs: ["use"]
+  resourceNames: [{{ template "vault-secrets-webhook.fullname" . }}]
+{{- end }}

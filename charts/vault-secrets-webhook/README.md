@@ -35,3 +35,4 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 |service.name                         |webhook service name                         |vault-secrets-webhook                     |
 |service.type                         |webhook service type                         |ClusterIP                                 |
 |tolerations                          |tolerations to add                           |[]                                        |
+|podSecurityPolicy.enabled            |use pod security policy                      |true                                      |

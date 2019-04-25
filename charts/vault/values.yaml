@@ -199,3 +199,6 @@ statsd:
       labels:
         method: "$1"
         path: "$2"
+
+podSecurityPolicy:
+  enabled: true
