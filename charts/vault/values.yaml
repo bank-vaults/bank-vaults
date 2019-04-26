@@ -200,5 +200,7 @@ statsd:
         method: "$1"
         path: "$2"
 
-podSecurityPolicy:
+rbac:
   enabled: true
+  psp:
+    enabled: false

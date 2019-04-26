@@ -29,5 +29,7 @@ tolerations: []
 
 affinity: {}
 
-podSecurityPolicy:
+rbac:
   enabled: true
+  psp:
+    enabled: false

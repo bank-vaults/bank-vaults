@@ -1,3 +1,4 @@
+{{- if .Values.rbac.enabled }}
 apiVersion: v1
 kind: List
 metadata: {}
@@ -36,3 +37,4 @@ items:
   - kind: ServiceAccount
     name: {{ template "vault.fullname" . }}
     namespace: {{ .Release.Namespace }}
+{{- end }}

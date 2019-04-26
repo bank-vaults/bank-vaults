@@ -4,6 +4,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   name: {{ template "vault-secrets-webhook.fullname" . }}
 ---
+{{- if .Values.rbac.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -23,7 +24,7 @@ rules:
     verbs:
       - "create"
       - "update"
-{{- if .Values.podSecurityPolicy.enabled }}
+{{- if .Values.rbac.psp.enabled }}
   - apiGroups:
       - extensions
     resources:
@@ -46,3 +47,4 @@ subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
   name: {{ template "vault-secrets-webhook.fullname" . }}
+{{- end }}
