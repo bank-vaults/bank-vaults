@@ -497,6 +497,25 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 
 	return mutated, nil
 }
+
+func addSecretsVolToContainers(containers []corev1.Container, logger log.Logger) {
+
+	for i, container := range containers {
+
+		logger.Debugf("Add secrets VolumeMount to container %s", container.Name)
+
+		container.VolumeMounts = append(container.VolumeMounts, []corev1.VolumeMount{
+			{
+				Name:      "ct-secrets",
+				MountPath: "/vault/secrets",
+			},
+		}...)
+
+		containers[i] = container
+	}
+
+}
+
 func newClientSet() (*kubernetes.Clientset, error) {
 	kubeConfig, err := rest.InClusterConfig()
 	if err != nil {
@@ -599,6 +618,8 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 
 	if vaultConfig.ctConfigMap != "" {
 		logger.Debugf("Consul Template config found")
+
+		addSecretsVolToContainers(podSpec.Containers, logger)
 
 		if vaultConfig.ctShareProcessDefault == "empty" {
 			logger.Debugf("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
