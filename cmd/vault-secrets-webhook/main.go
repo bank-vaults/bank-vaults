@@ -280,7 +280,7 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-tls-secret"]; ok {
 		vaultConfig.tlsSecret = val
 	} else {
-		vaultConfig.tlsSecret = viper.GetString("vault_tls_configmap")
+		vaultConfig.tlsSecret = viper.GetString("vault_tls_secret")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-agent"]; ok {
