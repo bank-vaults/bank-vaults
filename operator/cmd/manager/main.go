@@ -27,6 +27,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/operator/pkg/controller"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
+	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -38,8 +39,10 @@ import (
 var log = logf.Log.WithName("cmd")
 
 const (
-	operatorNamespace = "OPERATOR_NAMESPACE"
-	livenessPort      = "8080"
+	operatorNamespace       = "OPERATOR_NAMESPACE"
+	livenessPort            = "8080"
+	metricsHost             = "0.0.0.0"
+	metricsPort       int32 = 8383
 )
 
 func printVersion() {
@@ -109,8 +112,9 @@ func main() {
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, manager.Options{
-		Namespace:  namespace,
-		SyncPeriod: syncPeriod,
+		Namespace:          namespace,
+		SyncPeriod:         syncPeriod,
+		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
 	})
 	if err != nil {
 		log.Error(err, "")
@@ -127,6 +131,13 @@ func main() {
 
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Expose Controller Metrics
+	_, err = metrics.ExposeMetricsPort(context.TODO(), metricsPort)
+	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
