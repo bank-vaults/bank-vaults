@@ -103,22 +103,23 @@ func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
 		return err
 	}
 
-	clone := o.DeepCopyObject()
+	current := o.DeepCopyObject()
 
-	err = r.client.Get(context.TODO(), key, clone)
+	err = r.client.Get(context.TODO(), key, current)
 	if apierrors.IsNotFound(err) {
-		err = r.client.Create(context.TODO(), o)
-		if !apierrors.IsAlreadyExists(err) {
-			return err
-		}
+		return r.client.Create(context.TODO(), o)
 	} else if err == nil {
-		resourceVersion := clone.(metav1.ObjectMetaAccessor).GetObjectMeta().GetResourceVersion()
+		resourceVersion := current.(metav1.ObjectMetaAccessor).GetObjectMeta().GetResourceVersion()
 		o.(metav1.ObjectMetaAccessor).GetObjectMeta().SetResourceVersion(resourceVersion)
 
-		err = r.client.Update(context.TODO(), o)
-		if !apierrors.IsAlreadyExists(err) {
-			return err
+		// Handle special cases for update
+		switch o.(type) {
+		case *corev1.Service:
+			svc := o.(*corev1.Service)
+			svc.Spec.ClusterIP = current.(*corev1.Service).Spec.ClusterIP
 		}
+
+		return r.client.Update(context.TODO(), o)
 	}
 
 	return err
@@ -130,14 +131,11 @@ func (r *ReconcileVault) createObjectIfNotExists(o runtime.Object) error {
 		return err
 	}
 
-	clone := o.DeepCopyObject()
+	current := o.DeepCopyObject()
 
-	err = r.client.Get(context.TODO(), key, clone)
+	err = r.client.Get(context.TODO(), key, current)
 	if apierrors.IsNotFound(err) {
-		err = r.client.Create(context.TODO(), o)
-		if !apierrors.IsAlreadyExists(err) {
-			return err
-		}
+		return r.client.Create(context.TODO(), o)
 	}
 
 	return err
@@ -283,7 +281,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	if err := controllerutil.SetControllerReference(v, ser, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
-	err = r.createObjectIfNotExists(ser)
+	err = r.createOrUpdateObject(ser)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to create/update service: %v", err)
 	}
@@ -297,7 +295,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		if err := controllerutil.SetControllerReference(v, ser, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
-		err = r.createObjectIfNotExists(ser)
+		err = r.createOrUpdateObject(ser)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create/update per instance service: %v", err)
 		}
@@ -343,14 +341,14 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, fmt.Errorf("failed to create/update configurer deployment: %v", err)
 	}
 
-	// Create the Configurer ice if it doesn't exist
+	// Create the Configurer service if it doesn't exist
 	configurerSer := serviceForVaultConfigurer(v)
 	// Set Vault instance as the owner and controller
 	if err := controllerutil.SetControllerReference(v, configurerSer, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	err = r.createObjectIfNotExists(configurerSer)
+	err = r.createOrUpdateObject(configurerSer)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to create/update service: %v", err)
 	}
