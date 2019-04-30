@@ -436,7 +436,7 @@ func (v *vault) kubernetesAuthConfig(path string, config map[string]interface{})
 	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
 
 	if err != nil {
-		return fmt.Errorf("error putting %s kubernetes config into vault: %s", config, err.Error())
+		return fmt.Errorf("error putting kubernetes config into vault: %s", err.Error())
 	}
 	return nil
 }
@@ -697,7 +697,7 @@ func (v *vault) configureGithubConfig(path string, config map[string]interface{}
 	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
 
 	if err != nil {
-		return fmt.Errorf("error putting %s github config into vault: %s", config, err.Error())
+		return fmt.Errorf("error putting github config into vault: %s", err.Error())
 	}
 	return nil
 }
@@ -723,7 +723,7 @@ func (v *vault) configureAwsConfig(path string, config map[string]interface{}) e
 	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config/client", path), config)
 
 	if err != nil {
-		return fmt.Errorf("error putting %s aws config into vault: %s", config, err.Error())
+		return fmt.Errorf("error putting aws config into vault: %s", err.Error())
 	}
 	return nil
 }
@@ -765,7 +765,7 @@ func (v *vault) configureGcpConfig(path string, config map[string]interface{}) e
 	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
 
 	if err != nil {
-		return fmt.Errorf("error putting %s gcp config into vault: %s", config, err.Error())
+		return fmt.Errorf("error putting gcp config into vault: %s", err.Error())
 	}
 	return nil
 }
@@ -775,7 +775,7 @@ func (v *vault) configureJwtConfig(path string, config map[string]interface{}) e
 	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
 
 	if err != nil {
-		return fmt.Errorf("error putting %s jwt config into vault: %s", config, err.Error())
+		return fmt.Errorf("error putting jwt config into vault: %s", err.Error())
 	}
 	return nil
 }
@@ -825,7 +825,7 @@ func (v *vault) configureLdapConfig(path string, config map[string]interface{}) 
 	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
 
 	if err != nil {
-		return fmt.Errorf("error putting %s ldap config into vault: %s", config, err.Error())
+		return fmt.Errorf("error putting ldap config into vault: %s", err.Error())
 	}
 	return nil
 }
@@ -1035,7 +1035,7 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 						logrus.Debugln("Can't reconfigure", configPath, "please delete it manually")
 						continue
 					}
-					return fmt.Errorf("error putting %+v -> %s config into vault: %s", configData, configPath, err.Error())
+					return fmt.Errorf("error putting config data -> %s config into vault: %s", configPath, err.Error())
 				}
 			}
 		}
