@@ -30,6 +30,7 @@ rules:
     resources:
       - ingresses
     verbs:
+      - list
       - get
       - create
       - update
@@ -51,6 +52,8 @@ rules:
     resources:
       - servicemonitors
     verbs:
+      - update
+      - list
       - get
       - create
   - apiGroups:
