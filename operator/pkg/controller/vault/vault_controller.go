@@ -45,7 +45,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -98,6 +97,52 @@ type ReconcileVault struct {
 	httpClient *http.Client
 }
 
+func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
+	key, err := client.ObjectKeyFromObject(o)
+	if err != nil {
+		return err
+	}
+
+	clone := o.DeepCopyObject()
+
+	err = r.client.Get(context.TODO(), key, clone)
+	if apierrors.IsNotFound(err) {
+		err = r.client.Create(context.TODO(), o)
+		if !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+	} else if err == nil {
+		resourceVersion := clone.(metav1.ObjectMetaAccessor).GetObjectMeta().GetResourceVersion()
+		o.(metav1.ObjectMetaAccessor).GetObjectMeta().SetResourceVersion(resourceVersion)
+
+		err = r.client.Update(context.TODO(), o)
+		if !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+	}
+
+	return err
+}
+
+func (r *ReconcileVault) createObjectIfNotExists(o runtime.Object) error {
+	key, err := client.ObjectKeyFromObject(o)
+	if err != nil {
+		return err
+	}
+
+	clone := o.DeepCopyObject()
+
+	err = r.client.Get(context.TODO(), key, clone)
+	if apierrors.IsNotFound(err) {
+		err = r.client.Create(context.TODO(), o)
+		if !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+	}
+
+	return err
+}
+
 // Reconcile reads that state of the cluster for a Vault object and makes changes based on the state read
 // and what is in the Vault.Spec
 // Note:
@@ -140,8 +185,8 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			return reconcile.Result{}, err
 		}
 
-		err = r.client.Create(context.TODO(), sec)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
+		err = r.createObjectIfNotExists(sec)
+		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create secret for etcd: %v", err)
 		}
 
@@ -150,17 +195,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			return reconcile.Result{}, err
 		}
 
-		var previousEtcd etcdv1beta2.EtcdCluster
-
-		err = r.client.Get(context.TODO(), client.ObjectKey{Name: etcdCluster.Name, Namespace: etcdCluster.Namespace}, &previousEtcd)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				err = r.client.Create(context.TODO(), etcdCluster)
-			}
-		} else {
-			etcdCluster.ResourceVersion = previousEtcd.ResourceVersion
-			err = r.client.Update(context.TODO(), etcdCluster)
-		}
+		err = r.createOrUpdateObject(etcdCluster)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create/update etcd cluster: %v", err)
 		}
@@ -178,8 +213,8 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			return reconcile.Result{}, err
 		}
 
-		err = r.client.Create(context.TODO(), sec)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
+		err = r.createObjectIfNotExists(sec)
+		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create secret for vault: %v", err)
 		}
 	}
@@ -192,9 +227,9 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			return reconcile.Result{}, err
 		}
 
-		err = r.client.Create(context.TODO(), cm)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return reconcile.Result{}, fmt.Errorf("failed to create fluentd configmap: %v", err)
+		err = r.createOrUpdateObject(cm)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to create/update fluentd configmap: %v", err)
 		}
 	}
 
@@ -207,9 +242,9 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			return reconcile.Result{}, err
 		}
 
-		err = r.client.Create(context.TODO(), cm)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return reconcile.Result{}, fmt.Errorf("failed to create statsd configmap: %v", err)
+		err = r.createOrUpdateObject(cm)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to create/update statsd configmap: %v", err)
 		}
 	}
 
@@ -224,29 +259,9 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-	err = r.client.Get(context.TODO(), request.NamespacedName, statefulSet)
+	err = r.createOrUpdateObject(statefulSet)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			if err := r.client.Create(context.TODO(), statefulSet); err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to create StatefulSet: %v", err)
-			}
-		} else {
-			return reconcile.Result{}, fmt.Errorf("failed to get StatefulSet: %v", err)
-		}
-	} else {
-		newStatefulSet, err := statefulSetForVault(v)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to fabricate StatefulSet: %v", err)
-		}
-		// Set Vault instance as the owner and controller
-		if err := controllerutil.SetControllerReference(v, newStatefulSet, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
-		statefulSet.Spec = newStatefulSet.Spec
-		err = r.client.Update(context.TODO(), statefulSet)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to update StatefulSet: %v", err)
-		}
+		return reconcile.Result{}, fmt.Errorf("failed to create/update StatefulSet: %v", err)
 	}
 
 	if v.Spec.ServiceMonitorEnabled {
@@ -256,9 +271,9 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		if err := controllerutil.SetControllerReference(v, serviceMonitor, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
-		err = r.client.Create(context.TODO(), serviceMonitor)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return reconcile.Result{}, fmt.Errorf("failed to create serviceMonitor: %v", err)
+		err = r.createOrUpdateObject(serviceMonitor)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to create/update serviceMonitor: %v", err)
 		}
 	}
 
@@ -268,9 +283,9 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	if err := controllerutil.SetControllerReference(v, ser, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
-	err = r.client.Create(context.TODO(), ser)
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		return reconcile.Result{}, fmt.Errorf("failed to create service: %v", err)
+	err = r.createObjectIfNotExists(ser)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to create/update service: %v", err)
 	}
 
 	// Create the service if it doesn't exist
@@ -282,9 +297,9 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		if err := controllerutil.SetControllerReference(v, ser, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
-		err = r.client.Create(context.TODO(), ser)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return reconcile.Result{}, fmt.Errorf("failed to create per instance service: %v", err)
+		err = r.createObjectIfNotExists(ser)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to create/update per instance service: %v", err)
 		}
 	}
 
@@ -295,24 +310,10 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	if err := controllerutil.SetControllerReference(v, cm, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
-	err = r.client.Create(context.TODO(), cm)
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		return reconcile.Result{}, fmt.Errorf("failed to create configurer configmap: %v", err)
-	}
 
-	// Ensure the configmap is the same as the spec
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: cm.Name, Namespace: cm.Namespace}, cm)
+	err = r.createOrUpdateObject(cm)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get configurer configmap: %v", err)
-	}
-
-	externalConfig := v.Spec.ExternalConfigJSON()
-	if cm.Data[vault.DefaultConfigFile] != externalConfig {
-		cm.Data[vault.DefaultConfigFile] = externalConfig
-		err = r.client.Update(context.TODO(), cm)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to update configurer configmap: %v", err)
-		}
+		return reconcile.Result{}, fmt.Errorf("failed to create/update configurer configmap: %v", err)
 	}
 
 	externalConfigMaps := corev1.ConfigMapList{}
@@ -337,23 +338,21 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	if err := controllerutil.SetControllerReference(v, configurerDep, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
-	err = r.client.Create(context.TODO(), configurerDep)
-	if err != nil && apierrors.IsAlreadyExists(err) {
-		err = r.client.Update(context.TODO(), configurerDep)
-	}
+	err = r.createOrUpdateObject(configurerDep)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to create/update configurer deployment: %v", err)
 	}
 
-	// Create the Configurer service if it doesn't exist
+	// Create the Configurer ice if it doesn't exist
 	configurerSer := serviceForVaultConfigurer(v)
 	// Set Vault instance as the owner and controller
 	if err := controllerutil.SetControllerReference(v, configurerSer, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
-	err = r.client.Create(context.TODO(), configurerSer)
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		return reconcile.Result{}, fmt.Errorf("failed to create service: %v", err)
+
+	err = r.createObjectIfNotExists(configurerSer)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to create/update service: %v", err)
 	}
 
 	// Create ingress if specificed
@@ -363,10 +362,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			return reconcile.Result{}, err
 		}
 
-		err = r.client.Create(context.TODO(), ingress)
-		if err != nil && apierrors.IsAlreadyExists(err) {
-			err = r.client.Update(context.TODO(), ingress)
-		}
+		err = r.createOrUpdateObject(ingress)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create/update ingress: %v", err)
 		}
