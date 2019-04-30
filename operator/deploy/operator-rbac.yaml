@@ -36,6 +36,12 @@ rules:
   - apiGroups:
       - apps
     resources:
+      - replicasets
+    verbs:
+      - get
+  - apiGroups:
+      - apps
+    resources:
       - deployments
       - statefulsets
     verbs:
