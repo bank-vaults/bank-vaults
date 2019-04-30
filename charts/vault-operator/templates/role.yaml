@@ -29,6 +29,12 @@ rules:
 - apiGroups:
   - apps
   resources:
+  - replicasets
+  verbs:
+  - get
+- apiGroups:
+  - apps
+  resources:
   - deployments
   - statefulsets
   verbs:
@@ -36,7 +42,7 @@ rules:
 - apiGroups:
   - etcd.database.coreos.com
   resources:
-  - etcdclusters
+  - "*"
   verbs:
   - "*"
 - apiGroups:
@@ -44,6 +50,16 @@ rules:
   resources:
     - ingresses
   verbs:
+    - list
     - get
     - create
     - update
+- apiGroups:
+    - monitoring.coreos.com
+  resources:
+    - servicemonitors
+  verbs:
+    - update
+    - list
+    - get
+    - create
