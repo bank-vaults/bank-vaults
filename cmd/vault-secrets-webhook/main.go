@@ -150,10 +150,11 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 	},
 	)
 
+	var ctCommandString []string
 	if vaultConfig.ctOnce {
-		ctCommandString := []string{"-config", "/vault/ct-config/config.hcl", "-once"}
+		ctCommandString = []string{"-config", "/vault/ct-config/config.hcl", "-once"}
 	} else {
-		ctCommandString := []string{"-config", "/vault/ct-config/config.hcl"}
+		ctCommandString = []string{"-config", "/vault/ct-config/config.hcl"}
 	}
 
 	containers = append(containers, corev1.Container{
