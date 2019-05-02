@@ -43,6 +43,7 @@ type vaultConfig struct {
 	tlsSecret             string
 	useAgent              bool
 	ctConfigMap           string
+	ctOnce                bool
 	ctShareProcess        bool
 	ctShareProcessDefault string
 }
@@ -149,10 +150,16 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 	},
 	)
 
+	if vaultConfig.ctOnce {
+		ctCommandString := []string{"-config", "/vault/ct-config/config.hcl", "-once"}
+	} else {
+		ctCommandString := []string{"-config", "/vault/ct-config/config.hcl"}
+	}
+
 	containers = append(containers, corev1.Container{
 		Name:            "consul-template",
 		Image:           viper.GetString("vault_ct_image"),
-		Args:            []string{"-config", "/vault/ct-config/config.hcl"},
+		Args:            ctCommandString,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: securityContext,
 		Env:             containerEnvVars,
@@ -293,6 +300,12 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.ctConfigMap = val
 	} else {
 		vaultConfig.ctConfigMap = ""
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-once"]; ok {
+		vaultConfig.ctOnce, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.ctOnce = false
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-share-process-namespace"]; ok {
