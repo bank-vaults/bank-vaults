@@ -54,6 +54,7 @@ rules:
     - get
     - create
     - update
+    - watch
 - apiGroups:
     - monitoring.coreos.com
   resources:
