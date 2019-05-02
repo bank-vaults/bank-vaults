@@ -491,6 +491,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 	ls["global_service"] = "true"
 	servicePorts, _ := getServicePorts(v)
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
+	servicePorts = append(servicePorts, corev1.ServicePort{Name: "statsd", Port: 9125})
 	service := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
