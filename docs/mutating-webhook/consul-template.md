@@ -92,6 +92,7 @@ vault.security.banzaicloud.io/vault-skip-verify|Same as VAULT_SKIP_VERIFY above|
 vault.security.banzaicloud.io/vault-tls-secret|Same as VAULT_TLS_CONFIGMAP above||
 vault.security.banzaicloud.io/vault-agent|Same as VAULT_AGENT above||
 vault.security.banzaicloud.io/vault-ct-configmap|""|A configmap name which holds the consul template configuration|
+vault.security.banzaicloud.io/vault-ct-once|false|do not run consul-template in daemon mode, useful for kubernetes jobs|
 vault.security.banzaicloud.io/vault-ct-share-process-namespace|Same as VAULT_CT_SHARE_PROCESS_NAMESPACE above||
 
 ### How to enable consul template in the webhook?
