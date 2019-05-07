@@ -36,16 +36,17 @@ import (
 )
 
 type vaultConfig struct {
-	addr                  string
-	role                  string
-	path                  string
-	skipVerify            string
-	tlsSecret             string
-	useAgent              bool
-	ctConfigMap           string
-	ctOnce                bool
-	ctShareProcess        bool
-	ctShareProcessDefault string
+	addr                        string
+	role                        string
+	path                        string
+	skipVerify                  string
+	tlsSecret                   string
+	useAgent                    bool
+	ctConfigMap                 string
+	ctOnce                      bool
+	ctShareProcess              bool
+	ctShareProcessDefault       string
+	pspAllowPrivilegeEscalation bool
 }
 
 var vaultAgentConfig = `
@@ -90,7 +91,8 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 
 		runAsUser := int64(100)
 		securityContext := &corev1.SecurityContext{
-			RunAsUser: &runAsUser,
+			RunAsUser:                &runAsUser,
+			AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
 		}
 
 		containers = append(containers, corev1.Container{
@@ -116,6 +118,9 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 					MountPath: "/vault/",
 				},
 			},
+			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
+			},
 		})
 	}
 
@@ -124,10 +129,13 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 
 func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	var containers = []corev1.Container{}
-	var securityContext = &corev1.SecurityContext{}
+	securityContext := &corev1.SecurityContext{
+		AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
+	}
 
 	if vaultConfig.ctShareProcess {
 		securityContext = &corev1.SecurityContext{
+			AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{
 					"SYS_PTRACE",
@@ -315,6 +323,12 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	} else {
 		vaultConfig.ctShareProcessDefault = "empty"
 		vaultConfig.ctShareProcess = false
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/psp-allow-privilege-escalation"]; ok {
+		vaultConfig.pspAllowPrivilegeEscalation, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.pspAllowPrivilegeEscalation, _ = strconv.ParseBool(viper.GetString("psp_allow_privilege_escalation"))
 	}
 
 	return vaultConfig
