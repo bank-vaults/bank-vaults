@@ -327,7 +327,7 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 
 	if val, ok := annotations["vault.security.banzaicloud.io/psp-allow-privilege-escalation"]; ok {
 		vaultConfig.pspAllowPrivilegeEscalation, _ = strconv.ParseBool(val)
-	} else {
+	} else if viper.GetString("psp_allow_privilege_escalation") != "" {
 		vaultConfig.pspAllowPrivilegeEscalation, _ = strconv.ParseBool(viper.GetString("psp_allow_privilege_escalation"))
 	}
 
