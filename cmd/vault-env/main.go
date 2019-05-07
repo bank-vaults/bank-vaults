@@ -92,12 +92,17 @@ func main() {
 		}
 		if strings.HasPrefix(value, "vault:") {
 			path := strings.TrimPrefix(value, "vault:")
-			split := strings.SplitN(path, "#", 2)
+			split := strings.SplitN(path, "#", 3)
 			path = split[0]
 
 			var key string
 			if len(split) > 1 {
 				key = split[1]
+			}
+
+			version := "-1"
+			if len(split) == 3 {
+				version = split[2]
 			}
 
 			var secret *vaultapi.Secret
@@ -111,7 +116,7 @@ func main() {
 					os.Exit(1)
 				}
 			} else {
-				secret, err = client.Vault().Logical().Read(path)
+				secret, err = client.Vault().Logical().ReadWithData(path, map[string][]string{"version": {version}})
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "failed to read secret '%s': %s\n", path, err.Error())
 					os.Exit(1)
@@ -124,8 +129,20 @@ func main() {
 			} else {
 				var data map[string]interface{}
 				v2Data, ok := secret.Data["data"]
+
 				if ok {
 					data = cast.ToStringMap(v2Data)
+
+					// Check if a given version of a path is destroyed
+					metadata := secret.Data["metadata"].(map[string]interface{})
+					if metadata["destroyed"].(bool) {
+						fmt.Fprintf(os.Stderr, "Version %s of %s secret has been permanently destroyed\n", version, path)
+					}
+
+					// Check if a given version of a path still exists
+					if metadata["deletion_time"].(string) != "" {
+						fmt.Fprintf(os.Stderr, "Cannot find data for path: %s, given version (%s) has been deleted at %s\n", path, version, metadata["deletion_time"])
+					}
 				} else {
 					data = cast.ToStringMap(secret.Data)
 				}
