@@ -917,6 +917,10 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 		return nil, err
 	}
 
+	unsealCommand := []string{"bank-vaults", "unseal", "--init"}
+	if v.Spec.IsAutoUnseal() {
+		unsealCommand = []string{"bank-vaults", "init", "--auto-unseal"}
+	}
 	_, containerPorts := getServicePorts(v)
 
 	dep := &appsv1.StatefulSet{
@@ -1000,7 +1004,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							Image:           v.Spec.GetBankVaultsImage(),
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Name:            "bank-vaults",
-							Command:         []string{"bank-vaults", "unseal", "--init"},
+							Command:         unsealCommand,
 							Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
 							Env: withSecretEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, []corev1.EnvVar{
 								{
