@@ -684,6 +684,7 @@ func initConfig() {
 	viper.SetDefault("vault_tls_secret", "")
 	viper.SetDefault("vault_agent", "true")
 	viper.SetDefault("vault_ct_share_process_namespace", "")
+	viper.SetDefault("psp_allow_privilege_escalation", "false")
 	viper.AutomaticEnv()
 }
 
