@@ -15,8 +15,6 @@
 package main
 
 import (
-	"time"
-
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -25,8 +23,6 @@ import (
 const cfgInitRootToken = "init-root-token"
 const cfgStoreRootToken = "store-root-token"
 const cfgPreFlightChecks = "pre-flight-checks"
-const cfgAutoUnseal = "auto-unseal"
-const cfgInitPeriod = "init-period"
 
 var initCmd = &cobra.Command{
 	Use:   "init",
@@ -40,8 +36,6 @@ It will not unseal the Vault instance after initialising.`,
 		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))
 		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))
 		appConfig.BindPFlag(cfgPreFlightChecks, cmd.PersistentFlags().Lookup(cfgPreFlightChecks))
-		appConfig.BindPFlag(cfgAutoUnseal, cmd.PersistentFlags().Lookup(cfgAutoUnseal))
-		appConfig.BindPFlag(cfgInitPeriod, cmd.PersistentFlags().Lookup(cfgInitPeriod))
 
 		store, err := kvStoreForConfig(appConfig)
 		if err != nil {
@@ -67,20 +61,8 @@ It will not unseal the Vault instance after initialising.`,
 			logrus.Fatalf("error initialising vault: %s", err.Error())
 		}
 
-		autoUnseal := appConfig.GetBool(cfgAutoUnseal)
-		if autoUnseal {
-			initPeriod := appConfig.GetDuration(cfgInitPeriod)
-			for {
-				if err = v.Init(); err != nil {
-					logrus.Fatalf("error initialising vault: %s", err.Error())
-				}
-				time.Sleep(initPeriod)
-			}
-
-		} else {
-			if err = v.Init(); err != nil {
-				logrus.Fatalf("error initialising vault: %s", err.Error())
-			}
+		if err = v.Init(); err != nil {
+			logrus.Fatalf("error initialising vault: %s", err.Error())
 		}
 	},
 }
@@ -89,8 +71,6 @@ func init() {
 	initCmd.PersistentFlags().String(cfgInitRootToken, "", "root token for the new vault cluster")
 	initCmd.PersistentFlags().Bool(cfgStoreRootToken, true, "should the root token be stored in the key store")
 	initCmd.PersistentFlags().Bool(cfgPreFlightChecks, false, "should the key store be tested first to validate access rights")
-	initCmd.PersistentFlags().Bool(cfgAutoUnseal, false, "initialise vault when running in auto-unseal mode")
-	initCmd.PersistentFlags().Duration(cfgInitPeriod, time.Second*10, "How often to attempt to init the vault instance")
 
 	rootCmd.AddCommand(initCmd)
 }
