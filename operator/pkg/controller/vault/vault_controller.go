@@ -117,6 +117,8 @@ func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
 		case *corev1.Service:
 			svc := o.(*corev1.Service)
 			svc.Spec.ClusterIP = current.(*corev1.Service).Spec.ClusterIP
+			// Preserve the annotation when updating the service
+			svc.Annotations = current.(*corev1.Service).Annotations
 		}
 
 		return r.client.Update(context.TODO(), o)
