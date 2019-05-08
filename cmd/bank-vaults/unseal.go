@@ -26,11 +26,13 @@ import (
 const cfgUnsealPeriod = "unseal-period"
 const cfgInit = "init"
 const cfgOnce = "once"
+const cfgAuto = "auto"
 
 type unsealCfg struct {
 	unsealPeriod time.Duration
 	proceedInit  bool
 	runOnce      bool
+	auto         bool
 }
 
 var unsealCmd = &cobra.Command{
@@ -50,33 +52,31 @@ from one of the followings:
 		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))
 		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))
 		appConfig.BindPFlag(cfgPreFlightChecks, cmd.PersistentFlags().Lookup(cfgPreFlightChecks))
+		appConfig.BindPFlag(cfgAuto, cmd.PersistentFlags().Lookup(cfgAuto))
 
 		var unsealConfig unsealCfg
 
 		unsealConfig.unsealPeriod = appConfig.GetDuration(cfgUnsealPeriod)
 		unsealConfig.proceedInit = appConfig.GetBool(cfgInit)
 		unsealConfig.runOnce = appConfig.GetBool(cfgOnce)
+		unsealConfig.auto = appConfig.GetBool(cfgAuto)
 
 		store, err := kvStoreForConfig(appConfig)
-
 		if err != nil {
 			logrus.Fatalf("error creating kv store: %s", err.Error())
 		}
 
 		cl, err := vault.NewRawClient()
-
 		if err != nil {
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
 		}
 
 		vaultConfig, err := vaultConfigForConfig(appConfig)
-
 		if err != nil {
 			logrus.Fatalf("error building vault config: %s", err.Error())
 		}
 
 		v, err := vault.New(store, cl, vaultConfig)
-
 		if err != nil {
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
@@ -92,7 +92,9 @@ from one of the followings:
 		}
 
 		for {
-			unseal(unsealConfig, v)
+			if !unsealConfig.auto {
+				unseal(unsealConfig, v)
+			}
 
 			// wait unsealPeriod before trying again
 			time.Sleep(unsealConfig.unsealPeriod)
@@ -142,6 +144,7 @@ func init() {
 	unsealCmd.PersistentFlags().String(cfgInitRootToken, "", "Root token for the new vault cluster (only if -init=true)")
 	unsealCmd.PersistentFlags().Bool(cfgStoreRootToken, true, "Should the root token be stored in the key store (only if -init=true)")
 	unsealCmd.PersistentFlags().Bool(cfgPreFlightChecks, false, "should the key store be tested first to validate access rights")
+	unsealCmd.PersistentFlags().Bool(cfgAuto, false, "Run in auto-unseal mode")
 
 	rootCmd.AddCommand(unsealCmd)
 }
