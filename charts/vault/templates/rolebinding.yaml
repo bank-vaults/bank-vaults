@@ -3,8 +3,8 @@ apiVersion: v1
 kind: List
 metadata: {}
 items:
-- apiVersion: rbac.authorization.k8s.io/v1beta1
-  kind: RoleBinding
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRoleBinding
   metadata:
     name: {{ template "vault.fullname" . }}-auth-delegator
     labels:
@@ -20,7 +20,7 @@ items:
   - kind: ServiceAccount
     name: {{ template "vault.fullname" . }}
     namespace: {{ .Release.Namespace }}
-- apiVersion: rbac.authorization.k8s.io/v1beta1
+- apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     name: {{ template "vault.fullname" . }}-secret-access
