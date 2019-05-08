@@ -919,7 +919,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 
 	unsealCommand := []string{"bank-vaults", "unseal", "--init"}
 	if v.Spec.IsAutoUnseal() {
-		unsealCommand = []string{"bank-vaults", "init", "--auto-unseal"}
+		unsealCommand = append(unsealCommand, "--auto")
 	}
 	_, containerPorts := getServicePorts(v)
 
