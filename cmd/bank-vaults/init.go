@@ -20,7 +20,6 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const cfgInitRootToken = "init-root-token"
@@ -44,69 +43,46 @@ It will not unseal the Vault instance after initialising.`,
 		appConfig.BindPFlag(cfgAutoUnseal, cmd.PersistentFlags().Lookup(cfgAutoUnseal))
 		appConfig.BindPFlag(cfgInitPeriod, cmd.PersistentFlags().Lookup(cfgInitPeriod))
 
-		autoUnseal := appConfig.GetBool(cfgAutoUnseal)
-		if autoUnseal {
-			initVaultAutoUnseal(appConfig)
-		} else {
-			initVault(appConfig)
+		store, err := kvStoreForConfig(appConfig)
+		if err != nil {
+			logrus.Fatalf("error creating kv store: %s", err.Error())
 		}
-	},
-}
 
-func initVaultAutoUnseal(cfg *viper.Viper) {
-	cl, err := vault.NewRawClient()
-	if err != nil {
-		logrus.Fatalf("error connecting to vault: %s", err.Error())
-	}
+		cl, err := vault.NewRawClient()
+		if err != nil {
+			logrus.Fatalf("error connecting to vault: %s", err.Error())
+		}
 
-	vaultConfig, err := vaultConfigForConfig(appConfig)
-	if err != nil {
-		logrus.Fatalf("error building vault config: %s", err.Error())
-	}
+		vaultConfig, err := vaultConfigForConfig(appConfig)
+		if err != nil {
+			logrus.Fatalf("error building vault config: %s", err.Error())
+		}
 
-	v, err := vault.New(nil, cl, vaultConfig)
-	if err != nil {
-		logrus.Fatalf("error creating vault helper: %s", err.Error())
-	}
+		v, err := vault.New(store, cl, vaultConfig)
+		if err != nil {
+			logrus.Fatalf("error creating vault helper: %s", err.Error())
+		}
 
-	if err = v.InitAutoUnseal(); err != nil {
-		logrus.Fatalf("error initialising vault: %s", err.Error())
-	}
-
-	initPeriod := cfg.GetDuration(cfgInitPeriod)
-	for {
-		if err = v.InitAutoUnseal(); err != nil {
+		if err = v.Init(); err != nil {
 			logrus.Fatalf("error initialising vault: %s", err.Error())
 		}
 
-		time.Sleep(initPeriod)
-	}
-}
+		autoUnseal := appConfig.GetBool(cfgAutoUnseal)
+		if autoUnseal {
+			initPeriod := appConfig.GetDuration(cfgInitPeriod)
+			for {
+				if err = v.Init(); err != nil {
+					logrus.Fatalf("error initialising vault: %s", err.Error())
+				}
+				time.Sleep(initPeriod)
+			}
 
-func initVault(cfg *viper.Viper) {
-	store, err := kvStoreForConfig(appConfig)
-	if err != nil {
-		logrus.Fatalf("error creating kv store: %s", err.Error())
-	}
-
-	cl, err := vault.NewRawClient()
-	if err != nil {
-		logrus.Fatalf("error connecting to vault: %s", err.Error())
-	}
-
-	vaultConfig, err := vaultConfigForConfig(appConfig)
-	if err != nil {
-		logrus.Fatalf("error building vault config: %s", err.Error())
-	}
-
-	v, err := vault.New(store, cl, vaultConfig)
-	if err != nil {
-		logrus.Fatalf("error creating vault helper: %s", err.Error())
-	}
-
-	if err = v.Init(); err != nil {
-		logrus.Fatalf("error initialising vault: %s", err.Error())
-	}
+		} else {
+			if err = v.Init(); err != nil {
+				logrus.Fatalf("error initialising vault: %s", err.Error())
+			}
+		}
+	},
 }
 
 func init() {

@@ -81,7 +81,6 @@ var _ Vault = &vault{}
 // a Vault server.
 type Vault interface {
 	Init() error
-	InitAutoUnseal() error
 	Sealed() (bool, error)
 	Active() (bool, error)
 	Unseal() error
@@ -188,30 +187,6 @@ func (v *vault) keyStoreSet(key string, val []byte) error {
 	} else {
 		return fmt.Errorf("error setting key '%s': %s", key, err.Error())
 	}
-}
-
-// InitAutoUnseal initializes Vault in auto-unseal mode
-func (v *vault) InitAutoUnseal() error {
-	initialized, err := v.cl.Sys().InitStatus()
-	if err != nil {
-		return fmt.Errorf("error testing if vault is initialized: %s", err.Error())
-	}
-	if initialized {
-		logrus.Info("vault is already initialized")
-		return nil
-	}
-
-	logrus.Info("initializing vault")
-	_, err = v.cl.Sys().Init(&api.InitRequest{
-		SecretShares:      v.config.SecretShares,
-		SecretThreshold:   v.config.SecretThreshold,
-		RecoveryShares:    v.config.SecretShares,
-		RecoveryThreshold: v.config.SecretThreshold,
-	})
-	if err != nil {
-		return fmt.Errorf("error initializing vault: %s", err.Error())
-	}
-	return nil
 }
 
 // Init initializes Vault if is not initialized already
@@ -1384,13 +1359,11 @@ func isOverwriteProhibitedError(err error) bool {
 
 func getMountConfigInput(secretEngine map[string]interface{}) (api.MountConfigInput, error) {
 	var mountConfigInput api.MountConfigInput
-
-	config, err := getOrDefaultStringMapString(secretEngine, "config")
-	if err != nil {
-		return mountConfigInput, fmt.Errorf("error getting config for secret engine: %s", err.Error())
+	config, ok := secretEngine["config"]
+	if !ok {
+		return mountConfigInput, fmt.Errorf("error config for secret enginer not found: %v", config)
 	}
-	err = mapstructure.Decode(config, &mountConfigInput)
-	if err != nil {
+	if err := mapstructure.Decode(config, &mountConfigInput); err != nil {
 		return mountConfigInput, fmt.Errorf("error parsing config for secret engine: %s", err.Error())
 	}
 
