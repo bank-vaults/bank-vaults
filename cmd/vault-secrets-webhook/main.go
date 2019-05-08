@@ -636,9 +636,10 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 				}
 			}
 
-			podSpec.InitContainers = append(getInitContainers(podSpec.Containers, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), podSpec.InitContainers...)
-			logger.Debugf("Successfully appended pod init containers to spec")
 		}
+
+		podSpec.InitContainers = append(getInitContainers(podSpec.Containers, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), podSpec.InitContainers...)
+		logger.Debugf("Successfully appended pod init containers to spec")
 
 		podSpec.Volumes = append(podSpec.Volumes, getVolumes(agentConfigMapName, vaultConfig, logger)...)
 		logger.Debugf("Successfully appended pod spec volumes")
