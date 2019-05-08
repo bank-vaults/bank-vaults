@@ -5,9 +5,10 @@ OS = $(shell uname)
 # Project variables
 PACKAGE = github.com/banzaicloud/bank-vaults
 BINARY_NAME ?= bank-vaults
-DOCKER_IMAGE = banzaicloud/bank-vaults
-WEBHOOK_DOCKER_IMAGE = banzaicloud/vault-secrets-webhook
-OPERATOR_DOCKER_IMAGE = banzaicloud/vault-operator
+DOCKER_REGISTRY ?= banzaicloud
+DOCKER_IMAGE = ${DOCKER_REGISTRY}/bank-vaults
+WEBHOOK_DOCKER_IMAGE = ${DOCKER_REGISTRY}/vault-secrets-webhook
+OPERATOR_DOCKER_IMAGE = ${DOCKER_REGISTRY}/vault-operator
 
 # Build variables
 BUILD_DIR ?= build
