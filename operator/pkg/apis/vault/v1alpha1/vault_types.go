@@ -265,6 +265,12 @@ func (spec *VaultSpec) ExternalConfigJSON() string {
 	return string(config)
 }
 
+// IsAutoUnseal checks if auto-unseal is configured
+func (spec *VaultSpec) IsAutoUnseal() bool {
+	_, ok := spec.Config["seal"]
+	return ok
+}
+
 // GetIngress the Ingress configuration for Vault if any
 func (vault *Vault) GetIngress() *Ingress {
 	if vault.Spec.Ingress != nil {
