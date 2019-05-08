@@ -60,10 +60,6 @@ It will not unseal the Vault instance after initialising.`,
 		if err = v.Init(); err != nil {
 			logrus.Fatalf("error initialising vault: %s", err.Error())
 		}
-
-		if err = v.Init(); err != nil {
-			logrus.Fatalf("error initialising vault: %s", err.Error())
-		}
 	},
 }
 
