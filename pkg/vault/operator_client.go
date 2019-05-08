@@ -1132,40 +1132,40 @@ func (v *vault) configureStartupSecrets(config *viper.Viper) error {
 }
 
 func readVaultGroup(group string, client *api.Client) (secret *api.Secret, err error) {
-  secret, err = client.Logical().Read(fmt.Sprintf("identity/group/name/%s", group))
-  if err != nil {
-    return nil, fmt.Errorf("Failed to read group %s by name: %v", group, err)
-  }
-  if secret == nil {
-    // No Data returned, Group does not exist
-    return nil, nil
-  }
-  return secret, nil
+	secret, err = client.Logical().Read(fmt.Sprintf("identity/group/name/%s", group))
+	if err != nil {
+		return nil, fmt.Errorf("Failed to read group %s by name: %v", group, err)
+	}
+	if secret == nil {
+		// No Data returned, Group does not exist
+		return nil, nil
+	}
+	return secret, nil
 }
 
 func readVaultGroupAlias(id string, client *api.Client) (secret *api.Secret, err error) {
-  secret, err = client.Logical().Read(fmt.Sprintf("identity/group-alias/id/%s", id))
-  if err != nil {
-    return nil, fmt.Errorf("Failed to read group alias %s by id: %v", id, err)
-  }
-  if secret == nil {
-    // No Data returned, Group does not exist
-    return nil, nil
-  }
-  return secret, nil
+	secret, err = client.Logical().Read(fmt.Sprintf("identity/group-alias/id/%s", id))
+	if err != nil {
+		return nil, fmt.Errorf("Failed to read group alias %s by id: %v", id, err)
+	}
+	if secret == nil {
+		// No Data returned, Group does not exist
+		return nil, nil
+	}
+	return secret, nil
 }
 
 func getVaultAuthMountAccessor(path string, client *api.Client) (accessor string, err error) {
-  path = strings.TrimRight(path, "/")+"/"
-  mounts, err := client.Sys().ListAuth()
+	path = strings.TrimRight(path, "/") + "/"
+	mounts, err := client.Sys().ListAuth()
 
-  if err != nil {
-    return "", fmt.Errorf("failed to read auth mounts from vault: %s", err)
-  }
-  if mounts[path] == nil {
-    return "", fmt.Errorf("auth mount path %s does not exist on vaut", path)
-  }
-  return mounts[path].Accessor, nil
+	if err != nil {
+		return "", fmt.Errorf("failed to read auth mounts from vault: %s", err)
+	}
+	if mounts[path] == nil {
+		return "", fmt.Errorf("auth mount path %s does not exist on vaut", path)
+	}
+	return mounts[path].Accessor, nil
 }
 
 func getVaultGroupId(group string, client *api.Client) (id string, err error) {
@@ -1173,34 +1173,34 @@ func getVaultGroupId(group string, client *api.Client) (id string, err error) {
 	if err != nil {
 		return "", fmt.Errorf("error reading group %s: %s", group, err)
 	}
-  if g == nil {
-    return "", fmt.Errorf("group %s does not exist", group)
-  }
-  return g.Data["id"].(string), nil
+	if g == nil {
+		return "", fmt.Errorf("group %s does not exist", group)
+	}
+	return g.Data["id"].(string), nil
 }
 
 func getVaultGroupAliasName(aliasId string, client *api.Client) (id string, err error) {
-  alias, err := readVaultGroupAlias(aliasId, client)
+	alias, err := readVaultGroupAlias(aliasId, client)
 	if err != nil {
 		return "", fmt.Errorf("error reading group alias %s: %s", aliasId, err)
 	}
-  if alias == nil {
-    return "", fmt.Errorf("group alias %s does not exist", aliasId)
-  }
-  return alias.Data["name"].(string), nil
+	if alias == nil {
+		return "", fmt.Errorf("group alias %s does not exist", aliasId)
+	}
+	return alias.Data["name"].(string), nil
 }
 
 func findVaultGroupAliasIdFromName(name string, client *api.Client) (id string, err error) {
-  aliases, err := client.Logical().List("identity/group-alias/id")
+	aliases, err := client.Logical().List("identity/group-alias/id")
 
 	if err != nil {
 		return "", fmt.Errorf("error listing group aliases: %s", err)
 	}
-  if aliases == nil {
-    return "", nil
-  }
+	if aliases == nil {
+		return "", nil
+	}
 
-  for _, alias := range aliases.Data["keys"].([]interface{}) {
+	for _, alias := range aliases.Data["keys"].([]interface{}) {
 		aliasName, err := getVaultGroupAliasName(cast.ToString(alias), client)
 		if err != nil {
 			return "", fmt.Errorf("Error fetching name for alias id: %s", alias)
@@ -1208,7 +1208,7 @@ func findVaultGroupAliasIdFromName(name string, client *api.Client) (id string, 
 		if aliasName == name {
 			return cast.ToString(alias), nil
 		}
-  }
+	}
 
 	// Did not find any alias matching ID to Name
 	return "", nil
@@ -1242,8 +1242,8 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 		}
 
 		config := map[string]interface{}{
-			"name":    cast.ToString(group["name"]),
-			"type": cast.ToString(group["type"]),
+			"name":     cast.ToString(group["name"]),
+			"type":     cast.ToString(group["type"]),
 			"policies": cast.ToStringSlice(group["policies"]),
 			"metadata": cast.ToStringMap(group["metadata"]),
 		}
@@ -1280,9 +1280,9 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 		}
 
 		config := map[string]interface{}{
-			"name":    cast.ToString(groupAlias["name"]),
+			"name":           cast.ToString(groupAlias["name"]),
 			"mount_accessor": accessor,
-			"canonical_id": id,
+			"canonical_id":   id,
 		}
 
 		if ga == "" {
@@ -1302,8 +1302,6 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 
 	return nil
 }
-
-
 
 // toSliceStringMapE casts []map[string]interface{} preserving nested types
 func toSliceStringMapE(o interface{}) ([]map[string]interface{}, error) {
@@ -1361,13 +1359,11 @@ func isOverwriteProhibitedError(err error) bool {
 
 func getMountConfigInput(secretEngine map[string]interface{}) (api.MountConfigInput, error) {
 	var mountConfigInput api.MountConfigInput
-
-	config, err := getOrDefaultStringMapString(secretEngine, "config")
-	if err != nil {
-		return mountConfigInput, fmt.Errorf("error getting config for secret engine: %s", err.Error())
+	config, ok := secretEngine["config"]
+	if !ok {
+		return mountConfigInput, fmt.Errorf("error config for secret enginer not found: %v", config)
 	}
-	err = mapstructure.Decode(config, &mountConfigInput)
-	if err != nil {
+	if err := mapstructure.Decode(config, &mountConfigInput); err != nil {
 		return mountConfigInput, fmt.Errorf("error parsing config for secret engine: %s", err.Error())
 	}
 
@@ -1393,10 +1389,10 @@ func isConfigNoNeedName(secretEngineType string, configOption string) bool {
 }
 
 func StringInSlice(match string, list []string) bool {
-  for _, item := range list {
-    if item == match {
-      return true
-    }
-  }
-  return false
+	for _, item := range list {
+		if item == match {
+			return true
+		}
+	}
+	return false
 }
