@@ -39,20 +39,21 @@ $ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-
 
 The following tables lists configurable parameters of the vault-secrets-webhook chart and their default values.
 
-|               Parameter             |                Description                  |                  Default                 |
-| ----------------------------------- | ------------------------------------------- | -----------------------------------------|
-|affinity                             |affinities to use                            |{}                                        |
-|debug                                |debug logs for webhook                       |false                                     |
-|image.pullPolicy                     |image pull policy                            |IfNotPresent                              |
-|image.repository                     |image repo that contains the admission server|banzaicloud/vault-secrets-webhook         |
-|image.tag                            |image tag                                    |latest                                    |
-|nodeSelector                         |node selector to use                         |{}                                        |
-|replicaCount                         |number of replicas                           |1                                         |
-|resources                            |resources to request                         |{}                                        |
-|service.externalPort                 |webhook service external port                |443                                       |
-|service.internalPort                 |webhook service external port                |443                                       |
-|service.name                         |webhook service name                         |vault-secrets-webhook                     |
-|service.type                         |webhook service type                         |ClusterIP                                 |
-|tolerations                          |tolerations to add                           |[]                                        |
-|rabc.enabled                         |use rbac                                     |true                                      |
-|rabc.psp.enabled                     |use pod security policy                      |false                                     |
+|               Parameter             |                    Description                    |                  Default                 |
+| ----------------------------------- | ------------------------------------------------- | -----------------------------------------|
+|affinity                             |affinities to use                                  |{}                                        |
+|debug                                |debug logs for webhook                             |false                                     |
+|image.pullPolicy                     |image pull policy                                  |IfNotPresent                              |
+|image.repository                     |image repo that contains the admission server      |banzaicloud/vault-secrets-webhook         |
+|image.tag                            |image tag                                          |latest                                    |
+|namespaceSelector                    |namespace selector to use, will limit webhook scope|{}                                        |
+|nodeSelector                         |node selector to use                               |{}                                        |
+|replicaCount                         |number of replicas                                 |1                                         |
+|resources                            |resources to request                               |{}                                        |
+|service.externalPort                 |webhook service external port                      |443                                       |
+|service.internalPort                 |webhook service external port                      |443                                       |
+|service.name                         |webhook service name                               |vault-secrets-webhook                     |
+|service.type                         |webhook service type                               |ClusterIP                                 |
+|tolerations                          |tolerations to add                                 |[]                                        |
+|rabc.enabled                         |use rbac                                           |true                                      |
+|rabc.psp.enabled                     |use pod security policy                            |false                                     |

@@ -40,7 +40,14 @@ items:
       - pods
     failurePolicy: Fail
     namespaceSelector:
+    {{- if .Values.namespaceSelector.matchLabels }}
+      matchLabels:
+{{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
+    {{- end }}
       matchExpressions:
+      {{- if .Values.namespaceSelector.matchExpressions }}
+{{ toYaml .Values.namespaceSelector.matchExpressions | indent 6 }}
+      {{- end }}
       - key: name
         operator: NotIn
         values:
