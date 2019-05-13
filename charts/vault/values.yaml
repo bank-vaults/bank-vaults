@@ -6,7 +6,7 @@ strategy:
   type: RollingUpdate
 image:
   repository: vault
-  tag: 1.1.0
+  tag: 1.1.2
   pullPolicy: IfNotPresent
 service:
   name: vault
@@ -161,7 +161,7 @@ vault:
 unsealer:
   image:
     repository: banzaicloud/bank-vaults
-    tag: 0.4.14
+    tag: 0.4.15
     pullPolicy: IfNotPresent
   args: [
       "--mode",
