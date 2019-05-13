@@ -45,8 +45,9 @@ func NewData(cas int, data map[string]interface{}) map[string]interface{} {
 }
 
 type clientOptions struct {
-	role     string
-	authPath string
+	role      string
+	authPath  string
+	tokenPath string
 }
 
 // ClientOption configures a Vault client using the functional options paradigm popularized by Rob Pike and Dave Cheney.
@@ -69,6 +70,13 @@ type ClientAuthPath string
 
 func (co ClientAuthPath) apply(o *clientOptions) {
 	o.authPath = string(co)
+}
+
+// ClientTokenPath file where the Vault token can be found.
+type ClientTokenPath string
+
+func (co ClientTokenPath) apply(o *clientOptions) {
+	o.tokenPath = string(co)
 }
 
 // Client is a Vault client with Kubernetes support and token automatic renewing
@@ -175,9 +183,12 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 	client := &Client{client: rawClient, logical: logical}
 
 	if rawClient.Token() == "" {
-		tokenPath := os.Getenv("HOME") + "/.vault-token"
-		if env, ok := os.LookupEnv("VAULT_TOKEN_PATH"); ok {
-			tokenPath = env
+		tokenPath := o.tokenPath
+		if tokenPath == "" {
+			tokenPath = os.Getenv("HOME") + "/.vault-token"
+			if env, ok := os.LookupEnv("VAULT_TOKEN_PATH"); ok {
+				tokenPath = env
+			}
 		}
 
 		token, err := ioutil.ReadFile(tokenPath)
