@@ -170,28 +170,34 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 	logical := rawClient.Logical()
 	var tokenRenewer *vaultapi.Renewer
 
-	o := &clientOptions{
-		// Default options
-		authPath: "kubernetes",
-		role:     "default",
-	}
+	o := &clientOptions{}
 
 	for _, opt := range opts {
 		opt.apply(o)
 	}
 
+	// Default role
+	if o.role == "" {
+		o.role = "default"
+	}
+
+	// Default auth path
+	if o.authPath == "" {
+		o.authPath = "kubernetes"
+	}
+
+	// Default token path
+	if o.tokenPath == "" {
+		o.tokenPath = os.Getenv("HOME") + "/.vault-token"
+		if env, ok := os.LookupEnv("VAULT_TOKEN_PATH"); ok {
+			o.tokenPath = env
+		}
+	}
+
 	client := &Client{client: rawClient, logical: logical}
 
 	if rawClient.Token() == "" {
-		tokenPath := o.tokenPath
-		if tokenPath == "" {
-			tokenPath = os.Getenv("HOME") + "/.vault-token"
-			if env, ok := os.LookupEnv("VAULT_TOKEN_PATH"); ok {
-				tokenPath = env
-			}
-		}
-
-		token, err := ioutil.ReadFile(tokenPath)
+		token, err := ioutil.ReadFile(o.tokenPath)
 		if err == nil {
 			rawClient.SetToken(string(token))
 		} else {
