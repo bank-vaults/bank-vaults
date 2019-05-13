@@ -21,9 +21,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/spf13/cast"
+
+	"github.com/banzaicloud/bank-vaults/pkg/vault"
 )
 
 type sanitizedEnviron []string
@@ -59,17 +60,10 @@ func (environ *sanitizedEnviron) append(iname interface{}, ivalue interface{}) {
 }
 
 func main() {
-
-	role := os.Getenv("VAULT_ROLE")
-	if role == "" {
-		role = "default"
-	}
-	path := os.Getenv("VAULT_PATH")
-	if path == "" {
-		path = "kubernetes"
-	}
-
-	client, err := vault.NewClientWithConfig(vaultapi.DefaultConfig(), role, path)
+	client, err := vault.NewClientWithOptions(
+		vault.ClientRole(os.Getenv("VAULT_ROLE")),
+		vault.ClientAuthPath(os.Getenv("VAULT_PATH")),
+	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create vault client: %s\n", err.Error())
 		os.Exit(1)
