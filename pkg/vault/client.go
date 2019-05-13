@@ -44,6 +44,33 @@ func NewData(cas int, data map[string]interface{}) map[string]interface{} {
 	}
 }
 
+type clientOptions struct {
+	role     string
+	authPath string
+}
+
+// ClientOption configures a Vault client using the functional options paradigm popularized by Rob Pike and Dave Cheney.
+// If you're unfamiliar with this style,
+// see https://commandcenter.blogspot.com/2014/01/self-referential-functions-and-design.html and
+// https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis.
+type ClientOption interface {
+	apply(o *clientOptions)
+}
+
+// ClientRole is the vault role which the client would like to receive
+type ClientRole string
+
+func (co ClientRole) apply(o *clientOptions) {
+	o.role = string(co)
+}
+
+// ClientAuthPath is the mount path where the auth method is enabled.
+type ClientAuthPath string
+
+func (co ClientAuthPath) apply(o *clientOptions) {
+	o.authPath = string(co)
+}
+
 // Client is a Vault client with Kubernetes support and token automatic renewing
 type Client struct {
 	client       *vaultapi.Client
@@ -66,7 +93,7 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 		return nil, err
 	}
 
-	client, err := NewClientFromRawClient(rawClient, role, path)
+	client, err := NewClientFromRawClient(rawClient, ClientRole(role), ClientAuthPath(path))
 	if err != nil {
 		return nil, err
 	}
@@ -120,9 +147,19 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 }
 
 // NewClientFromRawClient creates a new Vault client from custom raw client.
-func NewClientFromRawClient(rawClient *vaultapi.Client, role, path string) (*Client, error) {
+func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*Client, error) {
 	logical := rawClient.Logical()
 	var tokenRenewer *vaultapi.Renewer
+
+	o := &clientOptions{
+		// Default options
+		authPath: "kubernetes",
+		role:     "default",
+	}
+
+	for _, opt := range opts {
+		opt.apply(o)
+	}
 
 	client := &Client{client: rawClient, logical: logical}
 
@@ -162,9 +199,9 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, role, path string) (*Cli
 					}
 					client.mu.Unlock()
 
-					data := map[string]interface{}{"jwt": string(jwt), "role": role}
+					data := map[string]interface{}{"jwt": string(jwt), "role": o.role}
 
-					secret, err := logical.Write(fmt.Sprintf("auth/%s/login", path), data)
+					secret, err := logical.Write(fmt.Sprintf("auth/%s/login", o.authPath), data)
 					if err != nil {
 						log.Println("Failed to request new Vault token", err.Error())
 						time.Sleep(1 * time.Second)
