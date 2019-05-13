@@ -81,19 +81,30 @@ type Client struct {
 	mu           sync.Mutex
 }
 
-// NewClient creates a new Vault client
+// NewClient creates a new Vault client.
 func NewClient(role string) (*Client, error) {
-	return NewClientWithConfig(vaultapi.DefaultConfig(), role, "kubernetes")
+	return NewClientWithOptions(ClientRole(role))
 }
 
-// NewClientWithConfig creates a new Vault client with custom configuration
+// NewClientWithOptions creates a new Vault client with custom options.
+func NewClientWithOptions(opts ...ClientOption) (*Client, error) {
+	return NewClientFromConfig(vaultapi.DefaultConfig(), opts...)
+}
+
+// NewClientWithConfig creates a new Vault client with custom configuration.
+// Deprecated: use NewClientFromConfig instead.
 func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, error) {
+	return NewClientFromConfig(config, ClientRole(role), ClientAuthPath(path))
+}
+
+// NewClientFromConfig creates a new Vault client from custom configuration.
+func NewClientFromConfig(config *vaultapi.Config, opts ...ClientOption) (*Client, error) {
 	rawClient, err := vaultapi.NewClient(config)
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := NewClientFromRawClient(rawClient, ClientRole(role), ClientAuthPath(path))
+	client, err := NewClientFromRawClient(rawClient, opts...)
 	if err != nil {
 		return nil, err
 	}
