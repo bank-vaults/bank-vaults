@@ -46,12 +46,12 @@ func NewData(cas int, data map[string]interface{}) map[string]interface{} {
 
 // Client is a Vault client with Kubernetes support and token automatic renewing
 type Client struct {
-	sync.Mutex
 	client       *vaultapi.Client
 	logical      *vaultapi.Logical
 	tokenRenewer *vaultapi.Renewer
 	closed       bool
 	watch        *fsnotify.Watcher
+	mu           sync.Mutex
 }
 
 // NewClient creates a new Vault client
@@ -87,12 +87,12 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 
 		go func() {
 			for {
-				client.Lock()
+				client.mu.Lock()
 				if client.closed {
-					client.Unlock()
+					client.mu.Unlock()
 					break
 				}
-				client.Unlock()
+				client.mu.Unlock()
 
 				select {
 				case event := <-watch.Events:
@@ -155,12 +155,12 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, role, path string) (*Cli
 
 			go func() {
 				for {
-					client.Lock()
+					client.mu.Lock()
 					if client.closed {
-						client.Unlock()
+						client.mu.Unlock()
 						break
 					}
-					client.Unlock()
+					client.mu.Unlock()
 
 					data := map[string]interface{}{"jwt": string(jwt), "role": role}
 
@@ -194,9 +194,9 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, role, path string) (*Cli
 						continue
 					}
 
-					client.Lock()
+					client.mu.Lock()
 					client.tokenRenewer = tokenRenewer
-					client.Unlock()
+					client.mu.Unlock()
 
 					go tokenRenewer.Renew()
 
@@ -246,8 +246,8 @@ func (client *Client) RawClient() *vaultapi.Client {
 
 // Close stops the token renewing process of this client
 func (client *Client) Close() {
-	client.Lock()
-	defer client.Unlock()
+	client.mu.Lock()
+	defer client.mu.Unlock()
 
 	if client.tokenRenewer != nil {
 		client.closed = true
