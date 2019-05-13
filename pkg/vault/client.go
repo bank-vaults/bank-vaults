@@ -65,13 +65,14 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 	if err != nil {
 		return nil, err
 	}
-	logical := rawClient.Logical()
-	var tokenRenewer *vaultapi.Renewer
 
-	client := &Client{client: rawClient, logical: logical}
+	client, err := NewClientFromRawClient(rawClient, role, path)
+	if err != nil {
+		return nil, err
+	}
 
 	caCertPath := os.Getenv(vaultapi.EnvVaultCACert)
-	caCertReload := (os.Getenv("VAULT_CACERT_RELOAD") != "false")
+	caCertReload := os.Getenv("VAULT_CACERT_RELOAD") != "false"
 
 	if caCertPath != "" && caCertReload {
 		watch, err := fsnotify.NewWatcher()
@@ -82,7 +83,7 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 		caCertFile := filepath.Clean(caCertPath)
 		configDir, _ := filepath.Split(caCertFile)
 
-		watch.Add(configDir)
+		_ = watch.Add(configDir)
 
 		go func() {
 			for {
@@ -115,8 +116,17 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 		client.watch = watch
 	}
 
-	if rawClient.Token() == "" {
+	return client, nil
+}
 
+// NewClientFromRawClient creates a new Vault client from custom raw client.
+func NewClientFromRawClient(rawClient *vaultapi.Client, role, path string) (*Client, error) {
+	logical := rawClient.Logical()
+	var tokenRenewer *vaultapi.Renewer
+
+	client := &Client{client: rawClient, logical: logical}
+
+	if rawClient.Token() == "" {
 		tokenPath := os.Getenv("HOME") + "/.vault-token"
 		if env, ok := os.LookupEnv("VAULT_TOKEN_PATH"); ok {
 			tokenPath = env
@@ -124,9 +134,7 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 
 		token, err := ioutil.ReadFile(tokenPath)
 		if err == nil {
-
 			rawClient.SetToken(string(token))
-
 		} else {
 			// If VAULT_TOKEN, VAULT_TOKEN_PATH or ~/.vault-token wasn't provided let's
 			// suppose we are in Kubernetes and try to get one with the ServiceAccount token.
@@ -155,12 +163,14 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 					client.Unlock()
 
 					data := map[string]interface{}{"jwt": string(jwt), "role": role}
+
 					secret, err := logical.Write(fmt.Sprintf("auth/%s/login", path), data)
 					if err != nil {
 						log.Println("Failed to request new Vault token", err.Error())
 						time.Sleep(1 * time.Second)
 						continue
 					}
+
 					if secret == nil {
 						log.Println("Received empty answer from Vault, retrying")
 						time.Sleep(1 * time.Second)
@@ -198,9 +208,10 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 			select {
 			case <-initialTokenArrived:
 				log.Println("Initial Vault token arrived")
+
 			case <-time.After(initialTokenTimeout):
 				client.Close()
-				return nil, fmt.Errorf("Timeout [%s] during waiting for Vault token", initialTokenTimeout)
+				return nil, fmt.Errorf("timeout [%s] during waiting for Vault token", initialTokenTimeout)
 			}
 		}
 	}
@@ -231,12 +242,14 @@ func (client *Client) Vault() *vaultapi.Client {
 func (client *Client) Close() {
 	client.Lock()
 	defer client.Unlock()
+
 	if client.tokenRenewer != nil {
 		client.closed = true
 		client.tokenRenewer.Stop()
 	}
+
 	if client.watch != nil {
-		client.watch.Close()
+		_ = client.watch.Close()
 	}
 }
 
