@@ -64,3 +64,4 @@ rules:
     - list
     - get
     - create
+    - watch
