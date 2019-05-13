@@ -233,8 +233,14 @@ func runRenewChecker(tokenRenewer *vaultapi.Renewer) {
 	}
 }
 
-// Vault returns the underlying hashicorp Vault client
+// Vault returns the underlying hashicorp Vault client.
+// Deprecated: use RawClient instead.
 func (client *Client) Vault() *vaultapi.Client {
+	return client.RawClient()
+}
+
+// RawClient returns the underlying raw Vault client.
+func (client *Client) RawClient() *vaultapi.Client {
 	return client.client
 }
 
@@ -253,11 +259,14 @@ func (client *Client) Close() {
 	}
 }
 
+// NewRawClient creates a new raw Vault client.
 func NewRawClient() (*api.Client, error) {
 	config := vaultapi.DefaultConfig()
 	if config.Error != nil {
 		return nil, config.Error
 	}
+
 	config.HttpClient.Transport.(*http.Transport).TLSHandshakeTimeout = 5 * time.Second
+
 	return vaultapi.NewClient(config)
 }
