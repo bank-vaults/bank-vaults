@@ -519,7 +519,7 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 			if err != nil {
 				return fmt.Errorf("error finding roles block for kubernetes: %s", err.Error())
 			}
-			err = v.configureGenericAuthRoles(authMethodType, path, roles)
+			err = v.configureGenericAuthRoles(authMethodType, path, "role", roles)
 			if err != nil {
 				return fmt.Errorf("error configuring kubernetes auth roles for vault: %s", err.Error())
 			}
@@ -563,7 +563,7 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 			if err != nil {
 				return fmt.Errorf("error finding roles block for aws: %s", err.Error())
 			}
-			err = v.configureGenericAuthRoles(authMethodType, path, roles)
+			err = v.configureGenericAuthRoles(authMethodType, path, "role", roles)
 			if err != nil {
 				return fmt.Errorf("error configuring aws auth roles for vault: %s", err.Error())
 			}
@@ -580,7 +580,7 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 			if err != nil {
 				return fmt.Errorf("error finding roles block for gcp: %s", err.Error())
 			}
-			err = v.configureGenericAuthRoles(authMethodType, path, roles)
+			err = v.configureGenericAuthRoles(authMethodType, path, "role", roles)
 			if err != nil {
 				return fmt.Errorf("error configuring gcp auth roles for vault: %s", err.Error())
 			}
@@ -589,7 +589,7 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 			if err != nil {
 				return fmt.Errorf("error finding role block for approle: %s", err.Error())
 			}
-			err = v.configureGenericAuthRoles(authMethodType, path, roles)
+			err = v.configureGenericAuthRoles(authMethodType, path, "role", roles)
 			if err != nil {
 				return fmt.Errorf("error configuring approle auth for vault: %s", err.Error())
 			}
@@ -609,6 +609,15 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 			err = v.configureJwtRoles(path, roles)
 			if err != nil {
 				return fmt.Errorf("error configuring jwt roles on path %s for vault: %s", path, err.Error())
+			}
+		case "token":
+			roles, err := cast.ToSliceE(authMethod["roles"])
+			if err != nil {
+				return fmt.Errorf("error finding roles block for token: %s", err.Error())
+			}
+			err = v.configureGenericAuthRoles(authMethodType, "token", "roles", roles)
+			if err != nil {
+				return fmt.Errorf("error configuring token roles for vault: %s", err.Error())
 			}
 		case "ldap", "okta":
 			config, err := cast.ToStringMapE(authMethod["config"])
@@ -694,14 +703,15 @@ func (v *vault) configureAwsConfig(path string, config map[string]interface{}) e
 // https://www.vaultproject.io/api/auth/gcp/index.html
 // https://www.vaultproject.io/api/auth/aws/index.html
 // https://www.vaultproject.io/api/auth/approle/index.html
-func (v *vault) configureGenericAuthRoles(method, path string, roles []interface{}) error {
+// https://www.vaultproject.io/api/auth/token/index.html
+func (v *vault) configureGenericAuthRoles(method, path, roleSubPath string, roles []interface{}) error {
 	for _, roleInterface := range roles {
 		role, err := cast.ToStringMapE(roleInterface)
 		if err != nil {
 			return fmt.Errorf("error converting roles for %s: %s", method, err.Error())
 		}
 
-		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/%s/%s", path, roleSubPath, role["name"]), role)
 		if err != nil {
 			return fmt.Errorf("error putting %s %s role into vault: %s", role["name"], method, err.Error())
 		}
