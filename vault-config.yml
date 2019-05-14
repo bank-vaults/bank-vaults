@@ -47,6 +47,19 @@ auth:
       users:
         bonifaido: allow_secrets
 
+  # Allows configuring roles for Vault's token based authentication.
+  # See https://www.vaultproject.io/docs/auth/token.html for
+  # more information.
+  - type: token
+    roles:
+      - name: prometheus-metrics
+        allowed_policies:
+          - prometheus-metrics
+        disallowed_policies:
+          - Administrator
+          - DeveloperFullAccess
+        orphan: true
+
   # Allows creating roles in Vault which can be used later on for AWS 
   # IAM based authentication.
   # See https://www.vaultproject.io/docs/auth/aws.html for
