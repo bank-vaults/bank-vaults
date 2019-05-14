@@ -1292,9 +1292,9 @@ func isOverwriteProhibitedError(err error) bool {
 
 func getMountConfigInput(secretEngine map[string]interface{}) (api.MountConfigInput, error) {
 	var mountConfigInput api.MountConfigInput
-	config, ok := secretEngine["config"]
-	if !ok {
-		return mountConfigInput, fmt.Errorf("error config for secret enginer not found: %v", config)
+	config, err := getOrDefaultStringMapString(secretEngine, "config")
+	if err != nil {
+		return mountConfigInput, fmt.Errorf("error getting config for secret engine: %v", config)
 	}
 	if err := mapstructure.Decode(config, &mountConfigInput); err != nil {
 		return mountConfigInput, fmt.Errorf("error parsing config for secret engine: %s", err.Error())
