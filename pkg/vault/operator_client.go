@@ -619,6 +619,23 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 			if err != nil {
 				return fmt.Errorf("error configuring token roles for vault: %s", err.Error())
 			}
+		case "cert":
+			config, err := cast.ToStringMapE(authMethod["config"])
+			if err != nil {
+				return fmt.Errorf("error finding config block for cert: %s", err.Error())
+			}
+			err = v.configureGenericAuthConfig(authMethodType, path, config)
+			if err != nil {
+				return fmt.Errorf("error configuring cert auth for vault: %s", err.Error())
+			}
+			roles, err := cast.ToSliceE(authMethod["roles"])
+			if err != nil {
+				return fmt.Errorf("error finding roles block for certs: %s", err.Error())
+			}
+			err = v.configureGenericAuthRoles(authMethodType, path, "certs", roles)
+			if err != nil {
+				return fmt.Errorf("error configuring certs auth roles for vault: %s", err.Error())
+			}
 		case "ldap", "okta":
 			config, err := cast.ToStringMapE(authMethod["config"])
 			if err != nil {
