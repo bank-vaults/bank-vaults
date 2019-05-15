@@ -763,7 +763,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      ls,
-					Annotations: v.Spec.GetAnnotations("9091"),
+					Annotations: withVaultConfigurerAnnotations(v, withPrometheusAnnotations("9091", v.Spec.GetAnnotations())),
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: v.Spec.GetServiceAccount(),
@@ -946,7 +946,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      ls,
-					Annotations: v.Spec.GetAnnotations("9102"),
+					Annotations: withVaultAnnotations(v, withPrometheusAnnotations("9102", v.Spec.GetAnnotations())),
 				},
 				Spec: corev1.PodSpec{
 					Affinity: &corev1.Affinity{
@@ -1034,6 +1034,37 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 	return dep, nil
 }
 
+// Annotations Functions
+
+func withPrometheusAnnotations(prometheusPort string, annotations map[string]string) map[string]string {
+	if prometheusPort == "" {
+		prometheusPort = "9102"
+	}
+
+	annotations["prometheus.io/scrape"] = "true"
+	annotations["prometheus.io/path"] = "/metrics"
+	annotations["prometheus.io/port"] = prometheusPort
+
+	return annotations
+}
+
+func withVaultAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
+	for k, v := range v.Spec.GetVaultAnnotations() {
+		annotations[k] = v
+	}
+
+	return annotations
+}
+
+func withVaultConfigurerAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
+	for k, v := range v.Spec.GetVaultConfigurerAnnotations() {
+		annotations[k] = v
+	}
+
+	return annotations
+}
+
+// TLS Functions
 func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool, envs []corev1.EnvVar) []corev1.EnvVar {
 	host := fmt.Sprintf("%s.%s", v.Name, v.Namespace)
 	if localhost {

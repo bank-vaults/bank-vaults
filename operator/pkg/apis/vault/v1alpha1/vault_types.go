@@ -56,21 +56,23 @@ type VaultList struct {
 // VaultSpec defines the desired state of Vault
 type VaultSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	Size              int32                  `json:"size"`
-	Image             string                 `json:"image"`
-	BankVaultsImage   string                 `json:"bankVaultsImage"`
-	StatsdDisabled    bool                   `json:"statsdDisabled"`
-	StatsDImage       string                 `json:"statsdImage"`
-	FluentDEnabled    bool                   `json:"fluentdEnabled"`
-	FluentDImage      string                 `json:"fluentdImage"`
-	FluentDConfig     string                 `json:"fluentdConfig"`
-	Annotations       map[string]string      `json:"annotations"`
-	Config            map[string]interface{} `json:"config"`
-	ExternalConfig    map[string]interface{} `json:"externalConfig"`
-	UnsealConfig      UnsealConfig           `json:"unsealConfig"`
-	CredentialsConfig CredentialsConfig      `json:"credentialsConfig"`
-	EnvsConfig        []v1.EnvVar            `json:"envsConfig"`
-	SecurityContext   v1.PodSecurityContext  `json:"securityContext,omitempty"`
+	Size                       int32                  `json:"size"`
+	Image                      string                 `json:"image"`
+	BankVaultsImage            string                 `json:"bankVaultsImage"`
+	StatsdDisabled             bool                   `json:"statsdDisabled"`
+	StatsDImage                string                 `json:"statsdImage"`
+	FluentDEnabled             bool                   `json:"fluentdEnabled"`
+	FluentDImage               string                 `json:"fluentdImage"`
+	FluentDConfig              string                 `json:"fluentdConfig"`
+	Annotations                map[string]string      `json:"annotations,omitempty"`
+	VaultAnnotations           map[string]string      `json:"vaultAnnotations,omitempty"`
+	VaultConfigurerAnnotations map[string]string      `json:"vaultConfigurerAnnotations,omitempty"`
+	Config                     map[string]interface{} `json:"config"`
+	ExternalConfig             map[string]interface{} `json:"externalConfig"`
+	UnsealConfig               UnsealConfig           `json:"unsealConfig"`
+	CredentialsConfig          CredentialsConfig      `json:"credentialsConfig"`
+	EnvsConfig                 []v1.EnvVar            `json:"envsConfig"`
+	SecurityContext            v1.PodSecurityContext  `json:"securityContext,omitempty"`
 	// This option gives us the option to workaround current StatefulSet limitations around updates
 	// See: https://github.com/kubernetes/kubernetes/issues/67250
 	// TODO: Should be removed once the ParallelPodManagement policy supports the broken update.
@@ -219,20 +221,31 @@ func (spec *VaultSpec) GetStatsDImage() string {
 	return spec.StatsDImage
 }
 
-// GetAnnotations returns the Annotations
-func (spec *VaultSpec) GetAnnotations(promPort string) map[string]string {
+// GetAnnotations returns the Common Annotations
+func (spec *VaultSpec) GetAnnotations() map[string]string {
 	if spec.Annotations == nil {
 		spec.Annotations = map[string]string{}
 	}
 
-	if promPort == "" {
-		promPort = "9102"
+	return spec.Annotations
+}
+
+// GetVaultAnnotations returns the Vault Pod , Secret and ConfigMap Annotations
+func (spec *VaultSpec) GetVaultAnnotations() map[string]string {
+	if spec.VaultAnnotations == nil {
+		spec.VaultAnnotations = map[string]string{}
 	}
 
-	spec.Annotations["prometheus.io/scrape"] = "true"
-	spec.Annotations["prometheus.io/path"] = "/metrics"
-	spec.Annotations["prometheus.io/port"] = promPort
-	return spec.Annotations
+	return spec.VaultAnnotations
+}
+
+// GetVaultConfigurerAnnotations returns the Vault Configurer Pod Annotations
+func (spec *VaultSpec) GetVaultConfigurerAnnotations() map[string]string {
+	if spec.VaultConfigurerAnnotations == nil {
+		spec.VaultConfigurerAnnotations = map[string]string{}
+	}
+
+	return spec.VaultConfigurerAnnotations
 }
 
 // GetFluentDImage returns the FluentD image to use
