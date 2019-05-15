@@ -763,7 +763,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      ls,
-					Annotations: withVaultConfigurerAnnotations(v, withPrometheusAnnotations("9091", v.Spec.GetAnnotations())),
+					Annotations: withVaultConfigurerAnnotations(v, withPrometheusAnnotations("9091", getCommonAnnotations(v, map[string]string{}))),
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: v.Spec.GetServiceAccount(),
@@ -946,7 +946,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      ls,
-					Annotations: withVaultAnnotations(v, withPrometheusAnnotations("9102", v.Spec.GetAnnotations())),
+					Annotations: withVaultAnnotations(v, withPrometheusAnnotations("9091", getCommonAnnotations(v, map[string]string{}))),
 				},
 				Spec: corev1.PodSpec{
 					Affinity: &corev1.Affinity{
@@ -1036,6 +1036,14 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 
 // Annotations Functions
 
+func getCommonAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
+	for key, value := range v.Spec.GetAnnotations() {
+		annotations[key] = value
+	}
+
+	return annotations
+}
+
 func withPrometheusAnnotations(prometheusPort string, annotations map[string]string) map[string]string {
 	if prometheusPort == "" {
 		prometheusPort = "9102"
@@ -1049,16 +1057,16 @@ func withPrometheusAnnotations(prometheusPort string, annotations map[string]str
 }
 
 func withVaultAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
-	for k, v := range v.Spec.GetVaultAnnotations() {
-		annotations[k] = v
+	for key, value := range v.Spec.GetVaultAnnotations() {
+		annotations[key] = value
 	}
 
 	return annotations
 }
 
 func withVaultConfigurerAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
-	for k, v := range v.Spec.GetVaultConfigurerAnnotations() {
-		annotations[k] = v
+	for key, value := range v.Spec.GetVaultConfigurerAnnotations() {
+		annotations[key] = value
 	}
 
 	return annotations
