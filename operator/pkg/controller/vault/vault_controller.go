@@ -833,6 +833,7 @@ func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, error) {
 	secret.Name = om.Name + "-tls"
 	secret.Namespace = om.Namespace
 	secret.Labels = labelsForVault(om.Name)
+	secret.Annotations = withVaultAnnotations(om, getCommonAnnotations(om, map[string]string{}))
 	secret.StringData = map[string]string{}
 	secret.StringData["ca.crt"] = chain.CACert
 	secret.StringData["server.crt"] = chain.ServerCert
