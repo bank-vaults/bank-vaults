@@ -64,9 +64,9 @@ type VaultSpec struct {
 	FluentDEnabled             bool                   `json:"fluentdEnabled"`
 	FluentDImage               string                 `json:"fluentdImage"`
 	FluentDConfig              string                 `json:"fluentdConfig"`
-	Annotations                map[string]string      `json:"annotations,omitempty"`
-	VaultAnnotations           map[string]string      `json:"vaultAnnotations,omitempty"`
-	VaultConfigurerAnnotations map[string]string      `json:"vaultConfigurerAnnotations,omitempty"`
+	Annotations                map[string]string      `json:"annotations"`
+	VaultAnnotations           map[string]string      `json:"vaultAnnotations"`
+	VaultConfigurerAnnotations map[string]string      `json:"vaultConfigurerAnnotations"`
 	Config                     map[string]interface{} `json:"config"`
 	ExternalConfig             map[string]interface{} `json:"externalConfig"`
 	UnsealConfig               UnsealConfig           `json:"unsealConfig"`
