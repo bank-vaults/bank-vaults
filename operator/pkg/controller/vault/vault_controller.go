@@ -502,6 +502,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name,
 			Namespace: v.Namespace,
+			Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
 			Labels:    ls,
 		},
 		Spec: corev1.ServiceSpec{
@@ -622,6 +623,7 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      podName,
 				Namespace: v.Namespace,
+				Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
 				Labels:    ls,
 			},
 			Spec: corev1.ServiceSpec{
@@ -653,6 +655,7 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
 			Namespace: v.Namespace,
+			Annotations: withVaultConfigurerAnnotations(v, getCommonAnnotations(v, map[string]string{})),
 			Labels:    ls,
 		},
 		Spec: corev1.ServiceSpec{
@@ -755,6 +758,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name + "-configurer",
 			Namespace: v.Namespace,
+			Annotations: withVaultConfigurerAnnotations(v, getCommonAnnotations(v, map[string]string{})),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -933,6 +937,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name,
 			Namespace: v.Namespace,
+			Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &replicas,
