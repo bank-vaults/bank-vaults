@@ -1311,7 +1311,7 @@ func getMountConfigInput(secretEngine map[string]interface{}) (api.MountConfigIn
 	var mountConfigInput api.MountConfigInput
 	config, ok := secretEngine["config"]
 	if !ok {
-		return mountConfigInput, fmt.Errorf("error config for secret enginer not found: %v", config)
+		return api.MountConfigInput{}, nil
 	}
 	if err := mapstructure.Decode(config, &mountConfigInput); err != nil {
 		return mountConfigInput, fmt.Errorf("error parsing config for secret engine: %s", err.Error())
