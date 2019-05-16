@@ -472,6 +472,7 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
 	etcdCluster.Spec.Pod = &etcdv1beta2.PodPolicy{
 		PersistentVolumeClaimSpec: v.Spec.EtcdPVCSpec,
 		Resources:                 *getEtcdResource(v),
+		Annotations:               v.Spec.EtcdPodAnnotations,
 	}
 	etcdCluster.Spec.Version = v.Spec.GetEtcdVersion()
 	etcdCluster.Spec.TLS = &etcdv1beta2.TLSPolicy{
@@ -500,10 +501,10 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.Name,
-			Namespace: v.Namespace,
+			Name:        v.Name,
+			Namespace:   v.Namespace,
 			Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
-			Labels:    ls,
+			Labels:      ls,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     serviceType(v),
@@ -621,10 +622,10 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 				Kind:       "Service",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      podName,
-				Namespace: v.Namespace,
+				Name:        podName,
+				Namespace:   v.Namespace,
 				Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
-				Labels:    ls,
+				Labels:      ls,
 			},
 			Spec: corev1.ServiceSpec{
 				Type:     serviceType(v),
@@ -653,10 +654,10 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceName,
-			Namespace: v.Namespace,
+			Name:        serviceName,
+			Namespace:   v.Namespace,
 			Annotations: withVaultConfigurerAnnotations(v, getCommonAnnotations(v, map[string]string{})),
-			Labels:    ls,
+			Labels:      ls,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,
@@ -756,8 +757,8 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Kind:       "Deployment",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.Name + "-configurer",
-			Namespace: v.Namespace,
+			Name:        v.Name + "-configurer",
+			Namespace:   v.Namespace,
 			Annotations: withVaultConfigurerAnnotations(v, getCommonAnnotations(v, map[string]string{})),
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -936,8 +937,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 			Kind:       "StatefulSet",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.Name,
-			Namespace: v.Namespace,
+			Name:        v.Name,
+			Namespace:   v.Namespace,
 			Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
 		},
 		Spec: appsv1.StatefulSetSpec{
