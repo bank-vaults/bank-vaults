@@ -8,4 +8,5 @@
 - [Unseal Keys](unseal-keys/README.md)
 - [Getting and Installing](installing/README.md)
 - [Monitoring](monitoring/README.md)
+- [Annotations](annotations/README.md)
 - [Contributing](contributing/README.md)
