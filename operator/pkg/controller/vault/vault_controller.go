@@ -953,7 +953,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      ls,
-					Annotations: withVaultAnnotations(v, withPrometheusAnnotations("9091", getCommonAnnotations(v, map[string]string{}))),
+					Annotations: withVaultAnnotations(v, withPrometheusAnnotations("9102", getCommonAnnotations(v, map[string]string{}))),
 				},
 				Spec: corev1.PodSpec{
 					Affinity: &corev1.Affinity{
