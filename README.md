@@ -77,6 +77,10 @@ Read more about usage of bank-vaults in [detailed documentation](docs/README.md)
 
 Kudos to HashiCorp for open sourcing Vault and making secret management easier and more secure.
 
+## Community
+
+ If you have any questions about Bank-Vaults, and would like to talk to us and the other members of the Banzai Cloud community, please join our **#bank-vaults** channel on [Slack](https://slack.banzaicloud.io/).
+ 
 ## License
 
 Copyright (c) 2017-2019 [Banzai Cloud, Inc.](https://banzaicloud.com)
