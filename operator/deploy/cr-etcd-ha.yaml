@@ -29,6 +29,10 @@ spec:
   etcdAnnotations:
     etcd.database.coreos.com/scope: clusterwide
 
+  # Annotations to be applied to the POD Specs
+  etcdPodAnnotations:
+    backup.velero.io/backup-volumes: "YOUR_VOLUME_NAME"
+
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
     kubernetes:
