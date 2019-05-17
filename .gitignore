@@ -18,6 +18,7 @@
 operator/build/_output/bin/*
 
 /vendor/
+operator/vendor
 /.licensei.cache
 bin/*
 /build/
