@@ -15,6 +15,8 @@
 package v1alpha1
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"reflect"
@@ -51,28 +53,69 @@ type VaultList struct {
 	Items           []Vault `json:"items"`
 }
 
+func init() {
+	gob.Register(VaultConfig{})
+	gob.Register(VaultExternalConfig{})
+}
+
+type VaultConfig map[string]interface{}
+
+func (c VaultConfig) DeepCopy() VaultConfig {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	dec := gob.NewDecoder(&buf)
+	err := enc.Encode(c)
+	if err != nil {
+		panic(err)
+	}
+	var copy VaultConfig
+	err = dec.Decode(&copy)
+	if err != nil {
+		panic(err)
+	}
+	return copy
+}
+
+type VaultExternalConfig map[string]interface{}
+
+func (c VaultExternalConfig) DeepCopy() VaultExternalConfig {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	dec := gob.NewDecoder(&buf)
+	err := enc.Encode(c)
+	if err != nil {
+		panic(err)
+	}
+	var copy VaultExternalConfig
+	err = dec.Decode(&copy)
+	if err != nil {
+		panic(err)
+	}
+	return copy
+}
+
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // VaultSpec defines the desired state of Vault
 type VaultSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	Size                       int32                  `json:"size"`
-	Image                      string                 `json:"image"`
-	BankVaultsImage            string                 `json:"bankVaultsImage"`
-	StatsdDisabled             bool                   `json:"statsdDisabled"`
-	StatsDImage                string                 `json:"statsdImage"`
-	FluentDEnabled             bool                   `json:"fluentdEnabled"`
-	FluentDImage               string                 `json:"fluentdImage"`
-	FluentDConfig              string                 `json:"fluentdConfig"`
-	Annotations                map[string]string      `json:"annotations"`
-	VaultAnnotations           map[string]string      `json:"vaultAnnotations"`
-	VaultConfigurerAnnotations map[string]string      `json:"vaultConfigurerAnnotations"`
-	Config                     map[string]interface{} `json:"config"`
-	ExternalConfig             map[string]interface{} `json:"externalConfig"`
-	UnsealConfig               UnsealConfig           `json:"unsealConfig"`
-	CredentialsConfig          CredentialsConfig      `json:"credentialsConfig"`
-	EnvsConfig                 []v1.EnvVar            `json:"envsConfig"`
-	SecurityContext            v1.PodSecurityContext  `json:"securityContext,omitempty"`
+	Size                       int32                 `json:"size"`
+	Image                      string                `json:"image"`
+	BankVaultsImage            string                `json:"bankVaultsImage"`
+	StatsdDisabled             bool                  `json:"statsdDisabled"`
+	StatsDImage                string                `json:"statsdImage"`
+	FluentDEnabled             bool                  `json:"fluentdEnabled"`
+	FluentDImage               string                `json:"fluentdImage"`
+	FluentDConfig              string                `json:"fluentdConfig"`
+	Annotations                map[string]string     `json:"annotations"`
+	VaultAnnotations           map[string]string     `json:"vaultAnnotations"`
+	VaultConfigurerAnnotations map[string]string     `json:"vaultConfigurerAnnotations"`
+	Config                     VaultConfig           `json:"config"`
+	ExternalConfig             VaultExternalConfig   `json:"externalConfig"`
+	UnsealConfig               UnsealConfig          `json:"unsealConfig"`
+	CredentialsConfig          CredentialsConfig     `json:"credentialsConfig"`
+	EnvsConfig                 []v1.EnvVar           `json:"envsConfig"`
+	SecurityContext            v1.PodSecurityContext `json:"securityContext,omitempty"`
 	// This option gives us the option to workaround current StatefulSet limitations around updates
 	// See: https://github.com/kubernetes/kubernetes/issues/67250
 	// TODO: Should be removed once the ParallelPodManagement policy supports the broken update.
