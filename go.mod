@@ -68,14 +68,13 @@ require (
 	github.com/json-iterator/go v1.1.5
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.0.0 // indirect
-	github.com/mattbaird/jsonpatch v0.0.0-20171005235357-81af80346b1a // indirect
 	github.com/mattn/go-isatty v0.0.3 // indirect
 	github.com/mattn/go-sqlite3 v1.10.0 // indirect
 	github.com/microcosm-cc/bluemonday v0.0.0-20180327211928-995366fdf961 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/onsi/gomega v1.4.3 // indirect
-	github.com/operator-framework/operator-sdk v0.6.0
+	github.com/operator-framework/operator-sdk v0.7.0
 	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pierrec/lz4 v0.0.0-20181005164709-635575b42742 // indirect
@@ -111,12 +110,12 @@ require (
 	k8s.io/api v0.0.0-20181213150558-05914d821849
 	k8s.io/apiextensions-apiserver v0.0.0-20190308081736-3a66ae4d2f93 // indirect
 	k8s.io/apimachinery v0.0.0-20181127025237-2b1284ed4c93
-	k8s.io/client-go v0.0.0-20190115164855-701b91367003
+	k8s.io/client-go v2.0.0-alpha.0.0.20181213151034-8d9ed539ba31+incompatible
 	k8s.io/code-generator v0.0.0-20190416052311-01a054e913a9
 	k8s.io/gengo v0.0.0-20190327210449-e17681d19d3a // indirect
 	k8s.io/klog v0.2.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20190228160746-b3a7cee44a30
-	sigs.k8s.io/controller-runtime v0.1.9
+	sigs.k8s.io/controller-runtime v0.1.10
 	sigs.k8s.io/testing_frameworks v0.1.1 // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )
