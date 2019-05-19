@@ -7,10 +7,17 @@ spec:
   image: vault:1.1.0
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
-  # Support for custom Vault (and sidecar) pod annotations
+  # Common annotations for all created resources
   annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "9102"
+    common/annotation: "true"
+  
+  # Vault Pods , Services and TLS Secret annotations
+  vaultAnnotations:
+    type/instance: "vault"
+  
+  # Vault Configurer Pods and Services annotations
+  vaultConfigurerAnnotations:
+    type/instance: "vaultconfigurer"
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault

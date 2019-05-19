@@ -38,25 +38,21 @@ It will not unseal the Vault instance after initialising.`,
 		appConfig.BindPFlag(cfgPreFlightChecks, cmd.PersistentFlags().Lookup(cfgPreFlightChecks))
 
 		store, err := kvStoreForConfig(appConfig)
-
 		if err != nil {
 			logrus.Fatalf("error creating kv store: %s", err.Error())
 		}
 
 		cl, err := vault.NewRawClient()
-
 		if err != nil {
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
 		}
 
 		vaultConfig, err := vaultConfigForConfig(appConfig)
-
 		if err != nil {
 			logrus.Fatalf("error building vault config: %s", err.Error())
 		}
 
 		v, err := vault.New(store, cl, vaultConfig)
-
 		if err != nil {
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}

@@ -15,6 +15,8 @@
 package v1alpha1
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"reflect"
@@ -51,32 +53,76 @@ type VaultList struct {
 	Items           []Vault `json:"items"`
 }
 
+func init() {
+	gob.Register(VaultConfig{})
+	gob.Register(VaultExternalConfig{})
+}
+
+type VaultConfig map[string]interface{}
+
+func (c VaultConfig) DeepCopy() VaultConfig {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	dec := gob.NewDecoder(&buf)
+	err := enc.Encode(c)
+	if err != nil {
+		panic(err)
+	}
+	var copy VaultConfig
+	err = dec.Decode(&copy)
+	if err != nil {
+		panic(err)
+	}
+	return copy
+}
+
+type VaultExternalConfig map[string]interface{}
+
+func (c VaultExternalConfig) DeepCopy() VaultExternalConfig {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	dec := gob.NewDecoder(&buf)
+	err := enc.Encode(c)
+	if err != nil {
+		panic(err)
+	}
+	var copy VaultExternalConfig
+	err = dec.Decode(&copy)
+	if err != nil {
+		panic(err)
+	}
+	return copy
+}
+
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // VaultSpec defines the desired state of Vault
 type VaultSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	Size              int32                  `json:"size"`
-	Image             string                 `json:"image"`
-	BankVaultsImage   string                 `json:"bankVaultsImage"`
-	StatsdDisabled    bool                   `json:"statsdDisabled"`
-	StatsDImage       string                 `json:"statsdImage"`
-	FluentDEnabled    bool                   `json:"fluentdEnabled"`
-	FluentDImage      string                 `json:"fluentdImage"`
-	FluentDConfig     string                 `json:"fluentdConfig"`
-	Annotations       map[string]string      `json:"annotations"`
-	Config            map[string]interface{} `json:"config"`
-	ExternalConfig    map[string]interface{} `json:"externalConfig"`
-	UnsealConfig      UnsealConfig           `json:"unsealConfig"`
-	CredentialsConfig CredentialsConfig      `json:"credentialsConfig"`
-	EnvsConfig        []v1.EnvVar            `json:"envsConfig"`
-	SecurityContext   v1.PodSecurityContext  `json:"securityContext,omitempty"`
+	Size                       int32                 `json:"size"`
+	Image                      string                `json:"image"`
+	BankVaultsImage            string                `json:"bankVaultsImage"`
+	StatsdDisabled             bool                  `json:"statsdDisabled"`
+	StatsDImage                string                `json:"statsdImage"`
+	FluentDEnabled             bool                  `json:"fluentdEnabled"`
+	FluentDImage               string                `json:"fluentdImage"`
+	FluentDConfig              string                `json:"fluentdConfig"`
+	Annotations                map[string]string     `json:"annotations"`
+	VaultAnnotations           map[string]string     `json:"vaultAnnotations"`
+	VaultConfigurerAnnotations map[string]string     `json:"vaultConfigurerAnnotations"`
+	Config                     VaultConfig           `json:"config"`
+	ExternalConfig             VaultExternalConfig   `json:"externalConfig"`
+	UnsealConfig               UnsealConfig          `json:"unsealConfig"`
+	CredentialsConfig          CredentialsConfig     `json:"credentialsConfig"`
+	EnvsConfig                 []v1.EnvVar           `json:"envsConfig"`
+	SecurityContext            v1.PodSecurityContext `json:"securityContext,omitempty"`
 	// This option gives us the option to workaround current StatefulSet limitations around updates
 	// See: https://github.com/kubernetes/kubernetes/issues/67250
 	// TODO: Should be removed once the ParallelPodManagement policy supports the broken update.
 	EtcdVersion           string                        `json:"etcdVersion"`
 	EtcdSize              int                           `json:"etcdSize"`
 	EtcdAnnotations       map[string]string             `json:"etcdAnnotations,omitempty"`
+	EtcdPodAnnotations    map[string]string             `json:"etcdPodAnnotations,omitempty"`
 	EtcdPVCSpec           *v1.PersistentVolumeClaimSpec `json:"etcdPVCSpec,omitempty"`
 	ServiceType           string                        `json:"serviceType"`
 	ServicePorts          map[string]int32              `json:"servicePorts"`
@@ -219,20 +265,31 @@ func (spec *VaultSpec) GetStatsDImage() string {
 	return spec.StatsDImage
 }
 
-// GetAnnotations returns the Annotations
-func (spec *VaultSpec) GetAnnotations(promPort string) map[string]string {
+// GetAnnotations returns the Common Annotations
+func (spec *VaultSpec) GetAnnotations() map[string]string {
 	if spec.Annotations == nil {
 		spec.Annotations = map[string]string{}
 	}
 
-	if promPort == "" {
-		promPort = "9102"
+	return spec.Annotations
+}
+
+// GetVaultAnnotations returns the Vault Pod , Secret and ConfigMap Annotations
+func (spec *VaultSpec) GetVaultAnnotations() map[string]string {
+	if spec.VaultAnnotations == nil {
+		spec.VaultAnnotations = map[string]string{}
 	}
 
-	spec.Annotations["prometheus.io/scrape"] = "true"
-	spec.Annotations["prometheus.io/path"] = "/metrics"
-	spec.Annotations["prometheus.io/port"] = promPort
-	return spec.Annotations
+	return spec.VaultAnnotations
+}
+
+// GetVaultConfigurerAnnotations returns the Vault Configurer Pod Annotations
+func (spec *VaultSpec) GetVaultConfigurerAnnotations() map[string]string {
+	if spec.VaultConfigurerAnnotations == nil {
+		spec.VaultConfigurerAnnotations = map[string]string{}
+	}
+
+	return spec.VaultConfigurerAnnotations
 }
 
 // GetFluentDImage returns the FluentD image to use
@@ -263,6 +320,12 @@ func (spec *VaultSpec) ConfigJSON() string {
 func (spec *VaultSpec) ExternalConfigJSON() string {
 	config, _ := json.Marshal(spec.ExternalConfig)
 	return string(config)
+}
+
+// IsAutoUnseal checks if auto-unseal is configured
+func (spec *VaultSpec) IsAutoUnseal() bool {
+	_, ok := spec.Config["seal"]
+	return ok
 }
 
 // GetIngress the Ingress configuration for Vault if any

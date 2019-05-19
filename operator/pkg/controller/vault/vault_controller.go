@@ -117,6 +117,8 @@ func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
 		case *corev1.Service:
 			svc := o.(*corev1.Service)
 			svc.Spec.ClusterIP = current.(*corev1.Service).Spec.ClusterIP
+			// Preserve the annotation when updating the service
+			svc.Annotations = current.(*corev1.Service).Annotations
 		}
 
 		return r.client.Update(context.TODO(), o)
@@ -470,6 +472,7 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
 	etcdCluster.Spec.Pod = &etcdv1beta2.PodPolicy{
 		PersistentVolumeClaimSpec: v.Spec.EtcdPVCSpec,
 		Resources:                 *getEtcdResource(v),
+		Annotations:               v.Spec.EtcdPodAnnotations,
 	}
 	etcdCluster.Spec.Version = v.Spec.GetEtcdVersion()
 	etcdCluster.Spec.TLS = &etcdv1beta2.TLSPolicy{
@@ -491,16 +494,17 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 	ls["global_service"] = "true"
 	servicePorts, _ := getServicePorts(v)
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
-	servicePorts = append(servicePorts, corev1.ServicePort{Name: "statsd", Port: 9125})
+	servicePorts = append(servicePorts, corev1.ServicePort{Name: "statsd", Port: 9102})
 	service := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.Name,
-			Namespace: v.Namespace,
-			Labels:    ls,
+			Name:        v.Name,
+			Namespace:   v.Namespace,
+			Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
+			Labels:      ls,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     serviceType(v),
@@ -618,9 +622,10 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 				Kind:       "Service",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      podName,
-				Namespace: v.Namespace,
-				Labels:    ls,
+				Name:        podName,
+				Namespace:   v.Namespace,
+				Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
+				Labels:      ls,
 			},
 			Spec: corev1.ServiceSpec{
 				Type:     serviceType(v),
@@ -649,9 +654,10 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceName,
-			Namespace: v.Namespace,
-			Labels:    ls,
+			Name:        serviceName,
+			Namespace:   v.Namespace,
+			Annotations: withVaultConfigurerAnnotations(v, getCommonAnnotations(v, map[string]string{})),
+			Labels:      ls,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,
@@ -751,8 +757,9 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Kind:       "Deployment",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.Name + "-configurer",
-			Namespace: v.Namespace,
+			Name:        v.Name + "-configurer",
+			Namespace:   v.Namespace,
+			Annotations: withVaultConfigurerAnnotations(v, getCommonAnnotations(v, map[string]string{})),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -761,7 +768,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      ls,
-					Annotations: v.Spec.GetAnnotations("9091"),
+					Annotations: withVaultConfigurerAnnotations(v, withPrometheusAnnotations("9091", getCommonAnnotations(v, map[string]string{}))),
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: v.Spec.GetServiceAccount(),
@@ -827,6 +834,7 @@ func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, error) {
 	secret.Name = om.Name + "-tls"
 	secret.Namespace = om.Namespace
 	secret.Labels = labelsForVault(om.Name)
+	secret.Annotations = withVaultAnnotations(om, getCommonAnnotations(om, map[string]string{}))
 	secret.StringData = map[string]string{}
 	secret.StringData["ca.crt"] = chain.CACert
 	secret.StringData["server.crt"] = chain.ServerCert
@@ -917,6 +925,10 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 		return nil, err
 	}
 
+	unsealCommand := []string{"bank-vaults", "unseal", "--init"}
+	if v.Spec.IsAutoUnseal() {
+		unsealCommand = append(unsealCommand, "--auto")
+	}
 	_, containerPorts := getServicePorts(v)
 
 	dep := &appsv1.StatefulSet{
@@ -925,8 +937,9 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 			Kind:       "StatefulSet",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.Name,
-			Namespace: v.Namespace,
+			Name:        v.Name,
+			Namespace:   v.Namespace,
+			Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &replicas,
@@ -940,7 +953,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      ls,
-					Annotations: v.Spec.GetAnnotations("9102"),
+					Annotations: withVaultAnnotations(v, withPrometheusAnnotations("9102", getCommonAnnotations(v, map[string]string{}))),
 				},
 				Spec: corev1.PodSpec{
 					Affinity: &corev1.Affinity{
@@ -1000,7 +1013,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 							Image:           v.Spec.GetBankVaultsImage(),
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Name:            "bank-vaults",
-							Command:         []string{"bank-vaults", "unseal", "--init"},
+							Command:         unsealCommand,
 							Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
 							Env: withSecretEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, []corev1.EnvVar{
 								{
@@ -1028,6 +1041,45 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 	return dep, nil
 }
 
+// Annotations Functions
+
+func getCommonAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
+	for key, value := range v.Spec.GetAnnotations() {
+		annotations[key] = value
+	}
+
+	return annotations
+}
+
+func withPrometheusAnnotations(prometheusPort string, annotations map[string]string) map[string]string {
+	if prometheusPort == "" {
+		prometheusPort = "9102"
+	}
+
+	annotations["prometheus.io/scrape"] = "true"
+	annotations["prometheus.io/path"] = "/metrics"
+	annotations["prometheus.io/port"] = prometheusPort
+
+	return annotations
+}
+
+func withVaultAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
+	for key, value := range v.Spec.GetVaultAnnotations() {
+		annotations[key] = value
+	}
+
+	return annotations
+}
+
+func withVaultConfigurerAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
+	for key, value := range v.Spec.GetVaultConfigurerAnnotations() {
+		annotations[key] = value
+	}
+
+	return annotations
+}
+
+// TLS Functions
 func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool, envs []corev1.EnvVar) []corev1.EnvVar {
 	host := fmt.Sprintf("%s.%s", v.Name, v.Namespace)
 	if localhost {
