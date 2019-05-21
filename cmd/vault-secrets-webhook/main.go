@@ -43,6 +43,7 @@ type vaultConfig struct {
 	tlsSecret                   string
 	useAgent                    bool
 	ctConfigMap                 string
+	ctImage                     string
 	ctOnce                      bool
 	ctShareProcess              bool
 	ctShareProcessDefault       string
@@ -167,7 +168,7 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 
 	containers = append(containers, corev1.Container{
 		Name:            "consul-template",
-		Image:           viper.GetString("vault_ct_image"),
+		Image:           vaultConfig.ctImage,
 		Args:            ctCommandString,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: securityContext,
@@ -309,6 +310,12 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.ctConfigMap = val
 	} else {
 		vaultConfig.ctConfigMap = ""
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-image"]; ok {
+		vaultConfig.ctImage = val
+	} else {
+		vaultConfig.ctImage = viper.GetString("vault_ct_image")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-once"]; ok {
