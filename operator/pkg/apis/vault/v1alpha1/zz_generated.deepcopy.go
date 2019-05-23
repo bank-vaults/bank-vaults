@@ -307,9 +307,15 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 	*out = *in
 	if in.WatchedSecretsLabels != nil {
 		in, out := &in.WatchedSecretsLabels, &out.WatchedSecretsLabels
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
+		*out = make([]map[string]string, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = make(map[string]string, len(*in))
+				for key, val := range *in {
+					(*out)[key] = val
+				}
+			}
 		}
 	}
 	if in.Annotations != nil {
