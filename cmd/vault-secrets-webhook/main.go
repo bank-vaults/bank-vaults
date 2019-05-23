@@ -45,6 +45,7 @@ type vaultConfig struct {
 	ctConfigMap                 string
 	ctImage                     string
 	ctOnce                      bool
+	ctImagePullPolicy           corev1.PullPolicy
 	ctShareProcess              bool
 	ctShareProcessDefault       string
 	pspAllowPrivilegeEscalation bool
@@ -170,7 +171,7 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 		Name:            "consul-template",
 		Image:           vaultConfig.ctImage,
 		Args:            ctCommandString,
-		ImagePullPolicy: corev1.PullIfNotPresent,
+		ImagePullPolicy: vaultConfig.ctImagePullPolicy,
 		SecurityContext: securityContext,
 		Env:             containerEnvVars,
 		VolumeMounts:    containerVolMounts,
@@ -316,6 +317,19 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.ctImage = val
 	} else {
 		vaultConfig.ctImage = viper.GetString("vault_ct_image")
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-pull-policy"]; ok {
+		switch val {
+		case "Never", "never":
+			vaultConfig.ctImagePullPolicy = corev1.PullNever
+		case "Always", "always":
+			vaultConfig.ctImagePullPolicy = corev1.PullAlways
+		case "IfNotPresent", "ifnotpresent":
+			vaultConfig.ctImagePullPolicy = corev1.PullIfNotPresent
+		}
+	} else {
+		vaultConfig.ctImagePullPolicy = corev1.PullIfNotPresent
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-once"]; ok {
