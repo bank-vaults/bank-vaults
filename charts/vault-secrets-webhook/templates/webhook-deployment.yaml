@@ -40,7 +40,7 @@ spec:
             value: {{ .Values.debug | quote }}
           {{- range $key, $value := .Values.env }}
           - name: {{ $key }}
-            value: {{ $value }}
+            value: {{ $value | quote }}
           {{- end }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
