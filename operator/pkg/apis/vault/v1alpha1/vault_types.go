@@ -107,7 +107,7 @@ type VaultSpec struct {
 	FluentDEnabled             bool                  `json:"fluentdEnabled"`
 	FluentDImage               string                `json:"fluentdImage"`
 	FluentDConfig              string                `json:"fluentdConfig"`
-	WatchedSecretsLabels       map[string]string     `json:"watchedSecretsLabels"`
+	WatchedSecretsLabels       []map[string]string   `json:"watchedSecretsLabels"`
 	Annotations                map[string]string     `json:"annotations"`
 	VaultAnnotations           map[string]string     `json:"vaultAnnotations"`
 	VaultConfigurerAnnotations map[string]string     `json:"vaultConfigurerAnnotations"`
@@ -267,9 +267,9 @@ func (spec *VaultSpec) GetStatsDImage() string {
 }
 
 // GetWatchedSecretsLabels returns the set of labels for secrets to watch in the vault namespace
-func (spec *VaultSpec) GetWatchedSecretsLabels() map[string]string {
+func (spec *VaultSpec) GetWatchedSecretsLabels() []map[string]string {
 	if spec.WatchedSecretsLabels == nil {
-		spec.WatchedSecretsLabels = map[string]string{}
+		spec.WatchedSecretsLabels = []map[string]string{}
 	}
 
 	return spec.WatchedSecretsLabels
