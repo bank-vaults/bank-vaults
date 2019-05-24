@@ -29,8 +29,7 @@ Subseqently using this `consul-template` means it will never start, so we need t
 custom Dockerfile and entrypoint.
 
 ## Configuration
-### Custom consul-temlpate image
-## docker-entrypoint.sh
+### Custom consul-temlpate image; docker-entrypoint.sh
 ```
 #!/bin/dumb-init /bin/sh
 set -ex
@@ -77,7 +76,7 @@ fi
 
 exec "$@"
 ```
-## Dockerfile
+### Dockerfile
 ```
 FROM hashicorp/consul-template:0.19.6-dev-alpine
 
@@ -89,7 +88,7 @@ RUN apk --no-cache add shadow && \
 
 USER consul-template:consul-template
 ```
-## ConfigMap
+### ConfigMap
 ```
 ---
 apiVersion: v1
@@ -123,7 +122,7 @@ data:
     }
 ```
 
-### Vault CR snippets:
+## Vault CR snippets:
 Set the vault image to use:
 ```
 ---
