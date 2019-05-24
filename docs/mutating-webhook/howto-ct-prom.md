@@ -164,6 +164,7 @@ policies :
           }
 ```
 auth:
+```
     auth:
       - type: token
         roles:
