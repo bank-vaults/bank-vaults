@@ -15,19 +15,22 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"syscall"
 
+	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/spf13/cast"
-
-	"github.com/banzaicloud/bank-vaults/pkg/vault"
+	"go.uber.org/zap"
 )
 
 type sanitizedEnviron []string
+
+var logger *zap.Logger
 
 var sanitizeEnvmap = map[string]bool{
 	"VAULT_TOKEN":           true,
@@ -48,6 +51,10 @@ var sanitizeEnvmap = map[string]bool{
 	"VAULT_MFA":             true,
 	"VAULT_ROLE":            true,
 	"VAULT_PATH":            true,
+	"MY_POD_NAME":           true,
+	"NAMESPACE":             true,
+	"CONTAINER_NAME":        true,
+	"REGISTRY_SKIP_VERIFY":  true,
 }
 
 // Appends variable an entry (name=value) into the environ list.
@@ -60,13 +67,17 @@ func (environ *sanitizedEnviron) append(iname interface{}, ivalue interface{}) {
 }
 
 func main() {
+	flag.Parse()
+
+	logger, _ = zap.NewProduction()
+	defer logger.Sync()
+
 	client, err := vault.NewClientWithOptions(
 		vault.ClientRole(os.Getenv("VAULT_ROLE")),
 		vault.ClientAuthPath(os.Getenv("VAULT_PATH")),
 	)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to create vault client: %s\n", err.Error())
-		os.Exit(1)
+		logger.Fatal("Failed to create vault client", zap.Error(err))
 	}
 
 	// initial and sanitized environs
@@ -106,36 +117,35 @@ func main() {
 				var empty map[string]interface{}
 				secret, err = client.Vault().Logical().Write(path, empty)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "failed to write secret '%s': %s\n", path, err.Error())
-					os.Exit(1)
+					logger.Fatal("Failed to write secret", zap.String("path", path), zap.Error(err))
 				}
 			} else {
 				secret, err = client.Vault().Logical().ReadWithData(path, map[string][]string{"version": {version}})
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "failed to read secret '%s': %s\n", path, err.Error())
-					os.Exit(1)
+					logger.Fatal("Failed to read secret", zap.String("path", path), zap.Error(err))
 				}
 			}
 
 			if secret == nil {
-				fmt.Fprintf(os.Stderr, "path not found: %s\n", path)
-				os.Exit(1)
+				logger.Fatal("Path not found", zap.String("path", path))
 			} else {
 				var data map[string]interface{}
 				v2Data, ok := secret.Data["data"]
-
 				if ok {
 					data = cast.ToStringMap(v2Data)
 
 					// Check if a given version of a path is destroyed
 					metadata := secret.Data["metadata"].(map[string]interface{})
 					if metadata["destroyed"].(bool) {
-						fmt.Fprintf(os.Stderr, "Version %s of %s secret has been permanently destroyed\n", version, path)
+						logger.Warn("Version of secret has been permanently destroyed", zap.String("version", version), zap.String("path", path))
 					}
 
 					// Check if a given version of a path still exists
 					if metadata["deletion_time"].(string) != "" {
-						fmt.Fprintf(os.Stderr, "Cannot find data for path: %s, given version (%s) has been deleted at %s\n", path, version, metadata["deletion_time"])
+						logger.Warn("Cannot find data for path, given version has been deleted",
+							zap.String("path", path), zap.String("version", version),
+							zap.String("deletion_time", metadata["deletion_time"].(string)),
+						)
 					}
 				} else {
 					data = cast.ToStringMap(secret.Data)
@@ -143,8 +153,7 @@ func main() {
 				if value, ok := data[key]; ok {
 					sanitized.append(name, value)
 				} else {
-					fmt.Fprintf(os.Stderr, "key not found: %s\n", key)
-					os.Exit(1)
+					logger.Fatal("Key not found", zap.String("key", key))
 				}
 			}
 		} else {
@@ -152,19 +161,22 @@ func main() {
 		}
 	}
 
+	var entrypointCmd []string
 	if len(os.Args) == 1 {
-		fmt.Fprintf(os.Stderr, "no command is given, currently vault-env can't determine the entrypoint (command), please specify it explicitly")
-		os.Exit(1)
+		// reads entrypoint and cmd from image configuration
+		entrypoint, cmd := GetEntrypointCmd(client)
+
+		logger.Info("Retrieved configuration", zap.Strings("entrypoint", entrypoint), zap.Strings("cmd", cmd))
+		entrypointCmd = append(entrypoint, cmd...)
 	} else {
-		binary, err := exec.LookPath(os.Args[1])
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "binary not found: %s\n", os.Args[1])
-			os.Exit(1)
-		}
-		err = syscall.Exec(binary, os.Args[1:], sanitized)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to exec process '%s': %s\n", binary, err.Error())
-			os.Exit(1)
-		}
+		entrypointCmd = os.Args[1:]
+	}
+	binary, err := exec.LookPath(entrypointCmd[0])
+	if err != nil {
+		logger.Fatal("Binary not found", zap.String("binary", entrypointCmd[0]))
+	}
+	err = syscall.Exec(binary, entrypointCmd, sanitized)
+	if err != nil {
+		logger.Fatal("Failed to exec process", zap.String("binary", binary), zap.Error(err))
 	}
 }
