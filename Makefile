@@ -9,6 +9,7 @@ DOCKER_REGISTRY ?= banzaicloud
 DOCKER_IMAGE = ${DOCKER_REGISTRY}/bank-vaults
 WEBHOOK_DOCKER_IMAGE = ${DOCKER_REGISTRY}/vault-secrets-webhook
 OPERATOR_DOCKER_IMAGE = ${DOCKER_REGISTRY}/vault-operator
+VAULT_ENV_DOCKER_IMAGE = ${DOCKER_REGISTRY}/vault-env
 
 # Build variables
 BUILD_DIR ?= build
@@ -70,6 +71,13 @@ docker-webhook: ## Build a Docker-webhook image
 	docker build -t ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.webhook .
 ifeq (${DOCKER_LATEST}, 1)
 	docker tag ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} ${WEBHOOK_DOCKER_IMAGE}:latest
+endif
+
+.PHONY: docker-vault-env
+docker-vault-env: ## Build a Docker-vault-env image
+	docker build -t ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.vault-env .
+ifeq (${DOCKER_LATEST}, 1)
+	docker tag ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} ${VAULT_ENV_DOCKER_IMAGE}:latest
 endif
 
 .PHONY: docker-push
