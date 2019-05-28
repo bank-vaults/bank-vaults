@@ -16,17 +16,24 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	whhttp "github.com/slok/kubewebhook/pkg/http"
 	"github.com/slok/kubewebhook/pkg/log"
 	whcontext "github.com/slok/kubewebhook/pkg/webhook/context"
 	"github.com/slok/kubewebhook/pkg/webhook/mutating"
 	"github.com/spf13/viper"
+	xcontext "golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -503,7 +510,55 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 
 		mutated = true
 
-		args := append(container.Command, container.Args...)
+		args := append(container.Command)
+		if len(args) == 0 {
+			// Pull docker image and inspect
+			ctx := xcontext.Background()
+			cli, err := client.NewEnvClient()
+			if err != nil {
+				panic(err)
+			}
+			options := types.ImagePullOptions{}
+			if viper.IsSet("aws_access_key_id") && strings.Contains(container.Image, "amazonaws.com") {
+				sess := session.New()
+				svc := ecr.New(sess)
+
+				// request the token
+				resp, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
+				if err != nil {
+					panic(err)
+				}
+				data, err := base64.StdEncoding.DecodeString(*resp.AuthorizationData[0].AuthorizationToken)
+				token := strings.SplitN(string(data), ":", 2)
+				authConfig := types.AuthConfig{
+					Username: token[0],
+					Password: token[1],
+				}
+				encodedJSON, err := json.Marshal(authConfig)
+				if err != nil {
+					panic(err)
+				}
+				authStr := base64.URLEncoding.EncodeToString(encodedJSON)
+				options = types.ImagePullOptions{RegistryAuth: authStr}
+			}
+			_, err = cli.ImagePull(ctx, container.Image, options)
+			if err != nil {
+				panic(err)
+			}
+			imageInspect, _, err := cli.ImageInspectWithRaw(ctx, container.Image)
+			if err != nil {
+				panic(err)
+			}
+
+			args = append(args, []string(imageInspect.Config.Entrypoint)...)
+			if len(container.Args) == 0 {
+				args = append(args, []string(imageInspect.Config.Cmd)...)
+			} else {
+				args = append(args, container.Args...)
+			}
+		} else {
+			args = append(args, container.Args...)
+		}
 
 		container.Command = []string{"/vault/vault-env"}
 		container.Args = args
