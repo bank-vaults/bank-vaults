@@ -57,3 +57,5 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 |tolerations                          |tolerations to add                                 |[]                                        |
 |rabc.enabled                         |use rbac                                           |true                                      |
 |rabc.psp.enabled                     |use pod security policy                            |false                                     |
+|env.VAULT_IMAGE                      |vault image                                        |vault:latest                              |
+|env.VAULT_ENV_IMAGE                  |vault-env image                                    |banzaicloud/vault-env:latest              |
