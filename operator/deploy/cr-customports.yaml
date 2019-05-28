@@ -43,6 +43,10 @@ spec:
     # See: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.13/#ingressspec-v1beta1-extensions
     spec: {}
 
+  # Optionally Watch for the cert-manager managed secret and trigger restart of Vault when the secret change
+  watchedSecretsLabels:
+    - certmanager.k8s.io/certificate-name: <my-cert-manager-tls-secret-name>
+
   # Use local disk to store Vault file data, see config section.
   volumes:
     - name: vault-file

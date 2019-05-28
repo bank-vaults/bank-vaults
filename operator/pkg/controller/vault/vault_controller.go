@@ -16,6 +16,8 @@ package vault
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -248,8 +250,33 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
+	// Manage annotation for external secrets to watch and trigger restart of StatefulSet
+	externalSecretsToWatchLabelsSelector := v.Spec.GetWatchedSecretsLabels()
+	externalSecretsToWatchItems := []corev1.Secret{}
+	if len(externalSecretsToWatchLabelsSelector) != 0 {
+
+		for _, filter := range externalSecretsToWatchLabelsSelector {
+
+			externalSecretsToWatch := corev1.SecretList{}
+			externalSecretsToWatchFilter := client.ListOptions{
+				LabelSelector: labels.SelectorFromSet(filter),
+				Namespace:     v.Namespace,
+			}
+
+			if err = r.client.List(context.TODO(), &externalSecretsToWatchFilter, &externalSecretsToWatch); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to list secrets to watch: %v", err)
+			}
+
+			for _, secret := range externalSecretsToWatch.Items {
+				externalSecretsToWatchItems = append(externalSecretsToWatchItems, secret)
+			}
+
+		}
+
+	}
+
 	// Create the StatefulSet if it doesn't exist
-	statefulSet, err := statefulSetForVault(v)
+	statefulSet, err := statefulSetForVault(v, externalSecretsToWatchItems)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to fabricate StatefulSet: %v", err)
 	}
@@ -843,7 +870,7 @@ func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, error) {
 }
 
 // statefulSetForVault returns a Vault StatefulSet object
-func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
+func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []corev1.Secret) (*appsv1.StatefulSet, error) {
 	ls := labelsForVault(v.Name)
 	replicas := v.Spec.Size
 
@@ -953,7 +980,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault) (*appsv1.StatefulSet, error) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      ls,
-					Annotations: withVaultAnnotations(v, withPrometheusAnnotations("9102", getCommonAnnotations(v, map[string]string{}))),
+					Annotations: withVaultAnnotations(v, withVaultWatchedExternalSecrets(v, externalSecretsToWatchItems, withPrometheusAnnotations("9102", getCommonAnnotations(v, map[string]string{})))),
 				},
 				Spec: corev1.PodSpec{
 					Affinity: &corev1.Affinity{
@@ -1075,6 +1102,31 @@ func withVaultConfigurerAnnotations(v *vaultv1alpha1.Vault, annotations map[stri
 	for key, value := range v.Spec.GetVaultConfigurerAnnotations() {
 		annotations[key] = value
 	}
+
+	return annotations
+}
+
+func withVaultWatchedExternalSecrets(v *vaultv1alpha1.Vault, secrets []corev1.Secret, annotations map[string]string) map[string]string {
+	if len(secrets) == 0 {
+		// No Labels Selector was defined in the spec , return the annotations without changes
+		return annotations
+	}
+
+	// Calucalte SHASUM of all data fields in all secrets
+	secretValues := []string{}
+	for _, secret := range secrets {
+		for key, value := range secret.Data {
+			secretValues = append(secretValues, key+"="+string(value[:]))
+		}
+	}
+
+	sort.Strings(secretValues)
+
+	h := hmac.New(sha256.New, []byte(""))
+	h.Write([]byte(strings.Join(secretValues, ";;")))
+
+	// Set the Annotation
+	annotations["vault.banzaicloud.io/watched-secrets-sum"] = fmt.Sprintf("%x", h.Sum(nil))
 
 	return annotations
 }
