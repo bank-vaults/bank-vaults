@@ -529,6 +529,9 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 					panic(err)
 				}
 				data, err := base64.StdEncoding.DecodeString(*resp.AuthorizationData[0].AuthorizationToken)
+				if err != nil {
+					panic(err)
+				}
 				token := strings.SplitN(string(data), ":", 2)
 				authConfig := types.AuthConfig{
 					Username: token[0],
