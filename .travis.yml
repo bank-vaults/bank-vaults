@@ -1,0 +1,34 @@
+sudo: required
+# We need the systemd for the kubeadm and it's default from 16.04+
+dist: xenial
+env:
+  global:
+    - CHANGE_MINIKUBE_NONE_USER=true
+    - MINIKUBE_WANTUPDATENOTIFICATION=false
+    - MINIKUBE_WANTREPORTERRORPROMPT=false
+    - MINIKUBE_HOME=$HOME
+    - CHANGE_MINIKUBE_NONE_USER=true
+    - KUBECONFIG=$HOME/.kube/config
+
+before_script:
+# Download kubectl, which is a requirement for using minikube.
+- curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.13.0/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+# Download minikube.
+- curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.35.0/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+- mkdir -p $HOME/.kube $HOME/.minikube
+- touch $KUBECONFIG
+- sudo minikube start --vm-driver=none --kubernetes-version=v1.13.0 
+- "sudo chown -R travis: /home/travis/.minikube/"
+
+script:
+# Following is just to demo that the kubernetes cluster works.
+- kubectl cluster-info
+# Verify kube-addon-manager.
+# kube-addon-manager is responsible for managing other kubernetes components, such as kube-dns, dashboard, storage-provisioner..
+- JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl -n kube-system get pods -lcomponent=kube-addon-manager -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1;echo "waiting for kube-addon-manager to be available"; kubectl get pods --all-namespaces; done
+# Wait for kube-dns to be ready.
+- JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl -n kube-system get pods -lk8s-app=kube-dns -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1;echo "waiting for kube-dns to be available"; kubectl get pods --all-namespaces; done
+# Create example Redis deployment on Kubernetes.
+- kubectl run travis-example --image=redis --labels="app=travis-example"
+# Make sure created pod is scheduled and running.
+- JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl -n default get pods -lapp=travis-example -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1;echo "waiting for travis-example deployment to be available"; kubectl get pods -n default; done
