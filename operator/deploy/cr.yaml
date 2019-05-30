@@ -45,6 +45,8 @@ spec:
   serviceAccount: vault
 
   # Specify the Service's type where the Vault Service is exposed
+  # Please note that some Ingress controllers like https://github.com/kubernetes/ingress-gce
+  # forces you to expose your Service on a NodePort
   serviceType: ClusterIP
 
   # Request an Ingress controller with the default configuration
