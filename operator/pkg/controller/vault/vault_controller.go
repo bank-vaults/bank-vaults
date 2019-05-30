@@ -117,10 +117,18 @@ func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
 		// Handle special cases for update
 		switch o.(type) {
 		case *corev1.Service:
+			currentSvc := current.(*corev1.Service)
 			svc := o.(*corev1.Service)
-			svc.Spec.ClusterIP = current.(*corev1.Service).Spec.ClusterIP
+			// Preserve the ClusterIP when updating the service
+			svc.Spec.ClusterIP = currentSvc.Spec.ClusterIP
 			// Preserve the annotation when updating the service
-			svc.Annotations = current.(*corev1.Service).Annotations
+			svc.Annotations = currentSvc.Annotations
+
+			if svc.Spec.Type == corev1.ServiceTypeNodePort || svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+				for i := range svc.Spec.Ports {
+					svc.Spec.Ports[i].NodePort = currentSvc.Spec.Ports[i].NodePort
+				}
+			}
 		}
 
 		return r.client.Update(context.TODO(), o)
@@ -520,6 +528,14 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 	// Label to differentiate per-instance service and global service via label selection
 	ls["global_service"] = "true"
 	servicePorts, _ := getServicePorts(v)
+
+	annotations := withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{}))
+
+	// On GKE we need to specifiy the backend protocol on the service if TLS is enabled
+	if ingress := v.GetIngress(); ingress != nil && !v.Spec.GetTLSDisable() {
+		annotations["cloud.google.com/app-protocols"] = "{\"api-port\":\"HTTPS\"}"
+	}
+
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "statsd", Port: 9102})
 	service := &corev1.Service{
@@ -530,7 +546,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        v.Name,
 			Namespace:   v.Namespace,
-			Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
+			Annotations: annotations,
 			Labels:      ls,
 		},
 		Spec: corev1.ServiceSpec{
@@ -655,7 +671,7 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 				Labels:      ls,
 			},
 			Spec: corev1.ServiceSpec{
-				Type:     serviceType(v),
+				Type:     corev1.ServiceTypeClusterIP,
 				Selector: ls,
 				Ports:    servicePorts,
 			},
