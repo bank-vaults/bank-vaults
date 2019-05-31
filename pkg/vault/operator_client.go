@@ -1310,11 +1310,10 @@ func isOverwriteProhibitedError(err error) bool {
 func getMountConfigInput(secretEngine map[string]interface{}) (api.MountConfigInput, error) {
 	var mountConfigInput api.MountConfigInput
 	config, ok := secretEngine["config"]
-	if !ok {
-		return api.MountConfigInput{}, nil
-	}
-	if err := mapstructure.Decode(config, &mountConfigInput); err != nil {
-		return mountConfigInput, fmt.Errorf("error parsing config for secret engine: %s", err.Error())
+	if ok {
+		if err := mapstructure.Decode(config, &mountConfigInput); err != nil {
+			return mountConfigInput, fmt.Errorf("error parsing config for secret engine: %s", err.Error())
+		}
 	}
 
 	// Bank-Vaults supported options outside config to be used options in the mount request
