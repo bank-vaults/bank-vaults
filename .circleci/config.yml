@@ -22,7 +22,6 @@ jobs:
           name: Restore Go module cache
           keys:
           - gomod-v3-{{ checksum "go.sum" }}
-          - gomod-v3-master
           - gomod-v3
 
       - run:
@@ -39,7 +38,6 @@ jobs:
           name: Restore license cache
           keys:
               - licensei-v3-{{ checksum "go.sum" }}
-              - licensei-v3-master
               - licensei-v3
 
       - run:
@@ -113,7 +111,6 @@ jobs:
           name: Restore Go module cache
           keys:
           - gomod-v3-{{ checksum "go.sum" }}
-          - gomod-v3-master
           - gomod-v3
 
       - run:
