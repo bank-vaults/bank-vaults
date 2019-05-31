@@ -10,6 +10,9 @@ function finish {
     kubectl get services --show-labels -l vault_cr=vault
     kubectl get ep --show-labels -l vault_cr=vault
     kubectl logs deployment/vault-configurer
+    kubectl logs -n vswh deployment/vault-secrets-webhook
+    kubectl describe deployment/hello-secrets
+    kubectl describe rs hello-secrets
 }
 
 trap finish EXIT
@@ -48,6 +51,13 @@ kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
 # Give bank-vaults some time to let the Kubernetes auth backend configuration happen
 sleep 20
 
+# Run an internal client which tries to read from Vault with the configured Kubernetes auth backend
 go get -v github.com/banzaicloud/kurun
 export PATH=${PATH}:${GOPATH}/bin
 kurun cmd/examples/main.go
+
+
+# Run the webhook test, the hello-secrets deployment should be successfully mutated
+helm install --name vault-secrets-webhook banzaicloud-stable/vault-secrets-webhook --set image.tag=latest --set image.pullPolicy=IfNotPresent --set env.VAULT_ENV_IMAGE=latest --namespace vswh --wait
+kubectl apply -f deploy/test-deployment.yaml
+kubectl wait --for=condition=available deployment/hello-secrets --timeout=60s
