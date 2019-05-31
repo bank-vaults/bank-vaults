@@ -152,7 +152,7 @@ jobs:
             helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com/
 
       - run:
-          name: Operator acceptance test
+          name: Operator and webhook acceptance test
           command:
             hack/acceptance-test.sh
 

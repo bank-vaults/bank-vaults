@@ -60,6 +60,12 @@ kurun cmd/examples/main.go
 
 
 # Run the webhook test, the hello-secrets deployment should be successfully mutated
-helm install --name vault-secrets-webhook banzaicloud-stable/vault-secrets-webhook --set image.tag=latest --set image.pullPolicy=IfNotPresent --set env.VAULT_ENV_IMAGE=banzaicloud/vault-env:latest --namespace vswh --wait
+helm install banzaicloud-stable/vault-secrets-webhook \
+    --name vault-secrets-webhook \
+    --set image.tag=latest \
+    --set image.pullPolicy=IfNotPresent \
+    --set env.VAULT_ENV_IMAGE=banzaicloud/vault-env:latest \
+    --namespace vswh \
+    --wait
 kubectl apply -f deploy/test-deployment.yaml
 kubectl wait --for=condition=available deployment/hello-secrets --timeout=120s
