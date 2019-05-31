@@ -62,6 +62,7 @@ spec:
         rules: path "secret/*" {
           capabilities = ["create", "read", "update", "delete", "list"]
           }
+
     auth:
       - type: kubernetes
         roles:
@@ -71,3 +72,20 @@ spec:
             bound_service_account_namespaces: default
             policies: allow_secrets
             ttl: 1h
+
+    secrets:
+      - path: secret
+        type: kv
+        description: General secrets.
+        options:
+          version: 2
+
+    # Allows writing some secrets to Vault (useful for development purposes).
+    # See https://www.vaultproject.io/docs/secrets/kv/index.html for more information.
+    startupSecrets:
+      - type: kv
+        path: secret/data/accounts/aws
+        data:
+          data:
+            AWS_ACCESS_KEY_ID: secretId
+            AWS_SECRET_ACCESS_KEY: s3cr3t
