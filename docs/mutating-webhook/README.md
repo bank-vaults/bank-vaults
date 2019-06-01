@@ -116,3 +116,27 @@ spec:
         - name: AWS_SECRET_ACCESS_KEY
           value: vault:secret/data/valami/aws#AWS_SECRET_ACCESS_KEY
 ```
+
+## Getting secret data from vault and replace it in sercret data
+
+You can mutate secrets as well if you set your secret annotations and define proper vault path in secret data:
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sample-secret
+  annotations:
+    vault.security.banzaicloud.io/vault-addr: "https://vault.default.svc.cluster.local:8200"
+    vault.security.banzaicloud.io/vault-role: "default"
+    vault.security.banzaicloud.io/vault-skip-verify: "true"
+    vault.security.banzaicloud.io/vault-path: "kubernetes"
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJodHRwczovL2RvY2tlci5pbyI6eyJ1c2VybmFtZSI6InZhdWx0OnNlY3JldC9kYXRhL2RvY2tlcnJlcG8vI0RPQ0tFUl9SRVBPX1VTRVIiLCJwYXNzd29yZCI6InZhdWx0OnNlY3JldC9kYXRhL2RvY2tlcnJlcG8vI0RPQ0tFUl9SRVBPX1BBU1NXT1JEIiwiYXV0aCI6ImRtRjFiSFE2YzJWamNtVjBMMlJoZEdFdlpHOWphMlZ5Y21Wd2J5OGpSRTlEUzBWU1gxSkZVRTlmVlZORlVqcDJZWFZzZERwelpXTnlaWFF2WkdGMFlTOWtiMk5yWlhKeVpYQnZMeU5FVDBOTFJWSmZVa1ZRVDE5UVFWTlRWMDlTUkE9PSJ9fX0=
+```
+
+For example above the secret type is `kubernetes.io/dockerconfigjson` and the webhook can get credentials from vault.
+The base64 encoded data contain vault path in case of username and password for docker repository
+```
+.dockerconfigjson:  {"auths":{"https://docker.io":{"username":"vault:secret/data/dockerrepo/#DOCKER_REPO_USER","password":"vault:secret/data/dockerrepo/#DOCKER_REPO_PASSWORD","auth":"dmF1bHQ6c2VjcmV0L2RhdGEvZG9ja2VycmVwby8jRE9DS0VSX1JFUE9fVVNFUjp2YXVsdDpzZWNyZXQvZGF0YS9kb2NrZXJyZXBvLyNET0NLRVJfUkVQT19QQVNTV09SRA=="}}}
+```
