@@ -50,18 +50,12 @@ func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultCon
 		if key == ".dockerconfigjson" {
 			var dc dockerCreds
 			_ = json.Unmarshal(value, &dc)
-			mutated, _ := mutateDockerCreds(secret, &dc, vaultConfig)
-			if mutated {
-				logger.Infof("Docker credentials mutated successfully")
-			}
+			_ = mutateDockerCreds(secret, &dc, vaultConfig)
 		} else {
 			sc := map[string]string{
 				key: string(value),
 			}
-			mutated, _ := mutateSecretCreds(secret, sc, vaultConfig)
-			if mutated {
-				logger.Infof("Secrets data mutated successfully")
-			}
+			_ = mutateSecretCreds(secret, sc, vaultConfig)
 		}
 	}
 
@@ -71,8 +65,7 @@ func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultCon
 	return nil
 }
 
-func mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultConfig vaultConfig) (bool, error) {
-	mutated := false
+func mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultConfig vaultConfig) error {
 	logger := &log.Std{Debug: viper.GetBool("debug")}
 
 	var assembled dockerCreds
@@ -104,23 +97,19 @@ func mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultConfig vault
 	logger.Debugf("assembled %s", marhalled)
 
 	secret.Data[".dockerconfigjson"] = marhalled
-	mutated = true
 
-	return mutated, nil
+	return nil
 }
 
-func mutateSecretCreds(secret *corev1.Secret, sc map[string]string, vaultConfig vaultConfig) (bool, error) {
-	mutated := false
-
+func mutateSecretCreds(secret *corev1.Secret, sc map[string]string, vaultConfig vaultConfig) error {
 	logger := &log.Std{Debug: viper.GetBool("debug")}
 	logger.Debugf("simple secret %s", sc)
 
 	secCreds := getCredsFromVault(sc, vaultConfig)
 	for key, value := range secCreds {
 		secret.Data[key] = []byte(value)
-		mutated = true
 	}
-	return mutated, nil
+	return nil
 }
 
 func getCredsFromVault(creds map[string]string, vaultConfig vaultConfig) map[string]string {
