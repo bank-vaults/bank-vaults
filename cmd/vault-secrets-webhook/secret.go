@@ -43,21 +43,30 @@ func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultCon
 	logger := &log.Std{Debug: viper.GetBool("debug")}
 	logger.Debugf("SecretData: %s", secret.Data)
 
+	os.Setenv("VAULT_ADDR", vaultConfig.addr)
+	os.Setenv("VAULT_SKIP_VERIFY", vaultConfig.skipVerify)
+
 	for key, value := range secret.Data {
 		if key == ".dockerconfigjson" {
 			var dc dockerCreds
 			_ = json.Unmarshal(value, &dc)
-			mutateDockerCreds(secret, &dc, vaultConfig)
+			mutated, _ := mutateDockerCreds(secret, &dc, vaultConfig)
+			if mutated {
+				logger.Infof("Docker credentials mutated successfully")
+			}
 		} else {
 			sc := map[string]string{
 				key: string(value),
 			}
 			mutated, _ := mutateSecretCreds(secret, sc, vaultConfig)
 			if mutated {
-				logger.Infof("Mutated successfully")
+				logger.Infof("Secrets data mutated successfully")
 			}
 		}
 	}
+
+	os.Unsetenv("VAULT_ADDR")
+	os.Unsetenv("VAULT_SKIP_VERIFY")
 
 	return nil
 }
@@ -116,8 +125,6 @@ func mutateSecretCreds(secret *corev1.Secret, sc map[string]string, vaultConfig 
 
 func getCredsFromVault(creds map[string]string, vaultConfig vaultConfig) map[string]string {
 	logger := &log.Std{Debug: viper.GetBool("debug")}
-	os.Setenv("VAULT_ADDR", vaultConfig.addr)
-	os.Setenv("VAULT_SKIP_VERIFY", vaultConfig.skipVerify)
 
 	logger.Debugf("Vaultconfig %s", vaultConfig)
 
