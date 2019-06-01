@@ -30,7 +30,7 @@ import (
 )
 
 type dockerCreds struct {
-	Auths map[string]*dockerCred `json:"auths"`
+	Auths map[string]dockerCred `json:"auths"`
 }
 
 type dockerCred struct {
@@ -66,7 +66,8 @@ func mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultConfig vault
 	mutated := false
 	logger := &log.Std{Debug: viper.GetBool("debug")}
 
-	
+	var assembled dockerCreds
+	assembled.Auths = make(map[string]dockerCred)
 	for key, creds := range dc.Auths {
 		if strings.HasPrefix(string(creds.Auth), "vault:") {
 			logger.Debugf("auth %s %s", key, creds.Auth)
@@ -80,18 +81,21 @@ func mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultConfig vault
 			}
 
 			dcCreds := getCredsFromVault(credPath, vaultConfig)
-			logger.Infof("dccreds %s --- %s", key, dcCreds)
-
 			dockerAuths := dockerCred{
 				Auth: []byte(fmt.Sprintf("%s:%s", dcCreds["username"], dcCreds["password"])),
 			}
 			if creds.Username != "" && creds.Password != "" {
-				dockerAuths.Username = dcCreds["password"]
+				dockerAuths.Username = dcCreds["username"]
 				dockerAuths.Password = dcCreds["password"]
 			}
+			assembled.Auths[key] = dockerAuths
 		}
 	}
-	//logger.Infof("assembled %v", dockerCred)
+	marhalled, _ := json.Marshal(assembled)
+	logger.Debugf("assembled %s", marhalled)
+
+	secret.Data[".dockerconfigjson"] = marhalled
+	mutated = true
 
 	return mutated, nil
 }
@@ -100,7 +104,7 @@ func mutateSecretCreds(secret *corev1.Secret, sc map[string]string, vaultConfig 
 	mutated := false
 
 	logger := &log.Std{Debug: viper.GetBool("debug")}
-	logger.Infof("simple secret %s", sc)
+	logger.Debugf("simple secret %s", sc)
 
 	secCreds := getCredsFromVault(sc, vaultConfig)
 	for key, value := range secCreds {
