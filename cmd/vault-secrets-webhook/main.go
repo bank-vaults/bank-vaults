@@ -255,18 +255,17 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger log.L
 }
 
 func vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
-	var podSpec *corev1.PodSpec
 
 	switch v := obj.(type) {
 	case *corev1.Pod:
-		podSpec = &v.Spec
+		podSpec := &v.Spec
+		return false, mutatePodSpec(obj, podSpec, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
+	case *corev1.Secret:
+		secret := v
+		return false, mutateSecret(obj, secret, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
 	default:
 		return false, nil
 	}
-
-	vaultConfig := parseVaultConfig(obj)
-
-	return false, mutatePodSpec(obj, podSpec, vaultConfig, whcontext.GetAdmissionRequest(ctx).Namespace)
 }
 
 func parseVaultConfig(obj metav1.Object) vaultConfig {
@@ -735,9 +734,11 @@ func main() {
 	mutator := mutating.MutatorFunc(vaultSecretsMutator)
 
 	podHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-pods", Obj: &corev1.Pod{}}, mutator, logger)
+	secretHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-secret", Obj: &corev1.Secret{}}, mutator, logger)
 
 	mux := http.NewServeMux()
 	mux.Handle("/pods", podHandler)
+	mux.Handle("/secrets", secretHandler)
 
 	logger.Infof("Listening on :8443")
 	err := http.ListenAndServeTLS(":8443", viper.GetString("tls_cert_file"), viper.GetString("tls_private_key_file"), mux)
