@@ -262,7 +262,10 @@ func vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
 		return false, mutatePodSpec(obj, podSpec, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
 	case *corev1.Secret:
 		secret := v
-		return false, mutateSecret(obj, secret, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
+		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/vault-addr"]; ok {
+			return false, mutateSecret(obj, secret, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
+		}
+		return false, nil
 	default:
 		return false, nil
 	}
