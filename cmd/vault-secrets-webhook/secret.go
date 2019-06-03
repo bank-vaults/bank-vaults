@@ -136,7 +136,7 @@ func getCredsFromVault(creds map[string]string, vaultConfig vaultConfig) (map[st
 	)
 
 	if err != nil {
-		return map[string]string{}, fmt.Errorf("failed to create vault client: %v", err)
+		return nil, fmt.Errorf("failed to create vault client: %v", err)
 	}
 
 	var secCreds = make(map[string]string)
