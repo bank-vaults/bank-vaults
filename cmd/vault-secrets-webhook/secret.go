@@ -79,7 +79,7 @@ func mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultConfig vault
 		if strings.HasPrefix(string(creds.Auth), "vault:") {
 			logger.Debugf("auth %s %s", key, creds.Auth)
 			split := strings.Split(creds.Auth, ":")
-			if len(split) < 4 {
+			if len(split) != 4 {
 				return errors.New("splitting auth credentials failed")
 			}
 			username := fmt.Sprintf("%s:%s", split[0], split[1])
