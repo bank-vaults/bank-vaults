@@ -22,8 +22,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
+	log "github.com/sirupsen/logrus"
 	whhttp "github.com/slok/kubewebhook/pkg/http"
-	"github.com/slok/kubewebhook/pkg/log"
 	whcontext "github.com/slok/kubewebhook/pkg/webhook/context"
 	"github.com/slok/kubewebhook/pkg/webhook/mutating"
 	"github.com/spf13/viper"
@@ -181,7 +182,7 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 	return containers
 }
 
-func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger log.Logger) []corev1.Volume {
+func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger *log.Logger) []corev1.Volume {
 	logger.Debugf("Add generic volumes to podspec")
 
 	volumes := []corev1.Volume{
@@ -477,7 +478,7 @@ func lookForValueFrom(env corev1.EnvVar, ns string) (*corev1.EnvVar, error) {
 	return nil, nil
 }
 
-func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns string) (bool, error) {
+func mutateContainers(containers []corev1.Container, podSpec *corev1.PodSpec, vaultConfig vaultConfig, ns string) (bool, error) {
 	mutated := false
 
 	for i, container := range containers {
@@ -513,6 +514,22 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 		mutated = true
 
 		args := append(container.Command, container.Args...)
+
+		// the container has no explicitly specified command
+		if len(args) == 0 {
+			clientset, err := newClientSet()
+			if err != nil {
+				return false, err
+			}
+
+			entrypoint, cmd, err := registry.GetEntrypointCmd(clientset, ns, &container, podSpec)
+			if err != nil {
+				return false, err
+			}
+
+			args = append(args, entrypoint...)
+			args = append(args, cmd...)
+		}
 
 		container.Command = []string{"/vault/vault-env"}
 		container.Args = args
@@ -560,7 +577,7 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 	return mutated, nil
 }
 
-func addSecretsVolToContainers(containers []corev1.Container, logger log.Logger) {
+func addSecretsVolToContainers(containers []corev1.Container, logger *log.Logger) {
 
 	for i, container := range containers {
 
@@ -578,6 +595,7 @@ func addSecretsVolToContainers(containers []corev1.Container, logger log.Logger)
 
 }
 
+// TODO replace all the calls with a global clientset
 func newClientSet() (*kubernetes.Clientset, error) {
 	kubeConfig, err := rest.InClusterConfig()
 	if err != nil {
@@ -593,8 +611,6 @@ func newClientSet() (*kubernetes.Clientset, error) {
 
 func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vaultConfig, ns string) error {
 
-	logger := &log.Std{Debug: viper.GetBool("debug")}
-
 	clientset, err := newClientSet()
 	if err != nil {
 		return err
@@ -602,7 +618,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 
 	logger.Debugf("Successfully connected to the API")
 
-	initContainersMutated, err := mutateContainers(podSpec.InitContainers, vaultConfig, ns)
+	initContainersMutated, err := mutateContainers(podSpec.InitContainers, podSpec, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
@@ -613,7 +629,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		logger.Debugf("No pod init containers were mutated")
 	}
 
-	containersMutated, err := mutateContainers(podSpec.Containers, vaultConfig, ns)
+	containersMutated, err := mutateContainers(podSpec.Containers, podSpec, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
@@ -710,11 +726,11 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 	return nil
 }
 
-func initConfig() {
+func init() {
 	viper.SetDefault("vault_image", "vault:latest")
 	viper.SetDefault("vault_env_image", "banzaicloud/vault-env:latest")
 	viper.SetDefault("vault_ct_image", "hashicorp/consul-template:0.19.6-dev-alpine")
-	viper.SetDefault("vault_addr", "https://127.0.0.1:8200")
+	viper.SetDefault("vault_addr", "https://vault:8200")
 	viper.SetDefault("vault_skip_verify", "false")
 	viper.SetDefault("vault_tls_secret", "")
 	viper.SetDefault("vault_agent", "true")
@@ -722,9 +738,11 @@ func initConfig() {
 	viper.SetDefault("psp_allow_privilege_escalation", "false")
 	viper.SetDefault("vault_ignore_missing_secrets", "false")
 	viper.AutomaticEnv()
+
+	logger = log.New()
 }
 
-func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, logger log.Logger) http.Handler {
+func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, logger *log.Logger) http.Handler {
 	webhook, err := mutating.NewWebhook(config, mutator, nil, nil, logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error creating webhook: %s", err)
@@ -740,11 +758,9 @@ func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, log
 	return handler
 }
 
+var logger *log.Logger
+
 func main() {
-
-	initConfig()
-
-	logger := &log.Std{Debug: viper.GetBool("debug")}
 
 	mutator := mutating.MutatorFunc(vaultSecretsMutator)
 
