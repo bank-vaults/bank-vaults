@@ -144,3 +144,18 @@ kubectl annotate secret dockerhub vault.security.banzaicloud.io/vault-role="defa
 kubectl annotate secret dockerhub vault.security.banzaicloud.io/vault-skip-verify="true"
 kubectl annotate secret dockerhub vault.security.banzaicloud.io/vault-path="kubernetes"
 ```
+
+
+## Using charts without explicit container.command and container.args:
+
+```bash
+helm upgrade --install mysql stable/mysql --set mysqlRootPassword=vault:secret/data/mysql#MYSQL_ROOT_PASSWORD --set-string "podAnnotations.vault\.security\.banzaicloud\.io/vault-skip-verify=true"
+```
+
+When using a private image repository:
+
+```bash
+kubectl create secret docker-registry dockerhub --docker-username=${DOCKER_USERNAME} --docker-password=$DOCKER_PASSWORD --docker-server=https://index.docker.io
+
+helm upgrade --install mysql stable/mysql --set mysqlRootPassword=vault:secret/data/mysql#MYSQL_ROOT_PASSWORD --set "imagePullSecrets[0].name=dockerhub" --set-string "podAnnotations.vault\.security\.banzaicloud\.io/vault-skip-verify=true" --set image="private-repo/mysql"
+```
