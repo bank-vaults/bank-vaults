@@ -49,13 +49,22 @@ func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultCon
 	for key, value := range secret.Data {
 		if key == ".dockerconfigjson" {
 			var dc dockerCreds
-			_ = json.Unmarshal(value, &dc)
-			_ = mutateDockerCreds(secret, &dc, vaultConfig)
+			err := json.Unmarshal(value, &dc)
+			if err != nil {
+				return fmt.Errorf("unmarshal dockerconfig json failed: %v", err)
+			}
+			err = mutateDockerCreds(secret, &dc, vaultConfig)
+			if err != nil {
+				return fmt.Errorf("mutate dockerconfig json failed: %v", err)
+			}
 		} else {
 			sc := map[string]string{
 				key: string(value),
 			}
-			_ = mutateSecretCreds(secret, sc, vaultConfig)
+			err := mutateSecretCreds(secret, sc, vaultConfig)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -82,7 +91,10 @@ func mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultConfig vault
 				"password": password,
 			}
 
-			dcCreds := getCredsFromVault(credPath, vaultConfig)
+			dcCreds, err := getCredsFromVault(credPath, vaultConfig)
+			if err != nil {
+				return err
+			}
 			dockerAuths := dockerCred{
 				Auth: []byte(fmt.Sprintf("%s:%s", dcCreds["username"], dcCreds["password"])),
 			}
@@ -93,7 +105,10 @@ func mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultConfig vault
 			assembled.Auths[key] = dockerAuths
 		}
 	}
-	marhalled, _ := json.Marshal(assembled)
+	marhalled, err := json.Marshal(assembled)
+	if err != nil {
+		return fmt.Errorf("marshaling dockerconfig failed: %v", err)
+	}
 	logger.Debugf("assembled %s", marhalled)
 
 	secret.Data[".dockerconfigjson"] = marhalled
@@ -105,14 +120,17 @@ func mutateSecretCreds(secret *corev1.Secret, sc map[string]string, vaultConfig 
 	logger := &log.Std{Debug: viper.GetBool("debug")}
 	logger.Debugf("simple secret %s", sc)
 
-	secCreds := getCredsFromVault(sc, vaultConfig)
+	secCreds, err := getCredsFromVault(sc, vaultConfig)
+	if err != nil {
+		return err
+	}
 	for key, value := range secCreds {
 		secret.Data[key] = []byte(value)
 	}
 	return nil
 }
 
-func getCredsFromVault(creds map[string]string, vaultConfig vaultConfig) map[string]string {
+func getCredsFromVault(creds map[string]string, vaultConfig vaultConfig) (map[string]string, error) {
 	logger := &log.Std{Debug: viper.GetBool("debug")}
 
 	logger.Debugf("Vaultconfig %s", vaultConfig)
@@ -123,7 +141,7 @@ func getCredsFromVault(creds map[string]string, vaultConfig vaultConfig) map[str
 	)
 
 	if err != nil {
-		logger.Errorf("Failed to create vault client")
+		return map[string]string{}, fmt.Errorf("failed to create vault client: %v", err)
 	}
 
 	var secCreds = make(map[string]string)
@@ -162,5 +180,5 @@ func getCredsFromVault(creds map[string]string, vaultConfig vaultConfig) map[str
 			secCreds[key] = cast.ToString(data[vaultKey])
 		}
 	}
-	return secCreds
+	return secCreds, nil
 }
