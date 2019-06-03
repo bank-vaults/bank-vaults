@@ -20,12 +20,12 @@ import (
 	"os"
 	"reflect"
 
+	dockerTypes "github.com/docker/docker/api/types"
 	"go.uber.org/zap"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-
-	v1 "k8s.io/api/core/v1"
 )
 
 // K8s structure keeps information retrieved from POD definition
@@ -38,6 +38,10 @@ type K8s struct {
 	RegistryUsername string
 	RegistryPassword string
 	Image            string
+}
+
+type dockerCreds struct {
+	Auths map[string]dockerTypes.AuthConfig `json:"auths"`
 }
 
 func (k *K8s) newClientSet() error {
@@ -73,13 +77,13 @@ func (k *K8s) getPod(podName string) (*v1.Pod, error) {
 	return pod, nil
 }
 
-func (k *K8s) parseDockerConfig(dockerConfigJSON map[string]interface{}) {
-	k.RegistryName = reflect.ValueOf(dockerConfigJSON["auths"]).MapKeys()[0].String()
+func (k *K8s) parseDockerConfig(dockerCreds dockerCreds) {
+	k.RegistryName = reflect.ValueOf(dockerCreds.Auths).MapKeys()[0].String()
 	k.RegistryAddress = fmt.Sprintf("https://%s", k.RegistryName)
 
-	auths := dockerConfigJSON["auths"].(map[string]interface{})
-	k.RegistryUsername = auths[k.RegistryName].(map[string]interface{})["username"].(string)
-	k.RegistryPassword = auths[k.RegistryName].(map[string]interface{})["password"].(string)
+	auths := dockerCreds.Auths
+	k.RegistryUsername = auths[k.RegistryName].Username
+	k.RegistryPassword = auths[k.RegistryName].Password
 }
 
 // Load reads information from k8s and load them into the structure
@@ -114,14 +118,14 @@ func (k *K8s) Load() {
 			if err != nil {
 				logger.Fatal("Cannot read imagePullSecrets", zap.Error(err))
 			}
-			dockerConfig := data[".dockerconfigjson"]
+			dockerConfig := data[v1.DockerConfigJsonKey]
 			//parse config
-			jsonMap := make(map[string]interface{})
-			err = json.Unmarshal(dockerConfig, &jsonMap)
+			var dockerCreds dockerCreds
+			err = json.Unmarshal(dockerConfig, &dockerCreds)
 			if err != nil {
 				logger.Fatal("Cannot unmarshal docker configuration from imagePullSecrets", zap.Error(err))
 			}
-			k.parseDockerConfig(jsonMap)
+			k.parseDockerConfig(dockerCreds)
 		}
 	}
 }
