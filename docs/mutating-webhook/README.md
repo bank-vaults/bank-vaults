@@ -136,7 +136,7 @@ data:
 ```
 
 In the example above the secret type is `kubernetes.io/dockerconfigjson` and the webhook can get credentials from vault.
-The base64 encoded data contain vault path in case of username and password for docker repository
+The base64 encoded data contain vault path in case of username and password for docker repository and you cna create it with command:
 ```
-.dockerconfigjson:  {"auths":{"https://docker.io":{"username":"vault:secret/data/dockerrepo/#DOCKER_REPO_USER","password":"vault:secret/data/dockerrepo/#DOCKER_REPO_PASSWORD","auth":"dmF1bHQ6c2VjcmV0L2RhdGEvZG9ja2VycmVwby8jRE9DS0VSX1JFUE9fVVNFUjp2YXVsdDpzZWNyZXQvZGF0YS9kb2NrZXJyZXBvLyNET0NLRVJfUkVQT19QQVNTV09SRA=="}}}
+kubectl create secret docker-registry dockerhub --docker-username="vault:secret/data/dockerrepo/#DOCKER_REPO_USER" --docker-password="vault:secret/data/dockerrepo/#DOCKER_REPO_PASSWORD"
 ```
