@@ -22,6 +22,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	dockerTypes "github.com/docker/docker/api/types"
 	vaultapi "github.com/hashicorp/vault/api"
@@ -32,12 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type dockerCreds struct {
-	Auths map[string]dockerTypes.AuthConfig `json:"auths"`
-}
-
 func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultConfig, ns string) error {
-	logger := &log.Std{Debug: viper.GetBool("debug")}
 	logger.Debugf("SecretData: %s", secret.Data)
 
 	os.Setenv("VAULT_ADDR", vaultConfig.addr)
@@ -45,7 +41,7 @@ func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultCon
 
 	for key, value := range secret.Data {
 		if key == corev1.DockerConfigJsonKey {
-			var dc dockerCreds
+			var dc registry.DockerCreds
 			err := json.Unmarshal(value, &dc)
 			if err != nil {
 				return fmt.Errorf("unmarshal dockerconfig json failed: %v", err)
@@ -71,10 +67,10 @@ func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultCon
 	return nil
 }
 
-func mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultConfig vaultConfig) error {
+func mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultConfig vaultConfig) error {
 	logger := &log.Std{Debug: viper.GetBool("debug")}
 
-	assembled := dockerCreds{Auths: map[string]dockerTypes.AuthConfig{}}
+	assembled := registry.DockerCreds{Auths: map[string]dockerTypes.AuthConfig{}}
 
 	for key, creds := range dc.Auths {
 		authBytes, err := base64.StdEncoding.DecodeString(creds.Auth)

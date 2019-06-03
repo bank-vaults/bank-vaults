@@ -32,3 +32,5 @@ spec:
         env:
         - name: AWS_SECRET_ACCESS_KEY
           value: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
+      # imagePullSecrets:
+      # - sample-secret
