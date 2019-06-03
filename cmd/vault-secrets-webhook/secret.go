@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
+	dockerTypes "github.com/docker/docker/api/types"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/slok/kubewebhook/pkg/log"
 	"github.com/spf13/cast"
@@ -30,13 +31,7 @@ import (
 )
 
 type dockerCreds struct {
-	Auths map[string]dockerCred `json:"auths"`
-}
-
-type dockerCred struct {
-	Username string `json:"username,omitempty"`
-	Password string `json:"password,omitempty"`
-	Auth     []byte `json:"auth"`
+	Auths map[string]dockerTypes.AuthConfig `json:"auths"`
 }
 
 func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultConfig, ns string) error {
@@ -47,7 +42,7 @@ func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultCon
 	os.Setenv("VAULT_SKIP_VERIFY", vaultConfig.skipVerify)
 
 	for key, value := range secret.Data {
-		if key == ".dockerconfigjson" {
+		if key == corev1.DockerConfigJsonKey {
 			var dc dockerCreds
 			err := json.Unmarshal(value, &dc)
 			if err != nil {
@@ -78,11 +73,11 @@ func mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultConfig vault
 	logger := &log.Std{Debug: viper.GetBool("debug")}
 
 	var assembled dockerCreds
-	assembled.Auths = make(map[string]dockerCred)
+
 	for key, creds := range dc.Auths {
 		if strings.HasPrefix(string(creds.Auth), "vault:") {
 			logger.Debugf("auth %s %s", key, creds.Auth)
-			split := strings.Split(string(creds.Auth), ":")
+			split := strings.Split(creds.Auth, ":")
 			username := fmt.Sprintf("%s:%s", split[0], split[1])
 			password := fmt.Sprintf("%s:%s", split[2], split[3])
 
@@ -95,23 +90,23 @@ func mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultConfig vault
 			if err != nil {
 				return err
 			}
-			dockerAuths := dockerCred{
-				Auth: []byte(fmt.Sprintf("%s:%s", dcCreds["username"], dcCreds["password"])),
+			dockerAuth := dockerTypes.AuthConfig{
+				Auth: fmt.Sprintf("%s:%s", dcCreds["username"], dcCreds["password"]),
 			}
 			if creds.Username != "" && creds.Password != "" {
-				dockerAuths.Username = dcCreds["username"]
-				dockerAuths.Password = dcCreds["password"]
+				dockerAuth.Username = dcCreds["username"]
+				dockerAuth.Password = dcCreds["password"]
 			}
-			assembled.Auths[key] = dockerAuths
+			assembled.Auths[key] = dockerAuth
 		}
 	}
-	marhalled, err := json.Marshal(assembled)
+	marshalled, err := json.Marshal(assembled)
 	if err != nil {
 		return fmt.Errorf("marshaling dockerconfig failed: %v", err)
 	}
-	logger.Debugf("assembled %s", marhalled)
+	logger.Debugf("assembled %s", marshalled)
 
-	secret.Data[".dockerconfigjson"] = marhalled
+	secret.Data[corev1.DockerConfigJsonKey] = marshalled
 
 	return nil
 }

@@ -30,6 +30,9 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dimchansky/utfbom v1.1.0 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
+	github.com/docker/docker v1.13.1
+	github.com/docker/go-connections v0.4.0 // indirect
+	github.com/docker/go-units v0.4.0 // indirect
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
 	github.com/emicklei/go-restful v2.9.3+incompatible // indirect
 	github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5 // indirect
@@ -47,6 +50,7 @@ require (
 	github.com/google/martian v2.1.0+incompatible // indirect
 	github.com/google/uuid v0.0.0-20171113160352-8c31c18f31ed // indirect
 	github.com/googleapis/gnostic v0.1.0 // indirect
+	github.com/gorilla/mux v1.7.2 // indirect
 	github.com/gosimple/slug v1.1.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
