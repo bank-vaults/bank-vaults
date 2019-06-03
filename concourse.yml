@@ -1,0 +1,33 @@
+resources:
+- name: bank-vaults-git
+  type: git
+  source: {uri: "https://github.com/banzaicloud/bank-vaults"}
+
+- name: golang-image
+  type: registry-image
+  icon: docker
+  source:
+      repository: golang
+      tag: 1.12-stretch
+
+jobs:
+- name: test
+  plan:
+  - get: bank-vaults-git
+    trigger: true
+  - get: golang-image
+    trigger: true
+  - task: test-task
+    image: golang-image
+    config:
+      inputs:
+        - name:  bank-vaults-git
+      platform: linux
+      run:
+        path: /bin/bash
+        args:
+          - '-c'
+          - |
+            cd bank-vaults-git
+            go mod download
+            make check
