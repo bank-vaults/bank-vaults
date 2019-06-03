@@ -50,6 +50,7 @@ require (
 	github.com/google/martian v2.1.0+incompatible // indirect
 	github.com/google/uuid v0.0.0-20171113160352-8c31c18f31ed // indirect
 	github.com/googleapis/gnostic v0.1.0 // indirect
+	github.com/gorilla/mux v1.7.2 // indirect
 	github.com/gosimple/slug v1.1.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
