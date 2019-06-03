@@ -1,1 +1,22 @@
 buildPack: go
+pipelineConfig:
+  agent: {}
+  pipelines:
+    feature:
+      build:
+        steps:
+        - agent: {}
+          command: ls -lhat
+          loop:
+            steps: null
+            values: null
+            variable: ""
+    pullRequest:
+      build:
+        steps:
+        - agent: {}
+          command: ls -lha
+          loop:
+            steps: null
+            values: null
+            variable: ""
