@@ -138,6 +138,10 @@ type VaultSpec struct {
 	Resources             *Resources                    `json:"resources,omitempty"`
 	Ingress               *Ingress                      `json:"ingress,omitempty"`
 	ServiceMonitorEnabled bool                          `json:"serviceMonitorEnabled,omitempty"`
+
+	// Define a list of namespaces where the generated CA certificite should be distributed,
+	// use ["*"] for all namespaeces.
+	CANamespaces []string `json:"caNamespaces,omitempty"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability

@@ -227,6 +227,36 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create secret for vault: %v", err)
 		}
+
+		// Distribute the CA certificate to every namespace defined
+		if len(v.Spec.CANamespaces) > 0 {
+			// We need the CA certificate only
+			delete(sec.Data, "server.crt")
+			delete(sec.Data, "server.key")
+
+			var namespaces []string
+
+			if v.Spec.CANamespaces[0] == "*" {
+				var namespaceList corev1.NamespaceList
+				if err := r.client.List(context.TODO(), &client.ListOptions{}, &namespaceList); err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed to list namespaces: %v", err)
+				}
+
+				for _, namespace := range namespaceList.Items {
+					namespaces = append(namespaces, namespace.Name)
+				}
+			} else {
+				namespaces = v.Spec.CANamespaces
+			}
+
+			for _, namespace := range namespaces {
+				sec.SetNamespace(namespace)
+				err = r.createObjectIfNotExists(sec)
+				if err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed to create CA secret for vault in namespace %s: %v", namespace, err)
+				}
+			}
+		}
 	}
 
 	if v.Spec.IsFluentDEnabled() {
