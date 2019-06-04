@@ -35,8 +35,6 @@ github.com/aws/aws-sdk-go v1.15.31 h1:ExgD8W8QDeD8Y4CPVlcP/laumxvikDbkVWB+VCHgXx
 github.com/aws/aws-sdk-go v1.15.31/go.mod h1:mFuSZ37Z9YOHbQEwBWztmVzqXrEkub65tZoCYDt7FT0=
 github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f h1:ZNv7On9kyUzm7fvRZumSyy/IUiSC7AzL0I1jKKtwooA=
 github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f/go.mod h1:AuiFmCCPBSrqvVMvuqFuk0qogytodnVFVSN5CeJB8Gc=
-github.com/banzaicloud/kurun v0.0.0-20190115131921-2bc79cb32f99 h1:/GK6cWoMqh1XE09kPI2UPW35/gglolp/i4OSQPQCp4E=
-github.com/banzaicloud/kurun v0.0.0-20190115131921-2bc79cb32f99/go.mod h1:ne28/UE7A3bySDX0meumzxQmfePUQRKILoEB2kTeX1g=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 h1:xJ4a3vCFaGF/jqvzLMYoU8P317H5OQ+Via4RmuPwCS0=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/census-instrumentation/opencensus-proto v0.0.2-0.20180913191712-f303ae3f8d6a/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=

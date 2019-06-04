@@ -75,7 +75,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: secret-creator
+  name: vault-operator-secret-creator
 rules:
 - apiGroups: [""]
   resources: ["secrets"]
@@ -112,5 +112,5 @@ subjects:
     namespace: default
 roleRef:
   kind: ClusterRole
-  name: secret-creator
+  name: vault-operator-secret-creator
   apiGroup: rbac.authorization.k8s.io
