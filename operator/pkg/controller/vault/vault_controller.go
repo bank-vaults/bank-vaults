@@ -63,12 +63,25 @@ var log = logf.Log.WithName("controller_vault")
 // Add creates a new Vault Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+	reconciler, err := newReconciler(mgr)
+	if err != nil {
+		return err
+	}
+	return add(mgr, reconciler)
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileVault{client: mgr.GetClient(), scheme: mgr.GetScheme(), httpClient: newHTTPClient()}
+func newReconciler(mgr manager.Manager) (reconcile.Reconciler, error) {
+	nonNamespacedClient, err := client.New(mgr.GetConfig(), client.Options{})
+	if err != nil {
+		return nil, err
+	}
+	return &ReconcileVault{
+		client:              mgr.GetClient(),
+		nonNamespacedClient: nonNamespacedClient,
+		scheme:              mgr.GetScheme(),
+		httpClient:          newHTTPClient(),
+	}, nil
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -94,9 +107,12 @@ var _ reconcile.Reconciler = &ReconcileVault{}
 type ReconcileVault struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client     client.Client
-	scheme     *runtime.Scheme
-	httpClient *http.Client
+	client client.Client
+	// since the cache inside the client is namespaced we need to create another client which is not namespaced
+	// TODO the cache should be restricted to Secrets only right now in this one if possible
+	nonNamespacedClient client.Client
+	scheme              *runtime.Scheme
+	httpClient          *http.Client
 }
 
 func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
@@ -138,6 +154,10 @@ func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
 }
 
 func (r *ReconcileVault) createObjectIfNotExists(o runtime.Object) error {
+	return createObjectIfNotExistsWithClient(r.client, o)
+}
+
+func createObjectIfNotExistsWithClient(c client.Client, o runtime.Object) error {
 	key, err := client.ObjectKeyFromObject(o)
 	if err != nil {
 		return err
@@ -145,9 +165,9 @@ func (r *ReconcileVault) createObjectIfNotExists(o runtime.Object) error {
 
 	current := o.DeepCopyObject()
 
-	err = r.client.Get(context.TODO(), key, current)
+	err = c.Get(context.TODO(), key, current)
 	if apierrors.IsNotFound(err) {
-		return r.client.Create(context.TODO(), o)
+		return c.Create(context.TODO(), o)
 	}
 
 	return err
@@ -251,7 +271,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 			for _, namespace := range namespaces {
 				sec.SetNamespace(namespace)
-				err = r.createObjectIfNotExists(sec)
+				err = createObjectIfNotExistsWithClient(r.nonNamespacedClient, sec)
 				if err != nil {
 					return reconcile.Result{}, fmt.Errorf("failed to create CA secret for vault in namespace %s: %v", namespace, err)
 				}
