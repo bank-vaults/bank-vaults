@@ -70,6 +70,11 @@ spec:
     - name: vault-file
       mountPath: /vault/file
 
+  # Support for distributing the generated CA certificate Secret to other namespaces.
+  # Define a list of namespaces or use ["*"] for all namespaces.
+  # caNamespaces:
+  #   - "vswh"
+
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
     options:
