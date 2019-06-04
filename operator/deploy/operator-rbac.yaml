@@ -103,7 +103,7 @@ roleRef:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: vault-operator
+  name: vault-operator-secret-creator
 subjects:
   - kind: ServiceAccount
     name: vault-operator
