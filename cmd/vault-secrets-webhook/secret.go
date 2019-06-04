@@ -15,6 +15,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -73,12 +74,16 @@ func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultCon
 func mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultConfig vaultConfig) error {
 	logger := &log.Std{Debug: viper.GetBool("debug")}
 
-	var assembled dockerCreds
+	assembled := dockerCreds{Auths: map[string]dockerTypes.AuthConfig{}}
 
 	for key, creds := range dc.Auths {
-		if strings.HasPrefix(string(creds.Auth), "vault:") {
-			logger.Debugf("auth %s %s", key, creds.Auth)
-			split := strings.Split(creds.Auth, ":")
+		authBytes, err := base64.StdEncoding.DecodeString(creds.Auth)
+		if err != nil {
+			return fmt.Errorf("auth base64 decoding failed: %v", err)
+		}
+		auth := string(authBytes)
+		if strings.HasPrefix(auth, "vault:") {
+			split := strings.Split(auth, ":")
 			if len(split) != 4 {
 				return errors.New("splitting auth credentials failed")
 			}
