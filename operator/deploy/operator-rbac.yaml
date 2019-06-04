@@ -77,8 +77,11 @@ metadata:
 rules:
 - apiGroups: [""]
   resources: ["secrets"]
-  verbs: 
-  - ["create", "get", "list", "watch"]
+  verbs:
+    - create
+    - get
+    - list
+    - watch
 
 ---
 
