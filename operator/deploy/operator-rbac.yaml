@@ -70,6 +70,16 @@ rules:
     verbs:
       - "*"
 
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: secret-creator
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: 
+  - ["create", "get", "list", "watch"]
+
 ---
 
 kind: RoleBinding
@@ -83,4 +93,19 @@ subjects:
 roleRef:
   kind: Role
   name: vault-operator
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: vault-operator
+subjects:
+  - kind: ServiceAccount
+    name: vault-operator
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: secret-creator
   apiGroup: rbac.authorization.k8s.io
