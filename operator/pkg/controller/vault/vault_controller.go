@@ -262,6 +262,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			delete(currentSecret.StringData, "server.crt")
 			delete(currentSecret.StringData, "server.key")
 			currentSecret.GetObjectMeta().SetUID("")
+			currentSecret.SetResourceVersion("")
 
 			var namespaces []string
 
