@@ -479,7 +479,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	if !reflect.DeepEqual(podNames, v.Status.Nodes) || !reflect.DeepEqual(leader, v.Status.Leader) {
 		v.Status.Nodes = podNames
 		v.Status.Leader = leader
-		err := r.client.Update(context.TODO(), v)
+		err := r.client.Status().Update(context.TODO(), v)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to update vault status: %v", err)
 		}
