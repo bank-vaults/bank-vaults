@@ -116,6 +116,10 @@ type ReconcileVault struct {
 }
 
 func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
+	return createOrUpdateObjectWithClient(r.client, o)
+}
+
+func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 	key, err := client.ObjectKeyFromObject(o)
 	if err != nil {
 		return err
@@ -123,9 +127,9 @@ func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
 
 	current := o.DeepCopyObject()
 
-	err = r.client.Get(context.TODO(), key, current)
+	err = c.Get(context.TODO(), key, current)
 	if apierrors.IsNotFound(err) {
-		return r.client.Create(context.TODO(), o)
+		return c.Create(context.TODO(), o)
 	} else if err == nil {
 		resourceVersion := current.(metav1.ObjectMetaAccessor).GetObjectMeta().GetResourceVersion()
 		o.(metav1.ObjectMetaAccessor).GetObjectMeta().SetResourceVersion(resourceVersion)
@@ -147,17 +151,13 @@ func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
 			}
 		}
 
-		return r.client.Update(context.TODO(), o)
+		return c.Update(context.TODO(), o)
 	}
 
 	return err
 }
 
 func (r *ReconcileVault) createObjectIfNotExists(o runtime.Object) error {
-	return createObjectIfNotExistsWithClient(r.client, o)
-}
-
-func createObjectIfNotExistsWithClient(c client.Client, o runtime.Object) error {
 	key, err := client.ObjectKeyFromObject(o)
 	if err != nil {
 		return err
@@ -165,9 +165,9 @@ func createObjectIfNotExistsWithClient(c client.Client, o runtime.Object) error 
 
 	current := o.DeepCopyObject()
 
-	err = c.Get(context.TODO(), key, current)
+	err = r.client.Get(context.TODO(), key, current)
 	if apierrors.IsNotFound(err) {
-		return c.Create(context.TODO(), o)
+		return r.client.Create(context.TODO(), o)
 	}
 
 	return err
@@ -250,9 +250,18 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 		// Distribute the CA certificate to every namespace defined
 		if len(v.Spec.CANamespaces) > 0 {
+
+			// Get the current version of the TLS Secret
+			var currentSecret corev1.Secret
+			err = r.client.Get(context.TODO(), client.ObjectKey{Name: sec.Name, Namespace: sec.Namespace}, &currentSecret)
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to query current secret for vault: %v", err)
+			}
+
 			// We need the CA certificate only
-			delete(sec.StringData, "server.crt")
-			delete(sec.StringData, "server.key")
+			delete(currentSecret.StringData, "server.crt")
+			delete(currentSecret.StringData, "server.key")
+			currentSecret.GetObjectMeta().SetUID("")
 
 			var namespaces []string
 
@@ -270,8 +279,8 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			}
 
 			for _, namespace := range namespaces {
-				sec.SetNamespace(namespace)
-				err = createObjectIfNotExistsWithClient(r.nonNamespacedClient, sec)
+				currentSecret.SetNamespace(namespace)
+				err = createOrUpdateObjectWithClient(r.nonNamespacedClient, &currentSecret)
 				if err != nil {
 					return reconcile.Result{}, fmt.Errorf("failed to create CA secret for vault in namespace %s: %v", namespace, err)
 				}
