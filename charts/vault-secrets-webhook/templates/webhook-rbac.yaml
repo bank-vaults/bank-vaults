@@ -17,6 +17,7 @@ rules:
       - configmaps
     verbs:
       - "get"
+      - "update"
   - apiGroups:
       - ""
     resources:

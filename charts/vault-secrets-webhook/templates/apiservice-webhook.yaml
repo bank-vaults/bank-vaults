@@ -52,3 +52,34 @@ items:
         operator: NotIn
         values:
         - {{ .Release.Namespace }}
+  - name: secrets.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+    clientConfig:
+      service:
+        namespace: {{ .Release.Namespace }}
+        name: {{ template "vault-secrets-webhook.fullname" . }}
+        path: /secrets
+      caBundle: {{ b64enc $ca.Cert }}
+    rules:
+    - operations:
+      - CREATE
+      - UPDATE
+      apiGroups:
+      - "*"
+      apiVersions:
+      - "*"
+      resources:
+      - secrets
+    failurePolicy: Fail
+    namespaceSelector:
+    {{- if .Values.namespaceSelector.matchLabels }}
+      matchLabels:
+{{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
+    {{- end }}
+      matchExpressions:
+      {{- if .Values.namespaceSelector.matchExpressions }}
+{{ toYaml .Values.namespaceSelector.matchExpressions | indent 6 }}
+      {{- end }}
+      - key: name
+        operator: NotIn
+        values:
+        - {{ .Release.Namespace }}
