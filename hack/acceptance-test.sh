@@ -67,5 +67,6 @@ helm install banzaicloud-stable/vault-secrets-webhook \
     --set env.VAULT_ENV_IMAGE=banzaicloud/vault-env:latest \
     --namespace vswh \
     --wait
+kubectl apply -f deploy/test-secret.yaml
 kubectl apply -f deploy/test-deployment.yaml
 kubectl wait --for=condition=available deployment/hello-secrets --timeout=120s
