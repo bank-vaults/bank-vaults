@@ -99,8 +99,9 @@ func mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultConfig vault
 			if err != nil {
 				return err
 			}
+			auth = fmt.Sprintf("%s:%s", dcCreds["username"], dcCreds["password"])
 			dockerAuth := dockerTypes.AuthConfig{
-				Auth: fmt.Sprintf("%s:%s", dcCreds["username"], dcCreds["password"]),
+				Auth: base64.StdEncoding.EncodeToString([]byte(auth)),
 			}
 			if creds.Username != "" && creds.Password != "" {
 				dockerAuth.Username = dcCreds["username"]
