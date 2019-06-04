@@ -231,8 +231,8 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		// Distribute the CA certificate to every namespace defined
 		if len(v.Spec.CANamespaces) > 0 {
 			// We need the CA certificate only
-			delete(sec.Data, "server.crt")
-			delete(sec.Data, "server.key")
+			delete(sec.StringData, "server.crt")
+			delete(sec.StringData, "server.key")
 
 			var namespaces []string
 
