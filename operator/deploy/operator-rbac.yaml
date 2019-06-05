@@ -81,6 +81,7 @@ rules:
   resources: ["secrets"]
   verbs:
     - create
+    - update
     - get
     - list
     - watch
