@@ -75,8 +75,16 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: vault-operator-secret-creator
+  name: vault-operator
 rules:
+- apiGroups:
+    - ""
+  resources:
+    - namespaces
+  verbs:
+    - get
+    - list
+    - watch
 - apiGroups: [""]
   resources: ["secrets"]
   verbs:
@@ -106,12 +114,12 @@ roleRef:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: vault-operator-secret-creator
+  name: vault-operator
 subjects:
   - kind: ServiceAccount
     name: vault-operator
     namespace: default
 roleRef:
   kind: ClusterRole
-  name: vault-operator-secret-creator
+  name: vault-operator
   apiGroup: rbac.authorization.k8s.io
