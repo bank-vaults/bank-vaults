@@ -250,41 +250,9 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 		// Distribute the CA certificate to every namespace defined
 		if len(v.Spec.CANamespaces) > 0 {
-
-			// Get the current version of the TLS Secret
-			var currentSecret corev1.Secret
-			err = r.client.Get(context.TODO(), client.ObjectKey{Name: sec.Name, Namespace: sec.Namespace}, &currentSecret)
+			err = r.distributeCACertificate(v, client.ObjectKey{Name: sec.Name, Namespace: sec.Namespace})
 			if err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to query current secret for vault: %v", err)
-			}
-
-			// We need the CA certificate only
-			delete(currentSecret.StringData, "server.crt")
-			delete(currentSecret.StringData, "server.key")
-			currentSecret.GetObjectMeta().SetUID("")
-			currentSecret.SetResourceVersion("")
-
-			var namespaces []string
-
-			if v.Spec.CANamespaces[0] == "*" {
-				var namespaceList corev1.NamespaceList
-				if err := r.client.List(context.TODO(), &client.ListOptions{}, &namespaceList); err != nil {
-					return reconcile.Result{}, fmt.Errorf("failed to list namespaces: %v", err)
-				}
-
-				for _, namespace := range namespaceList.Items {
-					namespaces = append(namespaces, namespace.Name)
-				}
-			} else {
-				namespaces = v.Spec.CANamespaces
-			}
-
-			for _, namespace := range namespaces {
-				currentSecret.SetNamespace(namespace)
-				err = createOrUpdateObjectWithClient(r.nonNamespacedClient, &currentSecret)
-				if err != nil {
-					return reconcile.Result{}, fmt.Errorf("failed to create CA secret for vault in namespace %s: %v", namespace, err)
-				}
+				return reconcile.Result{}, fmt.Errorf("failed to distribute CA secret for vault: %v", err)
 			}
 		}
 	}
@@ -1645,4 +1613,46 @@ func getPrometheusExporterResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequi
 			corev1.ResourceMemory: resource.MustParse("128Mi"),
 		},
 	}
+}
+
+func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecretKey client.ObjectKey) error {
+	// Get the current version of the TLS Secret
+	var currentSecret corev1.Secret
+	err := r.client.Get(context.TODO(), caSecretKey, &currentSecret)
+	if err != nil {
+		return fmt.Errorf("failed to query current secret for vault: %v", err)
+	}
+
+	// We need the CA certificate only
+	delete(currentSecret.StringData, "server.crt")
+	delete(currentSecret.StringData, "server.key")
+	currentSecret.GetObjectMeta().SetUID("")
+	currentSecret.SetResourceVersion("")
+
+	var namespaces []string
+
+	if v.Spec.CANamespaces[0] == "*" {
+		var namespaceList corev1.NamespaceList
+		if err := r.client.List(context.TODO(), &client.ListOptions{}, &namespaceList); err != nil {
+			return fmt.Errorf("failed to list namespaces: %v", err)
+		}
+
+		for _, namespace := range namespaceList.Items {
+			namespaces = append(namespaces, namespace.Name)
+		}
+	} else {
+		namespaces = v.Spec.CANamespaces
+	}
+
+	for _, namespace := range namespaces {
+		currentSecret.SetNamespace(namespace)
+		err = createOrUpdateObjectWithClient(r.nonNamespacedClient, &currentSecret)
+		if apierrors.IsNotFound(err) {
+			log.V(2).Info("can't distribute CA secret, namespace doesn't exist", "namespace", namespace)
+		} else if err != nil {
+			return fmt.Errorf("failed to create CA secret for vault in namespace %s: %v", namespace, err)
+		}
+	}
+
+	return nil
 }
