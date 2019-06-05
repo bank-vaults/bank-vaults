@@ -89,7 +89,7 @@ These annotations are set *only* on the etcd pods created by the etcd-operator
 
 # Labels
 
-The Vault Operator suypport labelling most of the resources it creates using a set of fields in the Vault Specs:
+The Vault Operator support labelling most of the resources it creates using a set of fields in the Vault Specs:
 
 ## Vault Statefulset Resources labels
 ```
