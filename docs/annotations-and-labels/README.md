@@ -14,7 +14,7 @@ metadata:
 ```
 
 These annotations are common to all Vault Created resources
-  - Vault Statefulset
+	- Vault Statefulset
 	- Vault Pods
 	- Vault Configurer Deployment
 	- Vault Configurer Pod
@@ -35,7 +35,7 @@ metadata:
 ```
 
 These annotations are common to all Vault Statefulset Created resources
-  - Vault Statefulset
+	- Vault Statefulset
 	- Vault Pods
 	- Vault Services
 	- Vault TLS Secret
@@ -103,7 +103,7 @@ metadata:
 ```
 
 These Labels are common to all Vault Statefulset Created resources
-  - Vault Statefulset
+	- Vault Statefulset
 	- Vault Pods
 	- Vault Services
 	- Vault TLS Secret
