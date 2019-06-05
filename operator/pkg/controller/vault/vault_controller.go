@@ -63,12 +63,25 @@ var log = logf.Log.WithName("controller_vault")
 // Add creates a new Vault Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+	reconciler, err := newReconciler(mgr)
+	if err != nil {
+		return err
+	}
+	return add(mgr, reconciler)
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileVault{client: mgr.GetClient(), scheme: mgr.GetScheme(), httpClient: newHTTPClient()}
+func newReconciler(mgr manager.Manager) (reconcile.Reconciler, error) {
+	nonNamespacedClient, err := client.New(mgr.GetConfig(), client.Options{})
+	if err != nil {
+		return nil, err
+	}
+	return &ReconcileVault{
+		client:              mgr.GetClient(),
+		nonNamespacedClient: nonNamespacedClient,
+		scheme:              mgr.GetScheme(),
+		httpClient:          newHTTPClient(),
+	}, nil
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -94,12 +107,19 @@ var _ reconcile.Reconciler = &ReconcileVault{}
 type ReconcileVault struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client     client.Client
-	scheme     *runtime.Scheme
-	httpClient *http.Client
+	client client.Client
+	// since the cache inside the client is namespaced we need to create another client which is not namespaced
+	// TODO the cache should be restricted to Secrets only right now in this one if possible
+	nonNamespacedClient client.Client
+	scheme              *runtime.Scheme
+	httpClient          *http.Client
 }
 
 func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
+	return createOrUpdateObjectWithClient(r.client, o)
+}
+
+func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 	key, err := client.ObjectKeyFromObject(o)
 	if err != nil {
 		return err
@@ -107,9 +127,9 @@ func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
 
 	current := o.DeepCopyObject()
 
-	err = r.client.Get(context.TODO(), key, current)
+	err = c.Get(context.TODO(), key, current)
 	if apierrors.IsNotFound(err) {
-		return r.client.Create(context.TODO(), o)
+		return c.Create(context.TODO(), o)
 	} else if err == nil {
 		resourceVersion := current.(metav1.ObjectMetaAccessor).GetObjectMeta().GetResourceVersion()
 		o.(metav1.ObjectMetaAccessor).GetObjectMeta().SetResourceVersion(resourceVersion)
@@ -131,7 +151,7 @@ func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
 			}
 		}
 
-		return r.client.Update(context.TODO(), o)
+		return c.Update(context.TODO(), o)
 	}
 
 	return err
@@ -226,6 +246,14 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		err = r.createObjectIfNotExists(sec)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create secret for vault: %v", err)
+		}
+
+		// Distribute the CA certificate to every namespace defined
+		if len(v.Spec.CANamespaces) > 0 {
+			err = r.distributeCACertificate(v, client.ObjectKey{Name: sec.Name, Namespace: sec.Namespace})
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to distribute CA secret for vault: %v", err)
+			}
 		}
 	}
 
@@ -1585,4 +1613,47 @@ func getPrometheusExporterResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequi
 			corev1.ResourceMemory: resource.MustParse("128Mi"),
 		},
 	}
+}
+
+func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecretKey client.ObjectKey) error {
+	// Get the current version of the TLS Secret
+	var currentSecret corev1.Secret
+	err := r.client.Get(context.TODO(), caSecretKey, &currentSecret)
+	if err != nil {
+		return fmt.Errorf("failed to query current secret for vault: %v", err)
+	}
+
+	// We need the CA certificate only
+	delete(currentSecret.StringData, "server.crt")
+	delete(currentSecret.StringData, "server.key")
+
+	var namespaces []string
+
+	if v.Spec.CANamespaces[0] == "*" {
+		var namespaceList corev1.NamespaceList
+		if err := r.client.List(context.TODO(), &client.ListOptions{}, &namespaceList); err != nil {
+			return fmt.Errorf("failed to list namespaces: %v", err)
+		}
+
+		for _, namespace := range namespaceList.Items {
+			namespaces = append(namespaces, namespace.Name)
+		}
+	} else {
+		namespaces = v.Spec.CANamespaces
+	}
+
+	for _, namespace := range namespaces {
+		currentSecret.SetNamespace(namespace)
+		currentSecret.SetResourceVersion("")
+		currentSecret.GetObjectMeta().SetUID("")
+
+		err = createOrUpdateObjectWithClient(r.nonNamespacedClient, &currentSecret)
+		if apierrors.IsNotFound(err) {
+			log.V(2).Info("can't distribute CA secret, namespace doesn't exist", "namespace", namespace)
+		} else if err != nil {
+			return fmt.Errorf("failed to create CA secret for vault in namespace %s: %v", namespace, err)
+		}
+	}
+
+	return nil
 }

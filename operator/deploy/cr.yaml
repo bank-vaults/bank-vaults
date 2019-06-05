@@ -70,6 +70,11 @@ spec:
     - name: vault-file
       mountPath: /vault/file
 
+  # Support for distributing the generated CA certificate Secret to other namespaces.
+  # Define a list of namespaces or use ["*"] for all namespaces.
+  caNamespaces:
+    - "vswh"
+
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
     options:
@@ -107,7 +112,7 @@ spec:
         roles:
           # Allow every pod in the default namespace to use the secret kv store
           - name: default
-            bound_service_account_names: ["default", "vswh-vault-secrets-webhook"]
+            bound_service_account_names: ["default", "vault-secrets-webhook"]
             bound_service_account_namespaces: ["default", "vswh"]
             policies: allow_secrets
             ttl: 1h
