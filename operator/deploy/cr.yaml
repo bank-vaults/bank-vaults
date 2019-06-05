@@ -19,6 +19,14 @@ spec:
   vaultConfigurerAnnotations:
     type/instance: "vaultconfigurer"
 
+  # Vault Pods , Services and TLS Secret labels
+  vaultLabels:
+    example.com/log-format: "json"
+
+  # Vault Configurer Pods and Services labels
+  vaultConfigurerLabels:
+    example.com/log-format: "string"
+
   # Support for nodeAffinity Rules
   # nodeAffinity:
   #   requiredDuringSchedulingIgnoredDuringExecution:

@@ -86,3 +86,40 @@ metadata:
 
 These annotations are set *only* on the etcd pods created by the etcd-operator
 
+
+# Labels
+
+The Vault Operator suypport labelling most of the resources it creates using a set of fields in the Vault Specs:
+
+## Vault Statefulset Resources labels
+```
+apiVersion: "vault.banzaicloud.com/v1alpha1"
+kind: "Vault"
+metadata:
+  name: "vault"
+	spec:
+	  vaultLabels:
+		  example.com/log-format: "json"
+```
+
+These Labels are common to all Vault Statefulset Created resources
+  - Vault Statefulset
+	- Vault Pods
+	- Vault Services
+	- Vault TLS Secret
+
+## Vault Configurer deployment Resources labels
+```
+apiVersion: "vault.banzaicloud.com/v1alpha1"
+kind: "Vault"
+metadata:
+  name: "vault"
+	spec:
+	  vaultConfigurerLabels:
+		  example.com/log-format: "string"
+```
+
+These labels are common to all Vault Configurer Deployment Created resources
+	- Vault Configurer Deployment
+	- Vault Configurer Pod
+	- Vault Configurer Service

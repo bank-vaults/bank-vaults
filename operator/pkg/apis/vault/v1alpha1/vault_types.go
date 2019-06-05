@@ -110,7 +110,9 @@ type VaultSpec struct {
 	WatchedSecretsLabels       []map[string]string   `json:"watchedSecretsLabels"`
 	Annotations                map[string]string     `json:"annotations"`
 	VaultAnnotations           map[string]string     `json:"vaultAnnotations"`
+	VaultLabels                map[string]string     `json:"vaultLabels"`
 	VaultConfigurerAnnotations map[string]string     `json:"vaultConfigurerAnnotations"`
+	VaultConfigurerLabels      map[string]string     `json:"vaultConfigurerLabels"`
 	Config                     VaultConfig           `json:"config"`
 	ExternalConfig             VaultExternalConfig   `json:"externalConfig"`
 	UnsealConfig               UnsealConfig          `json:"unsealConfig"`
@@ -286,6 +288,24 @@ func (spec *VaultSpec) GetAnnotations() map[string]string {
 	}
 
 	return spec.Annotations
+}
+
+// GetVaultLAbels returns the Vault Pod , Secret and ConfigMap Labels
+func (spec *VaultSpec) GetVaultLabels() map[string]string {
+	if spec.VaultLabels == nil {
+		spec.VaultLabels = map[string]string{}
+	}
+
+	return spec.VaultLabels
+}
+
+// GetVaultConfigurerLabels returns the Vault Configurer Pod Labels
+func (spec *VaultSpec) GetVaultConfigurerLabels() map[string]string {
+	if spec.VaultConfigurerLabels == nil {
+		spec.VaultConfigurerLabels = map[string]string{}
+	}
+
+	return spec.VaultConfigurerLabels
 }
 
 // GetVaultAnnotations returns the Vault Pod , Secret and ConfigMap Annotations
