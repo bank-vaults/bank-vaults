@@ -575,7 +575,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 			Name:        v.Name,
 			Namespace:   v.Namespace,
 			Annotations: annotations,
-			Labels:      ls,
+			Labels:      withVaultLabels(v, ls),
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     serviceType(v),
@@ -696,7 +696,7 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 				Name:        podName,
 				Namespace:   v.Namespace,
 				Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
-				Labels:      ls,
+				Labels:      withVaultLabels(v, ls),
 			},
 			Spec: corev1.ServiceSpec{
 				Type:     corev1.ServiceTypeClusterIP,
@@ -728,7 +728,7 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 			Name:        serviceName,
 			Namespace:   v.Namespace,
 			Annotations: withVaultConfigurerAnnotations(v, getCommonAnnotations(v, map[string]string{})),
-			Labels:      ls,
+			Labels:      withVaultConfigurerLabels(v, ls),
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,
@@ -838,7 +838,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      ls,
+					Labels:      withVaultConfigurerLabels(v, ls),
 					Annotations: withVaultConfigurerAnnotations(v, withPrometheusAnnotations("9091", getCommonAnnotations(v, map[string]string{}))),
 				},
 				Spec: corev1.PodSpec{
@@ -882,7 +882,7 @@ func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name + "-configurer",
 			Namespace: v.Namespace,
-			Labels:    ls,
+			Labels:    withVaultConfigurerLabels(v, ls),
 		},
 		Data: map[string]string{vault.DefaultConfigFile: v.Spec.ExternalConfigJSON()},
 	}
@@ -904,7 +904,7 @@ func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, error) {
 	}
 	secret.Name = om.Name + "-tls"
 	secret.Namespace = om.Namespace
-	secret.Labels = labelsForVault(om.Name)
+	secret.Labels = withVaultLabels(om, labelsForVault(om.Name))
 	secret.Annotations = withVaultAnnotations(om, getCommonAnnotations(om, map[string]string{}))
 	secret.StringData = map[string]string{}
 	secret.StringData["ca.crt"] = chain.CACert
@@ -1023,7 +1023,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      ls,
+					Labels:      withVaultLabels(v, ls),
 					Annotations: withVaultAnnotations(v, withVaultWatchedExternalSecrets(v, externalSecretsToWatchItems, withPrometheusAnnotations("9102", getCommonAnnotations(v, map[string]string{})))),
 				},
 				Spec: corev1.PodSpec{
@@ -1510,6 +1510,34 @@ func labelsForVault(name string) map[string]string {
 // belonging to the given vault CR name.
 func labelsForVaultConfigurer(name string) map[string]string {
 	return map[string]string{"app": "vault-configurator", "vault_cr": name}
+}
+
+// Extend Labels with Vault User defined ones
+// Does not change original labels object but return a new one
+func withVaultLabels(v *vaultv1alpha1.Vault, labels map[string]string) map[string]string {
+	var l = map[string]string{}
+	for key, value := range labels {
+		l[key] = value
+	}
+	for key, value := range v.Spec.GetVaultLabels() {
+		l[key] = value
+	}
+
+	return l
+}
+
+// Extend Labels with Vault Configurer User defined ones
+// Does not change original labels object but return a new one
+func withVaultConfigurerLabels(v *vaultv1alpha1.Vault, labels map[string]string) map[string]string {
+	var l = map[string]string{}
+	for key, value := range labels {
+		l[key] = value
+	}
+	for key, value := range v.Spec.GetVaultConfigurerLabels() {
+		l[key] = value
+	}
+
+	return l
 }
 
 // asOwner returns an OwnerReference set as the vault CR
