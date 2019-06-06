@@ -522,13 +522,13 @@ func mutateContainers(containers []corev1.Container, podSpec *corev1.PodSpec, va
 				return false, err
 			}
 
-			entrypoint, cmd, err := registry.GetEntrypointCmd(clientset, ns, &container, podSpec)
+			imageConfig, err := registry.GetImageConfig(clientset, ns, &container, podSpec)
 			if err != nil {
 				return false, err
 			}
 
-			args = append(args, entrypoint...)
-			args = append(args, cmd...)
+			args = append(args, imageConfig.Entrypoint...)
+			args = append(args, imageConfig.Cmd...)
 		}
 
 		container.Command = []string{"/vault/vault-env"}

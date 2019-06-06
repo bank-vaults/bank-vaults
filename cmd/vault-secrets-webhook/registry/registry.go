@@ -21,6 +21,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/heroku/docker-registry-client/registry"
@@ -33,19 +34,76 @@ import (
 
 var logger log.FieldLogger
 
+var imageCache ImageCache
+
 func init() {
 	logger = log.New()
+	imageCache = NewInMemoryImageCache()
+}
+
+type ImageCache interface {
+	Get(image string) *imagev1.ImageConfig
+	Put(image string, imageConfig *imagev1.ImageConfig)
+}
+
+type InMemoryImageCache struct {
+	mutex sync.Mutex
+	cache map[string]imagev1.ImageConfig
+}
+
+func NewInMemoryImageCache() ImageCache {
+	return &InMemoryImageCache{cache: map[string]imagev1.ImageConfig{}}
+}
+
+func (c *InMemoryImageCache) Get(image string) *imagev1.ImageConfig {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if imageConfig, ok := c.cache[image]; ok {
+		return &imageConfig
+	}
+	return nil
+}
+
+func (c *InMemoryImageCache) Put(image string, imageConfig *imagev1.ImageConfig) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.cache[image] = *imageConfig
 }
 
 type DockerCreds struct {
 	Auths map[string]dockerTypes.AuthConfig `json:"auths"`
 }
 
-// GetImageBlob download image blob from registry
-func GetImageBlob(url, username, password, image string) ([]string, []string, error) {
-	imageName, tag, err := ParseContainerImage(image)
+// GetImageConfig returns entrypoint and command of container
+func GetImageConfig(clientset *kubernetes.Clientset, namespace string, container *corev1.Container, podSpec *corev1.PodSpec) (*imagev1.ImageConfig, error) {
+
+	if imageConfig := imageCache.Get(container.Image); imageConfig != nil {
+		logger.Infof("found image %s in cache", container.Image)
+		return imageConfig, nil
+	}
+
+	containerInfo := ContainerInfo{Namespace: namespace, clientset: clientset}
+
+	err := containerInfo.Collect(container, podSpec)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+
+	logger.Infoln("I'm using registry", containerInfo.RegistryAddress)
+
+	imageConfig, err := getImageBlob(containerInfo)
+	if imageConfig != nil {
+		imageCache.Put(container.Image, imageConfig)
+	}
+
+	return imageConfig, err
+}
+
+// GetImageBlob download image blob from registry
+func getImageBlob(container ContainerInfo) (*imagev1.ImageConfig, error) {
+	imageName, tag, err := ParseContainerImage(container.Image)
+	if err != nil {
+		return nil, err
 	}
 
 	registrySkipVerify := os.Getenv("REGISTRY_SKIP_VERIFY")
@@ -53,17 +111,17 @@ func GetImageBlob(url, username, password, image string) ([]string, []string, er
 	var hub *registry.Registry
 
 	if registrySkipVerify == "true" {
-		hub, err = registry.NewInsecure(url, username, password)
+		hub, err = registry.NewInsecure(container.RegistryAddress, container.RegistryUsername, container.RegistryPassword)
 	} else {
-		hub, err = registry.New(url, username, password)
+		hub, err = registry.New(container.RegistryAddress, container.RegistryUsername, container.RegistryPassword)
 	}
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot create client for registry: %s", err.Error())
+		return nil, fmt.Errorf("cannot create client for registry: %s", err.Error())
 	}
 
 	manifest, err := hub.ManifestV2(imageName, tag)
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot download manifest for image: %s", err.Error())
+		return nil, fmt.Errorf("cannot download manifest for image: %s", err.Error())
 	}
 
 	reader, err := hub.DownloadBlob(imageName, manifest.Config.Digest)
@@ -71,23 +129,21 @@ func GetImageBlob(url, username, password, image string) ([]string, []string, er
 		defer reader.Close()
 	}
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot download blob: %s", err.Error())
+		return nil, fmt.Errorf("cannot download blob: %s", err.Error())
 	}
 
 	b, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot read blob: %s", err.Error())
+		return nil, fmt.Errorf("cannot read blob: %s", err.Error())
 	}
-
-	logger.Info("downloaded blob len: ", len(b))
 
 	var imageMetadata imagev1.Image
 	err = json.Unmarshal(b, &imageMetadata)
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot unmarshal BlobResponse JSON: %s", err.Error())
+		return nil, fmt.Errorf("cannot unmarshal BlobResponse JSON: %s", err.Error())
 	}
 
-	return imageMetadata.Config.Entrypoint, imageMetadata.Config.Cmd, nil
+	return &imageMetadata.Config, nil
 }
 
 // ParseContainerImage returns image and tag
@@ -108,41 +164,8 @@ func isDockerHub(registryAddress string) bool {
 	return strings.HasPrefix(registryAddress, "https://registry-1.docker.io") || strings.HasPrefix(registryAddress, "https://index.docker.io")
 }
 
-// GetEntrypointCmd returns entrypoint and command of container
-func GetEntrypointCmd(clientset *kubernetes.Clientset, namespace string, container *corev1.Container, podSpec *corev1.PodSpec) ([]string, []string, error) {
-	podInfo := K8s{Namespace: namespace, clientset: clientset}
-
-	err := podInfo.Load(container, podSpec)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if podInfo.RegistryName != "" {
-		logger.Info(
-			"Trimmed registry name from image name",
-			"registry", podInfo.RegistryName,
-			"image", podInfo.Image,
-		)
-		podInfo.Image = strings.TrimLeft(podInfo.Image, fmt.Sprintf("%s/", podInfo.RegistryName))
-	}
-
-	registryAddress := podInfo.RegistryAddress
-	if registryAddress == "" {
-		registryAddress = "https://registry-1.docker.io/"
-	}
-
-	// this is a library image on DockerHub, add the `libarary/` prefix
-	if isDockerHub(registryAddress) && strings.Count(podInfo.Image, "/") == 0 {
-		podInfo.Image = "library/" + podInfo.Image
-	}
-
-	logger.Infoln("I'm using registry", registryAddress)
-
-	return GetImageBlob(registryAddress, podInfo.RegistryUsername, podInfo.RegistryPassword, podInfo.Image)
-}
-
 // K8s structure keeps information retrieved from POD definition
-type K8s struct {
+type ContainerInfo struct {
 	clientset        *kubernetes.Clientset
 	Namespace        string
 	ImagePullSecrets string
@@ -153,7 +176,7 @@ type K8s struct {
 	Image            string
 }
 
-func (k *K8s) readDockerSecret(namespace, secretName string) (map[string][]byte, error) {
+func (k *ContainerInfo) readDockerSecret(namespace, secretName string) (map[string][]byte, error) {
 	secret, err := k.clientset.CoreV1().Secrets(namespace).Get(secretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -161,7 +184,7 @@ func (k *K8s) readDockerSecret(namespace, secretName string) (map[string][]byte,
 	return secret.Data, nil
 }
 
-func (k *K8s) parseDockerConfig(dockerCreds DockerCreds) {
+func (k *ContainerInfo) parseDockerConfig(dockerCreds DockerCreds) {
 	k.RegistryName = reflect.ValueOf(dockerCreds.Auths).MapKeys()[0].String()
 	if !strings.HasPrefix(k.RegistryName, "https://") {
 		k.RegistryAddress = fmt.Sprintf("https://%s", k.RegistryName)
@@ -174,8 +197,8 @@ func (k *K8s) parseDockerConfig(dockerCreds DockerCreds) {
 	k.RegistryPassword = auths[k.RegistryName].Password
 }
 
-// Load reads information from k8s and load them into the structure
-func (k *K8s) Load(container *corev1.Container, podSpec *corev1.PodSpec) error {
+// Collect reads information from k8s and load them into the structure
+func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.PodSpec) error {
 
 	k.Image = container.Image
 
@@ -197,6 +220,24 @@ func (k *K8s) Load(container *corev1.Container, podSpec *corev1.PodSpec) error {
 			}
 			k.parseDockerConfig(dockerCreds)
 		}
+	}
+
+	if k.RegistryName != "" {
+		logger.Info(
+			"trimmed registry name from image name",
+			"registry", k.RegistryName,
+			"image", k.Image,
+		)
+		k.Image = strings.TrimLeft(k.Image, fmt.Sprintf("%s/", k.RegistryName))
+	}
+
+	if k.RegistryAddress == "" {
+		k.RegistryAddress = "https://registry-1.docker.io/"
+	}
+
+	// this is a library image on DockerHub, add the `libarary/` prefix
+	if isDockerHub(k.RegistryAddress) && strings.Count(k.Image, "/") == 0 {
+		k.Image = "library/" + k.Image
 	}
 
 	return nil
