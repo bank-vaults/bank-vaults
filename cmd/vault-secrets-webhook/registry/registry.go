@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -75,7 +74,11 @@ type DockerCreds struct {
 }
 
 // GetImageConfig returns entrypoint and command of container
-func GetImageConfig(clientset *kubernetes.Clientset, namespace string, container *corev1.Container, podSpec *corev1.PodSpec) (*imagev1.ImageConfig, error) {
+func GetImageConfig(
+	clientset *kubernetes.Clientset,
+	namespace string,
+	container *corev1.Container,
+	podSpec *corev1.PodSpec) (*imagev1.ImageConfig, error) {
 
 	if imageConfig := imageCache.Get(container.Image); imageConfig != nil {
 		logger.Infof("found image %s in cache", container.Image)
@@ -182,16 +185,11 @@ func (k *ContainerInfo) readDockerSecret(namespace, secretName string) (map[stri
 
 func (k *ContainerInfo) parseDockerConfig(dockerCreds DockerCreds) (bool, error) {
 	for registryName, registryAuth := range dockerCreds.Auths {
-		if !strings.HasPrefix(registryName, "https://") {
-			registryName = "https://" + registryName
+		if strings.HasPrefix(registryName, "https://") {
+			registryName = strings.TrimPrefix(registryName, "https://")
 		}
 
-		registryURL, err := url.Parse(registryName)
-		if err != nil {
-			return false, err
-		}
-
-		registryName = registryURL.Host + "/" + registryURL.Path
+		registryName = strings.TrimSuffix(registryName, "/")
 
 		if strings.HasPrefix(k.Image, registryName) {
 			k.RegistryName = registryName
@@ -258,7 +256,7 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 	}
 
 	// Clean registry from image
-	k.Image = strings.TrimLeft(k.Image, fmt.Sprintf("%s/", k.RegistryName))
+	k.Image = strings.TrimPrefix(k.Image, fmt.Sprintf("%s/", k.RegistryName))
 
 	return nil
 }
