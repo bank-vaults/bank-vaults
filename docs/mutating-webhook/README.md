@@ -155,7 +155,16 @@ helm upgrade --install mysql stable/mysql --set mysqlRootPassword=vault:secret/d
 When using a private image repository:
 
 ```bash
-kubectl create secret docker-registry dockerhub --docker-username=${DOCKER_USERNAME} --docker-password=$DOCKER_PASSWORD --docker-server=https://index.docker.io
+kubectl create secret docker-registry dockerhub --docker-username=${DOCKER_USERNAME} --docker-password=$DOCKER_PASSWORD
 
 helm upgrade --install mysql stable/mysql --set mysqlRootPassword=vault:secret/data/mysql#MYSQL_ROOT_PASSWORD --set "imagePullSecrets[0].name=dockerhub" --set-string "podAnnotations.vault\.security\.banzaicloud\.io/vault-skip-verify=true" --set image="private-repo/mysql"
+
+# or use the following for GCR
+
+kubectl create secret docker-registry gcr \
+--docker-server=gcr.io \
+--docker-username=_json_key \
+--docker-password="$(cat ~/json-key-file.json)"
+
+helm upgrade --install mysql stable/mysql --set mysqlRootPassword=vault:secret/data/mysql#MYSQL_ROOT_PASSWORD --set "imagePullSecrets[0].name=gcr" --set-string "podAnnotations.vault\.security\.banzaicloud\.io/vault-skip-verify=true" --set image="gcr.io/your-repo/mysql"
 ```
