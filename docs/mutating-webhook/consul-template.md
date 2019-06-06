@@ -71,7 +71,7 @@ data:
 There are two places to configure the Webhook, you can set some sane defaults in the environment of the mutating webhook or you can configure it via annotations in your PodSpec.
 
 ### Defaults via environment variables:
-|Variable      |default     |Explaination|
+|Variable      |default     |Explanation|
 |--------------|------------|------------|
 |VAULT_IMAGE   |vault:latest|the vault image to use for the init container|
 |VAULT_ENV_IMAGE|banzaicloud/vault-env:latest| the vault-env image to use |
@@ -83,7 +83,7 @@ There are two places to configure the Webhook, you can set some sane defaults in
 |VAULT_CT_SHARE_PROCESS_NAMESPACE|Kubernetes version <1.12 default off, 1.12 or higher default on|ShareProcessNamespace override|as above|
 
 ### PodSpec annotations:
-|Annotation    |default     |Explaination|
+|Annotation    |default     |Explanation|
 |--------------|------------|------------|
 vault.security.banzaicloud.io/vault-addr|Same as VAULT_ADDR above||
 vault.security.banzaicloud.io/vault-role|default|The Vault role for Vault agent to use|
@@ -96,6 +96,7 @@ vault.security.banzaicloud.io/vault-ct-image|""|Specify a custom image for consu
 vault.security.banzaicloud.io/vault-ct-once|false|do not run consul-template in daemon mode, useful for kubernetes jobs|
 vault.security.banzaicloud.io/vault-ct-pull-policy|IfNotPresent|the Pull policy for the consul template container|
 vault.security.banzaicloud.io/vault-ct-share-process-namespace|Same as VAULT_CT_SHARE_PROCESS_NAMESPACE above||
+vault.security.banzaicloud.io/vault-ignore-missing-secrets|"false"|When enabled will only log warnings when Vault secrets are missing|
 
 ### How to enable consul template in the webhook?
 For the webhook to detect that it will need to mutate or change a PodSpec, it must have the annotation `vault.security.banzaicloud.io/vault-ct-configmap` otherwise the PodSpec will be ignored for configuration with Consul Template.
