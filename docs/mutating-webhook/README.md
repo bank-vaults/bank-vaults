@@ -155,11 +155,13 @@ helm upgrade --install mysql stable/mysql --set mysqlRootPassword=vault:secret/d
 When using a private image repository:
 
 ```bash
+# Docker Hub
+
 kubectl create secret docker-registry dockerhub --docker-username=${DOCKER_USERNAME} --docker-password=$DOCKER_PASSWORD
 
 helm upgrade --install mysql stable/mysql --set mysqlRootPassword=vault:secret/data/mysql#MYSQL_ROOT_PASSWORD --set "imagePullSecrets[0].name=dockerhub" --set-string "podAnnotations.vault\.security\.banzaicloud\.io/vault-skip-verify=true" --set image="private-repo/mysql"
 
-# or use the following for GCR
+# GCR
 
 kubectl create secret docker-registry gcr \
 --docker-server=gcr.io \
@@ -167,4 +169,15 @@ kubectl create secret docker-registry gcr \
 --docker-password="$(cat ~/json-key-file.json)"
 
 helm upgrade --install mysql stable/mysql --set mysqlRootPassword=vault:secret/data/mysql#MYSQL_ROOT_PASSWORD --set "imagePullSecrets[0].name=gcr" --set-string "podAnnotations.vault\.security\.banzaicloud\.io/vault-skip-verify=true" --set image="gcr.io/your-repo/mysql"
+
+# ECR
+
+TOKEN=`aws ecr --region=eu-west-1 get-authorization-token --output text --query authorizationData[].authorizationToken | base64 --decode | cut -d: -f2`
+
+kubectl create secret docker-registry ecr \
+ --docker-server=https://171832738826.dkr.ecr.eu-west-1.amazonaws.com \
+ --docker-username=AWS \
+ --docker-password="${TOKEN}"
+
+ helm upgrade --install mysql stable/mysql --set mysqlRootPassword=vault:secret/data/mysql#MYSQL_ROOT_PASSWORD --set "imagePullSecrets[0].name=ecr" --set-string "podAnnotations.vault\.security\.banzaicloud\.io/vault-skip-verify=true" --set image="171832738826.dkr.ecr.eu-west-1.amazonaws.com/mysql" --set-string imageTag=5.7
 ```
