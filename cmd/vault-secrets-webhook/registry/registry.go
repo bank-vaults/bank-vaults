@@ -18,8 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -160,10 +160,6 @@ func ParseContainerImage(image string) (string, string, error) {
 	return imageName, tag, nil
 }
 
-func isDockerHub(registryAddress string) bool {
-	return strings.HasPrefix(registryAddress, "https://registry-1.docker.io") || strings.HasPrefix(registryAddress, "https://index.docker.io")
-}
-
 // K8s structure keeps information retrieved from POD definition
 type ContainerInfo struct {
 	clientset        *kubernetes.Clientset
@@ -184,61 +180,75 @@ func (k *ContainerInfo) readDockerSecret(namespace, secretName string) (map[stri
 	return secret.Data, nil
 }
 
-func (k *ContainerInfo) parseDockerConfig(dockerCreds DockerCreds) {
-	k.RegistryName = reflect.ValueOf(dockerCreds.Auths).MapKeys()[0].String()
-	if !strings.HasPrefix(k.RegistryName, "https://") {
-		k.RegistryAddress = fmt.Sprintf("https://%s", k.RegistryName)
-	} else {
-		k.RegistryAddress = k.RegistryName
+func (k *ContainerInfo) parseDockerConfig(dockerCreds DockerCreds) (bool, error) {
+	for registryName, registryAuth := range dockerCreds.Auths {
+		registryURL, err := url.Parse(registryName)
+		if err != nil {
+			return false, err
+		}
+
+		if strings.HasPrefix(k.Image, registryURL.Host) {
+			k.RegistryUsername = registryAuth.Username
+			k.RegistryPassword = registryAuth.Password
+			k.RegistryAddress = fmt.Sprintf("https://%s", registryURL.Host)
+			k.RegistryName = registryName
+			return true, nil
+		}
 	}
 
-	auths := dockerCreds.Auths
-	k.RegistryUsername = auths[k.RegistryName].Username
-	k.RegistryPassword = auths[k.RegistryName].Password
+	return false, nil
+}
+
+func (k *ContainerInfo) fixDockerHubImage(image string) string {
+	slash := strings.Index(image, "/")
+	if slash == -1 { // Is it a DockerHub library repository?
+		image = "index.docker.io/library/" + image
+	} else if !strings.Contains(image[:slash], ".") { // DockerHub organization names can't contain '.'
+		image = "index.docker.io/" + image
+	} else {
+		return image
+	}
+
+	// if in the end there is no RegistryAddress defined it should be a public DockerHub repository
+	k.RegistryAddress = "https://index.docker.io"
+	k.RegistryName = "index.docker.io"
+
+	return image
 }
 
 // Collect reads information from k8s and load them into the structure
 func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.PodSpec) error {
 
-	k.Image = container.Image
+	k.Image = k.fixDockerHubImage(container.Image)
 
-	if len(podSpec.ImagePullSecrets) >= 1 {
-		k.ImagePullSecrets = podSpec.ImagePullSecrets[0].Name
+	// k.clientset.Core().ServiceAccounts(k.Namespace).Get(podSpec.ServiceAccountName)
 
-		if k.ImagePullSecrets != "" {
-			data, err := k.readDockerSecret(k.Namespace, k.ImagePullSecrets)
-			if err != nil {
-				return fmt.Errorf("cannot read imagePullSecrets: %s", err.Error())
-			}
+	// TODO read ServiceAccount's imagePullSecrets as well
+	for _, imagePullSecret := range podSpec.ImagePullSecrets {
+		data, err := k.readDockerSecret(k.Namespace, imagePullSecret.Name)
+		if err != nil {
+			return fmt.Errorf("cannot read imagePullSecrets '%s': %s", imagePullSecret.Name, err.Error())
+		}
 
-			dockerConfig := data[corev1.DockerConfigJsonKey]
+		var dockerCreds DockerCreds
 
-			var dockerCreds DockerCreds
-			err = json.Unmarshal(dockerConfig, &dockerCreds)
-			if err != nil {
-				return fmt.Errorf("cannot unmarshal docker configuration from imagePullSecrets: %s", err.Error())
-			}
-			k.parseDockerConfig(dockerCreds)
+		err = json.Unmarshal(data[corev1.DockerConfigJsonKey], &dockerCreds)
+		if err != nil {
+			return fmt.Errorf("cannot unmarshal docker configuration from imagePullSecrets: %s", err.Error())
+		}
+
+		found, err := k.parseDockerConfig(dockerCreds)
+		if err != nil {
+			return nil
+		}
+
+		if found {
+			break
 		}
 	}
 
-	if k.RegistryName != "" {
-		logger.Info(
-			"trimmed registry name from image name",
-			"registry", k.RegistryName,
-			"image", k.Image,
-		)
-		k.Image = strings.TrimLeft(k.Image, fmt.Sprintf("%s/", k.RegistryName))
-	}
-
-	if k.RegistryAddress == "" {
-		k.RegistryAddress = "https://registry-1.docker.io/"
-	}
-
-	// this is a library image on DockerHub, add the `libarary/` prefix
-	if isDockerHub(k.RegistryAddress) && strings.Count(k.Image, "/") == 0 {
-		k.Image = "library/" + k.Image
-	}
+	// Clean registry from image
+	k.Image = strings.TrimLeft(k.Image, fmt.Sprintf("%s/", k.RegistryName))
 
 	return nil
 }
