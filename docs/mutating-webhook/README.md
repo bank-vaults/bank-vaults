@@ -148,10 +148,10 @@ kubectl annotate secret dockerhub vault.security.banzaicloud.io/vault-path="kube
 
 ## Using charts without explicit container.command and container.args
 
-The Webhook is capable of determining the container's entrypoint and command with the help of image metadata queried from the image registry, this data is cached until the webhook Pod is restarted. If the registry is publicly accessible (wihtout authentication) you don't need to do anything, but if the registry requires authentication the credentials have to be available in the Pod's `imagePullSecrets` section.
+The Webhook is now capable of determining the container's entrypoint and command with the help of image metadata queried from the image registry, this data is cached until the webhook Pod is restarted. If the registry is publicly accessible (without authentication) you don't need to do anything, but if the registry requires authentication the credentials have to be available in the Pod's `imagePullSecrets` section.
 
 Future improvements:
-- on AWS and GKE get a credential dinamically with the specific SDK
+- on AWS and GKE get a credential dynamically with the specific SDK
 - query the ServiceAccount's `imagePullSecrets` as well
 
 Some examples:
