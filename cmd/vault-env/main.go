@@ -33,28 +33,29 @@ type sanitizedEnviron []string
 var logger *zap.Logger
 
 var sanitizeEnvmap = map[string]bool{
-	"VAULT_TOKEN":           true,
-	"VAULT_ADDR":            true,
-	"VAULT_CACERT":          true,
-	"VAULT_CAPATH":          true,
-	"VAULT_CLIENT_CERT":     true,
-	"VAULT_CLIENT_KEY":      true,
-	"VAULT_CLIENT_TIMEOUT":  true,
-	"VAULT_CLUSTER_ADDR":    true,
-	"VAULT_MAX_RETRIES":     true,
-	"VAULT_REDIRECT_ADDR":   true,
-	"VAULT_SKIP_VERIFY":     true,
-	"VAULT_TLS_SERVER_NAME": true,
-	"VAULT_CLI_NO_COLOR":    true,
-	"VAULT_RATE_LIMIT":      true,
-	"VAULT_NAMESPACE":       true,
-	"VAULT_MFA":             true,
-	"VAULT_ROLE":            true,
-	"VAULT_PATH":            true,
-	"MY_POD_NAME":           true,
-	"NAMESPACE":             true,
-	"CONTAINER_NAME":        true,
-	"REGISTRY_SKIP_VERIFY":  true,
+	"VAULT_TOKEN":                  true,
+	"VAULT_ADDR":                   true,
+	"VAULT_CACERT":                 true,
+	"VAULT_CAPATH":                 true,
+	"VAULT_CLIENT_CERT":            true,
+	"VAULT_CLIENT_KEY":             true,
+	"VAULT_CLIENT_TIMEOUT":         true,
+	"VAULT_CLUSTER_ADDR":           true,
+	"VAULT_MAX_RETRIES":            true,
+	"VAULT_REDIRECT_ADDR":          true,
+	"VAULT_SKIP_VERIFY":            true,
+	"VAULT_TLS_SERVER_NAME":        true,
+	"VAULT_CLI_NO_COLOR":           true,
+	"VAULT_RATE_LIMIT":             true,
+	"VAULT_NAMESPACE":              true,
+	"VAULT_MFA":                    true,
+	"VAULT_ROLE":                   true,
+	"VAULT_PATH":                   true,
+	"VAULT_IGNORE_MISSING_SECRETS": true,
+	"MY_POD_NAME":                  true,
+	"NAMESPACE":                    true,
+	"CONTAINER_NAME":               true,
+	"REGISTRY_SKIP_VERIFY":         true,
 }
 
 // Appends variable an entry (name=value) into the environ list.
@@ -79,6 +80,8 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to create vault client", zap.Error(err))
 	}
+
+	ignoreMissingSecrets := os.Getenv("VAULT_IGNORE_MISSING_SECRETS") == "true"
 
 	// initial and sanitized environs
 	environ := syscall.Environ()
@@ -122,12 +125,20 @@ func main() {
 			} else {
 				secret, err = client.Vault().Logical().ReadWithData(path, map[string][]string{"version": {version}})
 				if err != nil {
-					logger.Fatal("Failed to read secret", zap.String("path", path), zap.Error(err))
+					if ignoreMissingSecrets {
+						logger.Warn("Failed to read secret", zap.String("path", path), zap.Error(err))
+					} else {
+						logger.Fatal("Failed to read secret", zap.String("path", path), zap.Error(err))
+					}
 				}
 			}
 
 			if secret == nil {
-				logger.Fatal("Path not found", zap.String("path", path))
+				if ignoreMissingSecrets {
+					logger.Warn("Path not found", zap.String("path", path))
+				} else {
+					logger.Fatal("Path not found", zap.String("path", path))
+				}
 			} else {
 				var data map[string]interface{}
 				v2Data, ok := secret.Data["data"]
