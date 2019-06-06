@@ -101,7 +101,7 @@ func GetImageConfig(clientset *kubernetes.Clientset, namespace string, container
 
 // GetImageBlob download image blob from registry
 func getImageBlob(container ContainerInfo) (*imagev1.ImageConfig, error) {
-	imageName, tag, err := ParseContainerImage(container.Image)
+	imageName, tag, err := parseContainerImage(container.Image)
 	if err != nil {
 		return nil, err
 	}
@@ -146,8 +146,8 @@ func getImageBlob(container ContainerInfo) (*imagev1.ImageConfig, error) {
 	return &imageMetadata.Config, nil
 }
 
-// ParseContainerImage returns image and tag
-func ParseContainerImage(image string) (string, string, error) {
+// parseContainerImage returns image and tag
+func parseContainerImage(image string) (string, string, error) {
 	split := strings.SplitN(image, ":", 2)
 
 	if len(split) <= 1 {
@@ -182,16 +182,26 @@ func (k *ContainerInfo) readDockerSecret(namespace, secretName string) (map[stri
 
 func (k *ContainerInfo) parseDockerConfig(dockerCreds DockerCreds) (bool, error) {
 	for registryName, registryAuth := range dockerCreds.Auths {
+		if !strings.HasPrefix(registryName, "https://") {
+			registryName = "https://" + registryName
+		}
+
 		registryURL, err := url.Parse(registryName)
 		if err != nil {
 			return false, err
 		}
 
-		if strings.HasPrefix(k.Image, registryURL.Host) {
+		registryName = registryURL.Host + "/" + registryURL.Path
+
+		if strings.HasPrefix(k.Image, registryName) {
+			k.RegistryName = registryName
+			if registryAuth.ServerAddress != "" {
+				k.RegistryAddress = registryAuth.ServerAddress
+			} else {
+				k.RegistryAddress = fmt.Sprintf("https://%s", registryName)
+			}
 			k.RegistryUsername = registryAuth.Username
 			k.RegistryPassword = registryAuth.Password
-			k.RegistryAddress = fmt.Sprintf("https://%s", registryURL.Host)
-			k.RegistryName = registryName
 			return true, nil
 		}
 	}
