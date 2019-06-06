@@ -49,6 +49,7 @@ type vaultConfig struct {
 	ctShareProcess              bool
 	ctShareProcessDefault       string
 	pspAllowPrivilegeEscalation bool
+	ignoreMissingSecrets        string
 }
 
 var vaultAgentConfig = `
@@ -321,6 +322,12 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.ctImage = viper.GetString("vault_ct_image")
 	}
 
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-ignore-missing-secrets"]; ok {
+		vaultConfig.ignoreMissingSecrets = val
+	} else {
+		vaultConfig.ignoreMissingSecrets = viper.GetString("vault_ignore_missing_secrets")
+	}
+
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-pull-policy"]; ok {
 		switch val {
 		case "Never", "never":
@@ -534,6 +541,10 @@ func mutateContainers(containers []corev1.Container, vaultConfig vaultConfig, ns
 				Name:  "VAULT_ROLE",
 				Value: vaultConfig.role,
 			},
+			{
+				Name:  "VAULT_IGNORE_MISSING_SECRETS",
+				Value: vaultConfig.ignoreMissingSecrets,
+			},
 		}...)
 
 		if vaultConfig.useAgent {
@@ -688,8 +699,8 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 
 		if vaultConfig.ctShareProcess {
 			logger.Debugf("Detected shared process namespace")
-			sharePorcessNamespace := true
-			podSpec.ShareProcessNamespace = &sharePorcessNamespace
+			shareProcessNamespace := true
+			podSpec.ShareProcessNamespace = &shareProcessNamespace
 		}
 		podSpec.Containers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), podSpec.Containers...)
 
@@ -709,6 +720,7 @@ func initConfig() {
 	viper.SetDefault("vault_agent", "true")
 	viper.SetDefault("vault_ct_share_process_namespace", "")
 	viper.SetDefault("psp_allow_privilege_escalation", "false")
+	viper.SetDefault("vault_ignore_missing_secrets", "false")
 	viper.AutomaticEnv()
 }
 
