@@ -2,6 +2,7 @@
 set -xeo pipefail
 
 function finish {
+    echo "The last command was: $(history 1 | awk '{print $2}')"
     kubectl get pods
     kubectl logs deployment/vault-operator
     kubectl describe pod -l name=vault-operator
@@ -67,6 +68,10 @@ helm install banzaicloud-stable/vault-secrets-webhook \
     --set env.VAULT_ENV_IMAGE=banzaicloud/vault-env:latest \
     --namespace vswh \
     --wait
+
 kubectl apply -f deploy/test-secret.yaml
+test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].username'` = "dockerrepouser"
+test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].password'` = "dockerrepopassword"
+
 kubectl apply -f deploy/test-deployment.yaml
 kubectl wait --for=condition=available deployment/hello-secrets --timeout=120s
