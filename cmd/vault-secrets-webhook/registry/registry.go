@@ -104,14 +104,12 @@ func GetImageConfig(
 
 // GetImageBlob download image blob from registry
 func getImageBlob(container ContainerInfo) (*imagev1.ImageConfig, error) {
-	imageName, tag, err := parseContainerImage(container.Image)
-	if err != nil {
-		return nil, err
-	}
+	imageName, tag := parseContainerImage(container.Image)
 
 	registrySkipVerify := os.Getenv("REGISTRY_SKIP_VERIFY")
 
 	var hub *registry.Registry
+	var err error
 
 	if registrySkipVerify == "true" {
 		hub, err = registry.NewInsecure(container.RegistryAddress, container.RegistryUsername, container.RegistryPassword)
@@ -150,17 +148,17 @@ func getImageBlob(container ContainerInfo) (*imagev1.ImageConfig, error) {
 }
 
 // parseContainerImage returns image and tag
-func parseContainerImage(image string) (string, string, error) {
+func parseContainerImage(image string) (string, string) {
 	split := strings.SplitN(image, ":", 2)
 
-	if len(split) <= 1 {
-		return "", "", fmt.Errorf("Cannot find tag for image %s", image)
+	imageName := split[0]
+	tag := "latest"
+
+	if len(split) > 1 {
+		tag = split[1]
 	}
 
-	imageName := split[0]
-	tag := split[1]
-
-	return imageName, tag, nil
+	return imageName, tag
 }
 
 // K8s structure keeps information retrieved from POD definition
