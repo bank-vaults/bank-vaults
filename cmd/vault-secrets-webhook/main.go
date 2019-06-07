@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
@@ -71,6 +70,10 @@ auto_auth {
 		}
 	}
 }`
+
+type mutatingWebhook struct {
+	k8sClient *kubernetes.Clientset
+}
 
 func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	var containers = []corev1.Container{}
@@ -256,12 +259,12 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger *log.
 	return volumes
 }
 
-func vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
+func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
 
 	switch v := obj.(type) {
 	case *corev1.Pod:
 		podSpec := &v.Spec
-		return false, mutatePodSpec(obj, podSpec, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
+		return false, mw.mutatePodSpec(obj, podSpec, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
 	case *corev1.Secret:
 		secret := v
 		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/vault-addr"]; ok {
@@ -386,36 +389,28 @@ func getConfigMapForVaultAgent(obj metav1.Object, vaultConfig vaultConfig) *core
 	}
 }
 
-func getDataFromConfigmap(cmName string, ns string) (map[string]string, error) {
-	clientset, err := newClientSet()
-	if err != nil {
-		return nil, err
-	}
-	configMap, err := clientset.CoreV1().ConfigMaps(ns).Get(cmName, metav1.GetOptions{})
+func (mw *mutatingWebhook) getDataFromConfigmap(cmName string, ns string) (map[string]string, error) {
+	configMap, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Get(cmName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 	return configMap.Data, nil
 }
 
-func getDataFromSecret(secretName string, ns string) (map[string][]byte, error) {
-	clientset, err := newClientSet()
-	if err != nil {
-		return nil, err
-	}
-	secret, err := clientset.CoreV1().Secrets(ns).Get(secretName, metav1.GetOptions{})
+func (mw *mutatingWebhook) getDataFromSecret(secretName string, ns string) (map[string][]byte, error) {
+	secret, err := mw.k8sClient.CoreV1().Secrets(ns).Get(secretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 	return secret.Data, nil
 }
 
-func lookForEnvFrom(envFrom []corev1.EnvFromSource, ns string) ([]corev1.EnvVar, error) {
+func (mw *mutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns string) ([]corev1.EnvVar, error) {
 	var envVars []corev1.EnvVar
 
 	for _, ef := range envFrom {
 		if ef.ConfigMapRef != nil {
-			data, err := getDataFromConfigmap(ef.ConfigMapRef.Name, ns)
+			data, err := mw.getDataFromConfigmap(ef.ConfigMapRef.Name, ns)
 			if err != nil {
 				return envVars, err
 			}
@@ -430,7 +425,7 @@ func lookForEnvFrom(envFrom []corev1.EnvFromSource, ns string) ([]corev1.EnvVar,
 			}
 		}
 		if ef.SecretRef != nil {
-			data, err := getDataFromSecret(ef.SecretRef.Name, ns)
+			data, err := mw.getDataFromSecret(ef.SecretRef.Name, ns)
 			if err != nil {
 				return envVars, err
 			}
@@ -448,9 +443,9 @@ func lookForEnvFrom(envFrom []corev1.EnvFromSource, ns string) ([]corev1.EnvVar,
 	return envVars, nil
 }
 
-func lookForValueFrom(env corev1.EnvVar, ns string) (*corev1.EnvVar, error) {
+func (mw *mutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*corev1.EnvVar, error) {
 	if env.ValueFrom.ConfigMapKeyRef != nil {
-		data, err := getDataFromConfigmap(env.ValueFrom.ConfigMapKeyRef.Name, ns)
+		data, err := mw.getDataFromConfigmap(env.ValueFrom.ConfigMapKeyRef.Name, ns)
 		if err != nil {
 			return nil, err
 		}
@@ -463,7 +458,7 @@ func lookForValueFrom(env corev1.EnvVar, ns string) (*corev1.EnvVar, error) {
 		}
 	}
 	if env.ValueFrom.SecretKeyRef != nil {
-		data, err := getDataFromSecret(env.ValueFrom.SecretKeyRef.Name, ns)
+		data, err := mw.getDataFromSecret(env.ValueFrom.SecretKeyRef.Name, ns)
 		if err != nil {
 			return nil, err
 		}
@@ -478,13 +473,13 @@ func lookForValueFrom(env corev1.EnvVar, ns string) (*corev1.EnvVar, error) {
 	return nil, nil
 }
 
-func mutateContainers(containers []corev1.Container, podSpec *corev1.PodSpec, vaultConfig vaultConfig, ns string) (bool, error) {
+func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSpec *corev1.PodSpec, vaultConfig vaultConfig, ns string) (bool, error) {
 	mutated := false
 
 	for i, container := range containers {
 		var envVars []corev1.EnvVar
 		if len(container.EnvFrom) > 0 {
-			envFrom, err := lookForEnvFrom(container.EnvFrom, ns)
+			envFrom, err := mw.lookForEnvFrom(container.EnvFrom, ns)
 			if err != nil {
 				return false, err
 			}
@@ -496,7 +491,7 @@ func mutateContainers(containers []corev1.Container, podSpec *corev1.PodSpec, va
 				envVars = append(envVars, env)
 			}
 			if env.ValueFrom != nil {
-				valueFrom, err := lookForValueFrom(env, ns)
+				valueFrom, err := mw.lookForValueFrom(env, ns)
 				if err != nil {
 					return false, err
 				}
@@ -517,12 +512,7 @@ func mutateContainers(containers []corev1.Container, podSpec *corev1.PodSpec, va
 
 		// the container has no explicitly specified command
 		if len(args) == 0 {
-			clientset, err := newClientSet()
-			if err != nil {
-				return false, err
-			}
-
-			imageConfig, err := registry.GetImageConfig(clientset, ns, &container, podSpec)
+			imageConfig, err := registry.GetImageConfig(mw.k8sClient, ns, &container, podSpec)
 			if err != nil {
 				return false, err
 			}
@@ -609,16 +599,11 @@ func newClientSet() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vaultConfig, ns string) error {
-
-	clientset, err := newClientSet()
-	if err != nil {
-		return err
-	}
+func (mw *mutatingWebhook) mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vaultConfig, ns string) error {
 
 	logger.Debugf("Successfully connected to the API")
 
-	initContainersMutated, err := mutateContainers(podSpec.InitContainers, podSpec, vaultConfig, ns)
+	initContainersMutated, err := mw.mutateContainers(podSpec.InitContainers, podSpec, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
@@ -629,7 +614,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 		logger.Debugf("No pod init containers were mutated")
 	}
 
-	containersMutated, err := mutateContainers(podSpec.Containers, podSpec, vaultConfig, ns)
+	containersMutated, err := mw.mutateContainers(podSpec.Containers, podSpec, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
@@ -674,10 +659,10 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 			configMap := getConfigMapForVaultAgent(obj, vaultConfig)
 			agentConfigMapName = configMap.Name
 
-			_, err := clientset.CoreV1().ConfigMaps(ns).Create(configMap)
+			_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(configMap)
 			if err != nil {
 				if errors.IsAlreadyExists(err) {
-					_, err = clientset.CoreV1().ConfigMaps(ns).Update(configMap)
+					_, err = mw.k8sClient.CoreV1().ConfigMaps(ns).Update(configMap)
 					if err != nil {
 						return err
 					}
@@ -702,7 +687,7 @@ func mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vault
 
 		if vaultConfig.ctShareProcessDefault == "empty" {
 			logger.Debugf("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
-			apiVersion, _ := clientset.Discovery().ServerVersion()
+			apiVersion, _ := mw.k8sClient.Discovery().ServerVersion()
 			versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
 			logger.Debugf("Kuberentes API version detected: %s", apiVersion.String())
 
@@ -745,14 +730,12 @@ func init() {
 func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, logger *log.Logger) http.Handler {
 	webhook, err := mutating.NewWebhook(config, mutator, nil, nil, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error creating webhook: %s", err)
-		os.Exit(1)
+		logger.Fatalf("error creating webhook: %s", err)
 	}
 
 	handler, err := whhttp.HandlerFor(webhook)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error creating webhook: %s", err)
-		os.Exit(1)
+		logger.Fatalf("error creating webhook: %s", err)
 	}
 
 	return handler
@@ -762,7 +745,14 @@ var logger *log.Logger
 
 func main() {
 
-	mutator := mutating.MutatorFunc(vaultSecretsMutator)
+	k8sClient, err := newClientSet()
+	if err != nil {
+		log.Fatalf("error creating k8s client: %s", err)
+	}
+
+	mutatingWebhook := mutatingWebhook{k8sClient: k8sClient}
+
+	mutator := mutating.MutatorFunc(mutatingWebhook.vaultSecretsMutator)
 
 	podHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-pods", Obj: &corev1.Pod{}}, mutator, logger)
 	secretHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-secret", Obj: &corev1.Secret{}}, mutator, logger)
@@ -772,9 +762,8 @@ func main() {
 	mux.Handle("/secrets", secretHandler)
 
 	logger.Infof("Listening on :8443")
-	err := http.ListenAndServeTLS(":8443", viper.GetString("tls_cert_file"), viper.GetString("tls_private_key_file"), mux)
+	err = http.ListenAndServeTLS(":8443", viper.GetString("tls_cert_file"), viper.GetString("tls_private_key_file"), mux)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error serving webhook: %s", err)
-		os.Exit(1)
+		logger.Fatalf("error serving webhook: %s", err)
 	}
 }
