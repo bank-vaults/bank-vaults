@@ -14,7 +14,7 @@ function finish {
     kubectl describe deployment/hello-secrets
     kubectl describe rs hello-secrets
     kubectl describe pod hello-secrets
-    kubectl logs deployment/hello-secrets
+    kubectl logs deployment/hello-secrets --all-containers
 }
 
 trap finish EXIT
