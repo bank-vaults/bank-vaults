@@ -19,25 +19,40 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
+	"strconv"
 	"strings"
 
 	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	dockerTypes "github.com/docker/docker/api/types"
 	vaultapi "github.com/hashicorp/vault/api"
-	"github.com/slok/kubewebhook/pkg/log"
 	"github.com/spf13/cast"
-	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultConfig, ns string) error {
-	logger.Debugf("SecretData: %s", secret.Data)
 
-	os.Setenv("VAULT_ADDR", vaultConfig.addr)
-	os.Setenv("VAULT_SKIP_VERIFY", vaultConfig.skipVerify)
+	clientConfig := vaultapi.DefaultConfig()
+	clientConfig.Address = vaultConfig.addr
+
+	vaultInsecure, err := strconv.ParseBool(vaultConfig.skipVerify)
+	if err != nil {
+		return fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
+	}
+
+	tlsConfig := vaultapi.TLSConfig{Insecure: vaultInsecure}
+
+	clientConfig.ConfigureTLS(&tlsConfig)
+
+	vaultClient, err := vault.NewClientFromConfig(
+		clientConfig,
+		vault.ClientRole(vaultConfig.role),
+		vault.ClientAuthPath(vaultConfig.path),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create vault client: %v", err)
+	}
 
 	for key, value := range secret.Data {
 		if key == corev1.DockerConfigJsonKey {
@@ -46,7 +61,7 @@ func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultCon
 			if err != nil {
 				return fmt.Errorf("unmarshal dockerconfig json failed: %v", err)
 			}
-			err = mutateDockerCreds(secret, &dc, vaultConfig)
+			err = mutateDockerCreds(secret, &dc, vaultClient)
 			if err != nil {
 				return fmt.Errorf("mutate dockerconfig json failed: %v", err)
 			}
@@ -54,21 +69,17 @@ func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultCon
 			sc := map[string]string{
 				key: string(value),
 			}
-			err := mutateSecretCreds(secret, sc, vaultConfig)
+			err := mutateSecretCreds(secret, sc, vaultClient)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	os.Unsetenv("VAULT_ADDR")
-	os.Unsetenv("VAULT_SKIP_VERIFY")
-
 	return nil
 }
 
-func mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultConfig vaultConfig) error {
-	logger := &log.Std{Debug: viper.GetBool("debug")}
+func mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultClient *vault.Client) error {
 
 	assembled := registry.DockerCreds{Auths: map[string]dockerTypes.AuthConfig{}}
 
@@ -91,7 +102,7 @@ func mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultCon
 				"password": password,
 			}
 
-			dcCreds, err := getCredsFromVault(credPath, vaultConfig)
+			dcCreds, err := getCredsFromVault(credPath, vaultClient)
 			if err != nil {
 				return err
 			}
@@ -117,11 +128,8 @@ func mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultCon
 	return nil
 }
 
-func mutateSecretCreds(secret *corev1.Secret, sc map[string]string, vaultConfig vaultConfig) error {
-	logger := &log.Std{Debug: viper.GetBool("debug")}
-	logger.Debugf("simple secret %s", sc)
-
-	secCreds, err := getCredsFromVault(sc, vaultConfig)
+func mutateSecretCreds(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client) error {
+	secCreds, err := getCredsFromVault(sc, vaultClient)
 	if err != nil {
 		return err
 	}
@@ -131,21 +139,9 @@ func mutateSecretCreds(secret *corev1.Secret, sc map[string]string, vaultConfig 
 	return nil
 }
 
-func getCredsFromVault(creds map[string]string, vaultConfig vaultConfig) (map[string]string, error) {
-	logger := &log.Std{Debug: viper.GetBool("debug")}
-
-	logger.Debugf("Vaultconfig %s", vaultConfig)
-
-	client, err := vault.NewClientWithOptions(
-		vault.ClientRole(vaultConfig.role),
-		vault.ClientAuthPath(vaultConfig.path),
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create vault client: %v", err)
-	}
-
+func getCredsFromVault(creds map[string]string, vaultClient *vault.Client) (map[string]string, error) {
 	var secCreds = make(map[string]string)
+
 	for key, value := range creds {
 		if strings.HasPrefix(value, "vault:") {
 			path := strings.TrimPrefix(value, "vault:")
@@ -160,11 +156,9 @@ func getCredsFromVault(creds map[string]string, vaultConfig vaultConfig) (map[st
 				version = split[2]
 			}
 
-			var secret *vaultapi.Secret
-			var err error
 			var data map[string]interface{}
 
-			secret, err = client.Vault().Logical().ReadWithData(path, map[string][]string{"version": {version}})
+			secret, err := vaultClient.Vault().Logical().ReadWithData(path, map[string][]string{"version": {version}})
 			if err != nil {
 				logger.Errorf("Failed to read secret path: %s error: %s", path, err.Error())
 			}
