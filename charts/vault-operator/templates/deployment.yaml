@@ -24,6 +24,12 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}       
     spec:
+      initContainers:
+      {{- if index .Values "etcd-operator" "enabled" }}
+      - name: check-etcd-crd
+        image: lachlanevenson/k8s-kubectl
+        command: ['kubectl', 'get', 'customresourcedefinitions', 'etcdclusters.etcd.database.coreos.com']
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
