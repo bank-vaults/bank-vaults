@@ -46,22 +46,28 @@ rules:
   verbs:
   - "*"
 - apiGroups:
-    - extensions
+  - apiextensions.k8s.io
   resources:
-    - ingresses
+  - customresourcedefinitions
   verbs:
-    - list
-    - get
-    - create
-    - update
-    - watch
+  - get
 - apiGroups:
-    - monitoring.coreos.com
+  - extensions
   resources:
-    - servicemonitors
+  - ingresses
   verbs:
-    - update
-    - list
-    - get
-    - create
-    - watch
+  - list
+  - get
+  - create
+  - update
+  - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - update
+  - list
+  - get
+  - create
+  - watch
