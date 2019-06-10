@@ -610,6 +610,23 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 			if err != nil {
 				return fmt.Errorf("error configuring jwt roles on path %s for vault: %s", path, err.Error())
 			}
+		case "oidc":
+			config, err := cast.ToStringMapE(authMethod["config"])
+			if err != nil {
+				return fmt.Errorf("error finding config block for oidc: %s", err.Error())
+			}
+			err = v.configureGenericAuthConfig(authMethodType, path, config)
+			if err != nil {
+				return fmt.Errorf("error configuring oidc auth on path %s for vault: %s", path, err.Error())
+			}
+			roles, err := cast.ToSliceE(authMethod["roles"])
+			if err != nil {
+				return fmt.Errorf("error finding roles block for oidc: %s", err.Error())
+			}
+			err = v.configureJwtRoles(path, roles)
+			if err != nil {
+				return fmt.Errorf("error configuring oidc roles on path %s for vault: %s", path, err.Error())
+			}			
 		case "token":
 			roles, err := cast.ToSliceE(authMethod["roles"])
 			if err != nil {
