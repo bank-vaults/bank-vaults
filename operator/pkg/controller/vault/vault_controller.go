@@ -19,7 +19,9 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -41,12 +43,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -186,7 +188,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	v := &vaultv1alpha1.Vault{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, v)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -233,9 +235,36 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	if !v.Spec.GetTLSDisable() {
 		// Create the secret if it doesn't exist
-		sec, err := secretForVault(v)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
+		var sec *corev1.Secret
+		existingSec := corev1.Secret{}
+		// 1. get tls secret
+		err := r.client.Get(context.TODO(), types.NamespacedName{
+			Namespace: v.Namespace,
+			Name:      v.Name + "-tls",
+		}, &existingSec)
+		if apierrors.IsNotFound(err) {
+			// 2. if tls secret doesn't exist generate tls
+			sec, err = secretForVault(v)
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
+			}
+		} else if len(existingSec.Data) > 0 {
+			// 3. if tls secret exists check expiration date
+			expired, err := getCertExpirationDate(string(existingSec.Data["ca.crt"]))
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to get certificate expiration: %v", err)
+			}
+			// 4. generate tls if expiration date too close
+			if expired {
+				sec, err = secretForVault(v)
+				if err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
+				}
+			} else {
+				sec = &existingSec
+			}
+		} else {
+			return reconcile.Result{}, fmt.Errorf("failed to get tls secret for vault: %v", err)
 		}
 
 		// Set Vault instance as the owner and controller
@@ -243,7 +272,8 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			return reconcile.Result{}, err
 		}
 
-		err = r.createObjectIfNotExists(sec)
+		err = r.createOrUpdateObject(sec)
+		//err = r.createObjectIfNotExists(sec)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create secret for vault: %v", err)
 		}
@@ -1684,4 +1714,22 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 	}
 
 	return nil
+}
+
+func getCertExpirationDate(certPEM string) (bool, error) {
+	block, _ := pem.Decode([]byte(certPEM))
+	if block == nil {
+		return false, fmt.Errorf("failed to parse certificate PEM")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse certificate: %v", err)
+	}
+
+	if cert.NotAfter.Sub(time.Now()).Hours() < 168 {
+		log.V(1).Info("cert expiration date too close", "date", cert.NotAfter.UTC())
+		return true, nil
+	}
+
+	return false, nil
 }
