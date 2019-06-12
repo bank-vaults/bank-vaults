@@ -374,8 +374,12 @@ func getConfigMapForVaultAgent(obj metav1.Object, vaultConfig vaultConfig) *core
 	if name == "" {
 		ownerReferences = obj.GetOwnerReferences()
 		if len(ownerReferences) > 0 {
-			generateNameSlice := strings.Split(ownerReferences[0].Name, "-")
-			name = strings.Join(generateNameSlice[:len(generateNameSlice)-1], "-")
+			if strings.Contains(ownerReferences[0].Name, "-") {
+				generateNameSlice := strings.Split(ownerReferences[0].Name, "-")
+				name = strings.Join(generateNameSlice[:len(generateNameSlice)-1], "-")
+			} else {
+				name = ownerReferences[0].Name
+			}
 		}
 	}
 	return &corev1.ConfigMap{
