@@ -346,7 +346,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	// Create the StatefulSet if it doesn't exist
 	tlsAnnotations := map[string]string{}
-	tlsAnnotations["tls-expiration-date"] = tlsExpiration.UTC().Format(time.RFC3339)
+	tlsAnnotations["vault.banzaicloud.io/tls-expiration-date"] = tlsExpiration.UTC().Format(time.RFC3339)
 	statefulSet, err := statefulSetForVault(v, externalSecretsToWatchItems, tlsAnnotations)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to fabricate StatefulSet: %v", err)
