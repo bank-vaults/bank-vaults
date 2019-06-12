@@ -257,10 +257,9 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to get certificate expiration: %v", err)
 			}
-			// If remaining time lower than defined return expiration date
+			// Generate new tls if expiration date is too close
 			if tlsExpiration.Sub(time.Now()).Hours() < *r.tlsExpTH {
 				log.V(2).Info("cert expiration date too close", "date", tlsExpiration.UTC().Format(time.RFC3339))
-				// Generate new tls if expiration date is too close
 				sec, tlsExpiration, err = secretForVault(v)
 				if err != nil {
 					return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
