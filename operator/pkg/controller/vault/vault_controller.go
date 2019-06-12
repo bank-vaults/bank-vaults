@@ -233,6 +233,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
+	tlsUpdated := false
 	if !v.Spec.GetTLSDisable() {
 		// Create the secret if it doesn't exist
 		var sec *corev1.Secret
@@ -260,6 +261,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 				if err != nil {
 					return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
 				}
+				tlsUpdated = true
 			} else {
 				sec = &existingSec
 			}
@@ -490,6 +492,14 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		err := r.client.Update(context.TODO(), v)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to update vault status: %v", err)
+		}
+	}
+
+	// delete vault pods if tls is updated
+	if tlsUpdated {
+		for _, pod := range podList.Items {
+			log.V(1).Info("Delete pod due to tls is updated", "podName", pod.GetName())
+			r.client.Delete(context.TODO(), &pod)
 		}
 	}
 
