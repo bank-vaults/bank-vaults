@@ -39,10 +39,6 @@ import (
 // DefaultConfigFile is the name of the default config file
 const DefaultConfigFile = "vault-config.yml"
 
-const databaseRotateRootPath = "rotate-root"
-
-const awsRotateRootPath = "config/rotate-root"
-
 // secretEngineConfigNoNeedName holds the secret engine types where
 // the name shouldn't be part of the config path
 var secretEngineConfigNoNeedName = map[string]bool{
