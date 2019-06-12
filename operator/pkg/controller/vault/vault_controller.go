@@ -1068,7 +1068,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      withVaultLabels(v, ls),
-					Annotations: withTLSAnnotations(v, tlsAnnotations, withVaultAnnotations(v, withVaultWatchedExternalSecrets(v, externalSecretsToWatchItems, withPrometheusAnnotations("9102", getCommonAnnotations(v, map[string]string{}))))),
+					Annotations: withTLSExpirationAnnotations(v, tlsAnnotations, withVaultAnnotations(v, withVaultWatchedExternalSecrets(v, externalSecretsToWatchItems, withPrometheusAnnotations("9102", getCommonAnnotations(v, map[string]string{}))))),
 				},
 				Spec: corev1.PodSpec{
 					Affinity: &corev1.Affinity{
@@ -1231,7 +1231,7 @@ func getTLSExpirationAnnotations(statefulSet *appsv1.StatefulSet, tlsExpiration 
 	return annotations
 }
 
-func withTLSAnnotations(v *vaultv1alpha1.Vault, tlsAnnotations, annotations map[string]string) map[string]string {
+func withTLSExpirationAnnotations(v *vaultv1alpha1.Vault, tlsAnnotations, annotations map[string]string) map[string]string {
 	for key, value := range tlsAnnotations {
 		annotations[key] = value
 	}
