@@ -182,7 +182,7 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.V
 
 		configFileDirs[configDirTrimmed] = files
 
-		logrus.Infof("Watching Directory for changes: %s", configDir)
+		logrus.Infof("watching directory for changes: %s", configDir)
 		watcher.Add(configDir)
 	}
 
@@ -193,7 +193,7 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.V
 			// For real Files we only need to watch the WRITE Event # TODO: Sometimes it triggers 2 WRITE when a file is edited and saved
 			// For Kubernetes configMaps we need to watch for CREATE on the "..data"
 			if event.Op&fsnotify.Write == fsnotify.Write && stringInSlice(vaultConfigFiles, filepath.Clean(event.Name)) {
-				logrus.Infof("File has changed: %s", event.Name)
+				logrus.Infof("file has changed: %s", event.Name)
 				configurations <- parseConfiguration(filepath.Clean(event.Name))
 			} else if event.Op&fsnotify.Create == fsnotify.Create && filepath.Base(event.Name) == "..data" {
 				for _, fileName := range configFileDirs[filepath.Dir(event.Name)] {
@@ -202,7 +202,7 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.V
 				}
 			}
 		case err := <-watcher.Errors:
-			logrus.Errorf("Watcher Event Error: %s", err.Error())
+			logrus.Errorf("watcher event error: %s", err.Error())
 		}
 	}
 }

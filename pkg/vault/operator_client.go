@@ -824,10 +824,10 @@ func (v *vault) configurePlugins(config *viper.Viper) error {
 
 	listPlugins, err := v.cl.Sys().ListPlugins(&api.ListPluginsInput{})
 	if err != nil {
-		return fmt.Errorf("Failed to retrieve list of plugins: %s", err.Error())
+		return fmt.Errorf("failed to retrieve list of plugins: %s", err.Error())
 	}
 
-	logrus.Debugf("Already registered plugins: %#v\n", listPlugins.Names)
+	logrus.Debugf("already registered plugins: %#v", listPlugins.Names)
 
 	for _, plugin := range plugins {
 		command, err := getOrError(plugin, "command")
@@ -857,14 +857,14 @@ func (v *vault) configurePlugins(config *viper.Viper) error {
 			SHA256:  sha256,
 			Type:    pluginType,
 		}
-		logrus.Infof("Registering plugin with input: %#v\n", input)
+		logrus.Infof("registering plugin with input: %#v", input)
 
 		err = v.cl.Sys().RegisterPlugin(&input)
 		if err != nil {
 			return fmt.Errorf("error registering plugin %s in vault", err.Error())
 		}
 
-		logrus.Infoln("registered", plugin)
+		logrus.Infoln("registered plugin", plugin)
 	}
 
 	return nil
@@ -875,7 +875,7 @@ func (v *vault) mountExists(path string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("error reading mounts from vault: %s", err.Error())
 	}
-	logrus.Infof("Already existing mounts: %+v\n", mounts)
+	logrus.Infof("already existing mounts: %+v", mounts)
 	return mounts[path+"/"] != nil, nil
 }
 
@@ -936,7 +936,7 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 				Local:       local,
 				SealWrap:    sealWrap,
 			}
-			logrus.Infof("Mounting secret engine with input: %#v\n", input)
+			logrus.Infof("mounting secret engine with input: %#v", input)
 			err = v.cl.Sys().Mount(path, &input)
 			if err != nil {
 				return fmt.Errorf("error mounting %s into vault: %s", path, err.Error())
@@ -945,7 +945,7 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 			logrus.Infoln("mounted", secretEngineType, "to", path)
 
 		} else {
-			logrus.Infof("Tuning already existing mount: %s/\n", path)
+			logrus.Infof("tuning already existing mount: %s/", path)
 			config, err := getMountConfigInput(secretEngine)
 			if err != nil {
 				return err
@@ -1018,7 +1018,7 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 				_, err = v.cl.Logical().Write(configPath, subConfigData)
 				if err != nil {
 					if isOverwriteProhibitedError(err) {
-						logrus.Infoln("Can't reconfigure", configPath, "please delete it manually")
+						logrus.Infoln("can't reconfigure", configPath, "please delete it manually")
 						continue
 					}
 					return fmt.Errorf("error configuring %s config in vault: %s", configPath, err.Error())
@@ -1096,7 +1096,7 @@ func (v *vault) configureAuditDevices(config *viper.Viper) error {
 			return fmt.Errorf("error reading audit mounts from vault: %s", err.Error())
 		}
 
-		logrus.Infof("Already existing audit devices: %#v\n", mounts)
+		logrus.Infof("already existing audit devices: %#v", mounts)
 
 		if mounts[path+"/"] == nil {
 			var options api.EnableAuditOptions
@@ -1104,7 +1104,7 @@ func (v *vault) configureAuditDevices(config *viper.Viper) error {
 			if err != nil {
 				return fmt.Errorf("error parsing audit options: %s", err.Error())
 			}
-			logrus.Infof("Enabling audit device with options: %#v\n", options)
+			logrus.Infof("enabling audit device with options: %#v", options)
 			err = v.cl.Sys().EnableAuditWithOptions(path, &options)
 			if err != nil {
 				return fmt.Errorf("error enabling audit device %s in vault: %s", path, err.Error())
@@ -1113,7 +1113,7 @@ func (v *vault) configureAuditDevices(config *viper.Viper) error {
 			logrus.Infoln("mounted audit device", auditDeviceType, "to", path)
 
 		} else {
-			logrus.Infof("audit device is already mounted: %s/\n", path)
+			logrus.Infof("audit device is already mounted: %s/", path)
 		}
 	}
 
@@ -1159,7 +1159,7 @@ func (v *vault) configureStartupSecrets(config *viper.Viper) error {
 func readVaultGroup(group string, client *api.Client) (secret *api.Secret, err error) {
 	secret, err = client.Logical().Read(fmt.Sprintf("identity/group/name/%s", group))
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read group %s by name: %v", group, err)
+		return nil, fmt.Errorf("failed to read group %s by name: %v", group, err)
 	}
 	if secret == nil {
 		// No Data returned, Group does not exist
@@ -1171,7 +1171,7 @@ func readVaultGroup(group string, client *api.Client) (secret *api.Secret, err e
 func readVaultGroupAlias(id string, client *api.Client) (secret *api.Secret, err error) {
 	secret, err = client.Logical().Read(fmt.Sprintf("identity/group-alias/id/%s", id))
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read group alias %s by id: %v", id, err)
+		return nil, fmt.Errorf("failed to read group alias %s by id: %v", id, err)
 	}
 	if secret == nil {
 		// No Data returned, Group does not exist
@@ -1228,7 +1228,7 @@ func findVaultGroupAliasIDFromName(name string, client *api.Client) (id string, 
 	for _, alias := range aliases.Data["keys"].([]interface{}) {
 		aliasName, err := getVaultGroupAliasName(cast.ToString(alias), client)
 		if err != nil {
-			return "", fmt.Errorf("Error fetching name for alias id: %s", alias)
+			return "", fmt.Errorf("error fetching name for alias id: %s", alias)
 		}
 		if aliasName == name {
 			return cast.ToString(alias), nil
@@ -1262,7 +1262,7 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 		// Currently does not support specifing members directly in the group config
 		// Use group aliases for that
 		if cast.ToString(group["type"]) != "external" {
-			return fmt.Errorf("Only external groups are supported for now")
+			return fmt.Errorf("only external groups are supported for now")
 		}
 
 		config := map[string]interface{}{
@@ -1276,13 +1276,13 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 			logrus.Infof("creating group: %s", group["name"])
 			_, err = v.cl.Logical().Write("identity/group", config)
 			if err != nil {
-				return fmt.Errorf("Failed to create group %s : %v", group["name"], err)
+				return fmt.Errorf("failed to create group %s : %v", group["name"], err)
 			}
 		} else {
 			logrus.Infof("tuning already existing group: %s", group["name"])
 			_, err = v.cl.Logical().Write(fmt.Sprintf("identity/group/name/%s", group["name"]), config)
 			if err != nil {
-				return fmt.Errorf("Failed to tune group %s : %v", group["name"], err)
+				return fmt.Errorf("failed to tune group %s : %v", group["name"], err)
 			}
 		}
 	}
@@ -1313,13 +1313,13 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 			logrus.Infof("creating group-alias: %s", groupAlias["name"])
 			_, err = v.cl.Logical().Write("identity/group-alias", config)
 			if err != nil {
-				return fmt.Errorf("Failed to create group-alias %s : %v", groupAlias["name"], err)
+				return fmt.Errorf("failed to create group-alias %s : %v", groupAlias["name"], err)
 			}
 		} else {
 			logrus.Infof("tuning already existing group-alias: %s - ID: %s", groupAlias["name"], ga)
 			_, err = v.cl.Logical().Write(fmt.Sprintf("identity/group-alias/id/%s", ga), config)
 			if err != nil {
-				return fmt.Errorf("Failed to tune group-alias %s : %v", ga, err)
+				return fmt.Errorf("failed to tune group-alias %s : %v", ga, err)
 			}
 		}
 	}
@@ -1374,7 +1374,7 @@ func getOrError(m map[string]interface{}, key string) (string, error) {
 	if value != nil {
 		return cast.ToStringE(value)
 	}
-	return "", fmt.Errorf("Value for %s is not set", key)
+	return "", fmt.Errorf("value for %s is not set", key)
 }
 
 func isOverwriteProhibitedError(err error) bool {
