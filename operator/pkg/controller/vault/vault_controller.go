@@ -238,24 +238,24 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		// Create the secret if it doesn't exist
 		var sec *corev1.Secret
 		existingSec := corev1.Secret{}
-		// 1. get tls secret
+		// Get tls secret
 		err := r.client.Get(context.TODO(), types.NamespacedName{
 			Namespace: v.Namespace,
 			Name:      v.Name + "-tls",
 		}, &existingSec)
 		if apierrors.IsNotFound(err) {
-			// 2. if tls secret doesn't exist generate tls
+			// If tls secret doesn't exist generate tls
 			sec, err = secretForVault(v)
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
 			}
 		} else if len(existingSec.Data) > 0 {
-			// 3. if tls secret exists check expiration date
-			expired, err := getCertExpirationDate(string(existingSec.Data["ca.crt"]))
+			// If tls secret exists check expiration date
+			expired, err := getCertExpirationDate(string(existingSec.Data["server.crt"]))
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to get certificate expiration: %v", err)
 			}
-			// 4. generate tls if expiration date too close
+			// Generate new tls if expiration date is too close
 			if expired {
 				sec, err = secretForVault(v)
 				if err != nil {
@@ -495,7 +495,8 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
-	// delete vault pods if tls is updated
+	// delete vault pods if tls is updated (for testing)
+	// TODO annotate statefulset instead deleting pod
 	if tlsUpdated {
 		for _, pod := range podList.Items {
 			log.V(1).Info("Delete pod due to tls is updated", "podName", pod.GetName())
@@ -1736,6 +1737,7 @@ func getCertExpirationDate(certPEM string) (bool, error) {
 		return false, fmt.Errorf("failed to parse certificate: %v", err)
 	}
 
+	// If remaining time lower than one week return true
 	if cert.NotAfter.Sub(time.Now()).Hours() < 168 {
 		log.V(1).Info("cert expiration date too close", "date", cert.NotAfter.UTC())
 		return true, nil
