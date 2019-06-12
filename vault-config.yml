@@ -66,8 +66,8 @@ auth:
   # more information.
   - type: aws
     config:
-      access_key: VKIAJBRHKH6EVTTNXDHA
-      secret_key: vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj
+      access_key: "${env "AWS_ACCESS_KEY_ID"}" # or you can put the credential literals directly here
+      secret_key: "${env "AWS_SECRET_ACCESS_KEY"}"
       iam_server_id_header_value: vault-dev.example.com # consider setting this to the Vault server's DNS name 
     crossaccountrole:
     # Add cross account number and role to assume in the cross account
@@ -178,6 +178,7 @@ secrets:
           allowed_roles: [pipeline]
           username: "${env "ROOT_USERNAME"}" # Example how to read environment variables
           password: "${env "ROOT_PASSWORD"}"
+          rotate: true # Ask bank-vaults to ask Vault to rotate the root credentials
       roles:
         - name: pipeline
           db_name: my-mysql
