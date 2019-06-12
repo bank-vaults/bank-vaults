@@ -226,6 +226,23 @@ secrets:
         generate_lease: true
         ttl: 30m
 
+  # The AWS secrets engine generates AWS access credentials dynamically based on IAM policies.
+  # See https://www.vaultproject.io/docs/secrets/aws/index.html for more information
+  - type: aws
+    description: AWS secret engine.
+    configuration:
+      config/root:
+        - access_key: "${env "AWS_ACCESS_KEY_ID"}" # or you can put the credential literals directly here
+          secret_key: "${env "AWS_SECRET_ACCESS_KEY"}"
+          # Uncomment for root credential rotation
+          # see: https://www.vaultproject.io/api/secret/aws/index.html#rotate-root-iam-credentials
+          # rotate: true
+      roles:
+        - name: simple-user
+          credential_type: iam_user
+          policy_arns:
+            - arn:aws:iam::123456789012:policy/UsersManageOwnCredentials
+
 # Registers a new plugin in Vault's plugin catalog. "plugin_directory" setting should be set it Vault server configuration
 # and plugin binary should be present in plugin directory. Also, for some plugins readOnlyRootFilesystem Pod Security Policy
 # should be disabled to allow RPC communication between plugin and Vault server via Unix socket
