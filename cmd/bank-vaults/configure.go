@@ -25,10 +25,10 @@ import (
 	"github.com/Masterminds/sprig"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	"github.com/fsnotify/fsnotify"
+	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/jpillora/backoff"
 )
 
 const (
@@ -95,7 +95,6 @@ var configureCmd = &cobra.Command{
 			close(configurations)
 		}
 
-
 		// Handle backoff for configuration errors
 		b := &backoff.Backoff{
 			Min:    500 * time.Millisecond,
@@ -138,7 +137,7 @@ var configureCmd = &cobra.Command{
 						return
 					}
 
-					// On *any* successful configuration reset the backoff 
+					// On *any* successful configuration reset the backoff
 					b.Reset()
 					successfulConfigurationsCount++
 					logrus.Info("successfully configured vault")
@@ -150,10 +149,10 @@ var configureCmd = &cobra.Command{
 }
 
 func handleConfigurationError(vaultConfigFile string, configurations chan *viper.Viper, sleepTime time.Duration) {
-	// This handler will sleep for a exponential backoff amount of time and re-inject the failed configuration into the 
+	// This handler will sleep for a exponential backoff amount of time and re-inject the failed configuration into the
 	// configurations channel to be re-applied to vault
 	// Eventually consistent model - all recovarable errors (5xx and configs that depend on other configs) will be eventually fixed
-	// non recovarable errors will be retried and keep failing every MAX BACKOFF seconds, increasing the error counters ont he vault-configurator pod. 
+	// non recovarable errors will be retried and keep failing every MAX BACKOFF seconds, increasing the error counters ont he vault-configurator pod.
 	logrus.Infof("Failed applying configuration file: %s , sleeping for %s before trying again", vaultConfigFile, sleepTime)
 	time.Sleep(sleepTime)
 	configurations <- parseConfiguration(vaultConfigFile)
@@ -193,7 +192,7 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.V
 			// we only care about the config file or the ConfigMap directory (if in Kubernetes)
 			// For real Files we only need to watch the WRITE Event # TODO: Sometimes it triggers 2 WRITE when a file is edited and saved
 			// For Kubernetes configMaps we need to watch for CREATE on the "..data"
-			if event.Op&fsnotify.Write == fsnotify.Write && vault.StringInSlice(filepath.Clean(event.Name), vaultConfigFiles) {
+			if event.Op&fsnotify.Write == fsnotify.Write && stringInSlice(vaultConfigFiles, filepath.Clean(event.Name)) {
 				logrus.Infof("File has changed: %s", event.Name)
 				configurations <- parseConfiguration(filepath.Clean(event.Name))
 			} else if event.Op&fsnotify.Create == fsnotify.Create && filepath.Base(event.Name) == "..data" {
@@ -206,7 +205,6 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.V
 			logrus.Errorf("Watcher Event Error: %s", err.Error())
 		}
 	}
-
 }
 
 func parseConfiguration(vaultConfigFile string) *viper.Viper {
@@ -239,6 +237,15 @@ func parseConfiguration(vaultConfigFile string) *viper.Viper {
 	}
 
 	return config
+}
+
+func stringInSlice(list []string, match string) bool {
+	for _, item := range list {
+		if item == match {
+			return true
+		}
+	}
+	return false
 }
 
 func init() {

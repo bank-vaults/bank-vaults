@@ -39,6 +39,10 @@ import (
 // DefaultConfigFile is the name of the default config file
 const DefaultConfigFile = "vault-config.yml"
 
+const databaseRotateRootPath = "rotate-root"
+
+const awsRotateRootPath = "config/rotate-root"
+
 // secretEngineConfigNoNeedName holds the secret engine types where
 // the name shouldn't be part of the config path
 var secretEngineConfigNoNeedName = map[string]bool{
@@ -69,9 +73,10 @@ type Config struct {
 // vault is an implementation of the Vault interface that will perform actions
 // against a Vault server, using a provided KMS to retrieve
 type vault struct {
-	keyStore kv.Service
-	cl       *api.Client
-	config   *Config
+	keyStore    kv.Service
+	cl          *api.Client
+	config      *Config
+	rotateCache map[string]bool
 }
 
 // Interface check
@@ -97,9 +102,10 @@ func New(k kv.Service, cl *api.Client, config Config) (Vault, error) {
 	}
 
 	return &vault{
-		keyStore: k,
-		cl:       cl,
-		config:   &config,
+		keyStore:    k,
+		cl:          cl,
+		config:      &config,
+		rotateCache: map[string]bool{},
 	}, nil
 }
 
@@ -864,6 +870,15 @@ func (v *vault) configurePlugins(config *viper.Viper) error {
 	return nil
 }
 
+func (v *vault) mountExists(path string) (bool, error) {
+	mounts, err := v.cl.Sys().ListMounts()
+	if err != nil {
+		return false, fmt.Errorf("error reading mounts from vault: %s", err.Error())
+	}
+	logrus.Infof("Already existing mounts: %+v\n", mounts)
+	return mounts[path+"/"] != nil, nil
+}
+
 func (v *vault) configureSecretEngines(config *viper.Viper) error {
 	secretsEngines := []map[string]interface{}{}
 	err := config.UnmarshalKey("secrets", &secretsEngines)
@@ -886,12 +901,12 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 			path = strings.Trim(path, "/")
 		}
 
-		mounts, err := v.cl.Sys().ListMounts()
+		mountExists, err := v.mountExists(path)
 		if err != nil {
-			return fmt.Errorf("error reading mounts from vault: %s", err.Error())
+			return err
 		}
-		logrus.Infof("Already existing mounts: %#v\n", mounts)
-		if mounts[path+"/"] == nil {
+
+		if !mountExists {
 			description, err := getOrDefaultString(secretEngine, "description")
 			if err != nil {
 				return fmt.Errorf("error getting description for secret engine: %s", err.Error())
@@ -946,6 +961,7 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 		if err != nil {
 			return fmt.Errorf("error getting configuration for secret engine: %s", err.Error())
 		}
+
 		for configOption, configData := range configuration {
 			configData, err := cast.ToSliceE(configData)
 			if err != nil {
@@ -959,7 +975,7 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 
 				name, ok := subConfigData["name"]
 				if !ok && !isConfigNoNeedName(secretEngineType, configOption) {
-					return fmt.Errorf("error finding sub config data name for secret engine")
+					return fmt.Errorf("error finding sub config data name for secret engine: %s/%s", path, configOption)
 				}
 
 				// config data can have a child dict. But it will cause:
@@ -978,17 +994,76 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 				} else {
 					configPath = fmt.Sprintf("%s/%s", path, configOption)
 				}
-				_, err = v.cl.Logical().Write(configPath, subConfigData)
 
+				rotate := cast.ToBool(subConfigData["rotate"])
+
+				// For secret engines where the root credentials are rotatable we don't wan't to reconfigure again
+				// with the old credentials, because that would cause access denied issues. Currently these are:
+				// - AWS
+				// - Database
+				if rotate && mountExists &&
+					((secretEngineType == "database" && configOption == "config") ||
+						(secretEngineType == "aws" && configOption == "config/root")) {
+
+					// TODO we need to find out if it was rotated or not
+					err = v.rotateSecretEngineCredentials(secretEngineType, path, name.(string), configPath)
+					if err != nil {
+						return fmt.Errorf("error rotating credentials for '%s' config in vault: %s", configPath, err.Error())
+					}
+
+					logrus.Infof("skipping reconfiguration of %s because of credential rotation", configPath)
+					continue
+				}
+
+				_, err = v.cl.Logical().Write(configPath, subConfigData)
 				if err != nil {
 					if isOverwriteProhibitedError(err) {
-						logrus.Debugln("Can't reconfigure", configPath, "please delete it manually")
+						logrus.Infoln("Can't reconfigure", configPath, "please delete it manually")
 						continue
 					}
-					return fmt.Errorf("error putting config data -> %s config into vault: %s", configPath, err.Error())
+					return fmt.Errorf("error configuring %s config in vault: %s", configPath, err.Error())
+				}
+
+				if rotate {
+					err = v.rotateSecretEngineCredentials(secretEngineType, path, name.(string), configPath)
+					if err != nil {
+						return fmt.Errorf("error rotating credentials for '%s' config in vault: %s", configPath, err.Error())
+					}
 				}
 			}
 		}
+	}
+
+	return nil
+}
+
+func (v *vault) rotateSecretEngineCredentials(secretEngineType, path, name, configPath string) error {
+	var rotatePath string
+	switch secretEngineType {
+	case "aws":
+		rotatePath = fmt.Sprintf("%s/config/rotate-root", path)
+	case "database":
+		rotatePath = fmt.Sprintf("%s/rotate-root/%s", path, name)
+	case "gcp":
+		rotatePath = fmt.Sprintf("%s/%s/rotate", path, name)
+	default:
+		return fmt.Errorf("secret engine type '%s' doesn't support credential rotation", secretEngineType)
+	}
+
+	if _, ok := v.rotateCache[rotatePath]; !ok {
+
+		logrus.Infoln("doing credential rotation at", rotatePath)
+
+		_, err := v.cl.Logical().Write(rotatePath, nil)
+		if err != nil {
+			return fmt.Errorf("error rotating credentials for '%s' config in vault: %s", configPath, err.Error())
+		}
+
+		logrus.Infoln("credential got rotated at", rotatePath)
+
+		v.rotateCache[rotatePath] = true
+	} else {
+		logrus.Infoln("credentials were rotated previously for", rotatePath)
 	}
 
 	return nil
@@ -1162,7 +1237,6 @@ func findVaultGroupAliasIDFromName(name string, client *api.Client) (id string, 
 
 	// Did not find any alias matching ID to Name
 	return "", nil
-
 }
 
 func (v *vault) configureIdentityGroups(config *viper.Viper) error {
@@ -1334,14 +1408,9 @@ func isConfigNoNeedName(secretEngineType string, configOption string) bool {
 		return ok
 	}
 
-	return false
-}
-
-func StringInSlice(match string, list []string) bool {
-	for _, item := range list {
-		if item == match {
-			return true
-		}
+	if secretEngineType == "aws" && configOption == "config/root" {
+		return true
 	}
+
 	return false
 }

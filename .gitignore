@@ -33,3 +33,5 @@ bin/*
 !/.idea/modules.xml
 !/.idea/runConfigurations/
 !/.idea/scopes/
+
+vault-config.yaml
