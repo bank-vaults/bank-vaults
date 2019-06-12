@@ -83,11 +83,11 @@ items:
         operator: NotIn
         values:
         - {{ .Release.Namespace }}
-  - name: configmaps.{{ template "vault-configmaps-webhook.name" . }}.admission.banzaicloud.com
+  - name: configmaps.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
     clientConfig:
       service:
         namespace: {{ .Release.Namespace }}
-        name: {{ template "vault-configmaps-webhook.fullname" . }}
+        name: {{ template "vault-secrets-webhook.fullname" . }}
         path: /configmaps
       caBundle: {{ b64enc $ca.Cert }}
     rules:
