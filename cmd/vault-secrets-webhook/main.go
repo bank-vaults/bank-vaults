@@ -50,6 +50,7 @@ type vaultConfig struct {
 	ctShareProcessDefault       string
 	pspAllowPrivilegeEscalation bool
 	ignoreMissingSecrets        string
+	vaultEnvPassThrough         string
 }
 
 var vaultAgentConfig = `
@@ -331,6 +332,11 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	} else {
 		vaultConfig.ignoreMissingSecrets = viper.GetString("vault_ignore_missing_secrets")
 	}
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-env-passthrough"]; ok {
+		vaultConfig.vaultEnvPassThrough = val
+	} else {
+		vaultConfig.vaultEnvPassThrough = viper.GetString("vault_env_passthrough")
+	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-pull-policy"]; ok {
 		switch val {
@@ -556,6 +562,10 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 				Name:  "VAULT_IGNORE_MISSING_SECRETS",
 				Value: vaultConfig.ignoreMissingSecrets,
 			},
+			{
+				Name:  "VAULT_ENV_PASSTHROUGH",
+				Value: vaultConfig.vaultEnvPassThrough,
+			},
 		}...)
 
 		if vaultConfig.useAgent {
@@ -726,6 +736,7 @@ func init() {
 	viper.SetDefault("vault_ct_share_process_namespace", "")
 	viper.SetDefault("psp_allow_privilege_escalation", "false")
 	viper.SetDefault("vault_ignore_missing_secrets", "false")
+	viper.SetDefault("vault_env_passthrough", "")
 	viper.AutomaticEnv()
 
 	logger = log.New()

@@ -52,6 +52,7 @@ var sanitizeEnvmap = map[string]bool{
 	"VAULT_ROLE":                   true,
 	"VAULT_PATH":                   true,
 	"VAULT_IGNORE_MISSING_SECRETS": true,
+	"VAULT_ENV_PASSTHROUGH":        true,
 }
 
 // Appends variable an entry (name=value) into the environ list.
@@ -78,6 +79,13 @@ func main() {
 	}
 
 	ignoreMissingSecrets := os.Getenv("VAULT_IGNORE_MISSING_SECRETS") == "true"
+
+	// do not sanitize env vars specified in VAULT_ENV_PASSTHROUGH
+	for _, envVar := range strings.Split(os.Getenv("VAULT_ENV_PASSTHROUGH"), ",") {
+		if trimmed := strings.TrimSpace(envVar); trimmed != "" {
+			delete(sanitizeEnvmap, trimmed)
+		}
+	}
 
 	// initial and sanitized environs
 	environ := syscall.Environ()
