@@ -15,14 +15,16 @@
 package controller
 
 import (
+	"time"
+
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // AddToManagerFuncs is a list of functions to add all Controllers to the Manager
-var AddToManagerFuncs []func(manager.Manager, *float64) error
+var AddToManagerFuncs []func(manager.Manager, time.Duration) error
 
 // AddToManager adds all Controllers to the Manager
-func AddToManager(m manager.Manager, tlsExpTH *float64) error {
+func AddToManager(m manager.Manager, tlsExpTH time.Duration) error {
 	for _, f := range AddToManagerFuncs {
 		if err := f(m, tlsExpTH); err != nil {
 			return err
