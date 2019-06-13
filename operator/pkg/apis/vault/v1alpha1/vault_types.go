@@ -21,6 +21,7 @@ import (
 	"errors"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/spf13/cast"
@@ -140,6 +141,7 @@ type VaultSpec struct {
 	Resources             *Resources                    `json:"resources,omitempty"`
 	Ingress               *Ingress                      `json:"ingress,omitempty"`
 	ServiceMonitorEnabled bool                          `json:"serviceMonitorEnabled,omitempty"`
+	TLSExpiryThreshold    *time.Duration                `json:"tlsExpiryThreshold,omitempty"`
 
 	// Define a list of namespaces where the generated CA certificite should be distributed,
 	// use ["*"] for all namespaeces.
@@ -250,6 +252,13 @@ func (spec *VaultSpec) GetTLSDisable() bool {
 	listener := spec.getListener()
 	tcpSpecs := cast.ToStringMap(listener["tcp"])
 	return cast.ToBool(tcpSpecs["tls_disable"])
+}
+
+func (spec *VaultSpec) GetTLSExpiryThreshold() time.Duration {
+	if spec.TLSExpiryThreshold == nil {
+		return time.Hour * 168
+	}
+	return *spec.TLSExpiryThreshold
 }
 
 func (spec *VaultSpec) getListener() map[string]interface{} {

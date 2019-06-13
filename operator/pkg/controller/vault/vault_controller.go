@@ -19,7 +19,9 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -41,12 +43,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -186,7 +188,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	v := &vaultv1alpha1.Vault{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, v)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -231,11 +233,40 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
+	tlsExpiration := time.Time{}
 	if !v.Spec.GetTLSDisable() {
-		// Create the secret if it doesn't exist
-		sec, err := secretForVault(v)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
+		// Check if we have an existing TLS Secret for Vault
+		var sec *corev1.Secret
+		existingSec := corev1.Secret{}
+		// Get tls secret
+		err := r.client.Get(context.TODO(), types.NamespacedName{
+			Namespace: v.Namespace,
+			Name:      v.Name + "-tls",
+		}, &existingSec)
+		if apierrors.IsNotFound(err) {
+			// If tls secret doesn't exist generate tls
+			sec, tlsExpiration, err = secretForVault(v)
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
+			}
+		} else if len(existingSec.Data) > 0 {
+			// If tls secret exists check expiration date
+			tlsExpiration, err = getCertExpirationDate(string(existingSec.Data["server.crt"]))
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to get certificate expiration: %v", err)
+			}
+			// Generate new tls if expiration date is too close
+			if tlsExpiration.Sub(time.Now()) < v.Spec.GetTLSExpiryThreshold() {
+				log.V(2).Info("cert expiration date too close", "date", tlsExpiration.UTC().Format(time.RFC3339))
+				sec, tlsExpiration, err = secretForVault(v)
+				if err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
+				}
+			} else {
+				sec = &existingSec
+			}
+		} else {
+			return reconcile.Result{}, fmt.Errorf("failed to get tls secret for vault: %v", err)
 		}
 
 		// Set Vault instance as the owner and controller
@@ -243,7 +274,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			return reconcile.Result{}, err
 		}
 
-		err = r.createObjectIfNotExists(sec)
+		err = r.createOrUpdateObject(sec)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create secret for vault: %v", err)
 		}
@@ -312,7 +343,9 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Create the StatefulSet if it doesn't exist
-	statefulSet, err := statefulSetForVault(v, externalSecretsToWatchItems)
+	tlsAnnotations := map[string]string{}
+	tlsAnnotations["vault.banzaicloud.io/tls-expiration-date"] = tlsExpiration.UTC().Format(time.RFC3339)
+	statefulSet, err := statefulSetForVault(v, externalSecretsToWatchItems, tlsAnnotations)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to fabricate StatefulSet: %v", err)
 	}
@@ -889,11 +922,11 @@ func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	return cm
 }
 
-func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, error) {
+func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, time.Time, error) {
 	hostsAndIPs := om.Name + "." + om.Namespace + ",127.0.0.1"
 	chain, err := bvtls.GenerateTLS(hostsAndIPs, "8760h")
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, err
 	}
 
 	secret := &corev1.Secret{
@@ -910,11 +943,16 @@ func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, error) {
 	secret.StringData["ca.crt"] = chain.CACert
 	secret.StringData["server.crt"] = chain.ServerCert
 	secret.StringData["server.key"] = chain.ServerKey
-	return secret, nil
+
+	tlsExpiration, err := getCertExpirationDate(chain.ServerCert)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("failed to get certificate expiration: %v", err)
+	}
+	return secret, tlsExpiration, nil
 }
 
 // statefulSetForVault returns a Vault StatefulSet object
-func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []corev1.Secret) (*appsv1.StatefulSet, error) {
+func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []corev1.Secret, tlsAnnotations map[string]string) (*appsv1.StatefulSet, error) {
 	ls := labelsForVault(v.Name)
 	replicas := v.Spec.Size
 
@@ -1024,7 +1062,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      withVaultLabels(v, ls),
-					Annotations: withVaultAnnotations(v, withVaultWatchedExternalSecrets(v, externalSecretsToWatchItems, withPrometheusAnnotations("9102", getCommonAnnotations(v, map[string]string{})))),
+					Annotations: withTLSExpirationAnnotations(tlsAnnotations, withVaultAnnotations(v, withVaultWatchedExternalSecrets(v, externalSecretsToWatchItems, withPrometheusAnnotations("9102", getCommonAnnotations(v, map[string]string{}))))),
 				},
 				Spec: corev1.PodSpec{
 					Affinity: &corev1.Affinity{
@@ -1171,6 +1209,14 @@ func withVaultWatchedExternalSecrets(v *vaultv1alpha1.Vault, secrets []corev1.Se
 
 	// Set the Annotation
 	annotations["vault.banzaicloud.io/watched-secrets-sum"] = fmt.Sprintf("%x", h.Sum(nil))
+
+	return annotations
+}
+
+func withTLSExpirationAnnotations(tlsAnnotations, annotations map[string]string) map[string]string {
+	for key, value := range tlsAnnotations {
+		annotations[key] = value
+	}
 
 	return annotations
 }
@@ -1684,4 +1730,17 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 	}
 
 	return nil
+}
+
+func getCertExpirationDate(certPEM string) (time.Time, error) {
+	block, _ := pem.Decode([]byte(certPEM))
+	if block == nil {
+		return time.Time{}, fmt.Errorf("failed to parse certificate PEM")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to parse certificate: %v", err)
+	}
+
+	return cert.NotAfter, nil
 }
