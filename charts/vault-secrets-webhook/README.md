@@ -46,6 +46,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 |image.pullPolicy                     |image pull policy                                  |IfNotPresent                              |
 |image.repository                     |image repo that contains the admission server      |banzaicloud/vault-secrets-webhook         |
 |image.tag                            |image tag                                          |latest                                    |
+|image.imagePullSecrets               |image pull secrets for private repositories        |[]                                        |
 |namespaceSelector                    |namespace selector to use, will limit webhook scope|{}                                        |
 |nodeSelector                         |node selector to use                               |{}                                        |
 |replicaCount                         |number of replicas                                 |1                                         |

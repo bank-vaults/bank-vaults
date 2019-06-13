@@ -10,6 +10,7 @@ image:
   repository: banzaicloud/vault-secrets-webhook
   tag: 0.4.17-rc.2
   pullPolicy: IfNotPresent
+  imagePullSecrets: []
 
 service:
   name: vault-secrets-webhook
