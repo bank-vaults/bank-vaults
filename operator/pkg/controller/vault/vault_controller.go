@@ -64,8 +64,8 @@ var log = logf.Log.WithName("controller_vault")
 
 // Add creates a new Vault Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, tlsExpTH time.Duration) error {
-	reconciler, err := newReconciler(mgr, tlsExpTH)
+func Add(mgr manager.Manager) error {
+	reconciler, err := newReconciler(mgr)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func Add(mgr manager.Manager, tlsExpTH time.Duration) error {
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, tlsExpTH time.Duration) (reconcile.Reconciler, error) {
+func newReconciler(mgr manager.Manager) (reconcile.Reconciler, error) {
 	nonNamespacedClient, err := client.New(mgr.GetConfig(), client.Options{})
 	if err != nil {
 		return nil, err
@@ -83,7 +83,6 @@ func newReconciler(mgr manager.Manager, tlsExpTH time.Duration) (reconcile.Recon
 		nonNamespacedClient: nonNamespacedClient,
 		scheme:              mgr.GetScheme(),
 		httpClient:          newHTTPClient(),
-		tlsExpTH:            tlsExpTH,
 	}, nil
 }
 
@@ -116,7 +115,6 @@ type ReconcileVault struct {
 	nonNamespacedClient client.Client
 	scheme              *runtime.Scheme
 	httpClient          *http.Client
-	tlsExpTH            time.Duration
 }
 
 func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
@@ -258,7 +256,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 				return reconcile.Result{}, fmt.Errorf("failed to get certificate expiration: %v", err)
 			}
 			// Generate new tls if expiration date is too close
-			if tlsExpiration.Sub(time.Now()) < r.tlsExpTH {
+			if tlsExpiration.Sub(time.Now()) < v.Spec.GetTLSExpiryThreshold() {
 				log.V(2).Info("cert expiration date too close", "date", tlsExpiration.UTC().Format(time.RFC3339))
 				sec, tlsExpiration, err = secretForVault(v)
 				if err != nil {
