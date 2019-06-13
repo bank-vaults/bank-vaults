@@ -237,7 +237,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	tlsExpiration := time.Time{}
 	if !v.Spec.GetTLSDisable() {
-		// Create the secret if it doesn't exist
+		// Check if we have an existing TLS Secret for Vault
 		var sec *corev1.Secret
 		existingSec := corev1.Secret{}
 		// Get tls secret
