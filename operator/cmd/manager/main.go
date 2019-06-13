@@ -65,7 +65,7 @@ func handleLiveness() {
 func main() {
 
 	syncPeriod := flag.Duration("sync_period", 30*time.Second, "SyncPeriod determines the minimum frequency at which watched resources are reconciled")
-	tlsExpTH := flag.Float64("tls_exp_th", 168, "TLS cert expiration treshold in hours")
+	tlsExpTH := flag.Duration("tls_exp_th", 168*time.Hour, "TLS cert expiration threshold")
 
 	flag.Parse()
 
@@ -131,7 +131,7 @@ func main() {
 	}
 
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr, tlsExpTH); err != nil {
+	if err := controller.AddToManager(mgr, *tlsExpTH); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
