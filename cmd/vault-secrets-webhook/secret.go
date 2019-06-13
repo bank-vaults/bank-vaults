@@ -102,7 +102,7 @@ func mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultCli
 				"password": password,
 			}
 
-			dcCreds, err := getCredsFromVault(credPath, vaultClient)
+			dcCreds, err := getDataFromVault(credPath, vaultClient)
 			if err != nil {
 				return err
 			}
@@ -129,7 +129,7 @@ func mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultCli
 }
 
 func mutateSecretCreds(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client) error {
-	secCreds, err := getCredsFromVault(sc, vaultClient)
+	secCreds, err := getDataFromVault(sc, vaultClient)
 	if err != nil {
 		return err
 	}
@@ -139,41 +139,53 @@ func mutateSecretCreds(secret *corev1.Secret, sc map[string]string, vaultClient 
 	return nil
 }
 
-func getCredsFromVault(creds map[string]string, vaultClient *vault.Client) (map[string]string, error) {
-	var secCreds = make(map[string]string)
+func getDataFromVault(data map[string]string, vaultClient *vault.Client) (map[string]string, error) {
+	var vaultData = make(map[string]string)
 
-	for key, value := range creds {
-		if strings.HasPrefix(value, "vault:") {
-			path := strings.TrimPrefix(value, "vault:")
-			split := strings.SplitN(path, "#", 3)
-			path = split[0]
-			var vaultKey string
-			if len(split) > 1 {
-				vaultKey = split[1]
-			}
-			version := "-1"
-			if len(split) == 3 {
-				version = split[2]
-			}
-
-			var data map[string]interface{}
-
-			secret, err := vaultClient.Vault().Logical().ReadWithData(path, map[string][]string{"version": {version}})
-			if err != nil {
-				logger.Errorf("Failed to read secret path: %s error: %s", path, err.Error())
-			}
-			if secret == nil {
-				logger.Errorf("Path not found path: %s", path)
-			} else {
-				v2Data, ok := secret.Data["data"]
-				if ok {
-					data = cast.ToStringMap(v2Data)
-				} else {
-					data = cast.ToStringMap(secret.Data)
-				}
-			}
-			secCreds[key] = cast.ToString(data[vaultKey])
+	removePunctuation := func(r rune) rune {
+		if strings.ContainsRune(";<>=\"'", r) {
+			return -1
+		} else {
+			return r
 		}
 	}
-	return secCreds, nil
+
+	for key, value := range data {
+		for _, val := range strings.Fields(value) {
+			val = strings.Map(removePunctuation, val)
+			if strings.HasPrefix(val, "vault:") {
+				path := strings.TrimPrefix(val, "vault:")
+				split := strings.SplitN(path, "#", 3)
+				path = split[0]
+				var vaultKey string
+				if len(split) > 1 {
+					vaultKey = split[1]
+				}
+				version := "-1"
+				if len(split) == 3 {
+					version = split[2]
+				}
+
+				var vaultSecret map[string]interface{}
+
+				secret, err := vaultClient.Vault().Logical().ReadWithData(path, map[string][]string{"version": {version}})
+				if err != nil {
+					logger.Errorf("Failed to read secret path: %s error: %s", path, err.Error())
+				}
+				if secret == nil {
+					logger.Errorf("Path not found path: %s", path)
+				} else {
+					v2Data, ok := secret.Data["data"]
+					if ok {
+						vaultSecret = cast.ToStringMap(v2Data)
+					} else {
+						vaultSecret = cast.ToStringMap(secret.Data)
+					}
+				}
+				value = strings.ReplaceAll(value, val, cast.ToString(vaultSecret[vaultKey]))
+			}
+		}
+		vaultData[key] = value
+	}
+	return vaultData, nil
 }

@@ -17,11 +17,9 @@ package main
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	vaultapi "github.com/hashicorp/vault/api"
-	"github.com/spf13/cast"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -73,46 +71,4 @@ func mutateData(configMap *corev1.ConfigMap, data map[string]string, vaultClient
 		configMap.Data[key] = string([]byte(value))
 	}
 	return nil
-}
-
-func getDataFromVault(data map[string]string, vaultClient *vault.Client) (map[string]string, error) {
-	var vaultData = make(map[string]string)
-
-	for key, value := range data {
-		for _, val := range strings.Fields(value) {
-			if strings.HasPrefix(val, "vault:") {
-				path := strings.TrimPrefix(val, "vault:")
-				split := strings.SplitN(path, "#", 3)
-				path = split[0]
-				var vaultKey string
-				if len(split) > 1 {
-					vaultKey = split[1]
-				}
-				version := "-1"
-				if len(split) == 3 {
-					version = split[2]
-				}
-
-				var vaultSecret map[string]interface{}
-
-				secret, err := vaultClient.Vault().Logical().ReadWithData(path, map[string][]string{"version": {version}})
-				if err != nil {
-					logger.Errorf("Failed to read secret path: %s error: %s", path, err.Error())
-				}
-				if secret == nil {
-					logger.Errorf("Path not found path: %s", path)
-				} else {
-					v2Data, ok := secret.Data["data"]
-					if ok {
-						vaultSecret = cast.ToStringMap(v2Data)
-					} else {
-						vaultSecret = cast.ToStringMap(secret.Data)
-					}
-				}
-				value = strings.ReplaceAll(value, val, cast.ToString(vaultSecret[vaultKey]))
-			}
-		}
-		vaultData[key] = value
-	}
-	return vaultData, nil
 }
