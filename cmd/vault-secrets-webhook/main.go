@@ -50,6 +50,8 @@ type vaultConfig struct {
 	ctShareProcessDefault       string
 	pspAllowPrivilegeEscalation bool
 	ignoreMissingSecrets        string
+	vaultEnvPassThrough         string
+	mutateConfigMap             bool
 }
 
 var vaultAgentConfig = `
@@ -260,7 +262,6 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger *log.
 }
 
 func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
-
 	switch v := obj.(type) {
 	case *corev1.Pod:
 		podSpec := &v.Spec
@@ -269,6 +270,12 @@ func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.O
 		secret := v
 		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/vault-addr"]; ok {
 			return false, mutateSecret(obj, secret, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
+		}
+		return false, nil
+	case *corev1.ConfigMap:
+		configMap := v
+		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/mutate-configmap"]; ok {
+			return false, mutateConfigMap(obj, configMap, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
 		}
 		return false, nil
 	default:
@@ -331,6 +338,11 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	} else {
 		vaultConfig.ignoreMissingSecrets = viper.GetString("vault_ignore_missing_secrets")
 	}
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-env-passthrough"]; ok {
+		vaultConfig.vaultEnvPassThrough = val
+	} else {
+		vaultConfig.vaultEnvPassThrough = viper.GetString("vault_env_passthrough")
+	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-pull-policy"]; ok {
 		switch val {
@@ -363,6 +375,12 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.pspAllowPrivilegeEscalation, _ = strconv.ParseBool(val)
 	} else {
 		vaultConfig.pspAllowPrivilegeEscalation, _ = strconv.ParseBool(viper.GetString("psp_allow_privilege_escalation"))
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/mutate-configmap"]; ok {
+		vaultConfig.mutateConfigMap, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.mutateConfigMap, _ = strconv.ParseBool(viper.GetString("mutate_configmap"))
 	}
 
 	return vaultConfig
@@ -556,6 +574,10 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 				Name:  "VAULT_IGNORE_MISSING_SECRETS",
 				Value: vaultConfig.ignoreMissingSecrets,
 			},
+			{
+				Name:  "VAULT_ENV_PASSTHROUGH",
+				Value: vaultConfig.vaultEnvPassThrough,
+			},
 		}...)
 
 		if vaultConfig.useAgent {
@@ -726,6 +748,8 @@ func init() {
 	viper.SetDefault("vault_ct_share_process_namespace", "")
 	viper.SetDefault("psp_allow_privilege_escalation", "false")
 	viper.SetDefault("vault_ignore_missing_secrets", "false")
+	viper.SetDefault("vault_env_passthrough", "")
+	viper.SetDefault("mutate_configmap", "false")
 	viper.AutomaticEnv()
 
 	logger = log.New()
@@ -760,10 +784,12 @@ func main() {
 
 	podHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-pods", Obj: &corev1.Pod{}}, mutator, logger)
 	secretHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-secret", Obj: &corev1.Secret{}}, mutator, logger)
+	configMapHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-configmap", Obj: &corev1.ConfigMap{}}, mutator, logger)
 
 	mux := http.NewServeMux()
 	mux.Handle("/pods", podHandler)
 	mux.Handle("/secrets", secretHandler)
+	mux.Handle("/configmaps", configMapHandler)
 
 	logger.Infof("Listening on :8443")
 	err = http.ListenAndServeTLS(":8443", viper.GetString("tls_cert_file"), viper.GetString("tls_private_key_file"), mux)
