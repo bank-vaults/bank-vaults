@@ -97,6 +97,7 @@ vault.security.banzaicloud.io/vault-ct-once|false|do not run consul-template in 
 vault.security.banzaicloud.io/vault-ct-pull-policy|IfNotPresent|the Pull policy for the consul template container|
 vault.security.banzaicloud.io/vault-ct-share-process-namespace|Same as VAULT_CT_SHARE_PROCESS_NAMESPACE above||
 vault.security.banzaicloud.io/vault-ignore-missing-secrets|"false"|When enabled will only log warnings when Vault secrets are missing|
+vault.security.banzaicloud.io/vault-env-passthrough|""|Comma seprated list of `VAULT_*` related environment variables to pass through to main process. E.g.`VAULT_ADDR,VAULT_ROLE`.
 
 ### How to enable consul template in the webhook?
 For the webhook to detect that it will need to mutate or change a PodSpec, it must have the annotation `vault.security.banzaicloud.io/vault-ct-configmap` otherwise the PodSpec will be ignored for configuration with Consul Template.
