@@ -180,6 +180,6 @@ spec:
 #     storage: 1Gi
 #   accessModes:
 #   - ReadWriteOnce
-#   persistentVolumeReclaimPolicy: Reclaim
+#   persistentVolumeReclaimPolicy: Recycle
 #   hostPath:
 #     path: /vault/file
