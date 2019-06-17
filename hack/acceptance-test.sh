@@ -56,6 +56,7 @@ sleep 20
 
 # Run an internal client which tries to read from Vault with the configured Kubernetes auth backend
 go get -v github.com/banzaicloud/kurun
+git checkout -- go.mod go.sum
 export PATH=${PATH}:${GOPATH}/bin
 kurun cmd/examples/main.go
 
