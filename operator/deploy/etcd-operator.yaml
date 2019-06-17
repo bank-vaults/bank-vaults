@@ -42,4 +42,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+          resources:
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
       serviceAccount: etcd-operator
