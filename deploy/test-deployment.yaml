@@ -25,6 +25,10 @@ spec:
         env:
         - name: AWS_SECRET_ACCESS_KEY
           value: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
       containers:
       - name: alpine
         image: alpine
@@ -32,6 +36,10 @@ spec:
         env:
         - name: AWS_SECRET_ACCESS_KEY
           value: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
       - name: mysql
         image: mysql # see that containers without explicit command can work
         env:
@@ -40,5 +48,9 @@ spec:
         ports:
         - name: mysql
           containerPort: 3306
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
       # imagePullSecrets:
       # - sample-secret
