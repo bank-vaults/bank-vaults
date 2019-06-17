@@ -38,7 +38,7 @@ kubectl apply -f operator/deploy/rbac.yaml
 
 # First test: single node cluster
 kubectl apply -f operator/deploy/cr.yaml
-sleep 5
+kubectl 10
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
 kubectl delete --wait=true -f operator/deploy/cr.yaml
 
