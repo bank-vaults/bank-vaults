@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -xeo pipefail
 
+function waitfor {
+    WAIT_MAX=0
+    until $@ &> /dev/null || [ $WAIT_MAX -eq 30 ]; do
+        sleep 1
+        (( WAIT_MAX++ ))
+    done
+}
+
 function finish {
     echo "The last command was: $(history 1 | awk '{print $2}')"
     kubectl get pods
@@ -28,7 +36,6 @@ kubectl create quota bank-vaults --hard=cpu=2,memory=4G,pods=10,services=10,repl
 kubectl apply -f operator/deploy/etcd-rbac.yaml
 kubectl apply -f operator/deploy/etcd-operator.yaml
 kubectl wait --for=condition=available deployment/etcd-operator --timeout=120s
-sleep 5
 
 kubectl apply -f operator/deploy/operator-rbac.yaml
 kubectl apply -f operator/deploy/operator.yaml
@@ -38,19 +45,17 @@ kubectl apply -f operator/deploy/rbac.yaml
 
 # First test: single node cluster
 kubectl apply -f operator/deploy/cr.yaml
-kubectl 10
+waitfor kubectl get pod/vault-0
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
 kubectl delete --wait=true -f operator/deploy/cr.yaml
 
 
 # Second test: HA setup with etcd
 kubectl apply -f operator/deploy/cr-etcd-ha.yaml
-sleep 5
-
+waitfor kubectl get etcdclusters.etcd.database.coreos.com/etcd-cluster
 kubectl wait --for=condition=available etcdclusters.etcd.database.coreos.com/etcd-cluster --timeout=120s
-sleep 30
-
-# piggyback on initial leader change of the current HA setup
+waitfor kubectl get pod/vault-0
+waitfor kubectl get pod/vault-1
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
 
 # Run a client test
