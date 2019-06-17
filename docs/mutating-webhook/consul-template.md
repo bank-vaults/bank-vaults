@@ -78,7 +78,7 @@ There are two places to configure the Webhook, you can set some sane defaults in
 |VAULT_CT_IMAGE|hashicorp/consul-template:latest| the consule template image to use|
 |VAULT_ADDR    |https://127.0.0.1:8200|Kuberentes service Vault endpoint URL|
 |VAULT_SKIP_VERIFY|"false"|should vault agent and consul template skip verifying TLS|
-|VAULT_TLS_SECRET|""|supply a configmap with the vault TLS CA so TLS can be verified|
+|VAULT_TLS_SECRET|""|supply a secret with the vault TLS CA so TLS can be verified|
 |VAULT_AGENT   |"true"|enable the vault agent|
 |VAULT_CT_SHARE_PROCESS_NAMESPACE|Kubernetes version <1.12 default off, 1.12 or higher default on|ShareProcessNamespace override|as above|
 
