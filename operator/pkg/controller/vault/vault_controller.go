@@ -1700,6 +1700,8 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 	// We need the CA certificate only
 	delete(currentSecret.StringData, "server.crt")
 	delete(currentSecret.StringData, "server.key")
+	delete(currentSecret.Data, "server.crt")
+	delete(currentSecret.Data, "server.key")
 
 	var namespaces []string
 
@@ -1717,15 +1719,17 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 	}
 
 	for _, namespace := range namespaces {
-		currentSecret.SetNamespace(namespace)
-		currentSecret.SetResourceVersion("")
-		currentSecret.GetObjectMeta().SetUID("")
+		if namespace != v.Namespace {
+			currentSecret.SetNamespace(namespace)
+			currentSecret.SetResourceVersion("")
+			currentSecret.GetObjectMeta().SetUID("")
 
-		err = createOrUpdateObjectWithClient(r.nonNamespacedClient, &currentSecret)
-		if apierrors.IsNotFound(err) {
-			log.V(2).Info("can't distribute CA secret, namespace doesn't exist", "namespace", namespace)
-		} else if err != nil {
-			return fmt.Errorf("failed to create CA secret for vault in namespace %s: %v", namespace, err)
+			err = createOrUpdateObjectWithClient(r.nonNamespacedClient, &currentSecret)
+			if apierrors.IsNotFound(err) {
+				log.V(2).Info("can't distribute CA secret, namespace doesn't exist", "namespace", namespace)
+			} else if err != nil {
+				return fmt.Errorf("failed to create CA secret for vault in namespace %s: %v", namespace, err)
+			}
 		}
 	}
 
