@@ -89,7 +89,7 @@ vault.security.banzaicloud.io/vault-addr|Same as VAULT_ADDR above||
 vault.security.banzaicloud.io/vault-role|default|The Vault role for Vault agent to use|
 vault.security.banzaicloud.io/vault-path|auth/<method type>|The mount path of the method|
 vault.security.banzaicloud.io/vault-skip-verify|Same as VAULT_SKIP_VERIFY above||
-vault.security.banzaicloud.io/vault-tls-secret|Same as VAULT_TLS_CONFIGMAP above||
+vault.security.banzaicloud.io/vault-tls-secret|Same as VAULT_TLS_SECRET above||
 vault.security.banzaicloud.io/vault-agent|Same as VAULT_AGENT above||
 vault.security.banzaicloud.io/vault-ct-configmap|""|A configmap name which holds the consul template configuration|
 vault.security.banzaicloud.io/vault-ct-image|""|Specify a custom image for consul template|
