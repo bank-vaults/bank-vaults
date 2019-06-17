@@ -70,5 +70,5 @@ spec:
               value: "vault-operator"
           resources:
             limits:
-              cpu: "300m"
+              cpu: "100m"
               memory: "128Mi"
