@@ -16,7 +16,7 @@ function finish {
     kubectl describe rs hello-secrets
     kubectl describe pod hello-secrets
     kubectl logs deployment/hello-secrets --all-containers
-    kubectl get secret -n vswh vault-tls -o yaml
+    kubectl get secret -n vswh -o yaml
 }
 
 trap finish EXIT
