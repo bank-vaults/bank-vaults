@@ -68,3 +68,7 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "vault-operator"
+          resources:
+            limits:
+              cpu: "200m"
+              memory: "128Mi"

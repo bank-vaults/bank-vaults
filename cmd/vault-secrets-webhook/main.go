@@ -1,4 +1,4 @@
-// Copyright © 2018 Banzai Cloud
+// Copyright © 2019 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,8 +29,9 @@ import (
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	metaVer "k8s.io/apimachinery/pkg/version"
+	kubeVer "k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -112,6 +113,12 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 			Command:         []string{"vault", "agent", "-config=/vault/agent/config.hcl"},
 			Env:             containerEnvVars,
 			VolumeMounts:    containerVolMounts,
+			Resources: corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("64Mi"),
+				},
+			},
 		})
 	}
 
@@ -129,6 +136,12 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 			},
 			SecurityContext: &corev1.SecurityContext{
 				AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
+			},
+			Resources: corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("64Mi"),
+				},
 			},
 		})
 	}
@@ -182,6 +195,12 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 		SecurityContext: securityContext,
 		Env:             containerEnvVars,
 		VolumeMounts:    containerVolMounts,
+		Resources: corev1.ResourceRequirements{
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("50m"),
+				corev1.ResourceMemory: resource.MustParse("64Mi"),
+			},
+		},
 	})
 
 	return containers
@@ -714,7 +733,7 @@ func (mw *mutatingWebhook) mutatePodSpec(obj metav1.Object, podSpec *corev1.PodS
 		if vaultConfig.ctShareProcessDefault == "empty" {
 			logger.Debugf("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
 			apiVersion, _ := mw.k8sClient.Discovery().ServerVersion()
-			versionCompared := metaVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
+			versionCompared := kubeVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
 			logger.Debugf("Kuberentes API version detected: %s", apiVersion.String())
 
 			if versionCompared >= 0 {
