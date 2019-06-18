@@ -57,7 +57,6 @@ kubectl delete -f operator/deploy/cr-etcd-ha.yaml
 kubectl apply -f operator/deploy/cr.yaml
 waitfor kubectl get pod/vault-0
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
-kubectl delete --wait=true -f operator/deploy/cr.yaml
 
 # Run a client test
 
@@ -65,7 +64,7 @@ kubectl delete --wait=true -f operator/deploy/cr.yaml
 sleep 20
 
 # Run an internal client which tries to read from Vault with the configured Kubernetes auth backend
-go get -v github.com/banzaicloud/kurun
+go get github.com/banzaicloud/kurun
 git checkout -- go.mod go.sum
 export PATH=${PATH}:${GOPATH}/bin
 kurun cmd/examples/main.go
