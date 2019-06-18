@@ -41,22 +41,23 @@ kubectl apply -f operator/deploy/operator-rbac.yaml
 kubectl apply -f operator/deploy/operator.yaml
 kubectl wait --for=condition=available deployment/vault-operator --timeout=120s
 
+# Install common RBAC setup for CRs
 kubectl apply -f operator/deploy/rbac.yaml
 
-# First test: single node cluster
-kubectl apply -f operator/deploy/cr.yaml
-waitfor kubectl get pod/vault-0
-kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
-kubectl delete --wait=true -f operator/deploy/cr.yaml
-
-
-# Second test: HA setup with etcd
+# First test: HA setup with etcd
 kubectl apply -f operator/deploy/cr-etcd-ha.yaml
 waitfor kubectl get etcdclusters.etcd.database.coreos.com/etcd-cluster
 kubectl wait --for=condition=available etcdclusters.etcd.database.coreos.com/etcd-cluster --timeout=120s
 waitfor kubectl get pod/vault-0
 waitfor kubectl get pod/vault-1
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
+kubectl delete -f operator/deploy/cr-etcd-ha.yaml
+
+# Second test: single node cluster, for additional tests
+kubectl apply -f operator/deploy/cr.yaml
+waitfor kubectl get pod/vault-0
+kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
+kubectl delete --wait=true -f operator/deploy/cr.yaml
 
 # Run a client test
 
