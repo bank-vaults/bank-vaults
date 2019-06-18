@@ -49,6 +49,8 @@ type vaultConfig struct {
 	ctImagePullPolicy           corev1.PullPolicy
 	ctShareProcess              bool
 	ctShareProcessDefault       string
+	ctCPU                       resource.Quantity
+	ctMemory                    resource.Quantity
 	pspAllowPrivilegeEscalation bool
 	ignoreMissingSecrets        string
 	vaultEnvPassThrough         string
@@ -197,8 +199,8 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 		VolumeMounts:    containerVolMounts,
 		Resources: corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("50m"),
-				corev1.ResourceMemory: resource.MustParse("64Mi"),
+				corev1.ResourceCPU:    vaultConfig.ctCPU,
+				corev1.ResourceMemory: vaultConfig.ctMemory,
 			},
 		},
 	})
@@ -380,6 +382,18 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.ctOnce, _ = strconv.ParseBool(val)
 	} else {
 		vaultConfig.ctOnce = false
+	}
+
+	if val, err := resource.ParseQuantity(annotations["vault.security.banzaicloud.io/vault-ct-cpu"]); err != nil {
+		vaultConfig.ctCPU = val
+	} else {
+		vaultConfig.ctCPU = resource.MustParse("100m")
+	}
+
+	if val, err := resource.ParseQuantity(annotations["vault.security.banzaicloud.io/vault-ct-memory"]); err != nil {
+		vaultConfig.ctMemory = val
+	} else {
+		vaultConfig.ctMemory = resource.MustParse("128Mi")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-share-process-namespace"]; ok {
