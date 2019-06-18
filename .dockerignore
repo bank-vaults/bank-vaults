@@ -1,6 +1,10 @@
 Dockerfile*
+.circle/
 .git/
 bin/
 docs/
 operator/build/
 vendor/
+hack/
+*.yaml
+*.yml
