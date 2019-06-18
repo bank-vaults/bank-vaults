@@ -95,7 +95,9 @@ vault.security.banzaicloud.io/vault-ct-configmap|""|A configmap name which holds
 vault.security.banzaicloud.io/vault-ct-image|""|Specify a custom image for consul template|
 vault.security.banzaicloud.io/vault-ct-once|false|do not run consul-template in daemon mode, useful for kubernetes jobs|
 vault.security.banzaicloud.io/vault-ct-pull-policy|IfNotPresent|the Pull policy for the consul template container|
-vault.security.banzaicloud.io/vault-ct-share-process-namespace|Same as VAULT_CT_SHARE_PROCESS_NAMESPACE above||
+vault.security.banzaicloud.io/vault-ct-share-process-namespace|Same as VAULT_CT_SHARE_PROCESS_NAMESPACE above|
+vault.security.banzaicloud.io/vault-ct-cpu|"100m"|Specify the consul-template container CPU resource limit|
+vault.security.banzaicloud.io/vault-ct-memory|"128Mi"|Specify the consul-template container memory resource limit|
 vault.security.banzaicloud.io/vault-ignore-missing-secrets|"false"|When enabled will only log warnings when Vault secrets are missing|
 vault.security.banzaicloud.io/vault-env-passthrough|""|Comma seprated list of `VAULT_*` related environment variables to pass through to main process. E.g.`VAULT_ADDR,VAULT_ROLE`.
 
