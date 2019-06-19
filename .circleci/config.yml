@@ -62,10 +62,9 @@ jobs:
           command: make check
 
   acceptance-test:
-    docker:
-      - image: circleci/golang:1.12
-        environment:
-          GOFLAG: -mod=readonly
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true
 
     environment:
       GO_VERSION: "1.12.6"
@@ -77,9 +76,6 @@ jobs:
       GIN_MODE: release
 
     steps:
-      - setup_remote_docker:
-          docker_layer_caching: true
-
       - run:
           name: Setup kind
           command: |
@@ -98,12 +94,6 @@ jobs:
             mkdir -p ${HOME}/.kube
 
       - checkout
-
-      - restore_cache:
-          name: Restore Go module cache
-          keys:
-          - gomod-v3-{{ checksum "go.sum" }}
-          - gomod-v3
 
       - run:
           name: Build Docker images
@@ -145,6 +135,18 @@ jobs:
             curl -L https://git.io/get_helm.sh | bash
             helm init
             helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com/
+
+      - restore_cache:
+          name: Restore Go module cache
+          keys:
+          - gomod-v3-{{ checksum "go.sum" }}
+          - gomod-v3
+
+      - run:
+          name: Setup golang
+          command: |
+            sudo rm -rf /usr/local/go
+            curl -Lo go.linux-amd64.tar.gz https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && sudo tar -C /usr/local -xzf go.linux-amd64.tar.gz && rm go.linux-amd64.tar.gz
 
       - run:
           name: Operator and webhook acceptance test
