@@ -7,7 +7,7 @@ jobs:
     docker:
       - image: circleci/golang:1.12
         environment:
-          GOFLAG: -mod=readonly
+          GOFLAGS: -mod=readonly
       - image: vault:1.1.0
         environment:
           SKIP_SETCAP: true
@@ -28,10 +28,10 @@ jobs:
           name: Install dependencies
           command: go mod download
 
-      - run:	
-          name: Create go directory	
-          command: |	
-            sudo mkdir /go	
+      - run:
+          name: Create go directory
+          command: |
+            sudo mkdir /go
             sudo chmod 777 /go
             
       - save_cache:
@@ -74,13 +74,14 @@ jobs:
 
     environment:
       GO_VERSION: "1.12.6"
+      GOFLAGS: -mod=readonly
+      GOPATH: /go
       K8S_VERSION: v1.14.0
       VAULT_VERSION: "1.1.0"
       KUBECONFIG: /home/circleci/.kube/kind-config-kind
       KIND_VERSION: v0.3.0
       DOCKER_LATEST: 1
       GIN_MODE: release
-      GOPATH: /go
 
     steps:
       - run:
