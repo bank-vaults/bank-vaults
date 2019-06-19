@@ -62,62 +62,48 @@ jobs:
           command: make check
 
   acceptance-test:
-    machine:
-      image: circleci/classic:201808-01
-      docker_layer_caching: true
+    docker:
+      - image: circleci/golang:1.12
+        environment:
+          GOFLAG: -mod=readonly
 
     environment:
-      GO_VERSION: "1.12.3"
+      GO_VERSION: "1.12.6"
       K8S_VERSION: v1.14.0
       VAULT_VERSION: "1.1.0"
-      KUBECONFIG: /home/circleci/.kube/config
-      MINIKUBE_VERSION: v1.0.0
-      MINIKUBE_WANTUPDATENOTIFICATION: false
-      MINIKUBE_WANTREPORTERRORPROMPT: false
-      MINIKUBE_HOME: /home/circleci
-      CHANGE_MINIKUBE_NONE_USER: true
-      GOPATH: /go
+      KUBECONFIG: /home/circleci/.kube/kind-config-kind
+      KIND_VERSION: v0.3.0
       DOCKER_LATEST: 1
       GIN_MODE: release
 
     steps:
-      - run:
-          name: Setup minikube
-          command: |
-            curl -Lo minikube https://github.com/kubernetes/minikube/releases/download/${MINIKUBE_VERSION}/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+      - setup_remote_docker:
+          docker_layer_caching: true
 
       - run:
-          name: Start minikube
+          name: Setup kind
+          command: |
+            curl -Lo kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-darwin-amd64 && chmod +x kind && sudo mv kind /usr/local/bin/
+
+      - run:
+          name: Start kind cluster
           background: true
           command: |
-            sudo -E minikube start --vm-driver=none --cpus 2 --memory 4096 --kubernetes-version=${K8S_VERSION}
+            kind create cluster
 
       - run:
           name: Setup kubectl
           command: |
             curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
             mkdir -p ${HOME}/.kube
-            touch ${HOME}/.kube/config
 
       - checkout
-
-      - run:
-          name: Create go directory
-          command: |
-            sudo mkdir /go
-            sudo chmod 777 /go
 
       - restore_cache:
           name: Restore Go module cache
           keys:
           - gomod-v3-{{ checksum "go.sum" }}
           - gomod-v3
-
-      - run:
-          name: Setup golang
-          command: |
-            sudo rm -rf /usr/local/go
-            curl -Lo go.linux-amd64.tar.gz https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && sudo tar -C /usr/local -xzf go.linux-amd64.tar.gz && rm go.linux-amd64.tar.gz
 
       - run:
           name: Build Docker images
@@ -128,10 +114,11 @@ jobs:
             make docker-webhook
 
       - run:
-          name: Wait for minikube
+          name: Wait for kind cluster
           command: |
             timeout 180s bash <<EOT
               set -o pipefail
+
               function is_ready()
               {
                 kubectl get nodes -o json \
@@ -143,6 +130,14 @@ jobs:
                 sleep 1
               done
             EOT
+
+      - run:
+          name: Load images to kind
+          command: |
+            kind load docker-image banzaicloud/bank-vaults:latest
+            kind load docker-image banzaicloud/vault-operator:latest
+            kind load docker-image banzaicloud/vault-secrets-webhook:latest
+            kind load docker-image banzaicloud/vault-env:latest
 
       - run:
           name: Setup helm
