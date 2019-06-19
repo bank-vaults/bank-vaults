@@ -27,12 +27,6 @@ jobs:
       - run:
           name: Install dependencies
           command: go mod download
-
-      - run:
-          name: Create go directory
-          command: |
-            sudo mkdir /go
-            sudo chmod 777 /go
             
       - save_cache:
           name: Save Go module cache
@@ -143,6 +137,12 @@ jobs:
             curl -L https://git.io/get_helm.sh | bash
             helm init
             helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com/
+
+      - run:
+          name: Create go directory
+          command: |
+            sudo mkdir /go
+            sudo chmod 777 /go
 
       - restore_cache:
           name: Restore Go module cache
