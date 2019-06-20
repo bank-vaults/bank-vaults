@@ -253,6 +253,18 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 		}
 	}
 
+	// In case of other public docker registry
+	if k.RegistryName == "" && k.RegistryAddress == "" {
+		registryName := container.Image
+		if strings.HasPrefix(registryName, "https://") {
+			registryName = strings.TrimPrefix(registryName, "https://")
+		}
+
+		registryName = strings.Split(registryName, "/")[0]
+		k.RegistryName = registryName
+		k.RegistryAddress = fmt.Sprintf("https://%s", registryName)
+	}
+
 	// Clean registry from image
 	k.Image = strings.TrimPrefix(k.Image, fmt.Sprintf("%s/", k.RegistryName))
 

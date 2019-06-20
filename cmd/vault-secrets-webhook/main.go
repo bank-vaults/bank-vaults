@@ -563,7 +563,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 
 		mutated = true
 
-		args := append(container.Command, container.Args...)
+		args := container.Command
 
 		// the container has no explicitly specified command
 		if len(args) == 0 {
@@ -575,6 +575,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			args = append(args, imageConfig.Entrypoint...)
 			args = append(args, imageConfig.Cmd...)
 		}
+		args = append(args, container.Args...)
 
 		container.Command = []string{"/vault/vault-env"}
 		container.Args = args
