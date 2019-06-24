@@ -514,8 +514,11 @@ func secretForEtcd(e *etcdv1beta2.EtcdCluster) (*corev1.Secret, error) {
 	hosts := []string{
 		e.Name,
 		e.Name + "." + e.Namespace,
+		e.Name + "." + e.Namespace + ".svc.cluster.local",
 		"*." + e.Name + "." + e.Namespace + ".svc",
+		"*." + e.Name + "." + e.Namespace + ".svc.cluster.local",
 		e.Name + "-client." + e.Namespace + ".svc",
+		e.Name + "-client." + e.Namespace + ".svc.cluster.local",
 		"localhost",
 	}
 	chain, err := bvtls.GenerateTLS(strings.Join(hosts, ","), "8760h")
@@ -923,7 +926,7 @@ func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 }
 
 func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, time.Time, error) {
-	hostsAndIPs := om.Name + "." + om.Namespace + ",127.0.0.1"
+	hostsAndIPs := om.Name + "." + om.Namespace + "," + om.Name + "." + om.Namespace + ".svc.cluster.local" + ",127.0.0.1"
 	chain, err := bvtls.GenerateTLS(hostsAndIPs, "8760h")
 	if err != nil {
 		return nil, time.Time{}, err
