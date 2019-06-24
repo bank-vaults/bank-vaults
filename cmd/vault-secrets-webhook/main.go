@@ -614,6 +614,18 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			},
 		}...)
 
+		if vaultConfig.tlsSecret != "" {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  "VAULT_CACERT",
+				Value: "/vault/tls/ca.crt",
+			})
+			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+				Name:      "vault-tls",
+				MountPath: "/vault/tls/ca.crt",
+				SubPath:   "ca.crt",
+			})
+		}
+
 		if vaultConfig.useAgent {
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  "VAULT_TOKEN_FILE",
