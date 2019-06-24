@@ -1,7 +1,8 @@
 {{ $ca := genCA "svc-cat-ca" 3650 }}
 {{ $svcName := include "vault-secrets-webhook.fullname" . }}
 {{ $cn := printf "%s.%s.svc" $svcName .Release.Namespace }}
-{{ $server := genSignedCert $cn nil nil 365 $ca }}
+{{ $altName := printf "%s.cluster.local" $cn }}
+{{ $server := genSignedCert $cn nil (list $altName) 365 $ca }}
 
 apiVersion: v1
 kind: List
