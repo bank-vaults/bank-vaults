@@ -26,7 +26,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
-	v1beta1 "k8s.io/api/extensions/v1beta1"
+	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -112,8 +112,10 @@ type VaultSpec struct {
 	Annotations                map[string]string     `json:"annotations"`
 	VaultAnnotations           map[string]string     `json:"vaultAnnotations"`
 	VaultLabels                map[string]string     `json:"vaultLabels"`
+	VaultPodSpec               v1.PodSpec            `json:"vaultPodSpec"`
 	VaultConfigurerAnnotations map[string]string     `json:"vaultConfigurerAnnotations"`
 	VaultConfigurerLabels      map[string]string     `json:"vaultConfigurerLabels"`
+	VaultConfigurerPodSpec     v1.PodSpec            `json:"vaultConfigurerPodSpec"`
 	Config                     VaultConfig           `json:"config"`
 	ExternalConfig             VaultExternalConfig   `json:"externalConfig"`
 	UnsealConfig               UnsealConfig          `json:"unsealConfig"`
