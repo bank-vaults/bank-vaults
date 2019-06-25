@@ -40,6 +40,7 @@ import (
 	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
 	monitorv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/hashicorp/vault/api"
+	"github.com/imdario/mergo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
@@ -429,7 +430,11 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Create the deployment if it doesn't exist
-	configurerDep := deploymentForConfigurer(v, externalConfigMaps, externalSecrets)
+	configurerDep, err := deploymentForConfigurer(v, externalConfigMaps, externalSecrets)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to fabricate deployment: %v", err)
+	}
+
 	// Set Vault instance as the owner and controller
 	if err := controllerutil.SetControllerReference(v, configurerDep, r.scheme); err != nil {
 		return reconcile.Result{}, err
@@ -808,7 +813,7 @@ func serviceType(v *vaultv1alpha1.Vault) corev1.ServiceType {
 	}
 }
 
-func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMapList, secrets corev1.SecretList) *appsv1.Deployment {
+func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMapList, secrets corev1.SecretList) (*appsv1.Deployment, error) {
 	ls := labelsForVaultConfigurer(v.Name)
 
 	volumes := []corev1.Volume{}
@@ -858,6 +863,38 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 		}
 	}
 
+	podSpec := corev1.PodSpec{
+		ServiceAccountName: v.Spec.GetServiceAccount(),
+		Containers: []corev1.Container{
+			{
+				Image:           v.Spec.GetBankVaultsImage(),
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Name:            "bank-vaults",
+				Command:         []string{"bank-vaults", "configure"},
+				Args:            append(v.Spec.UnsealConfig.ToArgs(v), configArgs...),
+				Ports: []corev1.ContainerPort{{
+					Name:          "metrics",
+					ContainerPort: 9091,
+					Protocol:      "TCP",
+				}},
+				Env:          withSecretEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{}))),
+				VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
+				WorkingDir:   "/config",
+				Resources:    *getBankVaultsResource(v),
+			},
+		},
+		Volumes:         withTLSVolume(v, withCredentialsVolume(v, volumes)),
+		SecurityContext: withSecurityContext(v),
+		NodeSelector:    v.Spec.NodeSelector,
+		Tolerations:     v.Spec.Tolerations,
+	}
+
+	// merge provided VaultConfigurerPodSpec into the PodSpec defined above
+	// the values in VaultConfigurerPodSpec will never overwrite fields defined in the PodSpec above
+	if err := mergo.Merge(&podSpec, v.Spec.VaultConfigurerPodSpec); err != nil {
+		return nil, err
+	}
+
 	dep := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -877,35 +914,11 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 					Labels:      withVaultConfigurerLabels(v, ls),
 					Annotations: withVaultConfigurerAnnotations(v, withPrometheusAnnotations("9091", getCommonAnnotations(v, map[string]string{}))),
 				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: v.Spec.GetServiceAccount(),
-					Containers: []corev1.Container{
-						{
-							Image:           v.Spec.GetBankVaultsImage(),
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Name:            "bank-vaults",
-							Command:         []string{"bank-vaults", "configure"},
-							Args:            append(v.Spec.UnsealConfig.ToArgs(v), configArgs...),
-							Ports: []corev1.ContainerPort{{
-								Name:          "metrics",
-								ContainerPort: 9091,
-								Protocol:      "TCP",
-							}},
-							Env:          withSecretEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{}))),
-							VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
-							WorkingDir:   "/config",
-							Resources:    *getBankVaultsResource(v),
-						},
-					},
-					Volumes:         withTLSVolume(v, withCredentialsVolume(v, volumes)),
-					SecurityContext: withSecurityContext(v),
-					NodeSelector:    v.Spec.NodeSelector,
-					Tolerations:     v.Spec.Tolerations,
-				},
+				Spec: podSpec,
 			},
 		},
 	}
-	return dep
+	return dep, nil
 }
 
 func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
@@ -1043,6 +1056,93 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	}
 	_, containerPorts := getServicePorts(v)
 
+	podSpec := corev1.PodSpec{
+		Affinity: &corev1.Affinity{
+			PodAntiAffinity: getPodAntiAffinity(v),
+			NodeAffinity:    getNodeAffinity(v),
+		},
+		ServiceAccountName: v.Spec.GetServiceAccount(),
+		Containers: withStatsdContainer(v, string(ownerJSON), withAuditLogContainer(v, string(ownerJSON), []corev1.Container{
+			{
+				Image:           v.Spec.Image,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Name:            "vault",
+				Args:            []string{"server"},
+				Ports:           containerPorts,
+				Env: withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
+					{
+						Name:  "VAULT_LOCAL_CONFIG",
+						Value: configJSON,
+					},
+					// https://github.com/hashicorp/docker-vault/blob/master/0.X/docker-entrypoint.sh#L12
+					{
+						Name:  "VAULT_CLUSTER_INTERFACE",
+						Value: "eth0",
+					},
+				}))),
+				SecurityContext: &corev1.SecurityContext{
+					Capabilities: &corev1.Capabilities{
+						Add: []corev1.Capability{"IPC_LOCK"},
+					},
+				},
+				// This probe makes sure Vault is responsive in a HTTPS manner
+				// See: https://www.vaultproject.io/api/system/init.html
+				LivenessProbe: &corev1.Probe{
+					Handler: corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Scheme: getVaultURIScheme(v),
+							Port:   intstr.FromString("api-port"),
+							Path:   "/v1/sys/init",
+						}},
+				},
+				// This probe makes sure that only the active Vault instance gets traffic
+				// See: https://www.vaultproject.io/api/system/health.html
+				ReadinessProbe: &corev1.Probe{
+					Handler: corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Scheme: getVaultURIScheme(v),
+							Port:   intstr.FromString("api-port"),
+							Path:   "/v1/sys/health?standbyok&perfstandbyok",
+						}},
+					PeriodSeconds:    5,
+					FailureThreshold: 2,
+				},
+				VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
+				Resources:    *getVaultResource(v),
+			},
+			{
+				Image:           v.Spec.GetBankVaultsImage(),
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Name:            "bank-vaults",
+				Command:         unsealCommand,
+				Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
+				Env: withSecretEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, []corev1.EnvVar{
+					{
+						Name:  k8s.EnvK8SOwnerReference,
+						Value: string(ownerJSON),
+					},
+				}))),
+				Ports: []corev1.ContainerPort{{
+					Name:          "metrics",
+					ContainerPort: 9091,
+					Protocol:      "TCP",
+				}},
+				VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{})),
+				Resources:    *getBankVaultsResource(v),
+			},
+		})),
+		Volumes:         withVaultVolumes(v, volumes),
+		SecurityContext: withSecurityContext(v),
+		NodeSelector:    v.Spec.NodeSelector,
+		Tolerations:     v.Spec.Tolerations,
+	}
+
+	// merge provided VaultPodSpec into the PodSpec defined above
+	// the values in VaultPodSpec will never overwrite fields defined in the PodSpec above
+	if err := mergo.Merge(&podSpec, v.Spec.VaultPodSpec); err != nil {
+		return nil, err
+	}
+
 	dep := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -1067,86 +1167,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					Labels:      withVaultLabels(v, ls),
 					Annotations: withTLSExpirationAnnotations(tlsAnnotations, withVaultAnnotations(v, withVaultWatchedExternalSecrets(v, externalSecretsToWatchItems, withPrometheusAnnotations("9102", getCommonAnnotations(v, map[string]string{}))))),
 				},
-				Spec: corev1.PodSpec{
-					Affinity: &corev1.Affinity{
-						PodAntiAffinity: getPodAntiAffinity(v),
-						NodeAffinity:    getNodeAffinity(v),
-					},
-					ServiceAccountName: v.Spec.GetServiceAccount(),
-					Containers: withStatsdContainer(v, string(ownerJSON), withAuditLogContainer(v, string(ownerJSON), []corev1.Container{
-						{
-							Image:           v.Spec.Image,
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Name:            "vault",
-							Args:            []string{"server"},
-							Ports:           containerPorts,
-							Env: withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
-								{
-									Name:  "VAULT_LOCAL_CONFIG",
-									Value: configJSON,
-								},
-								// https://github.com/hashicorp/docker-vault/blob/master/0.X/docker-entrypoint.sh#L12
-								{
-									Name:  "VAULT_CLUSTER_INTERFACE",
-									Value: "eth0",
-								},
-							}))),
-							SecurityContext: &corev1.SecurityContext{
-								Capabilities: &corev1.Capabilities{
-									Add: []corev1.Capability{"IPC_LOCK"},
-								},
-							},
-							// This probe makes sure Vault is responsive in a HTTPS manner
-							// See: https://www.vaultproject.io/api/system/init.html
-							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Scheme: getVaultURIScheme(v),
-										Port:   intstr.FromString("api-port"),
-										Path:   "/v1/sys/init",
-									}},
-							},
-							// This probe makes sure that only the active Vault instance gets traffic
-							// See: https://www.vaultproject.io/api/system/health.html
-							ReadinessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Scheme: getVaultURIScheme(v),
-										Port:   intstr.FromString("api-port"),
-										Path:   "/v1/sys/health?standbyok&perfstandbyok",
-									}},
-								PeriodSeconds:    5,
-								FailureThreshold: 2,
-							},
-							VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
-							Resources:    *getVaultResource(v),
-						},
-						{
-							Image:           v.Spec.GetBankVaultsImage(),
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Name:            "bank-vaults",
-							Command:         unsealCommand,
-							Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
-							Env: withSecretEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, []corev1.EnvVar{
-								{
-									Name:  k8s.EnvK8SOwnerReference,
-									Value: string(ownerJSON),
-								},
-							}))),
-							Ports: []corev1.ContainerPort{{
-								Name:          "metrics",
-								ContainerPort: 9091,
-								Protocol:      "TCP",
-							}},
-							VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{})),
-							Resources:    *getBankVaultsResource(v),
-						},
-					})),
-					Volumes:         withVaultVolumes(v, volumes),
-					SecurityContext: withSecurityContext(v),
-					NodeSelector:    v.Spec.NodeSelector,
-					Tolerations:     v.Spec.Tolerations,
-				},
+				Spec: podSpec,
 			},
 		},
 	}
