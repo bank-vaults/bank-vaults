@@ -64,7 +64,7 @@ require (
 	github.com/hashicorp/vault v1.1.2
 	github.com/heroku/docker-registry-client v0.0.0-20181004091502-47ecf50fd8d4
 	github.com/huandu/xstrings v1.0.0 // indirect
-	github.com/imdario/mergo v0.3.4 // indirect
+	github.com/imdario/mergo v0.3.4
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jinzhu/gorm v1.9.1 // indirect
 	github.com/jinzhu/inflection v0.0.0-20180308033659-04140366298a // indirect
