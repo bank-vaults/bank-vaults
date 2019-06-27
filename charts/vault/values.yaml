@@ -8,6 +8,10 @@ image:
   repository: vault
   tag: 1.1.2
   pullPolicy: IfNotPresent
+dockerizeImage:
+  repository: jwilder/dockerize
+  tag: latest
+  pullPolicy: IfNotPresent
 service:
   name: vault
   type: ClusterIP
@@ -186,6 +190,10 @@ unsealer:
       prometheus.io/port: "9091"
 
 statsd:
+  image:
+    repository: prom/statsd-exporter
+    tag: latest
+    pullPolicy: IfNotPresent
   metrics:
     enabled: true
     port: 9102
