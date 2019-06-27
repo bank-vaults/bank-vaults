@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   repository: banzaicloud/vault-operator
-  tag: 0.4.15
+  tag: 0.4.17
   pullPolicy: IfNotPresent
 
 service:
