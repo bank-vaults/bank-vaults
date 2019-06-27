@@ -53,8 +53,9 @@ waitfor kubectl get pod/vault-1
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
 kubectl delete -f operator/deploy/cr-etcd-ha.yaml
 
-# Second test: single node cluster, for additional tests
-kubectl apply -f operator/deploy/cr.yaml
+# Second test: single node cluster with defined PriorityClass via vaultPodSpec and vaultConfigurerPodSpec
+kubectl apply -f operator/deploy/priorityclass.yaml
+kubectl apply -f operator/deploy/cr-priority.yaml
 waitfor kubectl get pod/vault-0
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
 
