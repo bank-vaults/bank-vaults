@@ -11,7 +11,7 @@ spec:
   replicas: {{ .Values.replicaCount }}
   updateStrategy:
     type: {{ .Values.strategy.type }}
-  serviceName: {{ template "vault.name" . }}
+  serviceName: {{ template "vault.fullname" . }}
   selector:
     matchLabels:
       app: {{ template "vault.name" . }}
