@@ -9,8 +9,9 @@ metadata:
     heritage: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.replicaCount }}
-  strategy:
+  updateStrategy:
     type: {{ .Values.strategy.type }}
+  serviceName: {{ template "vault.name" . }}
   selector:
     matchLabels:
       app: {{ template "vault.name" . }}
@@ -255,7 +256,7 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
-        {{- end }}        
+        {{- end }}
         {{- range .Values.vault.customSecrets }}
         - name: {{ .secretName }}
           secret:
