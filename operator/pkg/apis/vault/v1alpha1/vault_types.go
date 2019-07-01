@@ -109,7 +109,7 @@ type VaultSpec struct {
 	// default: library/vault:latest
 	Image string `json:"image"`
 
-	// Image specifies the Bank Vaults image to use for Vault unsealing and configuration
+	// BankVaultsImage specifies the Bank Vaults image to use for Vault unsealing and configuration
 	// default: banzaicloud/bank-vaults:latest
 	BankVaultsImage string `json:"bankVaultsImage"`
 
@@ -247,19 +247,19 @@ type VaultSpec struct {
 	// default:
 	NodeSelector map[string]string `json:"nodeSelector"`
 
-	// Tolerations is Kubernetees Tolerations definition that should be applied to all Vault Pods.
+	// Tolerations is Kubernetes Tolerations definition that should be applied to all Vault Pods.
 	// default:
 	Tolerations []v1.Toleration `json:"tolerations"`
 
-	// Tolerations is Kubernetees ServiceAccount in which the Vault Pods should be running in.
+	// ServiceAccount is Kubernetes ServiceAccount in which the Vault Pods should be running in.
 	// default: default
 	ServiceAccount string `json:"serviceAccount"`
 
-	// Volumes define some extra Kuberenetes Volumes for the Vault Pods.
+	// Volumes define some extra Kubernetes Volumes for the Vault Pods.
 	// default:
 	Volumes []v1.Volume `json:"volumes,omitempty"`
 
-	// VolumeMounts define some extra Kuberenetes Volume mounts for the Vault Pods.
+	// VolumeMounts define some extra Kubernetes Volume mounts for the Vault Pods.
 	// default:
 	VolumeMounts []v1.VolumeMount `json:"volumeMounts,omitempty"`
 
@@ -286,7 +286,7 @@ type VaultSpec struct {
 	// default: 168h
 	TLSExpiryThreshold *time.Duration `json:"tlsExpiryThreshold,omitempty"`
 
-	// Define a list of namespaces where the generated CA certificite for Vault should be distributed,
+	// CANamespaces define a list of namespaces where the generated CA certificate for Vault should be distributed,
 	// use ["*"] for all namespaces.
 	// default:
 	CANamespaces []string `json:"caNamespaces,omitempty"`
