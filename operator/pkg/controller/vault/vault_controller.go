@@ -303,7 +303,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
-	if !v.Spec.IsStatsdDisabled() {
+	if !v.Spec.IsStatsDDisabled() {
 		// Create the configmap if it doesn't exist
 		cm := configMapForStatsD(v)
 
@@ -1062,9 +1062,9 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			NodeAffinity:    getNodeAffinity(v),
 		},
 		ServiceAccountName: v.Spec.GetServiceAccount(),
-		Containers: withStatsdContainer(v, string(ownerJSON), withAuditLogContainer(v, string(ownerJSON), []corev1.Container{
+		Containers: withStatsDContainer(v, string(ownerJSON), withAuditLogContainer(v, string(ownerJSON), []corev1.Container{
 			{
-				Image:           v.Spec.Image,
+				Image:           v.Spec.GetVaultImage(),
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Name:            "vault",
 				Args:            []string{"server"},
@@ -1321,10 +1321,6 @@ func configMapForStatsD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 func configMapForFluentD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	ls := labelsForVault(v.Name)
 	cm := &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name + "-fluentd-config",
 			Namespace: v.Namespace,
@@ -1377,7 +1373,7 @@ func withCredentialsVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.Vo
 }
 
 func withStatsdVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
-	if !v.Spec.IsStatsdDisabled() {
+	if !v.Spec.IsStatsDDisabled() {
 		volumes = append(volumes, []corev1.Volume{
 			{
 				Name: "statsd-mapping",
@@ -1392,8 +1388,8 @@ func withStatsdVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.
 	return volumes
 }
 
-func withStatsdContainer(v *vaultv1alpha1.Vault, owner string, containers []corev1.Container) []corev1.Container {
-	if !v.Spec.IsStatsdDisabled() {
+func withStatsDContainer(v *vaultv1alpha1.Vault, owner string, containers []corev1.Container) []corev1.Container {
+	if !v.Spec.IsStatsDDisabled() {
 		containers = append(containers, corev1.Container{
 			Image:           v.Spec.GetStatsDImage(),
 			ImagePullPolicy: corev1.PullIfNotPresent,
