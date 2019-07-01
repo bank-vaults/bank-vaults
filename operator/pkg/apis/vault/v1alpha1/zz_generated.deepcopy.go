@@ -185,11 +185,7 @@ func (in *Resources) DeepCopy() *Resources {
 func (in *UnsealConfig) DeepCopyInto(out *UnsealConfig) {
 	*out = *in
 	out.Options = in.Options
-	if in.Kubernetes != nil {
-		in, out := &in.Kubernetes, &out.Kubernetes
-		*out = new(KubernetesUnsealConfig)
-		**out = **in
-	}
+	out.Kubernetes = in.Kubernetes
 	if in.Google != nil {
 		in, out := &in.Google, &out.Google
 		*out = new(GoogleUnsealConfig)
