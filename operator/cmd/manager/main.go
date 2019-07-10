@@ -65,6 +65,7 @@ func handleLiveness() {
 func main() {
 
 	syncPeriod := flag.Duration("sync_period", 30*time.Second, "SyncPeriod determines the minimum frequency at which watched resources are reconciled")
+	verbose := flag.Bool("verbose", false, "enable verbose logging")
 
 	flag.Parse()
 
@@ -72,7 +73,7 @@ func main() {
 	// implementing the logr.Logger interface. This logger will
 	// be propagated through the whole operator, generating
 	// uniform and structured logs.
-	logf.SetLogger(logf.ZapLogger(false))
+	logf.SetLogger(logf.ZapLogger(*verbose))
 
 	printVersion()
 
