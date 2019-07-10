@@ -36,6 +36,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
 	bvtls "github.com/banzaicloud/bank-vaults/pkg/tls"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
+	"github.com/banzaicloud/k8s-objectmatcher/patch"
 	etcdv1beta2 "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
 	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
 	monitorv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
@@ -132,9 +133,18 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 
 	err = c.Get(context.TODO(), key, current)
 	if apierrors.IsNotFound(err) {
+		err := patch.DefaultAnnotator.SetLastAppliedAnnotation(o)
+		if err != nil {
+			log.Error(err, "failed to annotate original object", "object", o)
+		}
 		return c.Create(context.TODO(), o)
 	} else if err == nil {
 		resourceVersion := current.(metav1.ObjectMetaAccessor).GetObjectMeta().GetResourceVersion()
+
+		err := patch.DefaultAnnotator.SetLastAppliedAnnotation(o)
+		if err != nil {
+			log.Error(err, "failed to annotate modified object", "object", o)
+		}
 		o.(metav1.ObjectMetaAccessor).GetObjectMeta().SetResourceVersion(resourceVersion)
 
 		// Handle special cases for update
@@ -154,7 +164,24 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 			}
 		}
 
-		return c.Update(context.TODO(), o)
+		result, err := patch.DefaultPatchMaker.Calculate(current, o)
+		if err != nil {
+			log.Error(err, "failed to calculate patch to match objects, moving on to update")
+			// if there is an error with matching, we still want to update
+			return c.Update(context.TODO(), o)
+		}
+
+		if !result.IsEmpty() {
+			log.V(1).Info("resource diffs",
+				"patch", string(result.Patch),
+				"original", string(result.Original),
+				"modified", string(result.Modified),
+				"current", string(result.Current),
+			)
+			return c.Update(context.TODO(), o)
+		} else {
+			log.V(1).Info(fmt.Sprintf("Skipping update for object %s:%s", o.GetObjectKind(), o.(metav1.ObjectMetaAccessor).GetObjectMeta().GetName()))
+		}
 	}
 
 	return err
@@ -784,7 +811,7 @@ func ingressForVault(v *vaultv1alpha1.Vault) *v1beta1.Ingress {
 	if ingress := v.GetIngress(); ingress != nil {
 		return &v1beta1.Ingress{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1beta1",
+				APIVersion: "extensions/v1beta1",
 				Kind:       "Ingress",
 			},
 			ObjectMeta: metav1.ObjectMeta{
