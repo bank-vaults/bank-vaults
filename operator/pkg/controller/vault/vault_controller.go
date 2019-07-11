@@ -139,14 +139,6 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 		}
 		return c.Create(context.TODO(), o)
 	} else if err == nil {
-		resourceVersion := current.(metav1.ObjectMetaAccessor).GetObjectMeta().GetResourceVersion()
-
-		err := patch.DefaultAnnotator.SetLastAppliedAnnotation(o)
-		if err != nil {
-			log.Error(err, "failed to annotate modified object", "object", o)
-		}
-		o.(metav1.ObjectMetaAccessor).GetObjectMeta().SetResourceVersion(resourceVersion)
-
 		// Handle special cases for update
 		switch o.(type) {
 		case *corev1.Service:
@@ -168,6 +160,9 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 		if err != nil {
 			log.Error(err, "failed to calculate patch to match objects, moving on to update")
 			// if there is an error with matching, we still want to update
+			resourceVersion := current.(metav1.ObjectMetaAccessor).GetObjectMeta().GetResourceVersion()
+			o.(metav1.ObjectMetaAccessor).GetObjectMeta().SetResourceVersion(resourceVersion)
+
 			return c.Update(context.TODO(), o)
 		}
 
@@ -178,6 +173,15 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 				"modified", string(result.Modified),
 				"current", string(result.Current),
 			)
+
+			err := patch.DefaultAnnotator.SetLastAppliedAnnotation(o)
+			if err != nil {
+				log.Error(err, "failed to annotate modified object", "object", o)
+			}
+
+			resourceVersion := current.(metav1.ObjectMetaAccessor).GetObjectMeta().GetResourceVersion()
+			o.(metav1.ObjectMetaAccessor).GetObjectMeta().SetResourceVersion(resourceVersion)
+
 			return c.Update(context.TODO(), o)
 		} else {
 			log.V(1).Info(fmt.Sprintf("Skipping update for object %s:%s", o.GetObjectKind(), o.(metav1.ObjectMetaAccessor).GetObjectMeta().GetName()))
@@ -1661,6 +1665,7 @@ func getPodNames(pods []corev1.Pod) []string {
 	for _, pod := range pods {
 		podNames = append(podNames, pod.Name)
 	}
+	sort.Strings(podNames)
 	return podNames
 }
 
