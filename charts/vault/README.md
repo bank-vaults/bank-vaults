@@ -144,3 +144,23 @@ $ kubectl port-forward vault-pod 8200
 $ export VAULT_ADDR=http://127.0.0.1:8200
 $ vault status
 ```
+## OpenShift Implementation
+
+Tested with
+* OpenShift Conatiner Platform 3.11
+* Helm 3
+
+First create a new project named "vault"
+```
+oc new-app vault
+```
+Then create a new scc based on the scc restricted and add the capability "IPC_LOCK". Now add the new scc to the Serviceaccount vault of the new vault project:
+```
+oc adm policy add-scc-to-user <new_scc> system:serviceaccount:vault:vault
+```
+You will get the message, that the user system:serviceaccount:vault:vault doesn't exist, but that's ok.
+In the next step you install the helm chart vault in the namespace "vault" with following command:
+```
+helm install vault banzaicloud-stable/vault --set "unsealer.args[0]=--mode" --set "unsealer.args[1]=k8s" --set "unsealer.args[2]=--k8s-secret-namespace" --set "unsealer.args[3]=vault" --set "unsealer.args[4]=--k8s-secret-name" --set "unsealer.args[5]=bank-vaults"
+```
+Changing the vaulues of the arguments of the unsealer is necessary because in the values.yaml the default namespace is used to store the secret. Creating the secret in the same namespace like vault is the easiest solution. In alternative you can create a role which allows creating and read secrets in the default namespace. 
