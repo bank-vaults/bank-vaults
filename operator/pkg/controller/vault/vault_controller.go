@@ -523,9 +523,26 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
+	// Fetch the Vault instance again to minimize the possibility of updating a stale object
+	// see https://github.com/banzaicloud/bank-vaults/issues/364
+	v = &vaultv1alpha1.Vault{}
+	err = r.client.Get(context.TODO(), request.NamespacedName, v)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Request object not found, could have been deleted after reconcile request.
+			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+			// Return and don't requeue
+			return reconcile.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		return reconcile.Result{}, err
+	}
+
 	if !reflect.DeepEqual(podNames, v.Status.Nodes) || !reflect.DeepEqual(leader, v.Status.Leader) {
 		v.Status.Nodes = podNames
 		v.Status.Leader = leader
+		log.V(1).Info("Updating vault status", "status", v.Status,
+			"resourceVersion", v.ResourceVersion)
 		err := r.client.Update(context.TODO(), v)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to update vault status: %v", err)
