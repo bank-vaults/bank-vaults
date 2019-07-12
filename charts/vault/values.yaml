@@ -77,7 +77,7 @@ vault:
   # passing a MySQL secret. The three fields required are a secretName indicating
   # the name of the Kuberentes secret (created outside of this chart), secretKey
   # in this secret and envName which will be the name of the env var in the containers.
-  secretEnvs: []
+  envSecrets: []
     # - secretName: mysql
     #   secretKey: mysql-username
     #   envName: "MYSQL_USERNAME"
