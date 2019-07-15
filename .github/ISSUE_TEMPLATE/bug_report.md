@@ -4,32 +4,30 @@ about: Create a report to help us improve
 
 ---
 
-**Describe the bug**
+> Bugs should be filed for issues encountered whilst operating bank-vaults.
+> You should first attempt to resolve your issues through the community support
+> channels, e.g. Slack, in order to rule out individual configuration errors.
+> Please provide as much detail as possible.
+
+**Describe the bug**:
 A clear and concise description of what the bug is.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+**Expected behaviour**:
+A concise description of what you expected to happen.
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+**Steps to reproduce the bug**:
+Steps to reproduce the bug should be clear and easily reproducible to help people
+gain an understanding of the problem.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
-
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
-
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
-
-**Additional context**
+**Additional context**:
 Add any other context about the problem here.
+
+**Environment details**:
+- Kubernetes version (e.g. v1.10.2):
+- Cloud-provider/provisioner (e.g. AKS, GKE, EKS, PKE etc):
+- bank-vaults version (e.g. 0.4.17):
+- Install method (e.g. helm or static manifests):
+- Logs from the misbehaving component (and any other relevant logs):
+- Resource definition (possibly in YAML format) that caused the issue, without sensitive data:
+
+/kind bug
