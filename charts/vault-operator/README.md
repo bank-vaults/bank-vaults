@@ -27,6 +27,7 @@ To install the chart, use the following, this backs Vault with a Consul cluster:
 ```bash
 helm init -c
 helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch/master
+helm repo update
 helm install vault-operator
 ```
 
