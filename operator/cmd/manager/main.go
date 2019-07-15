@@ -29,7 +29,10 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -39,10 +42,10 @@ import (
 var log = logf.Log.WithName("cmd")
 
 const (
-	operatorNamespace       = "OPERATOR_NAMESPACE"
-	livenessPort            = "8080"
-	metricsHost             = "0.0.0.0"
-	metricsPort       int32 = 8383
+	operatorNamespace = "OPERATOR_NAMESPACE"
+	livenessPort      = "8080"
+	metricsHost       = "0.0.0.0"
+	metricsPort       = 8383
 )
 
 func printVersion() {
@@ -137,7 +140,23 @@ func main() {
 	}
 
 	// Expose Controller Metrics
-	_, err = metrics.ExposeMetricsPort(context.TODO(), metricsPort)
+	k8sConfig, err := rest.InClusterConfig()
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Add to the below struct any other metrics ports you want to expose.
+	servicePorts := []v1.ServicePort{
+		{
+			Port:       metricsPort,
+			Name:       metrics.OperatorPortName,
+			Protocol:   v1.ProtocolTCP,
+			TargetPort: intstr.FromInt(metricsPort),
+		},
+	}
+
+	_, err = metrics.CreateMetricsService(context.TODO(), k8sConfig, servicePorts)
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
