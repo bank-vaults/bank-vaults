@@ -621,10 +621,12 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
 	etcdCluster.Namespace = v.Namespace
 	etcdCluster.Labels = labelsForVault(v.Name)
 	etcdCluster.Spec.Size = v.Spec.GetEtcdSize()
+	etcdCluster.Spec.Repository = v.Spec.EtcdRepository
 	etcdCluster.Spec.Pod = &etcdv1beta2.PodPolicy{
 		PersistentVolumeClaimSpec: v.Spec.EtcdPVCSpec,
 		Resources:                 *getEtcdResource(v),
 		Annotations:               v.Spec.EtcdPodAnnotations,
+		BusyboxImage:              v.Spec.EtcdPodBusyBoxImage,
 	}
 	etcdCluster.Spec.Version = v.Spec.GetEtcdVersion()
 	etcdCluster.Spec.TLS = &etcdv1beta2.TLSPolicy{
