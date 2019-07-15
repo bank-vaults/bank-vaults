@@ -213,6 +213,14 @@ type VaultSpec struct {
 	// default: 3
 	EtcdSize int `json:"etcdSize"`
 
+	// EtcdRepository is the repository used to pull the etcd imaegs
+	// default:
+	EtcdRepository string `json:"etcdRepository,omitempty"`
+
+	// BusyBox image used for the etcd pod init container
+	// default:
+	EtcdPodBusyBoxImage string `json:"etcdPodBusyBoxImage,omitempty"`
+
 	// EtcdAnnotations define a set of Kubernetes annotations that will be added to ETCD Cluster CR.
 	// default:
 	EtcdAnnotations map[string]string `json:"etcdAnnotations,omitempty"`
