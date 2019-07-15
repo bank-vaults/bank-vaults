@@ -16,9 +16,12 @@
 
 # Operator
 operator/build/_output/bin/*
+operator/vendor
+operator/go.mod
+operator/go.sum
 
 /vendor/
-operator/vendor
+
 /.licensei.cache
 bin/*
 /build/

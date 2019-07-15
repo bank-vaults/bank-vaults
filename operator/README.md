@@ -5,20 +5,22 @@ This directory holds the code of the Banzai Cloud Vault Operator.
 ## Build
 
 ```bash
-GO111MODULE=on go mod download
-GO111MODULE=on go mod vendor
-cd operator
-operator-sdk build banzaicloud/vault-operator
+go build ./operator/cmd/manager
+```
+
+If you wish to build the operator Docker image:
+
+```bash
+make docker-operator
 ```
 
 Regenerate the k8s code by the *operator-sdk*:
 
 ```bash
-GO111MODULE=on go mod download
-GO111MODULE=on go mod vendor
 cd operator
-ln -s ../vendor vendor
+ln -s ../go.mod go.mod
 operator-sdk generate k8s
+rm go.mod go.sum
 ```
 
 ## Deploying the operator
