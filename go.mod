@@ -34,6 +34,7 @@ require (
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
 	github.com/google/martian v2.1.0+incompatible // indirect
 	github.com/googleapis/gax-go v2.0.0+incompatible // indirect
+	github.com/goph/emperror v0.17.1
 	github.com/gorilla/mux v1.7.2 // indirect
 	github.com/gosimple/slug v1.1.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect

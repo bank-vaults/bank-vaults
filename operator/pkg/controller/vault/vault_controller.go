@@ -1027,11 +1027,16 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		return nil, fmt.Errorf("more than 1 replicas are not supported without HA storage backend")
 	}
 
+	configSizeLimit := resource.MustParse("1Mi")
+
 	volumes := withTLSVolume(v, withCredentialsVolume(v, []corev1.Volume{
 		{
 			Name: "vault-config",
 			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					Medium:    corev1.StorageMediumMemory,
+					SizeLimit: &configSizeLimit,
+				},
 			},
 		},
 		{
