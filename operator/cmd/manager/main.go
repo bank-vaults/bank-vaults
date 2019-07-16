@@ -32,7 +32,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -140,7 +139,7 @@ func main() {
 	}
 
 	// Expose Controller Metrics
-	k8sConfig, err := rest.InClusterConfig()
+	k8sConfig, err := config.GetConfig()
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
