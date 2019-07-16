@@ -96,7 +96,7 @@ spec:
   config:
     storage:
       file:
-        path: "/vault/file"
+        path: "${ .Env.VAULT_STORAGE_FILE }" # An example how Vault config environment interpolation can be used
     listener:
       tcp:
         address: "0.0.0.0:8200"
@@ -156,6 +156,9 @@ spec:
   vaultEnvsConfig:
     - name: VAULT_LOG_LEVEL
       value: debug
+    - name: VAULT_STORAGE_FILE
+      value: "/vault/file"
+
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
