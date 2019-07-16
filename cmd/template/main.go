@@ -15,15 +15,13 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"io/ioutil"
-	"log"
 	"os"
-	"strings"
-	"text/template"
 
-	"github.com/Masterminds/sprig"
+	"github.com/banzaicloud/bank-vaults/internal/configuration"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // template is an internal CLI command and not supported for direct consumption.
@@ -35,27 +33,7 @@ func main() {
 
 	vaultConfig := os.Getenv("VAULT_LOCAL_CONFIG")
 
-	configTemplate, err := template.New("config").
-		Funcs(sprig.TxtFuncMap()).
-		Delims("${", "}").
-		Parse(vaultConfig)
-
-	if err != nil {
-		log.Fatalf("error parsing config template: %s", err.Error())
-	}
-
-	var env struct {
-		Env map[string]string
-	}
-	env.Env = make(map[string]string, len(os.Environ()))
-
-	for _, v := range os.Environ() {
-		split := strings.Split(v, "=")
-		env.Env[split[0]] = split[1]
-	}
-
-	buffer := bytes.NewBuffer(nil)
-	err = configTemplate.ExecuteTemplate(buffer, "config", &env)
+	buffer, err := configuration.EnvTemplate(vaultConfig)
 	if err != nil {
 		log.Fatalf("error executing config template: %s", err.Error())
 	}

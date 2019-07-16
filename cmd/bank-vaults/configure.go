@@ -15,15 +15,15 @@
 package main
 
 import (
-	"bytes"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 	"time"
 
-	"github.com/Masterminds/sprig"
+	"github.com/banzaicloud/bank-vaults/internal/configuration"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
@@ -211,20 +211,12 @@ func parseConfiguration(vaultConfigFile string) *viper.Viper {
 
 	config := viper.New()
 
-	templateName := filepath.Base(vaultConfigFile)
-
-	configTemplate, err := template.New(templateName).
-		Funcs(sprig.TxtFuncMap()).
-		Delims("${", "}").
-		ParseFiles(vaultConfigFile)
-
+	vaultConfig, err := ioutil.ReadFile(vaultConfigFile)
 	if err != nil {
-		logrus.Fatalf("error parsing vault config template: %s", err.Error())
+		logrus.Fatalf("error reading vault config template: %s", err.Error())
 	}
 
-	buffer := bytes.NewBuffer(nil)
-
-	err = configTemplate.ExecuteTemplate(buffer, templateName, nil)
+	buffer, err := configuration.EnvTemplate(string(vaultConfig))
 	if err != nil {
 		logrus.Fatalf("error executing vault config template: %s", err.Error())
 	}
@@ -233,7 +225,7 @@ func parseConfiguration(vaultConfigFile string) *viper.Viper {
 
 	err = config.ReadConfig(buffer)
 	if err != nil {
-		logrus.Fatalf("error reading vault config file: %s", err.Error())
+		logrus.Fatalf("error parsing vault config file: %s", err.Error())
 	}
 
 	return config
