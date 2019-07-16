@@ -36,6 +36,9 @@ spec:
         - name: vault-operator
           image: banzaicloud/vault-operator:latest
           imagePullPolicy: IfNotPresent
+          # args:
+          #   - -verbose
+          #   - -sync_period=10s
           ports:
             - containerPort: 8383
               name: metrics
