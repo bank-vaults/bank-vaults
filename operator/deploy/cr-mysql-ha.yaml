@@ -10,15 +10,19 @@ spec:
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault
 
+  # Unsealing will be done via Kubernetes Secrets if not defined otherwise (not highly secure, but this is just an example)
+
+  # NOTE: you will need a MySQL instance, grab one with:
+  # helm upgrade --install mysql stable/mysql --set mysqlRootPassword=your-root-password --set mysqlDatabase=vault --set mysqlUser=vault --set mysqlPassword=secret
+
   # A YAML representation of a final vault config file, this config represents
   # a HA config in Google Cloud.
   # See https://www.vaultproject.io/docs/configuration/ for more information.
   config:
     storage:
-      # helm upgrade --install mysql stable/mysql --set mysqlRootPassword=your-vault-password
       mysql:
         address: "mysql:3306"
-        username: root
+        username: vault
         password: "${ .Env.MYSQL_VAULT_PASSWORD }"
         ha_enabled: "true"
     listener:
@@ -47,9 +51,34 @@ spec:
             bound_service_account_namespaces: default
             policies: allow_secrets
             ttl: 1h
+    secrets:
+      - type: database
+        description: MySQL Database secret engine.
+        configuration:
+          config:
+            - name: my-mysql
+              plugin_name: "mysql-database-plugin"
+              connection_url: "{{username}}:{{password}}@tcp(mysql:3306)/"
+              allowed_roles: [app]
+              username: "root"
+              password: "${env `MYSQL_ROOT_PASSWORD`}" # Example how to read environment variables, with the env function
+              rotate: true # Ask bank-vaults to ask Vault to rotate the root credentials of MySQL
+          roles:
+            - name: app
+              db_name: app-db
+              creation_statements: "CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}'; GRANT ALL ON `app\_%`.* TO '{{name}}'@'%';"
+              default_ttl: "10m"
+              max_ttl: "24h"
 
   vaultEnvsConfig:
     - name: MYSQL_VAULT_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: mysql
+          key: mysql-password
+
+  envsConfig:
+    - name: MYSQL_ROOT_PASSWORD
       valueFrom:
         secretKeyRef:
           name: mysql
