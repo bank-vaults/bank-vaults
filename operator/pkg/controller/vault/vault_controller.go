@@ -1112,6 +1112,22 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			NodeAffinity:    getNodeAffinity(v),
 		},
 		ServiceAccountName: v.Spec.GetServiceAccount(),
+		InitContainers: []corev1.Container{
+			{
+				Image:           v.Spec.GetBankVaultsImage(),
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Name:            "config-templating",
+				Command:         []string{"template", "-file", "/vault/config/vault.json"},
+				Env: withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
+					{
+						Name:  "VAULT_LOCAL_CONFIG",
+						Value: configJSON,
+					},
+				})),
+				VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
+				Resources:    *getVaultResource(v),
+			},
+		},
 		Containers: withStatsDContainer(v, string(ownerJSON), withAuditLogContainer(v, string(ownerJSON), []corev1.Container{
 			{
 				Image:           v.Spec.GetVaultImage(),
@@ -1120,10 +1136,6 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Args:            []string{"server"},
 				Ports:           containerPorts,
 				Env: withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
-					{
-						Name:  "VAULT_LOCAL_CONFIG",
-						Value: configJSON,
-					},
 					// https://github.com/hashicorp/docker-vault/blob/master/0.X/docker-entrypoint.sh#L12
 					{
 						Name:  "VAULT_CLUSTER_INTERFACE",
