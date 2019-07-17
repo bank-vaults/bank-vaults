@@ -32,8 +32,10 @@ $ helm repo update
 ```
 
 ```bash
-$ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook
+$ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook --wait
 ```
+
+**NOTE**: `--wait` is necessary because of Helm timing issues, please see [this issue](https://github.com/banzaicloud/banzai-charts/issues/888).
 
 ## Configuration
 
