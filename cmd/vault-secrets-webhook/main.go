@@ -573,8 +573,14 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			}
 
 			args = append(args, imageConfig.Entrypoint...)
-			args = append(args, imageConfig.Cmd...)
+
+			// If no Args are defined we can use the Docker CMD from the image
+			// https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#notes
+			if len(container.Args) == 0 {
+				args = append(args, imageConfig.Cmd...)
+			}
 		}
+
 		args = append(args, container.Args...)
 
 		container.Command = []string{"/vault/vault-env"}
