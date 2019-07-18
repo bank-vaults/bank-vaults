@@ -801,6 +801,10 @@ func init() {
 	logger = log.New()
 }
 
+func healthzHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(200)
+}
+
 func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, logger *log.Logger) http.Handler {
 	webhook, err := mutating.NewWebhook(config, mutator, nil, nil, logger)
 	if err != nil {
@@ -836,6 +840,7 @@ func main() {
 	mux.Handle("/pods", podHandler)
 	mux.Handle("/secrets", secretHandler)
 	mux.Handle("/configmaps", configMapHandler)
+	mux.Handle("/healthz", http.HandlerFunc(healthzHandler))
 
 	logger.Infof("Listening on :8443")
 	err = http.ListenAndServeTLS(":8443", viper.GetString("tls_cert_file"), viper.GetString("tls_private_key_file"), mux)
