@@ -15,7 +15,7 @@ The namespace must have a label of `name` with the namespace name as it's value.
 set the target namespace name or skip for the default name: vswh
 
 ```bash
-export WEBHOOK_NS=`<namepsace>`
+export WEBHOOK_NS=`<namespace>`
 ```
 
 ```bash
@@ -54,7 +54,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 |replicaCount                         |number of replicas                                 |1                                         |
 |resources                            |resources to request                               |{}                                        |
 |service.externalPort                 |webhook service external port                      |443                                       |
-|service.internalPort                 |webhook service external port                      |443                                       |
+|service.internalPort                 |webhook service external port                      |8443                                       |
 |service.name                         |webhook service name                               |vault-secrets-webhook                     |
 |service.type                         |webhook service type                               |ClusterIP                                 |
 |tolerations                          |tolerations to add                                 |[]                                        |
