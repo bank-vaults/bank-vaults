@@ -1,6 +1,6 @@
 
 
-<p align="center"><img src="docs/images/logo.png" width="260"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/banzaicloud/bank-vaults/master/docs/images/logo.png" width="260"></p>
 
 <p align="center">
 
