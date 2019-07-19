@@ -16,59 +16,57 @@ package main
 
 import (
 	"fmt"
-	"strconv"
+	"strings"
 
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
-	vaultapi "github.com/hashicorp/vault/api"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func mutateConfigMap(obj metav1.Object, configMap *corev1.ConfigMap, vaultConfig vaultConfig, ns string) error {
+func configMapNeedsMutation(configMap *corev1.ConfigMap) bool {
+	for _, value := range configMap.Data {
+		if strings.HasPrefix(value, "vault:") {
+			return true
+		}
+	}
+	return false
+}
 
-	clientConfig := vaultapi.DefaultConfig()
-	clientConfig.Address = vaultConfig.addr
+func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig vaultConfig, ns string) error {
 
-	vaultInsecure, err := strconv.ParseBool(vaultConfig.skipVerify)
-	if err != nil {
-		return fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
+	// do an early exit and don't construct the Vault client if not needed
+	if !configMapNeedsMutation(configMap) {
+		return nil
 	}
 
-	tlsConfig := vaultapi.TLSConfig{Insecure: vaultInsecure}
-
-	clientConfig.ConfigureTLS(&tlsConfig)
-
-	vaultClient, err := vault.NewClientFromConfig(
-		clientConfig,
-		vault.ClientRole(vaultConfig.role),
-		vault.ClientAuthPath(vaultConfig.path),
-	)
+	vaultClient, err := newVaultClient(vaultConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create vault client: %v", err)
 	}
 
+	defer vaultClient.Close()
+
 	for key, value := range configMap.Data {
-		data := map[string]string{
-			key: string(value),
-		}
-		err := mutateData(configMap, data, vaultClient)
-		if err != nil {
-			return err
+		if strings.HasPrefix(value, "vault:") {
+			data := map[string]string{
+				key: string(value),
+			}
+			err := mutateConfigMapData(configMap, data, vaultClient)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func mutateData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client) error {
-
+func mutateConfigMapData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client) error {
 	mapData, err := getDataFromVault(data, vaultClient)
-
 	if err != nil {
 		return err
 	}
 	for key, value := range mapData {
-		configMap.Data[key] = string([]byte(value))
+		configMap.Data[key] = value
 	}
 	return nil
 }
