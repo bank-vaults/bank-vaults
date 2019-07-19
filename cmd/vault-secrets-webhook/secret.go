@@ -19,40 +19,37 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	dockerTypes "github.com/docker/docker/api/types"
-	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/spf13/cast"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultConfig, ns string) error {
+func secretNeedsMutation(secret *corev1.Secret) bool {
+	for key, value := range secret.Data {
+		if key == corev1.DockerConfigJsonKey || strings.HasPrefix(string(value), "vault:") {
+			return true
+		}
+	}
+	return false
+}
 
-	clientConfig := vaultapi.DefaultConfig()
-	clientConfig.Address = vaultConfig.addr
+func mutateSecret(secret *corev1.Secret, vaultConfig vaultConfig, ns string) error {
 
-	vaultInsecure, err := strconv.ParseBool(vaultConfig.skipVerify)
-	if err != nil {
-		return fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
+	// do an early exit and don't construct the Vault client if not needed
+	if !secretNeedsMutation(secret) {
+		return nil
 	}
 
-	tlsConfig := vaultapi.TLSConfig{Insecure: vaultInsecure}
-
-	clientConfig.ConfigureTLS(&tlsConfig)
-
-	vaultClient, err := vault.NewClientFromConfig(
-		clientConfig,
-		vault.ClientRole(vaultConfig.role),
-		vault.ClientAuthPath(vaultConfig.path),
-	)
+	vaultClient, err := newVaultClient(vaultConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create vault client: %v", err)
 	}
+
+	defer vaultClient.Close()
 
 	for key, value := range secret.Data {
 		if key == corev1.DockerConfigJsonKey {
@@ -65,13 +62,13 @@ func mutateSecret(obj metav1.Object, secret *corev1.Secret, vaultConfig vaultCon
 			if err != nil {
 				return fmt.Errorf("mutate dockerconfig json failed: %v", err)
 			}
-		} else {
+		} else if strings.HasPrefix(string(value), "vault:") {
 			sc := map[string]string{
 				key: string(value),
 			}
-			err := mutateSecretCreds(secret, sc, vaultClient)
+			err := mutateSecretData(secret, sc, vaultClient)
 			if err != nil {
-				return err
+				return fmt.Errorf("mutate generic secret failed: %v", err)
 			}
 		}
 	}
@@ -117,6 +114,7 @@ func mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultCli
 			assembled.Auths[key] = dockerAuth
 		}
 	}
+
 	marshalled, err := json.Marshal(assembled)
 	if err != nil {
 		return fmt.Errorf("marshaling dockerconfig failed: %v", err)
@@ -128,7 +126,7 @@ func mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultCli
 	return nil
 }
 
-func mutateSecretCreds(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client) error {
+func mutateSecretData(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client) error {
 	secCreds, err := getDataFromVault(sc, vaultClient)
 	if err != nil {
 		return err
@@ -145,9 +143,8 @@ func getDataFromVault(data map[string]string, vaultClient *vault.Client) (map[st
 	removePunctuation := func(r rune) rune {
 		if strings.ContainsRune(";<>=\"'", r) {
 			return -1
-		} else {
-			return r
 		}
+		return r
 	}
 
 	for key, value := range data {
