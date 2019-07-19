@@ -22,6 +22,8 @@ import (
 	"strings"
 
 	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
+	"github.com/banzaicloud/bank-vaults/pkg/vault"
+	vaultapi "github.com/hashicorp/vault/api"
 	log "github.com/sirupsen/logrus"
 	whhttp "github.com/slok/kubewebhook/pkg/http"
 	whcontext "github.com/slok/kubewebhook/pkg/webhook/context"
@@ -285,18 +287,15 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger *log.
 func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
 	switch v := obj.(type) {
 	case *corev1.Pod:
-		podSpec := &v.Spec
-		return false, mw.mutatePodSpec(obj, podSpec, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
+		return false, mw.mutatePodSpec(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
 	case *corev1.Secret:
-		secret := v
 		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/vault-addr"]; ok {
-			return false, mutateSecret(obj, secret, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
+			return false, mutateSecret(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
 		}
 		return false, nil
 	case *corev1.ConfigMap:
-		configMap := v
 		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/mutate-configmap"]; ok {
-			return false, mutateConfigMap(obj, configMap, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
+			return false, mutateConfigMap(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
 		}
 		return false, nil
 	default:
@@ -660,11 +659,29 @@ func addSecretsVolToContainers(containers []corev1.Container, logger *log.Logger
 
 		containers[i] = container
 	}
-
 }
 
-// TODO replace all the calls with a global clientset
-func newClientSet() (*kubernetes.Clientset, error) {
+func newVaultClient(vaultConfig vaultConfig) (*vault.Client, error) {
+	clientConfig := vaultapi.DefaultConfig()
+	clientConfig.Address = vaultConfig.addr
+
+	vaultInsecure, err := strconv.ParseBool(vaultConfig.skipVerify)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
+	}
+
+	tlsConfig := vaultapi.TLSConfig{Insecure: vaultInsecure}
+
+	clientConfig.ConfigureTLS(&tlsConfig)
+
+	return vault.NewClientFromConfig(
+		clientConfig,
+		vault.ClientRole(vaultConfig.role),
+		vault.ClientAuthPath(vaultConfig.path),
+	)
+}
+
+func newK8SClient() (*kubernetes.Clientset, error) {
 	kubeConfig, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
@@ -677,11 +694,11 @@ func newClientSet() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func (mw *mutatingWebhook) mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vaultConfig, ns string) error {
+func (mw *mutatingWebhook) mutatePodSpec(pod *corev1.Pod, vaultConfig vaultConfig, ns string) error {
 
 	logger.Debugf("Successfully connected to the API")
 
-	initContainersMutated, err := mw.mutateContainers(podSpec.InitContainers, podSpec, vaultConfig, ns)
+	initContainersMutated, err := mw.mutateContainers(pod.Spec.InitContainers, &pod.Spec, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
@@ -692,7 +709,7 @@ func (mw *mutatingWebhook) mutatePodSpec(obj metav1.Object, podSpec *corev1.PodS
 		logger.Debugf("No pod init containers were mutated")
 	}
 
-	containersMutated, err := mw.mutateContainers(podSpec.Containers, podSpec, vaultConfig, ns)
+	containersMutated, err := mw.mutateContainers(pod.Spec.Containers, &pod.Spec, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
@@ -734,7 +751,7 @@ func (mw *mutatingWebhook) mutatePodSpec(obj metav1.Object, podSpec *corev1.PodS
 		var agentConfigMapName string
 
 		if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
-			configMap := getConfigMapForVaultAgent(obj, vaultConfig)
+			configMap := getConfigMapForVaultAgent(pod, vaultConfig)
 			agentConfigMapName = configMap.Name
 
 			_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(configMap)
@@ -751,17 +768,17 @@ func (mw *mutatingWebhook) mutatePodSpec(obj metav1.Object, podSpec *corev1.PodS
 
 		}
 
-		podSpec.InitContainers = append(getInitContainers(podSpec.Containers, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), podSpec.InitContainers...)
+		pod.Spec.InitContainers = append(getInitContainers(pod.Spec.Containers, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), pod.Spec.InitContainers...)
 		logger.Debugf("Successfully appended pod init containers to spec")
 
-		podSpec.Volumes = append(podSpec.Volumes, getVolumes(agentConfigMapName, vaultConfig, logger)...)
+		pod.Spec.Volumes = append(pod.Spec.Volumes, getVolumes(agentConfigMapName, vaultConfig, logger)...)
 		logger.Debugf("Successfully appended pod spec volumes")
 	}
 
 	if vaultConfig.ctConfigMap != "" {
 		logger.Debugf("Consul Template config found")
 
-		addSecretsVolToContainers(podSpec.Containers, logger)
+		addSecretsVolToContainers(pod.Spec.Containers, logger)
 
 		if vaultConfig.ctShareProcessDefault == "empty" {
 			logger.Debugf("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
@@ -779,9 +796,9 @@ func (mw *mutatingWebhook) mutatePodSpec(obj metav1.Object, podSpec *corev1.PodS
 		if vaultConfig.ctShareProcess {
 			logger.Debugf("Detected shared process namespace")
 			shareProcessNamespace := true
-			podSpec.ShareProcessNamespace = &shareProcessNamespace
+			pod.Spec.ShareProcessNamespace = &shareProcessNamespace
 		}
-		podSpec.Containers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), podSpec.Containers...)
+		pod.Spec.Containers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
 
 		logger.Debugf("Successfully appended pod containers to spec")
 	}
@@ -829,7 +846,7 @@ var logger *log.Logger
 
 func main() {
 
-	k8sClient, err := newClientSet()
+	k8sClient, err := newK8SClient()
 	if err != nil {
 		log.Fatalf("error creating k8s client: %s", err)
 	}
