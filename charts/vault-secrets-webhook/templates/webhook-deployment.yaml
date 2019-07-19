@@ -50,10 +50,10 @@ spec:
           ports:
             - containerPort: {{ .Values.service.internalPort }}
           readinessProbe:
-          httpGet:
-            scheme: HTTPS
-            path: /healthz
-            port: {{ .Values.service.internalPort }}
+            httpGet:
+              scheme: HTTPS
+              path: /healthz
+              port: {{ .Values.service.internalPort }}
           volumeMounts:
           - mountPath: /var/serving-cert
             name: serving-cert
