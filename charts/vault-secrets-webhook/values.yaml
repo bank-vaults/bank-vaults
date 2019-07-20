@@ -21,6 +21,16 @@ service:
 env:
   VAULT_IMAGE: vault:latest
   VAULT_ENV_IMAGE: banzaicloud/vault-env:latest
+  # VAULT_CAPATH: /vault/tls
+
+volumes: []
+# - name: vault-tls
+#   secret:
+#     secretName: vault-tls
+
+volumeMounts: []
+# - name: vault-tls
+#   mountPath: /vault/tls
 
 resources: {}
 

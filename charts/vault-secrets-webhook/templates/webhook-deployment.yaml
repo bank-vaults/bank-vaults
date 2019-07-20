@@ -24,10 +24,13 @@ spec:
     spec:
       serviceAccountName: {{ template "vault-secrets-webhook.fullname" . }}
       volumes:
-      - name: serving-cert
-        secret:
-          defaultMode: 420
-          secretName: {{ template "vault-secrets-webhook.fullname" . }}
+        - name: serving-cert
+          secret:
+            defaultMode: 420
+            secretName: {{ template "vault-secrets-webhook.fullname" . }}
+{{- if .Values.volumes }}
+{{ toYaml .Values.volumes | indent 8 }}
+{{- end }}
       {{- if .Values.image.imagePullSecrets }}
       imagePullSecrets:
 {{ toYaml .Values.image.imagePullSecrets | indent 8 }}
@@ -36,16 +39,16 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           env:
-          - name: TLS_CERT_FILE
-            value: /var/serving-cert/servingCert
-          - name: TLS_PRIVATE_KEY_FILE
-            value: /var/serving-cert/servingKey
-          - name: DEBUG
-            value: {{ .Values.debug | quote }}
-          {{- range $key, $value := .Values.env }}
-          - name: {{ $key }}
-            value: {{ $value | quote }}
-          {{- end }}
+            - name: TLS_CERT_FILE
+              value: /var/serving-cert/servingCert
+            - name: TLS_PRIVATE_KEY_FILE
+              value: /var/serving-cert/servingKey
+            - name: DEBUG
+              value: {{ .Values.debug | quote }}
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.internalPort }}
@@ -55,8 +58,11 @@ spec:
               path: /healthz
               port: {{ .Values.service.internalPort }}
           volumeMounts:
-          - mountPath: /var/serving-cert
-            name: serving-cert
+            - mountPath: /var/serving-cert
+              name: serving-cert
+{{- if .Values.volumeMounts }}
+{{ toYaml .Values.volumeMounts | indent 12 }}
+{{- end }}
           securityContext:
             runAsUser: 65534
             allowPrivilegeEscalation: false
