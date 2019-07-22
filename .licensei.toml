@@ -23,4 +23,5 @@ ignored = [
   "go.uber.org/atomic",
   "go.uber.org/multierr",
   "sigs.k8s.io/yaml",
+  "go.uber.org/zap",
 ]
