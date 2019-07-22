@@ -15,7 +15,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -24,13 +23,11 @@ import (
 
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	vaultapi "github.com/hashicorp/vault/api"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
-	"go.uber.org/zap"
 )
 
 type sanitizedEnviron []string
-
-var logger *zap.Logger
 
 var sanitizeEnvmap = map[string]bool{
 	"VAULT_TOKEN":                  true,
@@ -65,23 +62,35 @@ func (environ *sanitizedEnviron) append(iname interface{}, ivalue interface{}) {
 }
 
 func main() {
-	flag.Parse()
+	ignoreMissingSecrets := os.Getenv("VAULT_IGNORE_MISSING_SECRETS") == "true"
 
-	logger, _ = zap.NewProduction()
-	defer logger.Sync()
+	// The login procedure takes the token from a file (if using Vault Agent)
+	// or requests one for itself (Kubernetes Auth), so if we got a VAULT_TOKEN
+	// for the special value with "vault:login"
+	originalVaultTokenEnvVar := os.Getenv("VAULT_TOKEN")
+	if originalVaultTokenEnvVar != "" {
+		os.Unsetenv("VAULT_TOKEN")
+	}
 
 	client, err := vault.NewClientWithOptions(
 		vault.ClientRole(os.Getenv("VAULT_ROLE")),
 		vault.ClientAuthPath(os.Getenv("VAULT_PATH")),
 	)
 	if err != nil {
-		logger.Fatal("Failed to create vault client", zap.Error(err))
+		log.Fatal("failed to create vault client", err.Error())
 	}
 
-	ignoreMissingSecrets := os.Getenv("VAULT_IGNORE_MISSING_SECRETS") == "true"
+	passthroughEnvVars := strings.Split(os.Getenv("VAULT_ENV_PASSTHROUGH"), ",")
+
+	if originalVaultTokenEnvVar != "" {
+		os.Setenv("VAULT_TOKEN", originalVaultTokenEnvVar)
+		if originalVaultTokenEnvVar == "vault:login" {
+			passthroughEnvVars = append(passthroughEnvVars, "VAULT_TOKEN")
+		}
+	}
 
 	// do not sanitize env vars specified in VAULT_ENV_PASSTHROUGH
-	for _, envVar := range strings.Split(os.Getenv("VAULT_ENV_PASSTHROUGH"), ",") {
+	for _, envVar := range passthroughEnvVars {
 		if trimmed := strings.TrimSpace(envVar); trimmed != "" {
 			delete(sanitizeEnvmap, trimmed)
 		}
@@ -104,6 +113,15 @@ func main() {
 		}
 		if strings.HasPrefix(value, "vault:") {
 			path := strings.TrimPrefix(value, "vault:")
+
+			// handle special case for vault:login env value
+			// namely pass through the the VAULT_TOKEN received from the Vault login procedure
+			if name == "VAULT_TOKEN" && path == "login" {
+				value = client.RawClient().Token()
+				sanitized.append(name, value)
+				continue
+			}
+
 			split := strings.SplitN(path, "#", 3)
 			path = split[0]
 
@@ -124,24 +142,24 @@ func main() {
 				var empty map[string]interface{}
 				secret, err = client.Vault().Logical().Write(path, empty)
 				if err != nil {
-					logger.Fatal("Failed to write secret", zap.String("path", path), zap.Error(err))
+					log.Fatalln("failed to write secret to path:", path, err.Error())
 				}
 			} else {
 				secret, err = client.Vault().Logical().ReadWithData(path, map[string][]string{"version": {version}})
 				if err != nil {
 					if ignoreMissingSecrets {
-						logger.Warn("Failed to read secret", zap.String("path", path), zap.Error(err))
+						log.Errorln("failed to read secret from path:", path, err.Error())
 					} else {
-						logger.Fatal("Failed to read secret", zap.String("path", path), zap.Error(err))
+						log.Fatalln("failed to read secret from path:", path, err.Error())
 					}
 				}
 			}
 
 			if secret == nil {
 				if ignoreMissingSecrets {
-					logger.Warn("Path not found", zap.String("path", path))
+					log.Warnln("path not found:", path)
 				} else {
-					logger.Fatal("Path not found", zap.String("path", path))
+					log.Fatalln("path not found:", path)
 				}
 			} else {
 				var data map[string]interface{}
@@ -152,15 +170,14 @@ func main() {
 					// Check if a given version of a path is destroyed
 					metadata := secret.Data["metadata"].(map[string]interface{})
 					if metadata["destroyed"].(bool) {
-						logger.Warn("Version of secret has been permanently destroyed", zap.String("version", version), zap.String("path", path))
+						log.Warnln("version of secret has been permanently destroyed version:", version, "path:", path)
 					}
 
 					// Check if a given version of a path still exists
-					if metadata["deletion_time"].(string) != "" {
-						logger.Warn("Cannot find data for path, given version has been deleted",
-							zap.String("path", path), zap.String("version", version),
-							zap.String("deletion_time", metadata["deletion_time"].(string)),
-						)
+					if deletionTime, ok := metadata["deletion_time"].(string); ok && deletionTime != "" {
+						log.Warnln("cannot find data for path, given version has been deleted",
+							"path:", path, "version:", version,
+							"deletion_time", deletionTime)
 					}
 				} else {
 					data = cast.ToStringMap(secret.Data)
@@ -168,7 +185,7 @@ func main() {
 				if value, ok := data[key]; ok {
 					sanitized.append(name, value)
 				} else {
-					logger.Fatal("Key not found", zap.String("key", key))
+					log.Fatalln("key not found:", key)
 				}
 			}
 		} else {
@@ -178,17 +195,16 @@ func main() {
 
 	var entrypointCmd []string
 	if len(os.Args) == 1 {
-		logger.Fatal("no command is given, vault-env can't determine the entrypoint (command), please specify it explicitly or let the webhook query it (see documentation)")
-		os.Exit(1)
+		log.Fatalln("no command is given, vault-env can't determine the entrypoint (command), please specify it explicitly or let the webhook query it (see documentation)")
 	} else {
 		entrypointCmd = os.Args[1:]
 	}
 	binary, err := exec.LookPath(entrypointCmd[0])
 	if err != nil {
-		logger.Fatal("Binary not found", zap.String("binary", entrypointCmd[0]))
+		log.Fatalln("binary not found", entrypointCmd[0])
 	}
 	err = syscall.Exec(binary, entrypointCmd, sanitized)
 	if err != nil {
-		logger.Fatal("Failed to exec process", zap.String("binary", binary), zap.Error(err))
+		log.Fatalln("failed to exec process", binary, entrypointCmd, err.Error())
 	}
 }
