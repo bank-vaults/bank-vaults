@@ -72,7 +72,6 @@ require (
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/viper v1.3.2
 	github.com/ugorji/go v1.1.7 // indirect
-	go.uber.org/zap v1.9.1
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	google.golang.org/api v0.3.0
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
