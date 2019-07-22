@@ -61,10 +61,11 @@ spec:
           env:
             - name: WATCH_NAMESPACE
               # Use this to watch all namespaces
-              # value: ""
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
+              value: ""
+              # Use this to watch own namespace only
+              # valueFrom:
+              #   fieldRef:
+              #     fieldPath: metadata.namespace
             - name: POD_NAME
               valueFrom:
                 fieldRef:
