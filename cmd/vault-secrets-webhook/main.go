@@ -241,7 +241,7 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger *log.
 	if vaultConfig.tlsSecret != "" {
 		logger.Debugf("Add vault TLS volume to podspec")
 		volumes = append(volumes, corev1.Volume{
-			Name: "vault-tls",
+			Name: "vault-env-tls",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: vaultConfig.tlsSecret,
@@ -626,11 +626,11 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 		if vaultConfig.tlsSecret != "" {
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  "VAULT_CACERT",
-				Value: "/vault/tls/ca.crt",
+				Value: "/vault-env/tls/ca.crt",
 			})
 			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-				Name:      "vault-tls",
-				MountPath: "/vault/tls/ca.crt",
+				Name:      "vault-env-tls",
+				MountPath: "/vault-env/tls/ca.crt",
 				SubPath:   "ca.crt",
 			})
 		}
@@ -743,11 +743,11 @@ func (mw *mutatingWebhook) mutatePodSpec(pod *corev1.Pod, vaultConfig vaultConfi
 	if vaultConfig.tlsSecret != "" {
 		containerEnvVars = append(containerEnvVars, corev1.EnvVar{
 			Name:  "VAULT_CACERT",
-			Value: "/vault/tls/ca.crt",
+			Value: "/vault-env/tls/ca.crt",
 		})
 		containerVolMounts = append(containerVolMounts, corev1.VolumeMount{
-			Name:      "vault-tls",
-			MountPath: "/vault/tls",
+			Name:      "vault-env-tls",
+			MountPath: "/vault-env/tls",
 		})
 	}
 
@@ -817,7 +817,7 @@ func init() {
 	viper.SetDefault("vault_addr", "https://vault:8200")
 	viper.SetDefault("vault_skip_verify", "false")
 	viper.SetDefault("vault_tls_secret", "")
-	viper.SetDefault("vault_agent", "true")
+	viper.SetDefault("vault_agent", "false")
 	viper.SetDefault("vault_ct_share_process_namespace", "")
 	viper.SetDefault("psp_allow_privilege_escalation", "false")
 	viper.SetDefault("vault_ignore_missing_secrets", "false")
