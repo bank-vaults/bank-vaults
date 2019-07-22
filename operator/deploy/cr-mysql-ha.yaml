@@ -16,7 +16,7 @@ spec:
   # helm upgrade --install mysql stable/mysql --set mysqlRootPassword=your-root-password --set mysqlDatabase=vault --set mysqlUser=vault --set mysqlPassword=secret
 
   # A YAML representation of a final vault config file, this config represents
-  # a HA config in Google Cloud.
+  # a HA config with MySQL.
   # See https://www.vaultproject.io/docs/configuration/ for more information.
   config:
     storage:
