@@ -27,6 +27,10 @@ import (
 	"github.com/spf13/cast"
 )
 
+// The special value for VAULT_ENV which marks that the login token needs to be passed through to the application
+// which was acquired during the new Vault client creation
+const vaultLogin = "vault:login"
+
 type sanitizedEnviron []string
 
 var sanitizeEnvmap = map[string]bool{
@@ -68,7 +72,7 @@ func main() {
 	// or requests one for itself (Kubernetes Auth), so if we got a VAULT_TOKEN
 	// for the special value with "vault:login"
 	originalVaultTokenEnvVar := os.Getenv("VAULT_TOKEN")
-	if originalVaultTokenEnvVar != "" {
+	if originalVaultTokenEnvVar == vaultLogin {
 		os.Unsetenv("VAULT_TOKEN")
 	}
 
@@ -82,11 +86,9 @@ func main() {
 
 	passthroughEnvVars := strings.Split(os.Getenv("VAULT_ENV_PASSTHROUGH"), ",")
 
-	if originalVaultTokenEnvVar != "" {
-		os.Setenv("VAULT_TOKEN", originalVaultTokenEnvVar)
-		if originalVaultTokenEnvVar == "vault:login" {
-			passthroughEnvVars = append(passthroughEnvVars, "VAULT_TOKEN")
-		}
+	if originalVaultTokenEnvVar == vaultLogin {
+		os.Setenv("VAULT_TOKEN", vaultLogin)
+		passthroughEnvVars = append(passthroughEnvVars, "VAULT_TOKEN")
 	}
 
 	// do not sanitize env vars specified in VAULT_ENV_PASSTHROUGH
