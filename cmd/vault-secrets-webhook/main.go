@@ -321,7 +321,7 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-path"]; ok {
 		vaultConfig.path = val
 	} else {
-		vaultConfig.path = viper.getString("vault_path")
+		vaultConfig.path = viper.GetString("vault_path")
 	}
 	if vaultConfig.path == "" {
 		vaultConfig.path = "kubernetes"
