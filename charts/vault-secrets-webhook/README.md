@@ -47,26 +47,25 @@ You can read more information on how to add firewall rules for the GKE control p
 
 The following tables lists configurable parameters of the vault-secrets-webhook chart and their default values:
 
-|               Parameter             |                    Description                    |              Default            |
-| ----------------------------------- | ------------------------------------------------- | --------------------------------|
-|affinity                             |affinities to use                                  |{}                               |
-|debug                                |debug logs for webhook                             |false                            |
-|image.pullPolicy                     |image pull policy                                  |IfNotPresent                     |
-|image.repository                     |image repo that contains the admission server      |banzaicloud/vault-secrets-webhook|
-|image.tag                            |image tag                                          |latest                           |
-|image.imagePullSecrets               |image pull secrets for private repositories        |[]                               |
-|namespaceSelector                    |namespace selector to use, will limit webhook scope|{}                               |
-|nodeSelector                         |node selector to use                               |{}                               |
-|replicaCount                         |number of replicas                                 |1                                |
-|resources                            |resources to request                               |{}                               |
-|service.externalPort                 |webhook service external port                      |443                              |
-|service.internalPort                 |webhook service external port                      |8443                             |
-|service.name                         |webhook service name                               |vault-secrets-webhook            |
-|service.type                         |webhook service type                               |ClusterIP                        |
-|tolerations                          |tolerations to add                                 |[]                               |
-|rbac.enabled                         |use rbac                                           |true                             |
-|rbac.psp.enabled                     |use pod security policy                            |false                            |
-|env.VAULT_IMAGE                      |vault image                                        |vault:latest                     |
-|env.VAULT_ENV_IMAGE                  |vault-env image                                    |banzaicloud/vault-env:latest     |
-|volumes                              |extra volume definitions                           |[]                               |
-|volumeMounts                         |extra volume mounts                                |[]                               |
+| Parameter              | Description                                         | Default                           |
+| ---------------------- | --------------------------------------------------- | --------------------------------- |
+| affinity               | affinities to use                                   | {}                                |
+| debug                  | debug logs for webhook                              | false                             |
+| image.pullPolicy       | image pull policy                                   | IfNotPresent                      |
+| image.repository       | image repo that contains the admission server       | banzaicloud/vault-secrets-webhook |
+| image.tag              | image tag                                           | latest                            |
+| image.imagePullSecrets | image pull secrets for private repositories         | []                                |
+| namespaceSelector      | namespace selector to use, will limit webhook scope | {}                                |
+| nodeSelector           | node selector to use                                | {}                                |
+| replicaCount           | number of replicas                                  | 1                                 |
+| resources              | resources to request                                | {}                                |
+| service.externalPort   | webhook service external port                       | 443                               |
+| service.name           | webhook service name                                | vault-secrets-webhook             |
+| service.type           | webhook service type                                | ClusterIP                         |
+| tolerations            | tolerations to add                                  | []                                |
+| rbac.enabled           | use rbac                                            | true                              |
+| rbac.psp.enabled       | use pod security policy                             | false                             |
+| env.VAULT_IMAGE        | vault image                                         | vault:latest                      |
+| env.VAULT_ENV_IMAGE    | vault-env image                                     | banzaicloud/vault-env:latest      |
+| volumes                | extra volume definitions                            | []                                |
+| volumeMounts           | extra volume mounts                                 | []                                |
