@@ -318,7 +318,12 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.role = "default"
 	}
 
-	vaultConfig.path = annotations["vault.security.banzaicloud.io/vault-path"]
+	if val, ok := vaultConfig.path = annotations["vault.security.banzaicloud.io/vault-path"]; ok {
+		vaultConfig.path = val
+	}
+	else {
+		vaultConfig.path = viper.getString("vault_path")
+	}
 	if vaultConfig.path == "" {
 		vaultConfig.path = "kubernetes"
 	}
