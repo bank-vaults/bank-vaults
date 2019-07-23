@@ -318,10 +318,9 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.role = "default"
 	}
 
-	if val, ok := vaultConfig.path = annotations["vault.security.banzaicloud.io/vault-path"]; ok {
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-path"]; ok {
 		vaultConfig.path = val
-	}
-	else {
+	} else {
 		vaultConfig.path = viper.getString("vault_path")
 	}
 	if vaultConfig.path == "" {
