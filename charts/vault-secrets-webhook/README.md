@@ -37,6 +37,12 @@ $ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-
 
 **NOTE**: `--wait` is necessary because of Helm timing issues, please see [this issue](https://github.com/banzaicloud/banzai-charts/issues/888).
 
+### About GKE Private Clusters
+When Google configure the control plane for private clusters, they automatically configure VPC peering between your Kubernetes cluster’s network in a separate Google managed project.
+
+The auto-generated rules **only** open ports 10250 and 443 between masters and nodes. This means that in order to use the webhook component with a GKE private cluster, you must configure an additional firewall rule to allow your masters CIDR to access your webhook pod using the port 8443.
+
+You can read more information on how to add firewall rules for the GKE control plane nodes in the [GKE docs](https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters#add_firewall_rules).
 ## Configuration
 
 The following tables lists configurable parameters of the vault-secrets-webhook chart and their default values:
