@@ -195,6 +195,7 @@ You have two differnt K8S clusters.
 You have a cluster with running `vault-operator`, and you have to grant access to the `Vault` from other K8S cluster which contains `vault-secrets-webhook`.
 
 1. In your `vaults.vault.banzaicloud.com` custom resource you have to define proper `externalConfig` containing the `cluster2` config.
+
 You can get K8S cert and host:
 ```bash
 kubectl config view -o yaml --minify=true --raw=true
