@@ -66,7 +66,7 @@ It will not unseal the Vault instance after initialising.`,
 func init() {
 	initCmd.PersistentFlags().String(cfgInitRootToken, "", "root token for the new vault cluster")
 	initCmd.PersistentFlags().Bool(cfgStoreRootToken, true, "should the root token be stored in the key store")
-	initCmd.PersistentFlags().Bool(cfgPreFlightChecks, false, "should the key store be tested first to validate access rights")
+	initCmd.PersistentFlags().Bool(cfgPreFlightChecks, true, "should the key store be tested first to validate access rights")
 
 	rootCmd.AddCommand(initCmd)
 }
