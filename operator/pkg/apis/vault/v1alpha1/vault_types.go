@@ -587,12 +587,12 @@ type UnsealConfig struct {
 
 // UnsealOptions represents the common options to all unsealing backends
 type UnsealOptions struct {
-	PreFlightChecks bool `json:"preFlightChecks,omitempty"`
+	PreFlightChecks *bool `json:"preFlightChecks,omitempty"`
 }
 
 func (uso UnsealOptions) ToArgs() []string {
 	args := []string{}
-	if uso.PreFlightChecks {
+	if uso.PreFlightChecks == nil || *uso.PreFlightChecks {
 		args = append(args, "--pre-flight-checks", "true")
 	}
 	return args
