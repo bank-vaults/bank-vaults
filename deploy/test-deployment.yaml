@@ -13,10 +13,10 @@ spec:
         app: hello-secrets
       annotations:
         vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
-        # vault.security.banzaicloud.io/vault-role: "default"
         vault.security.banzaicloud.io/vault-tls-secret: vault-tls
+        # vault.security.banzaicloud.io/vault-skip-verify: "false"
+        # vault.security.banzaicloud.io/vault-role: "default"
         # vault.security.banzaicloud.io/vault-path: "kubernetes"
-        # vault.security.banzaicloud.io/vault-skip-verify: "true"
         # vault.security.banzaicloud.io/vault-agent: "true"
     spec:
       initContainers:
