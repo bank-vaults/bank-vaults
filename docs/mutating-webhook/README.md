@@ -185,3 +185,95 @@ kubectl create secret docker-registry ecr \
 
  helm upgrade --install mysql stable/mysql --set mysqlRootPassword=vault:secret/data/mysql#MYSQL_ROOT_PASSWORD --set "imagePullSecrets[0].name=ecr" --set-string "podAnnotations.vault\.security\.banzaicloud\.io/vault-skip-verify=true" --set image="171832738826.dkr.ecr.eu-west-1.amazonaws.com/mysql" --set-string imageTag=5.7
 ```
+
+## Running webhook and Vault in different K8S cluster
+
+You have two differnt K8S clusters.
+- `cluster1` contains `vault-operator`
+- `cluster2` contains `vault-secrets-webhook`
+
+You have a cluster with running `vault-operator`, and you have to grant access to the `Vault` from other K8S cluster which contains `vault-secrets-webhook`.
+
+1. In your `vaults.vault.banzaicloud.com` custom resource you have to define proper `externalConfig` containing the `cluster2` config.
+
+You can get K8S cert and host:
+```bash
+kubectl config view -o yaml --minify=true --raw=true
+```
+
+2. Create `vault` serviceaccount and `vault-auth-delegator` clusterrolebinding in `cluster2`:
+```bash
+kubectl apply -f operator/deployment/rbac.yaml
+```
+
+You can use vault serviceaccount token as `token_reviewer_jwt`:
+```bash
+kubectl get secret $(kubectl get sa vault -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 -D
+```
+
+3. Now you can use proper `kubernetes_ca_cert`, `kubernetes_host` and `token_reviewer_jwt` in your CR:
+```yaml
+  externalConfig:
+    policies:
+      - name: allow_secrets
+        rules: path "secret/*" {
+          capabilities = ["create", "read", "update", "delete", "list"]
+          }
+    auth:
+      - type: kubernetes
+        config:
+          token_reviewer_jwt: webhook.cluster.token.reviewer.token
+          kubernetes_ca_cert: |
+            -----BEGIN CERTIFICATE-----
+            webhook.cluster.cert
+            -----END CERTIFICATE-----
+          kubernetes_host: https://webhook-cluster
+        roles:
+          # Allow every pod in the default namespace to use the secret kv store
+          - name: default
+            bound_service_account_names: ["default", "vault-secrets-webhook"]
+            bound_service_account_namespaces: ["default", "vswh"]
+            policies: allow_secrets
+            ttl: 1h
+```
+
+4. In production environment highly recommended to specify TLS config for your Vault ingress.
+```yaml
+  # Request an Ingress controller with the default configuration
+  ingress:
+    # Specify Ingress object annotations here, if TLS is enabled (which is by default)
+    # the operator will add NGINX, Traefik and HAProxy Ingress compatible annotations
+    # to support TLS backends
+    annotations:
+    # Override the default Ingress specification here
+    # This follows the same format as the standard Kubernetes Ingress
+    # See: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.13/#ingressspec-v1beta1-extensions
+    spec:
+      tls:
+      - hosts:
+        - vault-dns-name
+        secretName: vault-ingress-tls-secret
+```
+
+5. Deploy `Vault` with operator in your `cluster1`:
+```bash
+kubectl apply -f your-proper-vault-cr.yaml
+```
+
+6. After Vault started in `cluster1` you can use `vault-secrets-webhook` in `cluster2` with proper annotations:
+```yaml
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-secrets
+  template:
+    metadata:
+      labels:
+        app: hello-secrets
+      annotations:
+        vault.security.banzaicloud.io/vault-addr: "https://vault-dns-name:443"
+        vault.security.banzaicloud.io/vault-role: "default"
+        vault.security.banzaicloud.io/vault-skip-verify: "true"
+        vault.security.banzaicloud.io/vault-path: "kubernetes"
+```
