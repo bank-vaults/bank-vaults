@@ -315,16 +315,18 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 
 	vaultConfig.role = annotations["vault.security.banzaicloud.io/vault-role"]
 	if vaultConfig.role == "" {
-		vaultConfig.role = "default"
+		switch p := obj.(type) {
+		case *corev1.Pod:
+			vaultConfig.role = p.Spec.ServiceAccountName
+		default:
+			vaultConfig.role = "default"
+		}
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-path"]; ok {
 		vaultConfig.path = val
 	} else {
 		vaultConfig.path = viper.GetString("vault_path")
-	}
-	if vaultConfig.path == "" {
-		vaultConfig.path = "kubernetes"
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-skip-verify"]; ok {
@@ -816,6 +818,7 @@ func init() {
 	viper.SetDefault("vault_ct_image", "hashicorp/consul-template:0.19.6-dev-alpine")
 	viper.SetDefault("vault_addr", "https://vault:8200")
 	viper.SetDefault("vault_skip_verify", "false")
+	viper.SetDefault("vault_path", "kubernetes")
 	viper.SetDefault("vault_tls_secret", "")
 	viper.SetDefault("vault_agent", "false")
 	viper.SetDefault("vault_ct_share_process_namespace", "")
