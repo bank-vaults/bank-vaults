@@ -989,8 +989,13 @@ func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 }
 
 func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, time.Time, error) {
-	hostsAndIPs := om.Name + "." + om.Namespace + "," + om.Name + "." + om.Namespace + ".svc.cluster.local" + ",127.0.0.1"
-	chain, err := bvtls.GenerateTLS(hostsAndIPs, "8760h")
+	hostsAndIPs := []string{
+		om.Name,
+		om.Name + "." + om.Namespace,
+		om.Name + "." + om.Namespace + ".svc.cluster.local",
+		"127.0.0.1",
+	}
+	chain, err := bvtls.GenerateTLS(strings.Join(hostsAndIPs, ","), "8760h")
 	if err != nil {
 		return nil, time.Time{}, err
 	}
