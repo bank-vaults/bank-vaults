@@ -56,9 +56,9 @@ type CertificateChain struct {
 }
 
 type separatedCertHosts struct {
-	WildCardHost string
-	Hosts        []string
-	IPs          []net.IP
+	WildCardHosts []string
+	Hosts         []string
+	IPs           []net.IP
 }
 
 // NewSeparatedCertHosts creates a new seperatedCertsHosts struct by parsing and separating the comma-separated
@@ -70,7 +70,7 @@ func NewSeparatedCertHosts(hosts string) *separatedCertHosts {
 			sHosts.IPs = append(sHosts.IPs, ip)
 		} else {
 			if strings.HasPrefix(h, "*.") {
-				sHosts.WildCardHost = h
+				sHosts.WildCardHosts = append(sHosts.WildCardHosts, h)
 			} else {
 				sHosts.Hosts = append(sHosts.Hosts, h)
 			}
@@ -82,14 +82,16 @@ func NewSeparatedCertHosts(hosts string) *separatedCertHosts {
 // validate validates the hostnames in case of wildCard host is present
 // eg.: *.foo.bar boo.foo.bar is not allowed, but coo.boo.foo.bar is valid
 func (sh *separatedCertHosts) validate() error {
-	if sh.WildCardHost == "" {
+	if len(sh.WildCardHosts) == 0 {
 		return nil
 	} else {
-		hostWithoutWildCard := strings.ReplaceAll(sh.WildCardHost, "*", "")
-		for _, host := range sh.Hosts {
-			if strings.Contains(host, hostWithoutWildCard) {
-				if !strings.Contains(strings.ReplaceAll(host, hostWithoutWildCard, ""), ".") {
-					return errors.WithStack(InvalidHostNameError)
+		for _, wildCardHost := range sh.WildCardHosts {
+			hostWithoutWildCard := strings.ReplaceAll(wildCardHost, "*", "")
+			for _, host := range sh.Hosts {
+				if strings.Contains(host, hostWithoutWildCard) {
+					if !strings.Contains(strings.ReplaceAll(host, hostWithoutWildCard, ""), ".") {
+						return errors.WithStack(InvalidHostNameError)
+					}
 				}
 			}
 		}
@@ -162,9 +164,9 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 		Validity:  validityDuration,
 		notBefore: notBefore,
 	}
-	if sHosts.WildCardHost != "" {
-		serverCertRequest.Subject.CommonName = sHosts.WildCardHost
-		serverCertRequest.DNSNames = append(serverCertRequest.DNSNames, sHosts.WildCardHost)
+	if len(sHosts.WildCardHosts) != 0 {
+		serverCertRequest.Subject.CommonName = sHosts.WildCardHosts[0]
+		serverCertRequest.DNSNames = append(serverCertRequest.DNSNames, sHosts.WildCardHosts...)
 	}
 	serverCertRequest.IPAddresses = append(serverCertRequest.IPAddresses, sHosts.IPs...)
 	serverCertRequest.DNSNames = append(serverCertRequest.DNSNames, sHosts.Hosts...)
@@ -197,9 +199,9 @@ func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
 		notBefore: notBefore,
 	}
 
-	if sHosts.WildCardHost != "" {
-		peerCertRequest.Subject.CommonName = sHosts.WildCardHost
-		peerCertRequest.DNSNames = append(peerCertRequest.DNSNames, sHosts.WildCardHost)
+	if len(sHosts.WildCardHosts) != 0 {
+		peerCertRequest.Subject.CommonName = sHosts.WildCardHosts[0]
+		peerCertRequest.DNSNames = append(peerCertRequest.DNSNames, sHosts.WildCardHosts...)
 	}
 	peerCertRequest.IPAddresses = append(peerCertRequest.IPAddresses, sHosts.IPs...)
 	peerCertRequest.DNSNames = append(peerCertRequest.DNSNames, sHosts.Hosts...)
