@@ -230,6 +230,11 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
+	if err := v.Spec.Validate(); err != nil {
+		// TODO set status here instead
+		return reconcile.Result{}, err
+	}
+
 	// check if we need to create an etcd cluster
 	// if etcd size is < 0. Will not create etcd cluster
 	if v.Spec.GetStorageType() == "etcd" && v.Spec.GetEtcdSize() > 0 {
@@ -266,7 +271,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	tlsExpiration := time.Time{}
-	if !v.Spec.GetTLSDisable() {
+	if !v.Spec.GetTLSDisabledGlobally() {
 		// Check if we have an existing TLS Secret for Vault
 		var sec *corev1.Secret
 		existingSec := corev1.Secret{}
@@ -510,9 +515,11 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 	podNames := getPodNames(podList.Items)
 
+	port := v.Spec.GetListenerPort(0)
+
 	var leader string
 	for _, podName := range podNames {
-		url := fmt.Sprintf("%s://%s.%s:8200/v1/sys/health", strings.ToLower(string(getVaultURIScheme(v))), podName, v.Namespace)
+		url := fmt.Sprintf("%s://%s.%s:%d/v1/sys/health", strings.ToLower(string(getVaultURIScheme(v, 0))), podName, v.Namespace, port.Port)
 		resp, err := r.httpClient.Get(url)
 		if err == nil {
 			defer resp.Body.Close()
@@ -520,6 +527,8 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 				leader = podName
 				break
 			}
+		} else {
+			leader = err.Error()
 		}
 	}
 
@@ -579,12 +588,7 @@ func secretForEtcd(e *etcdv1beta2.EtcdCluster) (*corev1.Secret, error) {
 		return nil, err
 	}
 
-	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
-	}
+	secret := &corev1.Secret{}
 	secret.Name = e.Name + "-tls"
 	secret.Namespace = e.Namespace
 	secret.Labels = labelsForVault(e.Name)
@@ -651,17 +655,26 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 	annotations := withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{}))
 
 	// On GKE we need to specifiy the backend protocol on the service if TLS is enabled
-	if ingress := v.GetIngress(); ingress != nil && !v.Spec.GetTLSDisable() {
-		annotations["cloud.google.com/app-protocols"] = "{\"api-port\":\"HTTPS\"}"
+	if ingress := v.GetIngress(); ingress != nil {
+		appProtocols := map[string]string{}
+
+		for listener := range v.Spec.GetListeners() {
+			port := v.Spec.GetListenerPort(listener)
+			if v.Spec.GetTLSDisable(listener) {
+				appProtocols[port.Name] = "HTTP"
+			} else {
+				appProtocols[port.Name] = "HTTPS"
+			}
+		}
+
+		// This can't really fail
+		appProtocolsJSON, _ := json.Marshal(appProtocols)
+		annotations["cloud.google.com/app-protocols"] = string(appProtocolsJSON)
 	}
 
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "statsd", Port: 9102})
 	service := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        v.Name,
 			Namespace:   v.Namespace,
@@ -701,8 +714,8 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 	if err == nil && !version.LessThan(vaultVersionWithPrometheus) {
 		serviceMonitor.Spec.Endpoints = []monitorv1.Endpoint{{
 			Interval: "30s",
-			Port:     "api-port",
-			Scheme:   strings.ToLower(string(getVaultURIScheme(v))),
+			Port:     v.Spec.GetListenerPort(0).Name,
+			Scheme:   strings.ToLower(string(getVaultURIScheme(v, 0))),
 			Params:   map[string][]string{"format": []string{"prometheus"}},
 			Path:     "/v1/sys/metrics",
 			TLSConfig: &monitorv1.TLSConfig{
@@ -725,25 +738,32 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 	var containerPorts []corev1.ContainerPort
 
 	if len(v.Spec.ServicePorts) == 0 {
-		return []corev1.ServicePort{
+
+		for listener := range v.Spec.GetListeners() {
+			port := v.Spec.GetListenerPort(listener)
+			servicePorts = append(servicePorts, []corev1.ServicePort{
 				{
-					Name: "api-port",
-					Port: 8200,
+					Name: port.Name,
+					Port: port.Port,
 				},
 				{
-					Name: "cluster-port",
-					Port: 8201,
+					Name: port.Name + "-cl",
+					Port: port.Port + 1,
 				},
-			}, []corev1.ContainerPort{
+			}...)
+			containerPorts = append(containerPorts, []corev1.ContainerPort{
 				{
-					Name:          "api-port",
-					ContainerPort: 8200,
+					Name:          port.Name,
+					ContainerPort: port.Port,
 				},
 				{
-					Name:          "cluster-port",
-					ContainerPort: 8201,
+					Name:          port.Name + "-cl",
+					ContainerPort: port.Port + 1,
 				},
-			}
+			}...)
+		}
+
+		return servicePorts, containerPorts
 	}
 
 	for k, i := range v.Spec.ServicePorts {
@@ -779,10 +799,6 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 		ls[appsv1.StatefulSetPodNameLabel] = podName
 
 		service := &corev1.Service{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Service",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        podName,
 				Namespace:   v.Namespace,
@@ -812,10 +828,6 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 	serviceName := fmt.Sprintf("%s-configurer", v.Name)
 
 	service := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        serviceName,
 			Namespace:   v.Namespace,
@@ -834,10 +846,6 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 func ingressForVault(v *vaultv1alpha1.Vault) *v1beta1.Ingress {
 	if ingress := v.GetIngress(); ingress != nil {
 		return &v1beta1.Ingress{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "extensions/v1beta1",
-				Kind:       "Ingress",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        v.Name,
 				Namespace:   v.Namespace,
@@ -947,10 +955,6 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	}
 
 	dep := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        v.Name + "-configurer",
 			Namespace:   v.Namespace,
@@ -975,10 +979,6 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	ls := labelsForVaultConfigurer(v.Name)
 	cm := &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name + "-configurer",
 			Namespace: v.Namespace,
@@ -1001,12 +1001,7 @@ func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, time.Time, error) 
 		return nil, time.Time{}, err
 	}
 
-	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
-	}
+	secret := &corev1.Secret{}
 	secret.Name = om.Name + "-tls"
 	secret.Namespace = om.Namespace
 	secret.Labels = withVaultLabels(om, labelsForVault(om.Name))
@@ -1169,8 +1164,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				LivenessProbe: &corev1.Probe{
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
-							Scheme: getVaultURIScheme(v),
-							Port:   intstr.FromString("api-port"),
+							Scheme: getVaultURIScheme(v, 0),
+							Port:   intstr.FromString(v.Spec.GetListenerPort(0).Name),
 							Path:   "/v1/sys/init",
 						}},
 				},
@@ -1179,8 +1174,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				ReadinessProbe: &corev1.Probe{
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
-							Scheme: getVaultURIScheme(v),
-							Port:   intstr.FromString("api-port"),
+							Scheme: getVaultURIScheme(v, 0),
+							Port:   intstr.FromString(v.Spec.GetListenerPort(0).Name),
 							Path:   "/v1/sys/health?standbyok&perfstandbyok",
 						}},
 					PeriodSeconds:    5,
@@ -1343,11 +1338,12 @@ func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool, envs []corev1.EnvVar) []
 	if localhost {
 		host = "127.0.0.1"
 	}
-	if !v.Spec.GetTLSDisable() {
+	port := v.Spec.GetListenerPort(0)
+	if !v.Spec.GetTLSDisable(0) {
 		envs = append(envs, []corev1.EnvVar{
 			{
 				Name:  api.EnvVaultAddress,
-				Value: fmt.Sprintf("https://%s:8200", host),
+				Value: fmt.Sprintf("https://%s:%d", host, port.Port),
 			},
 			{
 				Name:  api.EnvVaultCACert,
@@ -1358,14 +1354,14 @@ func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool, envs []corev1.EnvVar) []
 		envs = append(envs, corev1.EnvVar{
 
 			Name:  api.EnvVaultAddress,
-			Value: fmt.Sprintf("http://%s:8200", host),
+			Value: fmt.Sprintf("http://%s:%d", host, port.Port),
 		})
 	}
 	return envs
 }
 
 func withTLSVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
-	if !v.Spec.GetTLSDisable() {
+	if !v.Spec.GetTLSDisabledGlobally() {
 		volumes = append(volumes, corev1.Volume{
 			Name: "vault-tls",
 			VolumeSource: corev1.VolumeSource{
@@ -1379,7 +1375,7 @@ func withTLSVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Vol
 }
 
 func withTLSVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
-	if !v.Spec.GetTLSDisable() {
+	if !v.Spec.GetTLSDisabledGlobally() {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "vault-tls",
 			MountPath: "/vault/tls",
@@ -1391,10 +1387,6 @@ func withTLSVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMoun
 func configMapForStatsD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	ls := labelsForVault(v.Name)
 	cm := &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name + "-statsd-mapping",
 			Namespace: v.Namespace,
@@ -1598,8 +1590,8 @@ func getNodeAffinity(v *vaultv1alpha1.Vault) *corev1.NodeAffinity {
 	return &v.Spec.NodeAffinity
 }
 
-func getVaultURIScheme(v *vaultv1alpha1.Vault) corev1.URIScheme {
-	if v.Spec.GetTLSDisable() {
+func getVaultURIScheme(v *vaultv1alpha1.Vault, listener int) corev1.URIScheme {
+	if v.Spec.GetTLSDisable(listener) {
 		return corev1.URISchemeHTTP
 	}
 	return corev1.URISchemeHTTPS
@@ -1712,12 +1704,7 @@ func asOwner(v *vaultv1alpha1.Vault) metav1.OwnerReference {
 
 // podList returns a v1.PodList object
 func podList() *corev1.PodList {
-	return &corev1.PodList{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Pod",
-			APIVersion: "v1",
-		},
-	}
+	return &corev1.PodList{}
 }
 
 // getPodNames returns the pod names of the array of pods passed in

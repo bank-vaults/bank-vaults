@@ -19,13 +19,15 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net"
 	"reflect"
 	"strings"
 	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/spf13/cast"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -154,7 +156,7 @@ type VaultSpec struct {
 	// VaultPodSpec is a Kubernetes Pod specification snippet (`spec:` block) that will be merged into the operator generated
 	// Vault Pod specification.
 	// default:
-	VaultPodSpec v1.PodSpec `json:"vaultPodSpec"`
+	VaultPodSpec corev1.PodSpec `json:"vaultPodSpec"`
 
 	// VaultConfigurerAnnotations define a set of Kubernetes annotations that will be added to the Vault Configurer Pod.
 	// default:
@@ -167,7 +169,7 @@ type VaultSpec struct {
 	// VaultConfigurerPodSpec is a Kubernetes Pod specification snippet (`spec:` block) that will be merged into
 	// the operator generated Vault Configurer Pod specification.
 	// default:
-	VaultConfigurerPodSpec v1.PodSpec `json:"vaultConfigurerPodSpec"`
+	VaultConfigurerPodSpec corev1.PodSpec `json:"vaultConfigurerPodSpec"`
 
 	// Config is the Vault Server configuration. See https://www.vaultproject.io/docs/configuration/ for more details.
 	// default:
@@ -197,11 +199,11 @@ type VaultSpec struct {
 
 	// EnvsConfig is a list of Kubernetes environment variable definitions that will be passed to all Bank-Vaults pods.
 	// default:
-	EnvsConfig []v1.EnvVar `json:"envsConfig"`
+	EnvsConfig []corev1.EnvVar `json:"envsConfig"`
 
 	// SecurityContext is a Kubernetes PodSecurityContext that will be applied to all Pods created by the operator.
 	// default:
-	SecurityContext v1.PodSecurityContext `json:"securityContext,omitempty"`
+	SecurityContext corev1.PodSecurityContext `json:"securityContext,omitempty"`
 
 	// EtcdVersion is the ETCD version of the automatically provisioned ETCD cluster
 	// default: "3.1.15"
@@ -232,7 +234,7 @@ type VaultSpec struct {
 	// EtcdPVCSpec is a Kuberrnetes PersistentVolumeClaimSpec that will be used by the ETCD Pods.
 	// emptyDir is used if not defined (no persistence).
 	// default:
-	EtcdPVCSpec *v1.PersistentVolumeClaimSpec `json:"etcdPVCSpec,omitempty"`
+	EtcdPVCSpec *corev1.PersistentVolumeClaimSpec `json:"etcdPVCSpec,omitempty"`
 
 	// ServiceType is a Kuberrnetes Service type of the Vault Service.
 	// default: ClusterIP
@@ -249,7 +251,7 @@ type VaultSpec struct {
 
 	// NodeAffinity is Kubernetees NodeAffinity definition that should be applied to all Vault Pods.
 	// default:
-	NodeAffinity v1.NodeAffinity `json:"nodeAffinity"`
+	NodeAffinity corev1.NodeAffinity `json:"nodeAffinity"`
 
 	// NodeSelector is Kubernetees NodeSelector definition that should be applied to all Vault Pods.
 	// default:
@@ -257,7 +259,7 @@ type VaultSpec struct {
 
 	// Tolerations is Kubernetes Tolerations definition that should be applied to all Vault Pods.
 	// default:
-	Tolerations []v1.Toleration `json:"tolerations"`
+	Tolerations []corev1.Toleration `json:"tolerations"`
 
 	// ServiceAccount is Kubernetes ServiceAccount in which the Vault Pods should be running in.
 	// default: default
@@ -265,11 +267,11 @@ type VaultSpec struct {
 
 	// Volumes define some extra Kubernetes Volumes for the Vault Pods.
 	// default:
-	Volumes []v1.Volume `json:"volumes,omitempty"`
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
 
 	// VolumeMounts define some extra Kubernetes Volume mounts for the Vault Pods.
 	// default:
-	VolumeMounts []v1.VolumeMount `json:"volumeMounts,omitempty"`
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 
 	// VolumeClaimTemplates define some extra Kubernetes PersistentVolumeClaim templates for the Vault Statefulset.
 	// default:
@@ -277,7 +279,7 @@ type VaultSpec struct {
 
 	// VaultEnvsConfig is a list of Kubernetes environment variable definitions that will be passed to Vault Pods.
 	// default:
-	VaultEnvsConfig []v1.EnvVar `json:"vaultEnvsConfig"`
+	VaultEnvsConfig []corev1.EnvVar `json:"vaultEnvsConfig"`
 
 	// Resources defines the resource limits for all the resources created by the operator.
 	// See the type for more details.
@@ -315,6 +317,14 @@ var HAStorageTypes = map[string]bool{
 	"raft":       true,
 	"spanner":    true,
 	"zookeeper":  true,
+}
+
+func (spec *VaultSpec) Validate() error {
+	if len(spec.GetListeners()) == 0 {
+		return errors.New("vault: at least one listener has to be defined")
+	}
+
+	return nil
 }
 
 // HasHAStorage detects if Vault is configured to use a storage backend which supports High Availability or if it has
@@ -405,13 +415,6 @@ func (spec *VaultSpec) HasStorageHAEnabled() bool {
 	return storageType == "consul" || storageType == "raft" || cast.ToBool(storageSpecs["ha_enabled"])
 }
 
-// GetTLSDisable returns if Vault's TLS should be disabled
-func (spec *VaultSpec) GetTLSDisable() bool {
-	listener := spec.getListener()
-	tcpSpecs := cast.ToStringMap(listener["tcp"])
-	return cast.ToBool(tcpSpecs["tls_disable"])
-}
-
 // GetTLSExpiryThreshold returns the Vault TLS certificate expiration threshold
 func (spec *VaultSpec) GetTLSExpiryThreshold() time.Duration {
 	if spec.TLSExpiryThreshold == nil {
@@ -420,8 +423,49 @@ func (spec *VaultSpec) GetTLSExpiryThreshold() time.Duration {
 	return *spec.TLSExpiryThreshold
 }
 
-func (spec *VaultSpec) getListener() map[string]interface{} {
-	return cast.ToStringMap(spec.Config["listener"])
+// GetTLSDisable returns if Vault's TLS should be disabled
+func (spec *VaultSpec) GetTLSDisable(listener int) bool {
+	listeners := spec.GetListeners()
+	tcp := cast.ToStringMap(listeners[listener]["tcp"])
+	return cast.ToBool(tcp["tls_disable"])
+}
+
+// GetTLSDisabledGlobally returns if Vault's TLS should be disabled entirely
+func (spec *VaultSpec) GetTLSDisabledGlobally() bool {
+	for listener := range spec.GetListeners() {
+		if !spec.GetTLSDisable(listener) {
+			return false
+		}
+	}
+	return true
+}
+
+func (spec *VaultSpec) GetListenerPort(listener int) corev1.ServicePort {
+	listeners := spec.GetListeners()
+	tcp := cast.ToStringMap(listeners[listener]["tcp"])
+	_, port, err := net.SplitHostPort(cast.ToString(tcp["address"]))
+	if err != nil {
+		panic(err)
+	}
+	return corev1.ServicePort{
+		Port: int32(cast.ToInt(port)),
+		Name: fmt.Sprintf("%s-port", port),
+	}
+}
+
+func (spec *VaultSpec) GetListeners() []map[string]interface{} {
+	switch listeners := spec.Config["listener"].(type) {
+	case map[string]interface{}:
+		return []map[string]interface{}{listeners}
+	case []interface{}:
+		var casted []map[string]interface{}
+		for _, listener := range listeners {
+			casted = append(casted, cast.ToStringMap(listener))
+		}
+		return casted
+	default:
+		return []map[string]interface{}{}
+	}
 }
 
 // GetVaultImage returns the Vault image to use
@@ -559,7 +603,7 @@ func (vault *Vault) GetIngress() *Ingress {
 		}
 
 		// If TLS is enabled add the Ingress TLS backend annotations
-		if !vault.Spec.GetTLSDisable() {
+		if !vault.Spec.GetTLSDisable(0) {
 			// Supporting the NGINX ingress controller with TLS backends
 			// https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#backend-protocol
 			vault.Spec.Ingress.Annotations["nginx.ingress.kubernetes.io/backend-protocol"] = "HTTPS"
@@ -745,10 +789,10 @@ type CredentialsConfig struct {
 
 // Resources holds different container's ResourceRequirements
 type Resources struct {
-	Vault              *v1.ResourceRequirements `json:"vault,omitempty"`
-	BankVaults         *v1.ResourceRequirements `json:"bankVaults,omitempty"`
-	Etcd               *v1.ResourceRequirements `json:"etcd,omitempty"`
-	PrometheusExporter *v1.ResourceRequirements `json:"prometheusExporter,omitempty"`
+	Vault              *corev1.ResourceRequirements `json:"vault,omitempty"`
+	BankVaults         *corev1.ResourceRequirements `json:"bankVaults,omitempty"`
+	Etcd               *corev1.ResourceRequirements `json:"etcd,omitempty"`
+	PrometheusExporter *corev1.ResourceRequirements `json:"prometheusExporter,omitempty"`
 }
 
 // Ingress specification for the Vault cluster
