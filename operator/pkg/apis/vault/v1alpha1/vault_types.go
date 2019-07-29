@@ -304,6 +304,10 @@ type VaultSpec struct {
 	// use ["*"] for all namespaces.
 	// default:
 	CANamespaces []string `json:"caNamespaces,omitempty"`
+
+	// CertExtraSANS defines a list of Subject Alternative Names for the generated Vault certificate.
+	// default:
+	CertExtraSANS []string `json:"certExtraSANS,omitempty"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability

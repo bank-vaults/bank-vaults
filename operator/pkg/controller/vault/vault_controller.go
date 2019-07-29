@@ -996,6 +996,7 @@ func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, time.Time, error) 
 		om.Name + "." + om.Namespace + ".svc.cluster.local",
 		"127.0.0.1",
 	}
+	hostsAndIPs = append(hostsAndIPs, om.Spec.CertExtraSANS...)
 	chain, err := bvtls.GenerateTLS(strings.Join(hostsAndIPs, ","), "8760h")
 	if err != nil {
 		return nil, time.Time{}, err
