@@ -55,7 +55,7 @@ spec:
   # Specify the Service's type where the Vault Service is exposed
   # Please note that some Ingress controllers like https://github.com/kubernetes/ingress-gce
   # forces you to expose your Service on a NodePort
-  serviceType: ClusterIP
+  serviceType: NodePort
 
   vaultServiceSpec:
     sessionAffinity: ClientIP
@@ -66,10 +66,13 @@ spec:
     # the operator will add NGINX, Traefik, HAProxy and GKE Ingress compatible annotations
     # to support TLS backends
     annotations:
+      kubernetes.io/ingress.allow-http: "false"
     # Override the default Ingress specification here
     # This follows the same format as the standard Kubernetes Ingress
     # See: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.13/#ingressspec-v1beta1-extensions
-    spec: {}
+    spec:
+      tls:
+      - secretName: vault-tls
 
   # Use local disk to store Vault file data, see config section.
   volumes:
@@ -87,7 +90,8 @@ spec:
     - "vswh"
 
   certExtraSANS:
-    - localhost
+    - my-vault-service.company.com
+    - "35.244.146.85"
 
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
@@ -159,7 +163,6 @@ spec:
         data:
           data:
             MYSQL_ROOT_PASSWORD: s3cr3t
-            MYSQL_PASSWORD: 3xtr3ms3cr3t
 
   vaultEnvsConfig:
     - name: VAULT_LOG_LEVEL

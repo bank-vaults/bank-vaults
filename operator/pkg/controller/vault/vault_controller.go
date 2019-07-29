@@ -1021,6 +1021,8 @@ func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, time.Time, error) 
 	secret.StringData["ca.crt"] = chain.CACert
 	secret.StringData["server.crt"] = chain.ServerCert
 	secret.StringData["server.key"] = chain.ServerKey
+	secret.StringData[corev1.TLSCertKey] = chain.ServerCert
+	secret.StringData[corev1.TLSPrivateKeyKey] = chain.ServerKey
 
 	tlsExpiration, err := getCertExpirationDate(chain.ServerCert)
 	if err != nil {
@@ -1811,8 +1813,12 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 	// We need the CA certificate only
 	delete(currentSecret.StringData, "server.crt")
 	delete(currentSecret.StringData, "server.key")
+	delete(currentSecret.StringData, corev1.TLSCertKey)
+	delete(currentSecret.StringData, corev1.TLSPrivateKeyKey)
 	delete(currentSecret.Data, "server.crt")
 	delete(currentSecret.Data, "server.key")
+	delete(currentSecret.Data, corev1.TLSCertKey)
+	delete(currentSecret.Data, corev1.TLSPrivateKeyKey)
 
 	var namespaces []string
 

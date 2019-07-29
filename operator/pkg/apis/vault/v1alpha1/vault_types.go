@@ -519,7 +519,7 @@ func (spec *VaultSpec) GetAnnotations() map[string]string {
 	return spec.Annotations
 }
 
-// GetVaultLAbels returns the Vault Pod , Secret and ConfigMap Labels
+// GetVaultLabels returns the Vault Pod, Secret and ConfigMap Labels
 func (spec *VaultSpec) GetVaultLabels() map[string]string {
 	if spec.VaultLabels == nil {
 		spec.VaultLabels = map[string]string{}
@@ -537,7 +537,7 @@ func (spec *VaultSpec) GetVaultConfigurerLabels() map[string]string {
 	return spec.VaultConfigurerLabels
 }
 
-// GetVaultAnnotations returns the Vault Pod , Secret and ConfigMap Annotations
+// GetVaultAnnotations returns the Vault Pod, Secret and ConfigMap Annotations
 func (spec *VaultSpec) GetVaultAnnotations() map[string]string {
 	if spec.VaultAnnotations == nil {
 		spec.VaultAnnotations = map[string]string{}
@@ -603,7 +603,7 @@ func (vault *Vault) GetIngress() *Ingress {
 		if vault.Spec.Ingress.Spec.Backend == nil {
 			vault.Spec.Ingress.Spec.Backend = &v1beta1.IngressBackend{
 				ServiceName: vault.Name,
-				ServicePort: intstr.FromInt(8200),
+				ServicePort: intstr.FromString(vault.Spec.GetListenerPort(0).Name),
 			}
 		}
 
