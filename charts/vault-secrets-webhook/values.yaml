@@ -46,3 +46,6 @@ rbac:
   enabled: true
   psp:
     enabled: false
+
+# This can cause issues when used with Helm, so it is not enabled by default
+configMapMutation: false

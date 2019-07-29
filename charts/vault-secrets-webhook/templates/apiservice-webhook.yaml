@@ -85,6 +85,7 @@ items:
         operator: NotIn
         values:
         - {{ .Release.Namespace }}
+{{- if .Values.configMapMutation }}
   - name: configmaps.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
     clientConfig:
       service:
@@ -116,3 +117,4 @@ items:
         operator: NotIn
         values:
         - {{ .Release.Namespace }}
+{{- end }}

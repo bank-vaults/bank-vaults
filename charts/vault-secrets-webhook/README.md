@@ -69,3 +69,4 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | env.VAULT_ENV_IMAGE    | vault-env image                                     | banzaicloud/vault-env:latest      |
 | volumes                | extra volume definitions                            | []                                |
 | volumeMounts           | extra volume mounts                                 | []                                |
+| configMapMutation      | enable injecting values from Vault to ConfigMaps    | false                             |
