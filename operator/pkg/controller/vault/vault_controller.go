@@ -411,7 +411,10 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Create the service if it doesn't exist
-	ser := serviceForVault(v)
+	ser, err := serviceForVault(v)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to fabricate service: %v", err)
+	}
 	// Set Vault instance as the owner and controller
 	if err := controllerutil.SetControllerReference(v, ser, r.scheme); err != nil {
 		return reconcile.Result{}, err
@@ -645,7 +648,7 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
 	return etcdCluster, nil
 }
 
-func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
+func serviceForVault(v *vaultv1alpha1.Vault) (*corev1.Service, error) {
 	ls := labelsForVault(v.Name)
 	selectorLs := labelsForVault(v.Name)
 	// Label to differentiate per-instance service and global service via label selection
@@ -687,7 +690,14 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 			Ports:    servicePorts,
 		},
 	}
-	return service
+
+	// merge provided VaultServiceSpec into the generated ServiceSpec defined above
+	// the values in VaultServiceSpec will never overwrite fields defined in the PodSpec above
+	if err := mergo.Merge(&service.Spec, v.Spec.VaultServiceSpec); err != nil {
+		return nil, err
+	}
+
+	return service, nil
 }
 
 func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {

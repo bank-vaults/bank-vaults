@@ -158,6 +158,11 @@ type VaultSpec struct {
 	// default:
 	VaultPodSpec corev1.PodSpec `json:"vaultPodSpec"`
 
+	// VaultServiceSpec is a Kubernetes Service specification snippet (`spec:` block) that will be merged into the operator generated
+	// Vault Service specification.
+	// default:
+	VaultServiceSpec corev1.ServiceSpec `json:"vaultServiceSpec"`
+
 	// VaultConfigurerAnnotations define a set of Kubernetes annotations that will be added to the Vault Configurer Pod.
 	// default:
 	VaultConfigurerAnnotations map[string]string `json:"vaultConfigurerAnnotations"`

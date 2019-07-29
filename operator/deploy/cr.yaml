@@ -57,6 +57,9 @@ spec:
   # forces you to expose your Service on a NodePort
   serviceType: ClusterIP
 
+  vaultServiceSpec:
+    sessionAffinity: ClientIP
+
   # Request an Ingress controller with the default configuration
   ingress:
     # Specify Ingress object annotations here, if TLS is enabled (which is by default)
@@ -82,6 +85,9 @@ spec:
   # Define a list of namespaces or use ["*"] for all namespaces.
   caNamespaces:
     - "vswh"
+
+  certExtraSANS:
+    - localhost
 
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
