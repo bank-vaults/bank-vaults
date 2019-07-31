@@ -829,8 +829,7 @@ func init() {
 	viper.AutomaticEnv()
 
 	logger = log.New()
-	b, _ := strconv.ParseBool(viper.GetString("debug"))
-	if b {
+	if viper.GetBool("debug") {
 		logger.SetLevel(log.DebugLevel)
 		logger.Debug("Debug mode enabled")
 	}
