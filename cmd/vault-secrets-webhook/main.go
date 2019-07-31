@@ -829,6 +829,10 @@ func init() {
 	viper.AutomaticEnv()
 
 	logger = log.New()
+	if viper.GetBool("debug") {
+		logger.SetLevel(log.DebugLevel)
+		logger.Debug("Debug mode enabled")
+	}
 }
 
 func healthzHandler(w http.ResponseWriter, r *http.Request) {
@@ -852,7 +856,6 @@ func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, log
 var logger *log.Logger
 
 func main() {
-
 	k8sClient, err := newK8SClient()
 	if err != nil {
 		log.Fatalf("error creating k8s client: %s", err)
