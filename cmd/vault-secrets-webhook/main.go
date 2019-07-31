@@ -826,6 +826,7 @@ func init() {
 	viper.SetDefault("vault_ignore_missing_secrets", "false")
 	viper.SetDefault("vault_env_passthrough", "")
 	viper.SetDefault("mutate_configmap", "false")
+	viper.SetDefault("listen_address", ":8443")
 	viper.AutomaticEnv()
 
 	logger = log.New()
@@ -875,8 +876,8 @@ func main() {
 	mux.Handle("/configmaps", configMapHandler)
 	mux.Handle("/healthz", http.HandlerFunc(healthzHandler))
 
-	logger.Infof("Listening on :8443")
-	err = http.ListenAndServeTLS(":8443", viper.GetString("tls_cert_file"), viper.GetString("tls_private_key_file"), mux)
+	logger.Infof("Listening on %s", viper.GetString("listen_address"))
+	err = http.ListenAndServeTLS(viper.GetString("listen_address"), viper.GetString("tls_cert_file"), viper.GetString("tls_private_key_file"), mux)
 	if err != nil {
 		logger.Fatalf("error serving webhook: %s", err)
 	}
