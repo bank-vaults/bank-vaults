@@ -48,6 +48,7 @@ type Vault struct {
 // VaultList contains a list of Vault
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:openapi-gen=true
 type VaultList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -99,6 +100,7 @@ func (c VaultExternalConfig) DeepCopy() VaultExternalConfig {
 
 // VaultSpec defines the desired state of Vault
 // Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
+// +k8s:openapi-gen=true
 type VaultSpec struct {
 
 	// Size defines the number of Vault instances in the cluster (>= 1 means HA)
@@ -569,6 +571,7 @@ func (vault *Vault) GetIngress() *Ingress {
 }
 
 // VaultStatus defines the observed state of Vault
+// +k8s:openapi-gen=true
 type VaultStatus struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	Nodes  []string `json:"nodes"`
