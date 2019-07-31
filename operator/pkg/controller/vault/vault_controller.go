@@ -147,7 +147,8 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 			// Preserve the ClusterIP when updating the service
 			svc.Spec.ClusterIP = currentSvc.Spec.ClusterIP
 			// Preserve the annotation when updating the service
-			svc.Annotations = currentSvc.Annotations
+			// TODO Why should we preserve? Removing for now.
+			// svc.Annotations = currentSvc.Annotations
 
 			if svc.Spec.Type == corev1.ServiceTypeNodePort || svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
 				for i := range svc.Spec.Ports {

@@ -90,7 +90,7 @@ spec:
     - "vswh"
 
   certExtraSANS:
-    - my-vault-service.company.com
+    - my-vault-service.example.com
     - "35.244.146.85"
 
   # Describe where you would like to store the Vault unseal keys and root token.
