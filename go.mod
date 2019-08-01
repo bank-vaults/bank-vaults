@@ -3,7 +3,7 @@ module github.com/banzaicloud/bank-vaults
 go 1.12
 
 require (
-	cloud.google.com/go v0.37.2
+	cloud.google.com/go v0.43.0
 	github.com/Azure/azure-sdk-for-go v23.2.0+incompatible
 	github.com/Azure/go-autorest v11.7.0+incompatible
 	github.com/Masterminds/semver v1.4.2
@@ -15,6 +15,7 @@ require (
 	github.com/aws/aws-sdk-go v1.15.31
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/banzaicloud/k8s-objectmatcher v1.0.0
+	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/coreos/etcd-operator v0.9.3
 	github.com/coreos/go-systemd v0.0.0-20190212144455-93d5ec2c7f76 // indirect
 	github.com/coreos/prometheus-operator v0.29.0
@@ -27,6 +28,7 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
 	github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5 // indirect
+	github.com/frankban/quicktest v1.4.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gin-contrib/sse v0.0.0-20170109093832-22d885f9ecc7 // indirect
 	github.com/gin-gonic/gin v0.0.0-20180512030042-bf7803815b0b
@@ -38,13 +40,10 @@ require (
 	github.com/gorilla/mux v1.7.2 // indirect
 	github.com/gosimple/slug v1.1.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
-	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
-	github.com/hashicorp/go-multierror v1.0.0 // indirect
-	github.com/hashicorp/go-retryablehttp v0.5.3 // indirect
-	github.com/hashicorp/go-rootcerts v1.0.0 // indirect
-	github.com/hashicorp/go-sockaddr v1.0.0 // indirect
+	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/hashicorp/hcl v1.0.0
-	github.com/hashicorp/vault v1.1.2
+	github.com/hashicorp/vault/api v1.0.4
+	github.com/hashicorp/vault/sdk v0.1.13
 	github.com/heroku/docker-registry-client v0.0.0-20181004091502-47ecf50fd8d4
 	github.com/imdario/mergo v0.3.7
 	github.com/jinzhu/gorm v1.9.1 // indirect
@@ -52,28 +51,38 @@ require (
 	github.com/jinzhu/now v0.0.0-20180511015916-ed742868f2ae // indirect
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/jpillora/backoff v0.0.0-20180909062703-3050d21c67d7
-	github.com/json-iterator/go v1.1.6
+	github.com/json-iterator/go v1.1.7
 	github.com/lib/pq v1.0.0 // indirect
-	github.com/mattn/go-isatty v0.0.3 // indirect
+	github.com/mattn/go-isatty v0.0.8 // indirect
 	github.com/microcosm-cc/bluemonday v0.0.0-20180327211928-995366fdf961 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/operator-framework/operator-sdk v0.9.0
+	github.com/pierrec/lz4 v2.2.5+incompatible // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
+	github.com/prometheus/client_golang v1.0.0
+	github.com/prometheus/common v0.6.0 // indirect
+	github.com/prometheus/procfs v0.0.3 // indirect
 	github.com/qor/qor v0.0.0-20180518090926-f171bc73933e
 	github.com/rainycape/unidecode v0.0.0-20150907023854-cb7f23ec59be // indirect
-	github.com/ryanuber/go-glob v0.0.0-20160226084822-572520ed46db // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
-	github.com/sirupsen/logrus v1.4.1
+	github.com/sirupsen/logrus v1.4.2
 	github.com/slok/kubewebhook v0.3.0
 	github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff // indirect
 	github.com/spf13/cast v1.3.0
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/viper v1.3.2
+	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/ugorji/go v1.1.7 // indirect
+	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 // indirect
+	golang.org/x/net v0.0.0-20190724013045-ca1201d0de80 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+	golang.org/x/sys v0.0.0-20190801041406-cbf593c0f2f3 // indirect
+	golang.org/x/tools v0.0.0-20190731214159-1e85ed8060aa // indirect
 	google.golang.org/api v0.3.0
+	google.golang.org/appengine v1.6.1 // indirect
+	google.golang.org/genproto v0.0.0-20190716160619-c506a9f90610 // indirect
+	google.golang.org/grpc v1.22.1 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/validator.v8 v8.18.2 // indirect
 	gopkg.in/ini.v1 v1.42.0 // indirect
