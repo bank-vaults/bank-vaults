@@ -1,6 +1,3 @@
-# You have to install the mutating webhook first:
-# helm upgrade --install vault-secrets-webhook banzaicloud-stable/vault-secrets-webhook --namespace vswh --wait --set image.tag=latest
-
 apiVersion: "v1"
 kind: Namespace
 metadata:
@@ -14,13 +11,14 @@ metadata:
   name: central-vault
 spec:
   size: 1
-  image: vault:1.1.0
+  image: vault:1.1.5
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault
 
-  # Unsealing will be done via Kubernetes Secrets if not defined otherwise (not highly secure, but this is just an example)
+  # Unsealing will be done via Kubernetes Secrets if not defined otherwise, not highly secure,
+  # but this is just an example, in production please use one of the KMS based unseal options.
 
   # A YAML representation of a final vault config file.
   # See https://www.vaultproject.io/docs/configuration/ for more information.
@@ -75,9 +73,9 @@ spec:
     - name: vault-file
       mountPath: /vault/file
 
-  # TODO: mount the secret and remove skip verify
   caNamespaces:
     - "tenant"
+    - "vault-infra"
 
 ---
 
@@ -101,10 +99,13 @@ metadata:
   namespace: tenant
 spec:
   size: 1
-  image: vault:1.1.0
+  image: vault:1.1.5
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   serviceAccount: default
+
+  # Root token and recovery keys will be stored in Kubernetes Secrets if not defined otherwise, not highly secure,
+  # but this is just an example, in production please use one of the KMS based options.
 
   # A YAML representation of a final vault config file.
   # See https://www.vaultproject.io/docs/configuration/ for more information.
@@ -112,7 +113,7 @@ spec:
     seal:
       transit:
         address: "https://central-vault.default:8200"
-        # token: will be injected via the webhook
+        # token: will be injected via the webhook through VAULT_TOKEN="vault:login"
         key_name: autounseal
         mount_path: tenant/transit
         tls_ca_cert: "/central-vault/tls/ca.crt"
