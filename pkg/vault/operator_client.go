@@ -28,7 +28,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	hclPrinter "github.com/hashicorp/hcl/hcl/printer"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	json "github.com/json-iterator/go"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
@@ -1013,11 +1013,11 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 
 				// Control if the configs should be updated or just Created once and skipped later on
 				// This is a workaround to secrets backend like GCP that will destroy and recreate secrets at every iteration
-				create_only := cast.ToBool(subConfigData["create_only"])
+				createOnly := cast.ToBool(subConfigData["create_only"])
 				// Delete the create_only key from the map, so we don't push it to vault
 				delete(subConfigData, "create_only")
 
-				if create_only && mountExists {
+				if createOnly && mountExists {
 					sec, err := v.cl.Logical().Read(configPath)
 					if err != nil {
 						return fmt.Errorf("error reading configPath %s: %s", configPath, err.Error())
