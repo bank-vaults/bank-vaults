@@ -24,6 +24,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	whhttp "github.com/slok/kubewebhook/pkg/http"
 	whcontext "github.com/slok/kubewebhook/pkg/webhook/context"
@@ -875,6 +876,7 @@ func main() {
 	mux.Handle("/secrets", secretHandler)
 	mux.Handle("/configmaps", configMapHandler)
 	mux.Handle("/healthz", http.HandlerFunc(healthzHandler))
+	mux.Handle("/metrics", promhttp.Handler())
 
 	logger.Infof("Listening on %s", viper.GetString("listen_address"))
 	err = http.ListenAndServeTLS(viper.GetString("listen_address"), viper.GetString("tls_cert_file"), viper.GetString("tls_private_key_file"), mux)
