@@ -1,3 +1,6 @@
+# Create a namespace for called "tenant" for the Tenant Vault instance,
+# the Central instance will be running in "default"
+
 apiVersion: "v1"
 kind: Namespace
 metadata:
@@ -5,23 +8,30 @@ metadata:
 
 ---
 
+# This Vault CR describes the setup of the Central Vault instance
 apiVersion: "vault.banzaicloud.com/v1alpha1"
 kind: "Vault"
 metadata:
   name: central-vault
+  namespace: default
 spec:
   size: 1
   image: vault:1.1.5
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
-  # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
+  # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults
+  # configurer/unsealer will be running
   serviceAccount: vault
 
-  # Unsealing will be done via Kubernetes Secrets if not defined otherwise, not highly secure,
-  # but this is just an example, in production please use one of the KMS based unseal options.
+  # Unsealing will be done via Kubernetes Secrets if not defined otherwise,
+  # not highly secure, but this is just an example, in production, please
+  # use one of the KMS based unseal options.
+  # unsealConfig:
+  # ...
 
-  # A YAML representation of a final vault config file.
-  # See https://www.vaultproject.io/docs/configuration/ for more information.
+  # A YAML representation of a final Vault config file, this will be mounted
+  # to the Vault container directly.
+  # {{ Go .Templates | can | be | used }}
   config:
     storage:
       file:
@@ -34,8 +44,25 @@ spec:
     api_addr: https://central-vault.default:8200
     ui: true
 
-  # See: https://github.com/banzaicloud/bank-vaults#example-external-vault-configuration for more details.
+  # This is how the Bank-Vaults configurer should configure Vault to enable the
+  # transit auto-unseal flow for the tenant instance.
+  # The automated version of:
+  # https://learn.hashicorp.com/vault/operations/autounseal-transit#cli-command
   externalConfig:
+
+    # Configure the transit secret engine and create a key for the auto-unseal
+    secrets:
+      - type: transit
+        path: tenant/transit
+        description: Transit engine for the tenant
+        configuration:
+          keys:
+            - name: autounseal
+              type: aes256-gcm96
+              exportable: false
+
+    # The tenant Vault needs to call the transit secret engine endpoints,
+    # create the necessary policies to permit it
     policies:
       - name: allow_tenant_transit
         rules: path "tenant/transit/encrypt/autounseal" {
@@ -44,45 +71,45 @@ spec:
                path "tenant/transit/decrypt/autounseal" {
                  capabilities = ["update"]
                }
+
+    # Instead of creating a token by hand we allow the tenant Vault to request
+    # one with the Kubernetes auth method, via vault-env and webhook
     auth:
       - type: kubernetes
         path: tenant/kubernetes
         roles:
-          # Allow every the tenant Vault pod in the tenant namespace to use its transit engine
+          # Allow every the tenant Vault Pod in the tenant namespace to use
+          # its transit engine
           - name: tenant
             bound_service_account_names: default
             bound_service_account_namespaces: tenant
             policies: allow_tenant_transit
             ttl: 1m
-    secrets:
-      - type: transit
-        path: tenant/transit
-        description: Transit engine for namespace 1
-        configuration:
-          keys:
-            - name: autounseal
-              type: aes256-gcm96
-              exportable: false
 
+  # Instruct the vault-operator to distribute the CA certificate of the central
+  # Vault instance into other namespaces as well, this way a secure TLS connection
+  # can be built up between the tenant and central Vault instances
+  caNamespaces:
+    - "tenant"
+    - "vault-infra"
+
+  # Request and mount a Persistent Volume to this Vault instance
   volumes:
     - name: vault-file
       persistentVolumeClaim:
-        claimName: central-vault-file
+        claimName: vault-file
 
   volumeMounts:
     - name: vault-file
       mountPath: /vault/file
-
-  caNamespaces:
-    - "tenant"
-    - "vault-infra"
 
 ---
 
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: central-vault-file
+  name: vault-file
+  namespace: default
 spec:
   accessModes:
     - ReadWriteOnce
@@ -92,6 +119,7 @@ spec:
 
 ---
 
+# This Vault CR describes the setup of the Tenant Vault instance
 apiVersion: "vault.banzaicloud.com/v1alpha1"
 kind: "Vault"
 metadata:
@@ -102,13 +130,20 @@ spec:
   image: vault:1.1.5
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
+  # We don't need any extra RBAC rules besides the default ones
   serviceAccount: default
 
-  # Root token and recovery keys will be stored in Kubernetes Secrets if not defined otherwise, not highly secure,
-  # but this is just an example, in production please use one of the KMS based options.
+  # Even if unsealing will be done via the Transit Auto-Unseal flow the root token
+  # and recovery keys will be stored in Kubernetes Secrets if not defined otherwise,
+  # not highly secure, but this is just an example, in production please use one of
+  # the KMS based options.
 
-  # A YAML representation of a final vault config file.
-  # See https://www.vaultproject.io/docs/configuration/ for more information.
+  # This is how the Bank-Vaults configurer should configure Vault to enable the
+  # transit auto-unseal flow for the this instance, the seal stanza is the interesting
+  # part where we connect to the central instance, the token will be injected
+  # by the webhook automatically.
+  # The automated version of:
+  # https://learn.hashicorp.com/vault/operations/autounseal-transit#step-2-configure-auto-unseal-vault-2
   config:
     seal:
       transit:
@@ -128,20 +163,19 @@ spec:
     api_addr: https://tenant-vault.tenant:8200
     ui: true
 
-  # See: https://github.com/banzaicloud/bank-vaults#example-external-vault-configuration for more details.
   externalConfig:
     policies:
       - name: allow_secrets
         rules: path "secret/*" {
           capabilities = ["create", "read", "update", "delete", "list"]
           }
+    # Allow every pod in the application namespace to use the secret kv store
     auth:
       - type: kubernetes
         roles:
-          # Allow every pod in the default namespace to use the secret kv store
-          - name: default
+          - name: application
             bound_service_account_names: ["default"]
-            bound_service_account_namespaces: ["tenant"]
+            bound_service_account_namespaces: ["application"]
             policies: allow_secrets
             ttl: 1h
     secrets:
@@ -151,20 +185,31 @@ spec:
         options:
           version: 2
 
+  # The VAULT_TOKEN environment variable will be read by Vault to login
+  # for unsealing, the "vault:" special prefix instructs the webhook to
+  # mutate the Pod and pass in  variable directly to the process with
+  # vault-env.
   vaultEnvsConfig:
     - name: VAULT_TOKEN
       value: "vault:login"
 
+  # vault-env from the above block needs some information to know how
+  # to login into Vault with the Kubernetes auth method, and where to
+  # find the TLS CA certificate for it. Since the operator was asked
+  # to distribute the CA of central-vault instance to other namespaces
+  # with `caNamespaces:` it will find in the "central-vault-tls" Secrets.
+  # This will be mounted automatically by the webhook into the Pod.
   vaultAnnotations:
     vault.security.banzaicloud.io/vault-addr: https://central-vault.default:8200
     vault.security.banzaicloud.io/vault-role: tenant
     vault.security.banzaicloud.io/vault-path: tenant/kubernetes
     vault.security.banzaicloud.io/vault-tls-secret: "central-vault-tls"
 
+  # Persistence done in the same way as for central-vault
   volumes:
     - name: vault-file
       persistentVolumeClaim:
-        claimName: sub-vault-file
+        claimName: vault-file
     - name: central-vault-tls
       secret:
         secretName: central-vault-tls
@@ -180,7 +225,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: sub-vault-file
+  name: vault-file
   namespace: tenant
 spec:
   accessModes:
