@@ -31,7 +31,7 @@ kubectl get -n vault statefulset vault -o json | jq .spec.template.metadata.anno
   "prometheus.io/path": "/metrics",
   "prometheus.io/port": "9102",
   "prometheus.io/scrape": "true",
-  "vault.banzaicloud.io/watched-secrets-sum": "ff1f1c79a31f76c68097975977746be9b85878f4737b8ee5a9d6ee3c5169b0ba"
+  "vault.security.banzaicloud.io/watched-secrets-sum": "ff1f1c79a31f76c68097975977746be9b85878f4737b8ee5a9d6ee3c5169b0ba"
 }
 
 ```

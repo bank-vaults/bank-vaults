@@ -183,17 +183,3 @@ spec:
   resources:
     requests:
       storage: 1Gi
-
-# ---
-# apiVersion: v1
-# kind: PersistentVolume
-# metadata:
-#   name: vault-file
-# spec:
-#   capacity:
-#     storage: 1Gi
-#   accessModes:
-#   - ReadWriteOnce
-#   persistentVolumeReclaimPolicy: Recycle
-#   hostPath:
-#     path: /vault/file

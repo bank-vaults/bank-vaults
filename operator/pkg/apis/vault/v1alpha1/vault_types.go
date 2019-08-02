@@ -449,17 +449,23 @@ func (spec *VaultSpec) GetTLSDisabledGlobally() bool {
 	return true
 }
 
-func (spec *VaultSpec) GetListenerPort(listener int) corev1.ServicePort {
+func (spec *VaultSpec) GetListenerPort(listener int) (corev1.ServicePort, error) {
 	listeners := spec.GetListeners()
 	tcp := cast.ToStringMap(listeners[listener]["tcp"])
 	_, port, err := net.SplitHostPort(cast.ToString(tcp["address"]))
 	if err != nil {
-		panic(err)
+		return corev1.ServicePort{}, err
 	}
+
+	portName := fmt.Sprintf("%s-port", port)
+	if port == "8200" {
+		portName = "api-port"
+	}
+
 	return corev1.ServicePort{
 		Port: int32(cast.ToInt(port)),
-		Name: fmt.Sprintf("%s-port", port),
-	}
+		Name: portName,
+	}, nil
 }
 
 func (spec *VaultSpec) GetListeners() []map[string]interface{} {
@@ -597,13 +603,18 @@ func (spec *VaultSpec) IsRaftStorage() bool {
 }
 
 // GetIngress the Ingress configuration for Vault if any
-func (vault *Vault) GetIngress() *Ingress {
+func (vault *Vault) GetIngress() (*Ingress, error) {
 	if vault.Spec.Ingress != nil {
+		port, err := vault.Spec.GetListenerPort(0)
+		if err != nil {
+			return nil, err
+		}
+
 		// Add the Vault Service as the default backend if not specified
 		if vault.Spec.Ingress.Spec.Backend == nil {
 			vault.Spec.Ingress.Spec.Backend = &v1beta1.IngressBackend{
 				ServiceName: vault.Name,
-				ServicePort: intstr.FromString(vault.Spec.GetListenerPort(0).Name),
+				ServicePort: intstr.FromString(port.Name),
 			}
 		}
 
@@ -626,10 +637,10 @@ func (vault *Vault) GetIngress() *Ingress {
 			vault.Spec.Ingress.Annotations["ingress.kubernetes.io/secure-backends"] = "true"
 		}
 
-		return vault.Spec.Ingress
+		return vault.Spec.Ingress, nil
 	}
 
-	return nil
+	return nil, nil
 }
 
 // VaultStatus defines the observed state of Vault

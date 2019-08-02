@@ -382,7 +382,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	// Create the StatefulSet if it doesn't exist
 	tlsAnnotations := map[string]string{}
-	tlsAnnotations["vault.banzaicloud.io/tls-expiration-date"] = tlsExpiration.UTC().Format(time.RFC3339)
+	tlsAnnotations["vault.security.banzaicloud.io/tls-expiration-date"] = tlsExpiration.UTC().Format(time.RFC3339)
 	statefulSet, err := statefulSetForVault(v, externalSecretsToWatchItems, tlsAnnotations)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to fabricate StatefulSet: %v", err)
@@ -400,14 +400,17 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	if v.Spec.ServiceMonitorEnabled {
 		// Create the ServiceMonitor if it doesn't exist
-		serviceMonitor := serviceMonitorForVault(v)
+		serviceMonitor, err := serviceMonitorForVault(v)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to fabricate ServiceMonitor: %v", err)
+		}
 		// Set Vault instance as the owner and controller
 		if err := controllerutil.SetControllerReference(v, serviceMonitor, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
 		err = r.createOrUpdateObject(serviceMonitor)
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to create/update serviceMonitor: %v", err)
+			return reconcile.Result{}, fmt.Errorf("failed to create/update ServiceMonitor: %v", err)
 		}
 	}
 
@@ -428,7 +431,10 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	// Create the service if it doesn't exist
 	// NOTE: currently this is not used, but should be here once we implement support for Client Forwarding as well.
 	// Currently request forwarding works only.
-	services := perInstanceServicesForVault(v)
+	services, err := perInstanceServicesForVault(v)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to fabricate per instance service: %v", err)
+	}
 	for _, ser := range services {
 		// Set Vault instance as the owner and controller
 		if err := controllerutil.SetControllerReference(v, ser, r.scheme); err != nil {
@@ -497,7 +503,12 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Create ingress if specificed
-	if ingress := ingressForVault(v); ingress != nil {
+	ingress, err := ingressForVault(v)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to fabricate ingress: %v", err)
+	}
+
+	if ingress != nil {
 		// Set Vault instance as the owner and controller
 		if err := controllerutil.SetControllerReference(v, ingress, r.scheme); err != nil {
 			return reconcile.Result{}, err
@@ -519,7 +530,10 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 	podNames := getPodNames(podList.Items)
 
-	port := v.Spec.GetListenerPort(0)
+	port, err := v.Spec.GetListenerPort(0)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to fabricate ingress: %v", err)
+	}
 
 	var leader string
 	for _, podName := range podNames {
@@ -654,16 +668,28 @@ func serviceForVault(v *vaultv1alpha1.Vault) (*corev1.Service, error) {
 	selectorLs := labelsForVault(v.Name)
 	// Label to differentiate per-instance service and global service via label selection
 	ls["global_service"] = "true"
-	servicePorts, _ := getServicePorts(v)
+
+	servicePorts, _, err := getServicePorts(v)
+	if err != nil {
+		return nil, err
+	}
 
 	annotations := withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{}))
 
 	// On GKE we need to specifiy the backend protocol on the service if TLS is enabled
-	if ingress := v.GetIngress(); ingress != nil {
+	ingress, err := v.GetIngress()
+	if err != nil {
+		return nil, err
+	}
+	if ingress != nil {
 		appProtocols := map[string]string{}
 
 		for listener := range v.Spec.GetListeners() {
-			port := v.Spec.GetListenerPort(listener)
+			port, err := v.Spec.GetListenerPort(listener)
+			if err != nil {
+				return nil, err
+			}
+
 			if v.Spec.GetTLSDisable(listener) {
 				appProtocols[port.Name] = "HTTP"
 			} else {
@@ -671,8 +697,10 @@ func serviceForVault(v *vaultv1alpha1.Vault) (*corev1.Service, error) {
 			}
 		}
 
-		// This can't really fail
-		appProtocolsJSON, _ := json.Marshal(appProtocols)
+		appProtocolsJSON, err := json.Marshal(appProtocols)
+		if err != nil {
+			return nil, err
+		}
 		annotations["cloud.google.com/app-protocols"] = string(appProtocolsJSON)
 	}
 
@@ -701,7 +729,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) (*corev1.Service, error) {
 	return service, nil
 }
 
-func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
+func serviceMonitorForVault(v *vaultv1alpha1.Vault) (*monitorv1.ServiceMonitor, error) {
 	ls := labelsForVault(v.Name)
 	serviceMonitor := &monitorv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
@@ -723,9 +751,13 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 	vaultVersionWithPrometheus := semver.MustParse("1.1.0")
 	version, err := v.Spec.GetVersion()
 	if err == nil && !version.LessThan(vaultVersionWithPrometheus) {
+		port, err := v.Spec.GetListenerPort(0)
+		if err != nil {
+			return nil, err
+		}
 		serviceMonitor.Spec.Endpoints = []monitorv1.Endpoint{{
 			Interval: "30s",
-			Port:     v.Spec.GetListenerPort(0).Name,
+			Port:     port.Name,
 			Scheme:   strings.ToLower(string(getVaultURIScheme(v, 0))),
 			Params:   map[string][]string{"format": []string{"prometheus"}},
 			Path:     "/v1/sys/metrics",
@@ -741,24 +773,31 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 		}}
 	}
 
-	return serviceMonitor
+	return serviceMonitor, nil
 }
 
-func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.ContainerPort) {
+func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.ContainerPort, error) {
 	var servicePorts []corev1.ServicePort
 	var containerPorts []corev1.ContainerPort
 
 	if len(v.Spec.ServicePorts) == 0 {
 
 		for listener := range v.Spec.GetListeners() {
-			port := v.Spec.GetListenerPort(listener)
+			port, err := v.Spec.GetListenerPort(listener)
+			if err != nil {
+				return nil, nil, err
+			}
+			clusterPortName := port.Name + "-cl"
+			if port.Port == 8200 {
+				clusterPortName = "cluster-port"
+			}
 			servicePorts = append(servicePorts, []corev1.ServicePort{
 				{
 					Name: port.Name,
 					Port: port.Port,
 				},
 				{
-					Name: port.Name + "-cl",
+					Name: clusterPortName,
 					Port: port.Port + 1,
 				},
 			}...)
@@ -768,13 +807,13 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 					ContainerPort: port.Port,
 				},
 				{
-					Name:          port.Name + "-cl",
+					Name:          clusterPortName,
 					ContainerPort: port.Port + 1,
 				},
 			}...)
 		}
 
-		return servicePorts, containerPorts
+		return servicePorts, containerPorts, nil
 	}
 
 	for k, i := range v.Spec.ServicePorts {
@@ -794,14 +833,18 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 	sort.Slice(servicePorts, func(i, j int) bool { return servicePorts[i].Name < servicePorts[j].Name })
 	sort.Slice(containerPorts, func(i, j int) bool { return containerPorts[i].Name < containerPorts[j].Name })
 
-	return servicePorts, containerPorts
+	return servicePorts, containerPorts, nil
 }
 
-func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
-	var services []*corev1.Service
-	servicePorts, _ := getServicePorts(v)
+func perInstanceServicesForVault(v *vaultv1alpha1.Vault) ([]*corev1.Service, error) {
+	servicePorts, _, err := getServicePorts(v)
+	if err != nil {
+		return nil, err
+	}
+
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
 
+	var services []*corev1.Service
 	for i := 0; i < int(v.Spec.Size); i++ {
 
 		podName := fmt.Sprintf("%s-%d", v.Name, i)
@@ -827,7 +870,7 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 		services = append(services, service)
 	}
 
-	return services
+	return services, nil
 }
 
 func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
@@ -854,8 +897,12 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 	return service
 }
 
-func ingressForVault(v *vaultv1alpha1.Vault) *v1beta1.Ingress {
-	if ingress := v.GetIngress(); ingress != nil {
+func ingressForVault(v *vaultv1alpha1.Vault) (*v1beta1.Ingress, error) {
+	ingress, err := v.GetIngress()
+	if err != nil {
+		return nil, err
+	}
+	if ingress != nil {
 		return &v1beta1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        v.Name,
@@ -863,9 +910,9 @@ func ingressForVault(v *vaultv1alpha1.Vault) *v1beta1.Ingress {
 				Annotations: ingress.Annotations,
 			},
 			Spec: ingress.Spec,
-		}
+		}, nil
 	}
-	return nil
+	return nil, nil
 }
 
 func serviceType(v *vaultv1alpha1.Vault) corev1.ServiceType {
@@ -933,6 +980,11 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 		}
 	}
 
+	env, err := withTLSEnv(v, false)
+	if err != nil {
+		return nil, err
+	}
+
 	podSpec := corev1.PodSpec{
 		ServiceAccountName: v.Spec.GetServiceAccount(),
 		Containers: []corev1.Container{
@@ -947,7 +999,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 					ContainerPort: 9091,
 					Protocol:      "TCP",
 				}},
-				Env:          withSecretEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{}))),
+				Env:          withSecretEnv(v, withCredentialsEnv(v, env)),
 				VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
 				WorkingDir:   "/config",
 				Resources:    *getBankVaultsResource(v),
@@ -1128,7 +1180,15 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		unsealCommand = append(unsealCommand, "--raft", "--raft-leader-address", "https://"+v.Name+":8200")
 	}
 
-	_, containerPorts := getServicePorts(v)
+	_, containerPorts, err := getServicePorts(v)
+	if err != nil {
+		return nil, err
+	}
+
+	env, err := withTLSEnv(v, true)
+	if err != nil {
+		return nil, err
+	}
 
 	podSpec := corev1.PodSpec{
 		Affinity: &corev1.Affinity{
@@ -1167,7 +1227,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Name:            "vault",
 				Args:            []string{"server"},
 				Ports:           containerPorts,
-				Env:             withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{}))),
+				Env:             withCredentialsEnv(v, withVaultEnv(v, withVaultClusterInterfaceEnv(env))),
 				SecurityContext: &corev1.SecurityContext{
 					Capabilities: &corev1.Capabilities{
 						Add: []corev1.Capability{"IPC_LOCK"},
@@ -1179,7 +1239,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Scheme: getVaultURIScheme(v, 0),
-							Port:   intstr.FromString(v.Spec.GetListenerPort(0).Name),
+							Port:   intstr.FromString(containerPorts[0].Name),
 							Path:   "/v1/sys/init",
 						}},
 				},
@@ -1189,7 +1249,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Scheme: getVaultURIScheme(v, 0),
-							Port:   intstr.FromString(v.Spec.GetListenerPort(0).Name),
+							Port:   intstr.FromString(containerPorts[0].Name),
 							Path:   "/v1/sys/health?standbyok&perfstandbyok",
 						}},
 					PeriodSeconds:    5,
@@ -1204,20 +1264,14 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Name:            "bank-vaults",
 				Command:         unsealCommand,
 				Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
-				Env: withSecretEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, []corev1.EnvVar{
-					{
-						Name:  k8s.EnvK8SOwnerReference,
-						Value: string(ownerJSON),
-					},
-					{
-						Name: "POD_NAME",
-						ValueFrom: &corev1.EnvVarSource{
-							FieldRef: &corev1.ObjectFieldSelector{
-								FieldPath: "metadata.name",
-							},
+				Env: withSecretEnv(v, withCredentialsEnv(v, withOwnerReferenceEnv(append(env, corev1.EnvVar{
+					Name: "POD_NAME",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "metadata.name",
 						},
 					},
-				}))),
+				}), string(ownerJSON)))),
 				Ports: []corev1.ContainerPort{{
 					Name:          "metrics",
 					ContainerPort: 9091,
@@ -1273,6 +1327,23 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			VolumeClaimTemplates: v.Spec.VolumeClaimTemplates,
 		},
 	}, nil
+}
+
+func withOwnerReferenceEnv(envs []corev1.EnvVar, ownerJSON string) []corev1.EnvVar {
+	envs = append(envs, corev1.EnvVar{
+		Name:  k8s.EnvK8SOwnerReference,
+		Value: ownerJSON,
+	})
+	return envs
+}
+
+func withVaultClusterInterfaceEnv(envs []corev1.EnvVar) []corev1.EnvVar {
+	// https://github.com/hashicorp/docker-vault/blob/master/0.X/docker-entrypoint.sh#L12
+	envs = append(envs, corev1.EnvVar{
+		Name:  "VAULT_CLUSTER_INTERFACE",
+		Value: "eth0",
+	})
+	return envs
 }
 
 // Annotations Functions
@@ -1333,7 +1404,7 @@ func withVaultWatchedExternalSecrets(v *vaultv1alpha1.Vault, secrets []corev1.Se
 	h.Write([]byte(strings.Join(secretValues, ";;")))
 
 	// Set the Annotation
-	annotations["vault.banzaicloud.io/watched-secrets-sum"] = fmt.Sprintf("%x", h.Sum(nil))
+	annotations["vault.security.banzaicloud.io/watched-secrets-sum"] = fmt.Sprintf("%x", h.Sum(nil))
 
 	return annotations
 }
@@ -1347,12 +1418,16 @@ func withTLSExpirationAnnotations(tlsAnnotations, annotations map[string]string)
 }
 
 // TLS Functions
-func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool, envs []corev1.EnvVar) []corev1.EnvVar {
+func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool) ([]corev1.EnvVar, error) {
 	host := fmt.Sprintf("%s.%s", v.Name, v.Namespace)
 	if localhost {
 		host = "127.0.0.1"
 	}
-	port := v.Spec.GetListenerPort(0)
+	port, err := v.Spec.GetListenerPort(0)
+	if err != nil {
+		return nil, err
+	}
+	var envs []corev1.EnvVar
 	if !v.Spec.GetTLSDisable(0) {
 		envs = append(envs, []corev1.EnvVar{
 			{
@@ -1371,7 +1446,7 @@ func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool, envs []corev1.EnvVar) []
 			Value: fmt.Sprintf("http://%s:%d", host, port.Port),
 		})
 	}
-	return envs
+	return envs, nil
 }
 
 func withTLSVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
@@ -1493,12 +1568,6 @@ func withStatsDContainer(v *vaultv1alpha1.Vault, owner string, containers []core
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Name:            "prometheus-exporter",
 			Args:            []string{"--statsd.mapping-config=/tmp/statsd-mapping.conf"},
-			Env: withTLSEnv(v, true, withCredentialsEnv(v, []corev1.EnvVar{
-				{
-					Name:  k8s.EnvK8SOwnerReference,
-					Value: owner,
-				},
-			})),
 			Ports: []corev1.ContainerPort{{
 				Name:          "statsd",
 				ContainerPort: 9125,
