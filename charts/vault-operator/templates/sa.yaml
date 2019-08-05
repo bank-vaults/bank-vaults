@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "vault-operator.fullname" . }}
+  labels:
+    app: {{ include "vault-operator.name" . }}
+    chart: {{ include "vault-operator.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
