@@ -1,0 +1,120 @@
+{{ $ca := genCA "svc-cat-ca" 3650 }}
+{{ $svcName := include "vault-secrets-webhook.fullname" . }}
+{{ $cn := printf "%s.%s.svc" $svcName .Release.Namespace }}
+{{ $altName1 := printf "%s.cluster.local" $cn }}
+{{ $altName2 := printf "%s" $cn }}
+{{ $server := genSignedCert $cn nil (list $altName1 $altName2) 365 $ca }}
+
+apiVersion: v1
+kind: List
+metadata:
+items:
+
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: {{ template "vault-secrets-webhook.fullname" . }}
+  data:
+    servingCert: {{ b64enc $server.Cert }}
+    servingKey: {{ b64enc $server.Key }}
+    caCert: {{ b64enc $ca.Cert }}
+
+- apiVersion: admissionregistration.k8s.io/v1beta1
+  kind: MutatingWebhookConfiguration
+  metadata:
+    name: {{ template "vault-secrets-webhook.fullname" . }}
+  webhooks:
+  - name: pods.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+    clientConfig:
+      service:
+        namespace: {{ .Release.Namespace }}
+        name: {{ template "vault-secrets-webhook.fullname" . }}
+        path: /pods
+      caBundle: {{ b64enc $ca.Cert }}
+    rules:
+    - operations:
+      - CREATE
+      apiGroups:
+      - "*"
+      apiVersions:
+      - "*"
+      resources:
+      - pods
+    failurePolicy: Fail
+    namespaceSelector:
+    {{- if .Values.namespaceSelector.matchLabels }}
+      matchLabels:
+{{ toYaml .Values.namespaceSelector.matchLabels | indent 8 }}
+    {{- end }}
+      matchExpressions:
+      {{- if .Values.namespaceSelector.matchExpressions }}
+{{ toYaml .Values.namespaceSelector.matchExpressions | indent 8 }}
+      {{- end }}
+      - key: name
+        operator: NotIn
+        values:
+        - {{ .Release.Namespace }}
+  - name: secrets.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+    clientConfig:
+      service:
+        namespace: {{ .Release.Namespace }}
+        name: {{ template "vault-secrets-webhook.fullname" . }}
+        path: /secrets
+      caBundle: {{ b64enc $ca.Cert }}
+    rules:
+    - operations:
+      - CREATE
+      - UPDATE
+      apiGroups:
+      - "*"
+      apiVersions:
+      - "*"
+      resources:
+      - secrets
+    failurePolicy: Fail
+    namespaceSelector:
+    {{- if .Values.namespaceSelector.matchLabels }}
+      matchLabels:
+{{ toYaml .Values.namespaceSelector.matchLabels | indent 8 }}
+    {{- end }}
+      matchExpressions:
+      {{- if .Values.namespaceSelector.matchExpressions }}
+{{ toYaml .Values.namespaceSelector.matchExpressions | indent 8 }}
+      {{- end }}
+      - key: name
+        operator: NotIn
+        values:
+        - {{ .Release.Namespace }}
+{{- if .Values.configMapMutation }}
+  - name: configmaps.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+    clientConfig:
+      service:
+        namespace: {{ .Release.Namespace }}
+        name: {{ template "vault-secrets-webhook.fullname" . }}
+        path: /configmaps
+      caBundle: {{ b64enc $ca.Cert }}
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - "*"
+        apiVersions:
+          - "*"
+        resources:
+          - configmaps
+    failurePolicy: Fail
+    namespaceSelector:
+    {{- if .Values.namespaceSelector.matchLabels }}
+      matchLabels:
+{{ toYaml .Values.namespaceSelector.matchLabels | indent 8 }}
+    {{- end }}
+      matchExpressions:
+    {{- if .Values.namespaceSelector.matchExpressions }}
+{{ toYaml .Values.namespaceSelector.matchExpressions | indent 8 }}
+    {{- end }}
+      - key: name
+        operator: NotIn
+        values:
+        - {{ .Release.Namespace }}
+{{- end }}
