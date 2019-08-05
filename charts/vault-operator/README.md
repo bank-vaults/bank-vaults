@@ -43,16 +43,18 @@ helm upgrade --install vault-operator . \
 
 The following tables lists the configurable parameters of the vault chart and their default values.
 
-|       Parameter           |           Description               |                         Default                     |
-|---------------------------|-------------------------------------|-----------------------------------------------------|
-| `image.pullPolicy`        | Container pull policy               | `IfNotPresent`                                      |
-| `image.repository`        | Container image to use              | `banzaicloud/vault-operator`                        |
-| `image.tag`               | Container image tag to deploy       | `0.4.2`                                             |
-| `replicaCount`            | k8s replicas                        | `1`                                                 |
-| `resources.limits.cpu`    | Container requested CPU             | `nil`                                               |
-| `resources.limits.memory` | Container requested memory          | `nil`                                               |
-| `crdAnnotations`          | Annotations for the Vault CRD       | `{}`                                                |
-| `etcd-operator.enabled`   | Install etcd operator as well       | `false`                                             |
+|       Parameter             |           Description               |                         Default                     |
+|-----------------------------|-------------------------------------|-----------------------------------------------------|
+| `image.pullPolicy`          | Container pull policy               | `IfNotPresent`                                      |
+| `image.repository`          | Container image to use              | `banzaicloud/vault-operator`                        |
+| `image.tag`                 | Container image tag to deploy       | `0.4.2`                                             |
+| `replicaCount`              | k8s replicas                        | `1`                                                 |
+| `resources.requests.cpu`    | Container requested CPU             | `100m`                                              |
+| `resources.requests.memory` | Container requested memory          | `128Mi`                                             |
+| `resources.limits.cpu`      | Container CPU limit                 | `100m`                                              |
+| `resources.limits.memory`   | Container memory limit              | `256Mi`                                             |
+| `crdAnnotations`            | Annotations for the Vault CRD       | `{}`                                                |
+| `etcd-operator.enabled`     | Install etcd operator as well       | `false`                                             |
 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
