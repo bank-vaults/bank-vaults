@@ -1,0 +1,216 @@
+# Default values for vault.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+replicaCount: 1
+strategy:
+  type: RollingUpdate
+image:
+  repository: vault
+  tag: 1.1.2
+  pullPolicy: IfNotPresent
+dockerizeImage:
+  repository: jwilder/dockerize
+  tag: latest
+  pullPolicy: IfNotPresent
+service:
+  name: vault
+  type: ClusterIP
+  port: 8200
+  ## Force load balancer IP
+  # loadBalancerIP: 1.2.3.4
+  # annotations:
+  #   cloud.google.com/load-balancer-type: "Internal"
+ingress:
+  enabled: false
+  # Used to create Ingress record (should used with service.type: ClusterIP).
+  # hosts:
+  #  - chart-example.local
+  # annotations:
+  #   kubernetes.io/ingress.class: nginx
+  #   kubernetes.io/tls-acme: "true"
+  # tls:
+  #   Secrets must be manually created in the namespace.
+  #   - secretName: chart-example-tls
+  #     hosts:
+  #       - chart-example.local
+persistence:
+  ## Enable persistence using Persistent Volume Claims
+  ## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
+  enabled: false
+  ## Vault data Persistent Volume Storage Class
+  ## If defined, storageClassName: <storageClass>
+  ## If set to "-", storageClassName: "", which disables dynamic provisioning
+  ## If undefined (the default) or set to null, no storageClassName spec is
+  ## set, choosing the default provisioner. (gp2 on AWS, standard on
+  ## GKE, AWS & OpenStack)
+  # storageClass: "-"
+  # Used for hostPath persistence if left empty, "emptyDir" will be used
+  hostPath: ""
+  ## Set default PVC size
+  size: 10G
+  ## Set default PVC access mode: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
+  accessMode: ReadWriteOnce
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/metrics"
+  prometheus.io/port: "9102"
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+vault:
+  # Allows the mounting of various custom secrets to enable production vault
+  # configurations. The comments show an example usage for mounting a TLS
+  # secret. The two fields required are a secretName indicating the name of
+  # the Kuberentes secret (created outside of this chart), and the mountPath
+  # at which it should be mounted in the Vault container.
+  customSecrets: []
+    # - secretName: vault-tls
+    #   mountPath: /vault/tls
+  # Allows creating various custom environment variables from secrets to enable
+  # production vault configurations. The comments show an example usage for
+  # passing a MySQL secret. The three fields required are a secretName indicating
+  # the name of the Kuberentes secret (created outside of this chart), secretKey
+  # in this secret and envName which will be the name of the env var in the containers.
+  envSecrets: []
+    # - secretName: mysql
+    #   secretKey: mysql-username
+    #   envName: "MYSQL_USERNAME"
+  # Allows adding various custom eenvironment variables directly.
+  envs: []
+    # - name: GOOGLE_APPLICATION_CREDENTIALS
+    #   value: /etc/gcp/service-account.json
+  externalConfig:
+    # Allows creating policies in Vault which can be used later on in roles
+    # for the Kubernetes based authentication.
+    # See https://www.vaultproject.io/docs/concepts/policies.html for more information.
+    policies:
+      - name: allow_secrets
+        rules: path "secret/*" {
+                capabilities = ["create", "read", "update", "delete", "list"]
+              }
+    auth:
+      - type: kubernetes
+        # Allows creating roles in Vault which can be used later on for the Kubernetes based
+        # authentication.
+        # See https://www.vaultproject.io/docs/auth/kubernetes.html#creating-a-role for
+        # more information.
+        roles:
+          # Allow every pod in the default namespace to use the secret kv store
+          - name: default
+            bound_service_account_names: default
+            bound_service_account_namespaces: default
+            policies: allow_secrets
+            ttl: 1h
+    secrets:
+      - path: secret
+        type: kv
+        description: General secrets.
+        options:
+          version: 2
+  config:
+    # A YAML representation of a final vault config.json file.
+    # See https://www.vaultproject.io/docs/configuration/ for more information.
+    listener:
+      tcp:
+        address: '[::]:8200'
+        # tls_disable: true
+        tls_cert_file: /vault/tls/server.crt
+        tls_key_file: /vault/tls/server.key
+
+    telemetry:
+      statsd_address: localhost:9125
+
+    ui: true
+
+    # See https://www.vaultproject.io/docs/configuration/storage/ for storage backends
+    storage: {}
+      # file:
+      #   path: "/vault/file"
+      # consul:
+      #   address: ""
+      #   path: ""
+      #
+      # etcd:
+      #   address: ""
+      #   path: "vault/"
+      #
+      # s3:
+      #   bucket: ""
+      #   region: ""
+      #   access_key: ""
+      #   secret_key: ""
+      #   endpoint: "" # When not using AWS S3
+      #
+      # gcs:
+      #   bucket: ""
+      #   credentials_file: ""
+      #   ha_enabled: "true"
+    # api_addr: http://localhost:8200
+
+  # Until this issue is fixed: https://github.com/kubernetes/helm/issues/3117
+  # we have to workaround the default storage problem.
+  defaultStorage:
+    storage:
+      file:
+        path: "/vault/file"
+
+  logLevel: info
+
+unsealer:
+  image:
+    repository: banzaicloud/bank-vaults
+    tag: 0.4.18
+    pullPolicy: IfNotPresent
+  args: [
+      "--mode",
+      "k8s",
+      "--k8s-secret-namespace",
+      "default",
+      "--k8s-secret-name",
+      "bank-vaults"
+  ]
+  metrics:
+    enabled: true
+    debug: true
+    name: metrics
+    type: ClusterIP
+    port: 9091
+    serviceMonitor:
+      enabled: false
+      additionalLabels: {}
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/path: "/metrics"
+      prometheus.io/port: "9091"
+
+statsd:
+  image:
+    repository: prom/statsd-exporter
+    tag: latest
+    pullPolicy: IfNotPresent
+  metrics:
+    enabled: true
+    port: 9102
+    serviceMonitor:
+      enabled: false
+      additionalLabels: {}
+  config:
+    mappings:
+    - match: vault.route.*.*
+      name: "vault_route"
+      labels:
+        method: "$1"
+        path: "$2"
+
+rbac:
+  enabled: true
+  psp:
+    enabled: false

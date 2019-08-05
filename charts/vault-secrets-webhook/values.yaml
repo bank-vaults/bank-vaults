@@ -1,0 +1,51 @@
+# Default values for spot-config-webhook.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+debug: false
+
+image:
+  repository: banzaicloud/vault-secrets-webhook
+  tag: 0.4.18
+  pullPolicy: IfNotPresent
+  imagePullSecrets: []
+
+service:
+  name: vault-secrets-webhook
+  type: ClusterIP
+  externalPort: 443
+  internalPort: 8443
+
+env:
+  VAULT_IMAGE: vault:latest
+  VAULT_ENV_IMAGE: banzaicloud/vault-env:latest
+  # VAULT_CAPATH: /vault/tls
+
+volumes: []
+# - name: vault-tls
+#   secret:
+#     secretName: vault-tls
+
+volumeMounts: []
+# - name: vault-tls
+#   mountPath: /vault/tls
+
+resources: {}
+
+nodeSelector: {}
+
+namespaceSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+rbac:
+  enabled: true
+  psp:
+    enabled: false
+
+# This can cause issues when used with Helm, so it is not enabled by default
+configMapMutation: false

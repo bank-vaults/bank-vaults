@@ -1,0 +1,71 @@
+# Default values for vault-operator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: banzaicloud/vault-operator
+  tag: 0.4.18
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  externalPort: 80
+  internalPort: 8080
+
+nameOverride: ""
+fullnameOverride: ""
+
+crdAnnotations: {}
+
+# The namespace where the operator watches for vault CRD objects, if not defined
+# all namespaces are watched
+watchNamespace: ""
+syncPeriod: "1m"
+
+# # If needed, define nodeSelector for vault operator
+# nodeSelector:
+#   "node-role.kubernetes.io/custom_worker": "true"
+
+# # if tolerations are used inside cluster, define tolerations as well
+# tolerations:
+#   - effect: NoSchedule
+#     key: node_role
+#     operator: Equal
+#     value: custom_worker
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+affinity: {}
+
+terminationGracePeriodSeconds: 10
+
+probePath: /
+livenessProbe:
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 1
+readinessProbe:
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 1
+
+etcd-operator:
+  enabled: false
+  etcdOperator:
+    image:
+      tag: v0.9.1
+  backupOperator:
+    image:
+      tag: v0.9.1
+  restoreOperator:
+    image:
+      tag: v0.9.1
