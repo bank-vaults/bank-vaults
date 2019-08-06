@@ -1,7 +1,8 @@
-# Golang CircleCI 2.0 configuration file
-#
-# Check https://circleci.com/docs/2.0/language-go/ for more details
-version: 2
+version: 2.1
+
+orbs:
+  helm: banzaicloud/helm@0.0.5
+
 jobs:
   check:
     docker:
@@ -130,7 +131,7 @@ jobs:
       - run:
           name: Wait for minikube
           command: |
-            timeout 180s bash <<EOT
+            timeout 180s bash \<<EOT
               set -o pipefail
               function is_ready()
               {
@@ -164,3 +165,20 @@ workflows:
       - acceptance-test:
           requires:
             - check
+
+  helm-chart:
+    jobs:
+      - helm/lint-chart:
+          charts-dir: charts
+          filters:
+            tags:
+              ignore: /.*/
+
+      - helm/publish-chart:
+          context: helm
+          charts-dir: charts
+          filters:
+            tags:
+              only: /chart\/\S+\/\d+.\d+.\d+/
+            branches:
+              ignore: /.*/
