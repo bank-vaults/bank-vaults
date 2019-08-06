@@ -754,22 +754,24 @@ func (mw *mutatingWebhook) mutatePodSpec(pod *corev1.Pod, vaultConfig vaultConfi
 		})
 	}
 
-	if initContainersMutated || containersMutated || vaultConfig.ctConfigMap != ""  && !dryRun {
+	if initContainersMutated || containersMutated || vaultConfig.ctConfigMap != "" {
 		var agentConfigMapName string
 
 		if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
 			configMap := getConfigMapForVaultAgent(pod, vaultConfig)
 			agentConfigMapName = configMap.Name
 
-			_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(configMap)
-			if err != nil {
-				if errors.IsAlreadyExists(err) {
-					_, err = mw.k8sClient.CoreV1().ConfigMaps(ns).Update(configMap)
-					if err != nil {
+			if !dryRun {
+				_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(configMap)
+				if err != nil {
+					if errors.IsAlreadyExists(err) {
+						_, err = mw.k8sClient.CoreV1().ConfigMaps(ns).Update(configMap)
+						if err != nil {
+							return err
+						}
+					} else {
 						return err
 					}
-				} else {
-					return err
 				}
 			}
 
