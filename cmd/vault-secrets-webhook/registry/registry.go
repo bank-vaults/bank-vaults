@@ -26,6 +26,7 @@ import (
 	"github.com/heroku/docker-registry-client/registry"
 	imagev1 "github.com/opencontainers/image-spec/specs-go/v1"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -222,6 +223,23 @@ func (k *ContainerInfo) fixDockerHubImage(image string) string {
 	return image
 }
 
+func (k *ContainerInfo) checkImagePullSecret(namespace string, secret string) (bool, error) {
+	data, err := k.readDockerSecret(namespace, secret)
+	if err != nil {
+		return false, fmt.Errorf("cannot read imagePullSecret '%s' in namespace '%s': %s", secret, namespace, err.Error())
+	}
+
+	var dockerCreds DockerCreds
+
+	err = json.Unmarshal(data[corev1.DockerConfigJsonKey], &dockerCreds)
+	if err != nil {
+		return false, fmt.Errorf("cannot unmarshal docker configuration from imagePullSecret: %s", err.Error())
+	}
+
+	found, err := k.parseDockerConfig(dockerCreds)
+	return found, err
+}
+
 // Collect reads information from k8s and load them into the structure
 func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.PodSpec) error {
 
@@ -230,26 +248,30 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 	// k.clientset.Core().ServiceAccounts(k.Namespace).Get(podSpec.ServiceAccountName)
 
 	// TODO read ServiceAccount's imagePullSecrets as well
+	var err error
+	found := false
 	for _, imagePullSecret := range podSpec.ImagePullSecrets {
-		data, err := k.readDockerSecret(k.Namespace, imagePullSecret.Name)
+		found, err = k.checkImagePullSecret(k.Namespace, imagePullSecret.Name)
 		if err != nil {
-			return fmt.Errorf("cannot read imagePullSecrets '%s': %s", imagePullSecret.Name, err.Error())
-		}
-
-		var dockerCreds DockerCreds
-
-		err = json.Unmarshal(data[corev1.DockerConfigJsonKey], &dockerCreds)
-		if err != nil {
-			return fmt.Errorf("cannot unmarshal docker configuration from imagePullSecrets: %s", err.Error())
-		}
-
-		found, err := k.parseDockerConfig(dockerCreds)
-		if err != nil {
-			return nil
+			return err
 		}
 
 		if found {
 			break
+		}
+	}
+
+	// if we did not find a matching imagePullSecret on the pod itself,
+	// try to find matching registry credentials in the default imagePullSecret
+	// if one was provided
+	if !found {
+		defaultImagePullSecret := viper.GetString("default_image_pull_secret")
+		defaultImagePullSecretNamespace := viper.GetString("default_image_pull_secret_namespace")
+		if len(defaultImagePullSecret) > 0 && len(defaultImagePullSecretNamespace) > 0 {
+			_, err = k.checkImagePullSecret(defaultImagePullSecretNamespace, defaultImagePullSecret)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

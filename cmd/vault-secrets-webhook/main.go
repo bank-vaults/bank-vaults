@@ -830,6 +830,8 @@ func init() {
 	viper.SetDefault("vault_env_passthrough", "")
 	viper.SetDefault("mutate_configmap", "false")
 	viper.SetDefault("listen_address", ":8443")
+	viper.SetDefault("default_image_pull_secret", "")
+	viper.SetDefault("default_image_pull_secret_namespace", "")
 	viper.SetDefault("debug", "false")
 	viper.AutomaticEnv()
 
