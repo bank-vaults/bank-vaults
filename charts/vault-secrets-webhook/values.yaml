@@ -22,6 +22,11 @@ env:
   VAULT_IMAGE: vault:latest
   VAULT_ENV_IMAGE: banzaicloud/vault-env:latest
   # VAULT_CAPATH: /vault/tls
+  # used when the pod that should get secret injected does not specify
+  # an imagePullSecret
+  # DEFAULT_IMAGE_PULL_SECRET:
+  # DEFAULT_IMAGE_PULL_SECRET_NAMESPACE:
+
 
 volumes: []
 # - name: vault-tls
