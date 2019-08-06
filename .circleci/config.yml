@@ -1,7 +1,7 @@
-version: 2
+version: 2.1
 
 orbs:
-    helm: banzaicloud/helm@0.0.5
+  helm: banzaicloud/helm@0.0.5
 
 jobs:
   check:
@@ -176,7 +176,7 @@ workflows:
 
       - helm/publish-chart:
           context: helm
-          charts-dir: 'charts'
+          charts-dir: charts
           filters:
             tags:
               only: /\S+\/\d+.\d+.\d+/
