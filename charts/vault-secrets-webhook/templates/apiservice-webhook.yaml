@@ -118,3 +118,4 @@ items:
         values:
         - {{ .Release.Namespace }}
 {{- end }}
+    sideEffects: NoneOnDryRun
