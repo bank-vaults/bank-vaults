@@ -288,7 +288,7 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger *log.
 func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
 	switch v := obj.(type) {
 	case *corev1.Pod:
-		return false, mw.mutatePodSpec(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
+		return false, mw.mutatePodSpec(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.IsAdmissionRequestDryRun(ctx))
 	case *corev1.Secret:
 		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/vault-addr"]; ok {
 			return false, mutateSecret(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
@@ -701,7 +701,7 @@ func newK8SClient() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func (mw *mutatingWebhook) mutatePodSpec(pod *corev1.Pod, vaultConfig vaultConfig, ns string) error {
+func (mw *mutatingWebhook) mutatePodSpec(pod *corev1.Pod, vaultConfig vaultConfig, ns string, dryRun bool) error {
 
 	logger.Debugf("Successfully connected to the API")
 
@@ -761,15 +761,17 @@ func (mw *mutatingWebhook) mutatePodSpec(pod *corev1.Pod, vaultConfig vaultConfi
 			configMap := getConfigMapForVaultAgent(pod, vaultConfig)
 			agentConfigMapName = configMap.Name
 
-			_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(configMap)
-			if err != nil {
-				if errors.IsAlreadyExists(err) {
-					_, err = mw.k8sClient.CoreV1().ConfigMaps(ns).Update(configMap)
-					if err != nil {
+			if !dryRun {
+				_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(configMap)
+				if err != nil {
+					if errors.IsAlreadyExists(err) {
+						_, err = mw.k8sClient.CoreV1().ConfigMaps(ns).Update(configMap)
+						if err != nil {
+							return err
+						}
+					} else {
 						return err
 					}
-				} else {
-					return err
 				}
 			}
 
@@ -828,6 +830,7 @@ func init() {
 	viper.SetDefault("vault_env_passthrough", "")
 	viper.SetDefault("mutate_configmap", "false")
 	viper.SetDefault("listen_address", ":8443")
+	viper.SetDefault("debug", "false")
 	viper.AutomaticEnv()
 
 	logger = log.New()
