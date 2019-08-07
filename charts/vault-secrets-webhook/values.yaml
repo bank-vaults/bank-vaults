@@ -49,3 +49,9 @@ rbac:
 
 # This can cause issues when used with Helm, so it is not enabled by default
 configMapMutation: false
+
+configmapFailurePolicy: Ignore
+
+podsFailurePolicy: Ignore
+
+secretsFailurePolicy: Ignore
