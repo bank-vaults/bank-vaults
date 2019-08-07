@@ -83,6 +83,17 @@ type mutatingWebhook struct {
 	k8sClient *kubernetes.Clientset
 }
 
+// If the original Pod contained a Volume "vault-tls", for example Vault instances provisioned by the Operator
+// we need to handle that edge case and choose another name for the vault-tls volume for accessing Vault with TLS.
+func hasTLSVolume(volumes []corev1.Volume) bool {
+	for _, volume := range volumes {
+		if volume.Name == "vault-tls" {
+			return true
+		}
+	}
+	return false
+}
+
 func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	var containers = []corev1.Container{}
 
@@ -211,7 +222,7 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 	return containers
 }
 
-func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger *log.Logger) []corev1.Volume {
+func getVolumes(existingVolumes []corev1.Volume, agentConfigMapName string, vaultConfig vaultConfig, logger *log.Logger) []corev1.Volume {
 	logger.Debugf("Add generic volumes to podspec")
 
 	volumes := []corev1.Volume{
@@ -241,8 +252,14 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger *log.
 
 	if vaultConfig.tlsSecret != "" {
 		logger.Debugf("Add vault TLS volume to podspec")
+
+		volumeName := "vault-tls"
+		if hasTLSVolume(existingVolumes) {
+			volumeName = "vault-env-tls"
+		}
+
 		volumes = append(volumes, corev1.Volume{
-			Name: "vault-tls",
+			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: vaultConfig.tlsSecret,
@@ -288,7 +305,7 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger *log.
 func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
 	switch v := obj.(type) {
 	case *corev1.Pod:
-		return false, mw.mutatePodSpec(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.IsAdmissionRequestDryRun(ctx))
+		return false, mw.mutatePod(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.IsAdmissionRequestDryRun(ctx))
 	case *corev1.Secret:
 		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/vault-addr"]; ok {
 			return false, mutateSecret(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
@@ -627,13 +644,21 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 		}...)
 
 		if vaultConfig.tlsSecret != "" {
+
+			mountPath := "/vault/tls/ca.crt"
+			volumeName := "vault-tls"
+			if hasTLSVolume(podSpec.Volumes) {
+				mountPath = "/vault-env/tls/ca.crt"
+				volumeName = "vault-env-tls"
+			}
+
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  "VAULT_CACERT",
-				Value: "/vault/tls/ca.crt",
+				Value: mountPath,
 			})
 			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-				Name:      "vault-tls",
-				MountPath: "/vault/tls/ca.crt",
+				Name:      volumeName,
+				MountPath: mountPath,
 				SubPath:   "ca.crt",
 			})
 		}
@@ -701,7 +726,7 @@ func newK8SClient() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func (mw *mutatingWebhook) mutatePodSpec(pod *corev1.Pod, vaultConfig vaultConfig, ns string, dryRun bool) error {
+func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig vaultConfig, ns string, dryRun bool) error {
 
 	logger.Debugf("Successfully connected to the API")
 
@@ -744,13 +769,22 @@ func (mw *mutatingWebhook) mutatePodSpec(pod *corev1.Pod, vaultConfig vaultConfi
 		},
 	}
 	if vaultConfig.tlsSecret != "" {
+
+		mountPath := "/vault/tls/ca.crt"
+		volumeName := "vault-tls"
+		if hasTLSVolume(pod.Spec.Volumes) {
+			mountPath = "/vault-env/tls/ca.crt"
+			volumeName = "vault-env-tls"
+		}
+
 		containerEnvVars = append(containerEnvVars, corev1.EnvVar{
 			Name:  "VAULT_CACERT",
-			Value: "/vault/tls/ca.crt",
+			Value: mountPath,
 		})
 		containerVolMounts = append(containerVolMounts, corev1.VolumeMount{
-			Name:      "vault-tls",
-			MountPath: "/vault/tls",
+			Name:      volumeName,
+			MountPath: mountPath,
+			SubPath:   "ca.crt",
 		})
 	}
 
@@ -780,7 +814,7 @@ func (mw *mutatingWebhook) mutatePodSpec(pod *corev1.Pod, vaultConfig vaultConfi
 		pod.Spec.InitContainers = append(getInitContainers(pod.Spec.Containers, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), pod.Spec.InitContainers...)
 		logger.Debugf("Successfully appended pod init containers to spec")
 
-		pod.Spec.Volumes = append(pod.Spec.Volumes, getVolumes(agentConfigMapName, vaultConfig, logger)...)
+		pod.Spec.Volumes = append(pod.Spec.Volumes, getVolumes(pod.Spec.Volumes, agentConfigMapName, vaultConfig, logger)...)
 		logger.Debugf("Successfully appended pod spec volumes")
 	}
 
