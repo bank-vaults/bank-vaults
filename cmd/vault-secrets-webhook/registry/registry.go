@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 	"sync"
 
@@ -107,12 +106,12 @@ func GetImageConfig(
 func getImageBlob(container ContainerInfo) (*imagev1.ImageConfig, error) {
 	imageName, tag := parseContainerImage(container.Image)
 
-	registrySkipVerify := os.Getenv("REGISTRY_SKIP_VERIFY")
+	registrySkipVerify := viper.GetBool("registry_skip_verify")
 
 	var hub *registry.Registry
 	var err error
 
-	if registrySkipVerify == "true" {
+	if registrySkipVerify {
 		hub, err = registry.NewInsecure(container.RegistryAddress, container.RegistryUsername, container.RegistryPassword)
 	} else {
 		hub, err = registry.New(container.RegistryAddress, container.RegistryUsername, container.RegistryPassword)

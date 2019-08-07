@@ -832,6 +832,7 @@ func init() {
 	viper.SetDefault("listen_address", ":8443")
 	viper.SetDefault("default_image_pull_secret", "")
 	viper.SetDefault("default_image_pull_secret_namespace", "")
+	viper.SetDefault("registry_skip_verify", "false")
 	viper.SetDefault("debug", "false")
 	viper.AutomaticEnv()
 
