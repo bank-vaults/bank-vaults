@@ -68,7 +68,7 @@ sleep 20
 go get github.com/banzaicloud/kurun
 git checkout -- go.mod go.sum
 export PATH=${PATH}:${GOPATH}/bin
-kurun cmd/examples/main.go
+kurun run cmd/examples/main.go
 
 
 # Run the webhook test, the hello-secrets deployment should be successfully mutated
