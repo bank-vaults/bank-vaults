@@ -242,7 +242,7 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger *log.
 	if vaultConfig.tlsSecret != "" {
 		logger.Debugf("Add vault TLS volume to podspec")
 		volumes = append(volumes, corev1.Volume{
-			Name: "vault-env-tls",
+			Name: "vault-tls",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: vaultConfig.tlsSecret,
@@ -629,11 +629,11 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 		if vaultConfig.tlsSecret != "" {
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  "VAULT_CACERT",
-				Value: "/vault-env/tls/ca.crt",
+				Value: "/vault/tls/ca.crt",
 			})
 			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-				Name:      "vault-env-tls",
-				MountPath: "/vault-env/tls/ca.crt",
+				Name:      "vault-tls",
+				MountPath: "/vault/tls/ca.crt",
 				SubPath:   "ca.crt",
 			})
 		}
@@ -746,11 +746,11 @@ func (mw *mutatingWebhook) mutatePodSpec(pod *corev1.Pod, vaultConfig vaultConfi
 	if vaultConfig.tlsSecret != "" {
 		containerEnvVars = append(containerEnvVars, corev1.EnvVar{
 			Name:  "VAULT_CACERT",
-			Value: "/vault-env/tls/ca.crt",
+			Value: "/vault/tls/ca.crt",
 		})
 		containerVolMounts = append(containerVolMounts, corev1.VolumeMount{
-			Name:      "vault-env-tls",
-			MountPath: "/vault-env/tls",
+			Name:      "vault-tls",
+			MountPath: "/vault/tls",
 		})
 	}
 
