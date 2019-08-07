@@ -40,11 +40,7 @@ items:
       - "*"
       resources:
       - pods
-    {{ if .Values.PodsFailurePolicy }}
-    failurePolicy: {{ .Values.PodsFailurePolicy }}
-    {{- else -}}
-    failurePolicy: Ignore
-    {{- end }}
+    failurePolicy: {{ .Values.podsFailurePolicy }}
     namespaceSelector:
     {{- if .Values.namespaceSelector.matchLabels }}
       matchLabels:
@@ -75,11 +71,7 @@ items:
       - "*"
       resources:
       - secrets
-    {{ if .Values.SecretsfailurePolicy }}
-    failurePolicy: {{ .Values.SecretsFailurePolicy }}
-    {{- else -}}
-    failurePolicy: Ignore
-    {{- end }}
+    failurePolicy: {{ .Values.secretsFailurePolicy }}
     namespaceSelector:
     {{- if .Values.namespaceSelector.matchLabels }}
       matchLabels:
@@ -111,11 +103,7 @@ items:
           - "*"
         resources:
           - configmaps
-    {{ if .Values.ConfigmapFailurePolicy }}
-    failurePolicy: {{ .Values.ConfigmapFailurePolicy }}
-    {{- else -}}
-    failurePolicy: Ignore
-    {{- end }}
+    failurePolicy: {{ .Values.configmapFailurePolicy }}
     namespaceSelector:
     {{- if .Values.namespaceSelector.matchLabels }}
       matchLabels:
