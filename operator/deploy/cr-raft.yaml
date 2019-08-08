@@ -3,7 +3,7 @@ kind: "Vault"
 metadata:
   name: "vault"
 spec:
-  size: 2
+  size: 3
   image: vault:1.2.0
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
