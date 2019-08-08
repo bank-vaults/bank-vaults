@@ -276,11 +276,12 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 
 	k.Image = k.fixDockerHubImage(container.Image)
 
-	// k.clientset.Core().ServiceAccounts(k.Namespace).Get(podSpec.ServiceAccountName)
-
-	// TODO read ServiceAccount's imagePullSecrets as well
 	var err error
 	found := false
+	// Check for registry credentials in imagePullSecrets attached to the pod
+	// ImagePullSecrets attached to ServiceAccounts do not have to be considered
+	// explicitely as ServiceAccount ImagePullSecrets are automatically attached
+	// to a pod.
 	for _, imagePullSecret := range podSpec.ImagePullSecrets {
 		found, err = k.checkImagePullSecret(k.Namespace, imagePullSecret.Name)
 		if err != nil {
@@ -288,22 +289,30 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 		}
 
 		if found {
+			logger.Infof("found credentials for registry %s in pod imagePullSecret: %s/%s", k.RegistryName, k.Namespace, imagePullSecret.Name)
 			break
 		}
 	}
 
-	// if we did not find a matching imagePullSecret on the pod itself,
-	// try to find matching registry credentials in the default imagePullSecret
-	// if one was provided
+	// The pod imagePullSecrets did not contained matching credentials.
+	// Try to find matching registry credentials in the default imagePullSecret if one was provided.
 	if !found {
 		defaultImagePullSecret := viper.GetString("default_image_pull_secret")
 		defaultImagePullSecretNamespace := viper.GetString("default_image_pull_secret_namespace")
 		if len(defaultImagePullSecret) > 0 && len(defaultImagePullSecretNamespace) > 0 {
-			_, err = k.checkImagePullSecret(defaultImagePullSecretNamespace, defaultImagePullSecret)
+			found, err = k.checkImagePullSecret(defaultImagePullSecretNamespace, defaultImagePullSecret)
 			if err != nil {
 				return err
 			}
+
+			if found {
+				logger.Infof("found credentials for registry %s in default imagePullSecret: %s/s", k.RegistryName, defaultImagePullSecretNamespace, defaultImagePullSecret)
+			}
 		}
+	}
+
+	if !found {
+		logger.Infof("found no credentials for registry %s, assuming it is public")
 	}
 
 	// In case of other public docker registry
