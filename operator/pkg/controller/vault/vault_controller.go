@@ -1114,6 +1114,10 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	if v.Spec.IsAutoUnseal() {
 		unsealCommand = append(unsealCommand, "--auto")
 	}
+	if v.Spec.IsRaftStorage() {
+		unsealCommand = append(unsealCommand, "--raft", "--raft-leader-address", "https://"+v.Name+":8200")
+	}
+
 	_, containerPorts := getServicePorts(v)
 
 	podSpec := corev1.PodSpec{
@@ -1132,6 +1136,14 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					{
 						Name:  "VAULT_LOCAL_CONFIG",
 						Value: configJSON,
+					},
+					{
+						Name: "POD_NAME",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "metadata.name",
+							},
+						},
 					},
 				})),
 				VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
@@ -1193,6 +1205,14 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						Name:  k8s.EnvK8SOwnerReference,
 						Value: string(ownerJSON),
 					},
+					{
+						Name: "POD_NAME",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "metadata.name",
+							},
+						},
+					},
 				}))),
 				Ports: []corev1.ContainerPort{{
 					Name:          "metrics",
@@ -1215,7 +1235,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		return nil, err
 	}
 
-	dep := &appsv1.StatefulSet{
+	return &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
 			Kind:       "StatefulSet",
@@ -1241,9 +1261,9 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				},
 				Spec: podSpec,
 			},
+			VolumeClaimTemplates: v.Spec.VolumeClaimTemplates,
 		},
-	}
-	return dep, nil
+	}, nil
 }
 
 // Annotations Functions
