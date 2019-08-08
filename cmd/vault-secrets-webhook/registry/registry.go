@@ -15,6 +15,7 @@
 package registry
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -196,8 +197,39 @@ func (k *ContainerInfo) parseDockerConfig(dockerCreds DockerCreds) (bool, error)
 			} else {
 				k.RegistryAddress = fmt.Sprintf("https://%s", registryName)
 			}
-			k.RegistryUsername = registryAuth.Username
-			k.RegistryPassword = registryAuth.Password
+			if len(registryAuth.Username) > 0 && len(registryAuth.Password) > 0 {
+				// auths.<registry>.username and auths.<registry>.username are present
+				// in the config.json, use them
+				k.RegistryUsername = registryAuth.Username
+				k.RegistryPassword = registryAuth.Password
+			} else if len(registryAuth.Auth) > 0 {
+				// auths.<registry>.username and auths.<registry>.username are not present
+				// in the config.json, fall back to the base64 encoded auths.<registry>.auth field
+				// The registry.Auth field contains a base64 encoded string of the format <username>:<password>
+				decodedAuth, err := base64.StdEncoding.DecodeString(registryAuth.Auth)
+				if err != nil {
+					return false, fmt.Errorf("failed to decode auth field for registry %s: %s", registryName, err.Error())
+				}
+				auth := strings.Split(string(decodedAuth), ":")
+				if len(auth) != 2 {
+					return false, fmt.Errorf("unexpected number of elements in auth field for registry %s: %d (expected 2)", registryName, len(auth))
+				}
+				// decodedAuth is something like ":xxx"
+				if len(auth[0]) <= 0 {
+					return false, fmt.Errorf("username element of auth field for registry %s missing", registryName)
+				}
+				// decodedAuth is something like "xxx:"
+				if len(auth[1]) <= 0 {
+					return false, fmt.Errorf("password element of auth field for registry %s missing", registryName)
+				}
+				k.RegistryUsername = auth[0]
+				k.RegistryPassword = auth[1]
+			} else {
+				// the auths section has an entry for the registry, but it neither contains
+				// username/password fields nor an auth field, fail
+				return false, fmt.Errorf("found %s in imagePullSecrets but it contains no usable credentials; either username/password fields or an auth field are required", registryName)
+			}
+
 			return true, nil
 		}
 	}
