@@ -81,6 +81,7 @@ var _ Vault = &vault{}
 // a Vault server.
 type Vault interface {
 	Init() error
+	RaftJoin(string) error
 	Sealed() (bool, error)
 	Active() (bool, error)
 	Unseal() error
@@ -348,6 +349,42 @@ func (v *vault) Init() error {
 	}
 
 	return nil
+}
+
+// RaftJoin joins Vault raft cluster if is not initialized already
+func (v *vault) RaftJoin(leaderAPIAddr string) error {
+
+	initialized, err := v.cl.Sys().InitStatus()
+	if err != nil {
+		return fmt.Errorf("error testing if vault is initialized: %s", err.Error())
+	}
+
+	if initialized {
+		logrus.Info("vault is already initialized, skipping raft join")
+		return nil
+	}
+
+	leaderCACert, err := ioutil.ReadFile(os.Getenv(api.EnvVaultCACert))
+	if err != nil {
+		return fmt.Errorf("error reading vault CA certificate: %s", err.Error())
+	}
+
+	request := api.RaftJoinRequest{
+		LeaderAPIAddr: leaderAPIAddr,
+		LeaderCACert:  string(leaderCACert),
+	}
+
+	response, err := v.cl.Sys().RaftJoin(&request)
+	if err != nil {
+		return fmt.Errorf("error joining if raft cluster: %s", err.Error())
+	}
+
+	if response.Joined {
+		logrus.Info("vault joined raft cluster")
+		return nil
+	}
+
+	return fmt.Errorf("vault haven't joined raft cluster")
 }
 
 func (v *vault) StepDownActive(address string) error {
