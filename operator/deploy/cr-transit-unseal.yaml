@@ -81,8 +81,8 @@ spec:
           # Allow every the tenant Vault Pod in the tenant namespace to use
           # its transit engine
           - name: tenant
-            bound_service_account_names: default
-            bound_service_account_namespaces: tenant
+            bound_service_account_names: ["default", "vault-secrets-webhook"]
+            bound_service_account_namespaces: ["tenant","vswh"]
             policies: allow_tenant_transit
             ttl: 1m
 
@@ -92,6 +92,7 @@ spec:
   caNamespaces:
     - "tenant"
     - "vault-infra"
+    - "vswh"
 
   # Request and mount a Persistent Volume to this Vault instance
   volumes:
