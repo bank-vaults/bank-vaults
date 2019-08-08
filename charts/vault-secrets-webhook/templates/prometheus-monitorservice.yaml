@@ -1,0 +1,57 @@
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ template "vault-secrets-webhook.fullname" . }}
+  labels:
+    app: {{ template "vault-secrets-webhook.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    component: mutating-webhook
+    {{- if .Values.metrics.serviceMonitor.additionalLabels }}
+{{ toYaml .Values.metrics.serviceMonitor.additionalLabels | indent 4 }}
+    {{- end }}
+spec:
+  endpoints:
+  - interval: 30s
+    port: metrics
+    scheme: {{ .Values.metrics.serviceMonitor.scheme }}
+    {{- if .Values.metrics.serviceMonitor.relabellings }}
+    metricrelabelings:
+{{ toYaml .Values.metrics.serviceMonitor.relabellings | indent 6 }}
+    {{- end }}
+    {{- if .Values.metrics.serviceMonitor.tlsConfig }}
+    tlsConfig:
+{{ toYaml .Values.metrics.serviceMonitor.tlsConfig | indent 6 }}
+    {{- end }}
+  jobLabel: {{ template "vault-secrets-webhook.name" . }}
+  selector:
+    matchLabels:
+      app: {{ template "vault-secrets-webhook.name" . }}
+      release: "{{ .Release.Name }}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+  name: {{ template "vault-secrets-webhook.fullname" . }}-metrics
+  labels:
+    app: {{ template "vault-secrets-webhook.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    component: mutating-webhook
+spec:
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: {{ .Values.metrics.port }}
+    protocol: TCP
+    targetPort: {{ .Values.metrics.port }}
+  selector:
+    app: {{ template "vault-secrets-webhook.name" . }}
+    release: "{{ .Release.Name }}"
+  sessionAffinity: None
+  type: ClusterIP
+{{- end }}
