@@ -16,6 +16,7 @@ package main
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/banzaicloud/bank-vaults/pkg/vault"
@@ -27,12 +28,16 @@ const cfgUnsealPeriod = "unseal-period"
 const cfgInit = "init"
 const cfgOnce = "once"
 const cfgAuto = "auto"
+const cfgRaft = "raft"
+const cfgRaftLeaderAddress = "raft-leader-address"
 
 type unsealCfg struct {
-	unsealPeriod time.Duration
-	proceedInit  bool
-	runOnce      bool
-	auto         bool
+	unsealPeriod      time.Duration
+	proceedInit       bool
+	runOnce           bool
+	auto              bool
+	raft              bool
+	raftLeaderAddress string
 }
 
 var unsealCmd = &cobra.Command{
@@ -48,6 +53,7 @@ from one of the followings:
 	Run: func(cmd *cobra.Command, args []string) {
 		appConfig.BindPFlag(cfgUnsealPeriod, cmd.PersistentFlags().Lookup(cfgUnsealPeriod))
 		appConfig.BindPFlag(cfgInit, cmd.PersistentFlags().Lookup(cfgInit))
+		appConfig.BindPFlag(cfgRaft, cmd.PersistentFlags().Lookup(cfgRaft))
 		appConfig.BindPFlag(cfgOnce, cmd.PersistentFlags().Lookup(cfgOnce))
 		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))
 		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))
@@ -60,6 +66,8 @@ from one of the followings:
 		unsealConfig.proceedInit = appConfig.GetBool(cfgInit)
 		unsealConfig.runOnce = appConfig.GetBool(cfgOnce)
 		unsealConfig.auto = appConfig.GetBool(cfgAuto)
+		unsealConfig.raft = appConfig.GetBool(cfgRaft)
+		unsealConfig.raftLeaderAddress = appConfig.GetString(cfgRaftLeaderAddress)
 
 		store, err := kvStoreForConfig(appConfig)
 		if err != nil {
@@ -88,6 +96,22 @@ from one of the followings:
 			logrus.Info("initializing vault...")
 			if err := v.Init(); err != nil {
 				logrus.Fatalf("error initializing vault: %s", err.Error())
+			}
+		} else if unsealConfig.raft {
+			logrus.Info("joining leader vault...")
+
+			podName := os.Getenv("POD_NAME")
+			// If first instance we have to init it, this happens once in the clusters lifetime
+			if strings.HasSuffix(podName, "-0") {
+				logrus.Info("initializing vault...")
+				if err := v.Init(); err != nil {
+					logrus.Fatalf("error initializing vault: %s", err.Error())
+				}
+			} else {
+				logrus.Info("joining raft cluster...")
+				if err := v.RaftJoin(unsealConfig.raftLeaderAddress); err != nil {
+					logrus.Fatalf("error joining leader vault: %s", err.Error())
+				}
 			}
 		}
 
@@ -141,6 +165,8 @@ func init() {
 	unsealCmd.PersistentFlags().Duration(cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the vault instance")
 	unsealCmd.PersistentFlags().Bool(cfgInit, false, "Initialize vault instance if not yet initialized")
 	unsealCmd.PersistentFlags().Bool(cfgOnce, false, "Run unseal only once")
+	unsealCmd.PersistentFlags().Bool(cfgRaft, false, "Join leader vault instance in raft mode")
+	unsealCmd.PersistentFlags().String(cfgRaftLeaderAddress, "", "Address of leader vault instance in raft mode")
 	unsealCmd.PersistentFlags().String(cfgInitRootToken, "", "Root token for the new vault cluster (only if -init=true)")
 	unsealCmd.PersistentFlags().Bool(cfgStoreRootToken, true, "Should the root token be stored in the key store (only if -init=true)")
 	unsealCmd.PersistentFlags().Bool(cfgPreFlightChecks, true, "should the key store be tested first to validate access rights")

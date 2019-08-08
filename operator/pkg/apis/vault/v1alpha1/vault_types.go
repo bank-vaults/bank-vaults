@@ -538,6 +538,11 @@ func (spec *VaultSpec) IsAutoUnseal() bool {
 	return ok
 }
 
+// IsRaftStorage checks if raft storage is configured
+func (spec *VaultSpec) IsRaftStorage() bool {
+	return spec.GetStorageType() == "raft"
+}
+
 // GetIngress the Ingress configuration for Vault if any
 func (vault *Vault) GetIngress() *Ingress {
 	if vault.Spec.Ingress != nil {
