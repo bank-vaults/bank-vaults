@@ -54,6 +54,7 @@ from one of the followings:
 		appConfig.BindPFlag(cfgUnsealPeriod, cmd.PersistentFlags().Lookup(cfgUnsealPeriod))
 		appConfig.BindPFlag(cfgInit, cmd.PersistentFlags().Lookup(cfgInit))
 		appConfig.BindPFlag(cfgRaft, cmd.PersistentFlags().Lookup(cfgRaft))
+		appConfig.BindPFlag(cfgRaftLeaderAddress, cmd.PersistentFlags().Lookup(cfgRaftLeaderAddress))
 		appConfig.BindPFlag(cfgOnce, cmd.PersistentFlags().Lookup(cfgOnce))
 		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))
 		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))
@@ -92,12 +93,7 @@ from one of the followings:
 		metrics := prometheusExporter{Vault: v, Mode: "unseal"}
 		go metrics.Run()
 
-		if unsealConfig.proceedInit {
-			logrus.Info("initializing vault...")
-			if err := v.Init(); err != nil {
-				logrus.Fatalf("error initializing vault: %s", err.Error())
-			}
-		} else if unsealConfig.raft {
+		if unsealConfig.proceedInit && unsealConfig.raft {
 			logrus.Info("joining leader vault...")
 
 			podName := os.Getenv("POD_NAME")
@@ -112,6 +108,11 @@ from one of the followings:
 				if err := v.RaftJoin(unsealConfig.raftLeaderAddress); err != nil {
 					logrus.Fatalf("error joining leader vault: %s", err.Error())
 				}
+			}
+		} else if unsealConfig.proceedInit {
+			logrus.Info("initializing vault...")
+			if err := v.Init(); err != nil {
+				logrus.Fatalf("error initializing vault: %s", err.Error())
 			}
 		}
 
