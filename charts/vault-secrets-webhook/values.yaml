@@ -28,10 +28,10 @@ env:
   # DEFAULT_IMAGE_PULL_SECRET_NAMESPACE:
 
 metrics:
-  enabled: true
+  enabled: false
   port: 8443
   serviceMonitor:
-    enabled: true
+    enabled: false
     scheme: https
     tlsConfig:
       insecureSkipVerify: true
