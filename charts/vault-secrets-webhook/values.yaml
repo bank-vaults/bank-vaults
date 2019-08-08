@@ -27,6 +27,14 @@ env:
   # DEFAULT_IMAGE_PULL_SECRET:
   # DEFAULT_IMAGE_PULL_SECRET_NAMESPACE:
 
+metrics:
+  enabled: true
+  port: 8443
+  serviceMonitor:
+    enabled: true
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
 
 volumes: []
 # - name: vault-tls
