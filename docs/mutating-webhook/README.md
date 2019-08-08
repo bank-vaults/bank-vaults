@@ -151,6 +151,9 @@ kubectl annotate secret dockerhub vault.security.banzaicloud.io/vault-path="kube
 
 The Webhook is now capable of determining the container's entrypoint and command with the help of image metadata queried from the image registry, this data is cached until the webhook Pod is restarted. If the registry is publicly accessible (without authentication) you don't need to do anything, but if the registry requires authentication the credentials have to be available in the Pod's `imagePullSecrets` section.
 
+You can also specify a default secret to be used by the webhook for cases where a pod has no `imagePullSecrets` specified. For this to work you have to set the environment variables `DEFAULT_IMAGE_PULL_SECRET` and `DEFAULT_IMAGE_PULL_SECRET_NAMESPACE` when deploying the vault-secrets-webhook. Have a look at the values.yaml of the
+[vault-secrets-webhook](https://github.com/banzaicloud/bank-vaults/blob/master/charts/vault-secrets-webhook/values.yaml) helm chart to see how this is done.
+
 Future improvements:
 - on AWS and GKE get a credential dynamically with the specific SDK
 - query the ServiceAccount's `imagePullSecrets` as well
