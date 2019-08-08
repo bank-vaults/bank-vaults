@@ -271,6 +271,10 @@ type VaultSpec struct {
 	// default:
 	VolumeMounts []v1.VolumeMount `json:"volumeMounts,omitempty"`
 
+	// VolumeClaimTemplates define some extra Kubernetes PersistentVolumeClaim templates for the Vault Statefulset.
+	// default:
+	VolumeClaimTemplates []v1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
+
 	// VaultEnvsConfig is a list of Kubernetes environment variable definitions that will be passed to Vault Pods.
 	// default:
 	VaultEnvsConfig []v1.EnvVar `json:"vaultEnvsConfig"`
@@ -302,13 +306,15 @@ type VaultSpec struct {
 
 // HAStorageTypes is the set of storage backends supporting High Availability
 var HAStorageTypes = map[string]bool{
-	"consul":    true,
-	"dynamodb":  true,
-	"etcd":      true,
-	"gcs":       true,
-	"mysql":     true,
-	"spanner":   true,
-	"zookeeper": true,
+	"consul":     true,
+	"dynamodb":   true,
+	"etcd":       true,
+	"gcs":        true,
+	"mysql":      true,
+	"postgresql": true,
+	"raft":       true,
+	"spanner":    true,
+	"zookeeper":  true,
 }
 
 // HasHAStorage detects if Vault is configured to use a storage backend which supports High Availability or if it has
@@ -396,7 +402,7 @@ func (spec *VaultSpec) HasStorageHAEnabled() bool {
 	storage := spec.getStorage()
 	storageSpecs := cast.ToStringMap(storage[storageType])
 	// In Consul HA is always enabled
-	return storageType == "consul" || cast.ToBool(storageSpecs["ha_enabled"])
+	return storageType == "consul" || storageType == "raft" || cast.ToBool(storageSpecs["ha_enabled"])
 }
 
 // GetTLSDisable returns if Vault's TLS should be disabled

@@ -1215,7 +1215,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		return nil, err
 	}
 
-	dep := &appsv1.StatefulSet{
+	return &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
 			Kind:       "StatefulSet",
@@ -1241,9 +1241,9 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				},
 				Spec: podSpec,
 			},
+			VolumeClaimTemplates: v.Spec.VolumeClaimTemplates,
 		},
-	}
-	return dep, nil
+	}, nil
 }
 
 // Annotations Functions
