@@ -68,3 +68,10 @@ configmapFailurePolicy: Ignore
 podsFailurePolicy: Ignore
 
 secretsFailurePolicy: Ignore
+
+namespaceSelector:
+  matchExpressions:
+  - key: name
+    operator: NotIn
+    values:
+    - kube-system
