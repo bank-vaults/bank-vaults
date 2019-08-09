@@ -117,9 +117,7 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 			MountPath: "/vault/agent/",
 		})
 
-		runAsUser := int64(100)
 		securityContext := &corev1.SecurityContext{
-			RunAsUser:                &runAsUser,
 			AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
 		}
 
