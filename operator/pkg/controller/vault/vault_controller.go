@@ -183,9 +183,9 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 			o.(metav1.ObjectMetaAccessor).GetObjectMeta().SetResourceVersion(resourceVersion)
 
 			return c.Update(context.TODO(), o)
-		} else {
-			log.V(1).Info(fmt.Sprintf("Skipping update for object %s:%s", o.GetObjectKind(), o.(metav1.ObjectMetaAccessor).GetObjectMeta().GetName()))
 		}
+
+		log.V(1).Info(fmt.Sprintf("Skipping update for object %s:%s", o.GetObjectKind(), o.(metav1.ObjectMetaAccessor).GetObjectMeta().GetName()))
 	}
 
 	return err
@@ -790,9 +790,10 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 				Labels:      withVaultLabels(v, ls),
 			},
 			Spec: corev1.ServiceSpec{
-				Type:     corev1.ServiceTypeClusterIP,
-				Selector: ls,
-				Ports:    servicePorts,
+				Type:                     corev1.ServiceTypeClusterIP,
+				Selector:                 ls,
+				Ports:                    servicePorts,
+				PublishNotReadyAddresses: true,
 			},
 		}
 
@@ -1157,12 +1158,12 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Name:            "vault",
 				Args:            []string{"server"},
 				Ports:           containerPorts,
-				Env: withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
-					// https://github.com/hashicorp/docker-vault/blob/master/0.X/docker-entrypoint.sh#L12
-					{
-						Name:  "VAULT_CLUSTER_INTERFACE",
-						Value: "eth0",
-					},
+				Env:             withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
+					// // https://github.com/hashicorp/docker-vault/blob/master/0.X/docker-entrypoint.sh#L12
+					// {
+					// 	Name:  "VAULT_CLUSTER_INTERFACE",
+					// 	Value: "eth0",
+					// },
 				}))),
 				SecurityContext: &corev1.SecurityContext{
 					Capabilities: &corev1.Capabilities{
@@ -1235,6 +1236,11 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		return nil, err
 	}
 
+	podManagementPolicy := appsv1.PodManagementPolicyType(appsv1.ParallelPodManagement) // TODO this unncessary cast can be removed after k8s.io/api 1.14.0
+	if v.Spec.IsRaftStorage() {
+		podManagementPolicy = appsv1.OrderedReadyPodManagement
+	}
+
 	return &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -1250,7 +1256,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
 			},
-			PodManagementPolicy: appsv1.ParallelPodManagement,
+			PodManagementPolicy: podManagementPolicy,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
