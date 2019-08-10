@@ -450,7 +450,7 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	if val, ok := annotations["vault.security.banzaicloud.io/security-context-run-as-user-id"]; ok {
 		vaultConfig.securityContextRunAsUserID, _ = strconv.ParseInt(val, 10, 64)
 	} else {
-		vaultConfig.securityContextRunAsUserID = viper.GetInt64("security_context_run_as_user")
+		vaultConfig.securityContextRunAsUserID = viper.GetInt64("security_context_run_as_user_id")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/mutate-configmap"]; ok {
