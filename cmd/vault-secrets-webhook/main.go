@@ -57,6 +57,8 @@ type vaultConfig struct {
 	ctCPU                       resource.Quantity
 	ctMemory                    resource.Quantity
 	pspAllowPrivilegeEscalation bool
+	securityContextRunAsUser    bool
+	securityContextRunAsUserID  int64
 	ignoreMissingSecrets        string
 	vaultEnvPassThrough         string
 	mutateConfigMap             bool
@@ -99,6 +101,18 @@ func hasTLSVolume(volumes []corev1.Volume) bool {
 func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	var containers = []corev1.Container{}
 
+	var securityContext *corev1.SecurityContext
+	if vaultConfig.securityContextRunAsUser {
+		securityContext = &corev1.SecurityContext{
+			RunAsUser:                &vaultConfig.securityContextRunAsUserID,
+			AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
+		}
+	} else {
+		securityContext = &corev1.SecurityContext{
+			AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
+		}
+	}
+
 	if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
 		var serviceAccountMount corev1.VolumeMount
 
@@ -116,10 +130,6 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 			Name:      "vault-agent-config",
 			MountPath: "/vault/agent/",
 		})
-
-		securityContext := &corev1.SecurityContext{
-			AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
-		}
 
 		containers = append(containers, corev1.Container{
 			Name:            "vault-agent",
@@ -150,9 +160,7 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 					MountPath: "/vault/",
 				},
 			},
-			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
-			},
+			SecurityContext: securityContext,
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -431,6 +439,18 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.pspAllowPrivilegeEscalation, _ = strconv.ParseBool(val)
 	} else {
 		vaultConfig.pspAllowPrivilegeEscalation, _ = strconv.ParseBool(viper.GetString("psp_allow_privilege_escalation"))
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/security-context-run-as-user"]; ok {
+		vaultConfig.securityContextRunAsUser, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.securityContextRunAsUser, _ = strconv.ParseBool(viper.GetString("security_context_run_as_user"))
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/security-context-run-as-user-id"]; ok {
+		vaultConfig.securityContextRunAsUserID, _ = strconv.ParseInt(val, 10, 64)
+	} else {
+		vaultConfig.securityContextRunAsUserID = viper.GetInt64("security_context_run_as_user")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/mutate-configmap"]; ok {
@@ -860,6 +880,8 @@ func init() {
 	viper.SetDefault("vault_agent", "false")
 	viper.SetDefault("vault_ct_share_process_namespace", "")
 	viper.SetDefault("psp_allow_privilege_escalation", "false")
+	viper.SetDefault("security_context_run_as_user", "true")
+	viper.SetDefault("security_context_run_as_user_id", 100)
 	viper.SetDefault("vault_ignore_missing_secrets", "false")
 	viper.SetDefault("vault_env_passthrough", "")
 	viper.SetDefault("mutate_configmap", "false")
