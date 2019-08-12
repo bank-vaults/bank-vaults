@@ -71,6 +71,9 @@ export PATH=${PATH}:${GOPATH}/bin
 kurun run cmd/examples/main.go
 
 
+# create namespace
+kubect create ns vswh || echo "namespace already exists"
+
 # Run the webhook test, the hello-secrets deployment should be successfully mutated
 helm install ./charts/vault-secrets-webhook \
     --name vault-secrets-webhook \
@@ -80,8 +83,23 @@ helm install ./charts/vault-secrets-webhook \
     --namespace vswh \
     --wait
 
+
+# default
 kubectl apply -f deploy/test-secret.yaml
 test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].username'` = "dockerrepouser"
+test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].password'` = "dockerrepopassword"
+
+kubectl apply -f deploy/test-deployment.yaml
+kubectl wait --for=condition=available deployment/hello-secrets --timeout=120s
+
+# cleanup
+kubectl delete -f deploy/test-secret.yaml
+kubectl delete -f deploy/test-deployment.yaml
+
+
+
+kubectl apply -f deploy/test-secret-runasuser.yaml
+test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].username'` = "dockerrepouser" 
 test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].password'` = "dockerrepopassword"
 
 kubectl apply -f deploy/test-deployment.yaml
