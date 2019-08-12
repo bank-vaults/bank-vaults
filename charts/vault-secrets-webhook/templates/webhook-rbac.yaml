@@ -11,7 +11,7 @@ metadata:
   name: {{ template "vault-secrets-webhook.fullname" . }}
 rules:
   - apiGroups:
-      - ""
+      - "*"
     resources:
       - secrets
       - configmaps
@@ -19,12 +19,21 @@ rules:
       - "get"
       - "update"
   - apiGroups:
-      - ""
+      - "*"
     resources:
       - configmaps
     verbs:
       - "create"
       - "update"
+  - apiGroups:
+      - "*"
+    resources:
+      - "*/finalizers" 
+    verbs:
+      - "create"
+      - "update"
+      - "delete"
+      - "get"
 {{- if .Values.rbac.psp.enabled }}
   - apiGroups:
       - extensions
