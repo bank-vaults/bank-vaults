@@ -64,7 +64,9 @@ spec:
 {{ toYaml .Values.volumeMounts | indent 12 }}
 {{- end }}
           securityContext:
-            runAsUser: 65534
+{{- if ne (.Values.runAsUser | int64) 0 }}
+            runAsUser: {{ .Values.runAsUser }}
+{{- end }}
             allowPrivilegeEscalation: false
           resources:
 {{ toYaml .Values.resources | indent 12 }}
