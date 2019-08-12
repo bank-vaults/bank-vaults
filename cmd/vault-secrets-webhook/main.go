@@ -57,7 +57,6 @@ type vaultConfig struct {
 	ctCPU                       resource.Quantity
 	ctMemory                    resource.Quantity
 	pspAllowPrivilegeEscalation bool
-	securityContextRunAsUser    bool
 	securityContextRunAsUserID  int64
 	ignoreMissingSecrets        string
 	vaultEnvPassThrough         string
@@ -102,13 +101,14 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 	var containers = []corev1.Container{}
 
 	var securityContext *corev1.SecurityContext
-	if vaultConfig.securityContextRunAsUser {
+
+	if vaultConfig.securityContextRunAsUserID == 0 {
 		securityContext = &corev1.SecurityContext{
-			RunAsUser:                &vaultConfig.securityContextRunAsUserID,
 			AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
 		}
 	} else {
 		securityContext = &corev1.SecurityContext{
+			RunAsUser:                &vaultConfig.securityContextRunAsUserID,
 			AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
 		}
 	}
@@ -439,12 +439,6 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.pspAllowPrivilegeEscalation, _ = strconv.ParseBool(val)
 	} else {
 		vaultConfig.pspAllowPrivilegeEscalation, _ = strconv.ParseBool(viper.GetString("psp_allow_privilege_escalation"))
-	}
-
-	if val, ok := annotations["vault.security.banzaicloud.io/security-context-run-as-user"]; ok {
-		vaultConfig.securityContextRunAsUser, _ = strconv.ParseBool(val)
-	} else {
-		vaultConfig.securityContextRunAsUser, _ = strconv.ParseBool(viper.GetString("security_context_run_as_user"))
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/security-context-run-as-user-id"]; ok {
