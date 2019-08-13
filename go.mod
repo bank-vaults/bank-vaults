@@ -8,13 +8,14 @@ require (
 	github.com/Azure/go-autorest v11.7.0+incompatible
 	github.com/Masterminds/semver v1.4.2
 	github.com/Masterminds/sprig v2.15.0+incompatible
+	github.com/NYTimes/gziphandler v1.0.1 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190308093441-53f19b3c6bee
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20171213061034-52de7239022c
 	github.com/aokoli/goutils v1.0.1 // indirect
 	github.com/aws/aws-sdk-go v1.15.31
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/banzaicloud/bank-vaults/pkg/sdk v0.0.0-00010101000000-000000000000
-	github.com/banzaicloud/k8s-objectmatcher v1.0.1-0.20190813142559-d49f531f7335
+	github.com/banzaicloud/k8s-objectmatcher v1.0.1-0.20190813150246-386389f72468
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/coreos/etcd-operator v0.9.3
 	github.com/coreos/prometheus-operator v0.29.0
@@ -60,7 +61,7 @@ require (
 	golang.org/x/net v0.0.0-20190724013045-ca1201d0de80 // indirect
 	github.com/spf13/cobra v0.0.4
 	github.com/spf13/viper v1.3.2
-	github.com/ugorji/go/codec v1.1.7 // indirect
+	github.com/ugorji/go v1.1.7 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/tools v0.0.0-20190731214159-1e85ed8060aa // indirect
 	google.golang.org/api v0.3.0
