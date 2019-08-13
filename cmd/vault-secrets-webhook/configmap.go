@@ -15,6 +15,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -25,6 +26,11 @@ import (
 func configMapNeedsMutation(configMap *corev1.ConfigMap) bool {
 	for _, value := range configMap.Data {
 		if strings.HasPrefix(value, "vault:") {
+			return true
+		}
+	}
+	for _, value := range configMap.BinaryData {
+		if strings.HasPrefix(string(value), "vault:") {
 			return true
 		}
 	}
@@ -57,6 +63,18 @@ func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig vaultConfig, ns st
 		}
 	}
 
+	for key, value := range configMap.BinaryData {
+		if strings.HasPrefix(string(value), "vault:") {
+			binaryData := map[string]string{
+				key: string(value),
+			}
+			err := mutateConfigMapBinaryData(configMap, binaryData, vaultClient)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -67,6 +85,23 @@ func mutateConfigMapData(configMap *corev1.ConfigMap, data map[string]string, va
 	}
 	for key, value := range mapData {
 		configMap.Data[key] = value
+	}
+	return nil
+}
+
+func mutateConfigMapBinaryData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client) error {
+	mapData, err := getDataFromVault(data, vaultClient)
+	if err != nil {
+		return err
+	}
+	for key, value := range mapData {
+		// binary data are stored in base64 inside vault
+		// we need to decode base64 since k8s will encode this data too
+		valueBytes, err := base64.StdEncoding.DecodeString(value)
+		if err != nil {
+			return err
+		}
+		configMap.BinaryData[key] = valueBytes
 	}
 	return nil
 }
