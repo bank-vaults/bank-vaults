@@ -77,7 +77,6 @@ spec:
         # storageClassName: ""
         accessModes:
           - ReadWriteOnce
-        persistentVolumeReclaimPolicy: Delete
         resources:
           requests:
             storage: 1Gi
