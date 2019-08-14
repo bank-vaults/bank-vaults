@@ -25,6 +25,11 @@ function finish {
     kubectl describe pod hello-secrets
     kubectl logs deployment/hello-secrets --all-containers
     kubectl get secret -n vswh -o yaml
+
+    kubectl describe deployment/hello-secrets-runasuser
+    kubectl describe rs hello-secrets-runasuser
+    kubectl describe pod hello-secrets-runasuser
+    kubectl logs deployment/hello-secrets-runasuser --all-containers
 }
 
 trap finish EXIT
@@ -70,10 +75,6 @@ git checkout -- go.mod go.sum
 export PATH=${PATH}:${GOPATH}/bin
 kurun run cmd/examples/main.go
 
-
-# create namespace
-kubect create ns vswh || echo "namespace already exists"
-
 # Run the webhook test, the hello-secrets deployment should be successfully mutated
 helm install ./charts/vault-secrets-webhook \
     --name vault-secrets-webhook \
@@ -92,15 +93,5 @@ test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}'
 kubectl apply -f deploy/test-deployment.yaml
 kubectl wait --for=condition=available deployment/hello-secrets --timeout=120s
 
-# cleanup
-kubectl delete -f deploy/test-secret.yaml
-kubectl delete -f deploy/test-deployment.yaml
-
-
-
-kubectl apply -f deploy/test-secret-runasuser.yaml
-test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].username'` = "dockerrepouser" 
-test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].password'` = "dockerrepopassword"
-
-kubectl apply -f deploy/test-deployment.yaml
-kubectl wait --for=condition=available deployment/hello-secrets --timeout=120s
+kubectl apply -f deploy/test-deployment-runasuser.yaml
+kubectl wait --for=condition=available deployment/hello-secrets-runasuser --timeout=120s

@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hello-secrets
+  name: hello-secrets-runasuser
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hello-secrets
+      app: hello-secrets-runasuser
   template:
     metadata:
       labels:
-        app: hello-secrets
+        app: hello-secrets-runasuser
       annotations:
         vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
         vault.security.banzaicloud.io/vault-tls-secret: vault-tls
