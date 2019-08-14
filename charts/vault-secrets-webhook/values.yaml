@@ -45,6 +45,8 @@ volumeMounts: []
 # - name: vault-tls
 #   mountPath: /vault/tls
 
+podAnnotations: {}
+
 resources: {}
 
 nodeSelector: {}
