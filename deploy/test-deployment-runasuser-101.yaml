@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hello-secrets-runasuser
+  name: hello-secrets-runasuser-101
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hello-secrets-runasuser
+      app: hello-secrets-runasuser-101
   template:
     metadata:
       labels:
-        app: hello-secrets-runasuser
+        app: hello-secrets-runasuser-101
       annotations:
         vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
         vault.security.banzaicloud.io/vault-tls-secret: vault-tls
-        vault.security.banzaicloud.io/security-context-run-as-user-id: "0"
+        vault.security.banzaicloud.io/security-context-run-as-user-id: "101"
         # vault.security.banzaicloud.io/vault-skip-verify: "false"
         # vault.security.banzaicloud.io/vault-role: "default"
         # vault.security.banzaicloud.io/vault-path: "kubernetes"

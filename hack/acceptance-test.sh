@@ -26,10 +26,15 @@ function finish {
     kubectl logs deployment/hello-secrets --all-containers
     kubectl get secret -n vswh -o yaml
 
-    kubectl describe deployment/hello-secrets-runasuser
-    kubectl describe rs hello-secrets-runasuser
-    kubectl describe pod hello-secrets-runasuser
-    kubectl logs deployment/hello-secrets-runasuser --all-containers
+    kubectl describe deployment/hello-secrets-runasuser-0
+    kubectl describe rs hello-secrets-runasuser-0
+    kubectl describe pod hello-secrets-runasuser-0
+    kubectl logs deployment/hello-secrets-runasuser-0 --all-containers
+
+    kubectl describe deployment/hello-secrets-runasuser-101
+    kubectl describe rs hello-secrets-runasuser-101
+    kubectl describe pod hello-secrets-runasuser-101
+    kubectl logs deployment/hello-secrets-runasuser-101 --all-containers
 }
 
 trap finish EXIT
@@ -93,5 +98,8 @@ test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}'
 kubectl apply -f deploy/test-deployment.yaml
 kubectl wait --for=condition=available deployment/hello-secrets --timeout=120s
 
-kubectl apply -f deploy/test-deployment-runasuser.yaml
-kubectl wait --for=condition=available deployment/hello-secrets-runasuser --timeout=120s
+kubectl apply -f deploy/test-deployment-runasuser-0.yaml
+kubectl wait --for=condition=available deployment/hello-secrets-runasuser-0 --timeout=120s
+
+kubectl apply -f deploy/test-deployment-runasuser-101.yaml
+kubectl wait --for=condition=available deployment/hello-secrets-runasuser-101 --timeout=120s
