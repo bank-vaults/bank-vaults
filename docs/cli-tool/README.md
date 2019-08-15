@@ -68,7 +68,7 @@ auth:
       oidc_discovery_url: https://myco.auth0.com/
     roles:
     - name: role1
-      bound_audiences:                                                                                                                                                                                                                        
+      bound_audiences:
         - https://vault.plugin.auth.jwt.test
       user_claim: https://vault/user
       groups_claim: https://vault/groups
@@ -80,6 +80,11 @@ auth:
   # See https://www.vaultproject.io/docs/auth/github.html#configuration for
   # more information.
   - type: github
+    # Make the auth provider visible in the web ui
+    # See https://www.vaultproject.io/api/system/auth.html#config for more
+    # information.
+    options:
+      listing_visibility: "unauth"
     config:
       organization: banzaicloud
     map:
@@ -95,6 +100,11 @@ auth:
   # See https://www.vaultproject.io/docs/auth/aws.html for
   # more information.
   - type: aws
+    # Make the auth provider visible in the web ui
+    # See https://www.vaultproject.io/api/system/auth.html#config for more
+    # information.
+    options:
+      listing_visibility: "unauth"
     config:
       access_key: VKIAJBRHKH6EVTTNXDHA
       secret_key: vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj
@@ -121,6 +131,11 @@ auth:
   # See https://www.vaultproject.io/docs/auth/gcp.html for
   # more information.
   - type: gcp
+    # Make the auth provider visible in the web ui
+    # See https://www.vaultproject.io/api/system/auth.html#config for more
+    # information.
+    options:
+      listing_visibility: "unauth"
     config:
       # Credentials context is service account's key. Can download when you create a key for service account. 
       # No need to manually create it. Just paste the json context as multiline yaml.
@@ -159,6 +174,11 @@ auth:
   # Start an LDAP admin server: docker run -it --rm -p 6443:443 --link ldap:ldap -e PHPLDAPADMIN_LDAP_HOSTS=ldap -e PHPLDAPADMIN_LDAP_CLIENT_TLS=false osixia/phpldapadmin
   - type: ldap
     description: LDAP directory auth.
+    # add mount options
+    # See https://www.vaultproject.io/api/system/auth.html#config for more
+    # information.
+    options:
+      listing_visibility: "unauth"
     config:
       url: ldap://localhost
       binddn: "cn=admin,dc=example,dc=org"
@@ -311,7 +331,7 @@ secrets:
             access_key: "${env `AWS_ACCESS_KEY_ID`}"
             secret_key: "${env `AWS_SECRET_ACCESS_KEY`}"
             region: us-east-1
-        roles: 
+        roles:
           - credential_type: iam_user
             policy_arns: arn-of-policy
             name: my-aws-role
