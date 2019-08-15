@@ -44,7 +44,7 @@ items:
     namespaceSelector:
     {{- if .Values.namespaceSelector.matchLabels }}
       matchLabels:
-{{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
+{{ toYaml .Values.namespaceSelector.matchLabels | indent 8 }}
     {{- end }}
       matchExpressions:
       {{- if .Values.namespaceSelector.matchExpressions }}
@@ -75,7 +75,7 @@ items:
     namespaceSelector:
     {{- if .Values.namespaceSelector.matchLabels }}
       matchLabels:
-{{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
+{{ toYaml .Values.namespaceSelector.matchLabels | indent 8 }}
     {{- end }}
       matchExpressions:
       {{- if .Values.namespaceSelector.matchExpressions }}
@@ -107,7 +107,7 @@ items:
     namespaceSelector:
     {{- if .Values.namespaceSelector.matchLabels }}
       matchLabels:
-{{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
+{{ toYaml .Values.namespaceSelector.matchLabels | indent 8 }}
     {{- end }}
       matchExpressions:
     {{- if .Values.namespaceSelector.matchExpressions }}
