@@ -37,6 +37,11 @@ auth:
   # See https://www.vaultproject.io/docs/auth/github.html#configuration for
   # more information.
   - type: github
+    # Make the auth provider visible in the web ui
+    # See https://www.vaultproject.io/api/system/auth.html#config for more
+    # information.
+    options:
+      listing_visibility: "unauth"
     config:
       organization: banzaicloud
     map:
@@ -65,6 +70,11 @@ auth:
   # See https://www.vaultproject.io/docs/auth/aws.html for
   # more information.
   - type: aws
+    # Make the auth provider visible in the web ui
+    # See https://www.vaultproject.io/api/system/auth.html#config for more
+    # information.
+    options:
+      listing_visibility: "unauth"
     config:
       access_key: "${env "AWS_ACCESS_KEY_ID"}" # or you can put the credential literals directly here
       secret_key: "${env "AWS_SECRET_ACCESS_KEY"}"
@@ -94,6 +104,11 @@ auth:
   # Start an LDAP admin server: docker run -it --rm -p 6443:443 --link ldap:ldap -e PHPLDAPADMIN_LDAP_HOSTS=ldap -e PHPLDAPADMIN_LDAP_CLIENT_TLS=false osixia/phpldapadmin
   - type: ldap
     description: LDAP directory auth.
+    # Make the auth provider visible in the web ui
+    # See https://www.vaultproject.io/api/system/auth.html#config for more
+    # information.
+    options:
+      listing_visibility: "unauth"
     config:
       url: ldap://localhost
       binddn: "cn=admin,dc=example,dc=org"
@@ -114,6 +129,11 @@ auth:
   # The okta auth method allows authentication using Okta and user/password credentials.
   # See https://www.vaultproject.io/docs/auth/okta.html for more information.
   - type: okta
+    # Make the auth provider visible in the web ui
+    # See https://www.vaultproject.io/api/system/auth.html#config for more
+    # information.
+    options:
+      listing_visibility: "unauth"
     config:
       organization: banzaicloud
       base_url: okta.com
