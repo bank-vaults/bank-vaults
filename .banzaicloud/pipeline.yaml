@@ -1,0 +1,71 @@
+pipeline:
+  create_cluster:
+    image: banzaicloud/ci-pipeline-client:0.11
+    action: EnsureCluster
+
+  test:
+    image: golang:1.12
+    commands:
+    - go build -v ./cmd/...
+
+#   build_image:
+#     image: maven:3.5-jdk-11-slim
+#     commands:
+#     - mvn -Dmaven.repo.local=${PWD}/.m2/repository compile jib:build
+#     environment:
+#       DOCKER_REPO: '{{ .CICD_REPO }}'
+#       DOCKER_TAG:  '{{ trunc 7 .CICD_COMMIT_SHA }}'
+#     secretFrom:
+#       DOCKER_USERNAME:
+#         keyRef: username
+#       DOCKER_PASSWORD:
+#         keyRef: password
+
+# #  build_image:
+# #    image: banzaicloud/kaniko-plugin
+# #    dockerfile: Dockerfile
+# #    repo: '{{ .CICD_REPO }}'
+# #    tags: '{{ trunc 7 .CICD_COMMIT_SHA }}'
+# #    secretFrom:
+# #      DOCKER_USERNAME:
+# #        keyRef: username
+# #      DOCKER_PASSWORD:
+# #        keyRef: password
+
+#   package_application:
+#     image: lachlanevenson/k8s-helm:latest
+#     commands:
+#     - helm init -c
+#     - helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch/master
+#     - helm dep update ./.banzaicloud/charts/spotguide-spring-boot
+#     - helm package ./.banzaicloud/charts/spotguide-spring-boot
+
+#   install_mysql_user_secret:
+#     when:
+#       branch:
+#         include: [master]
+#     image: banzaicloud/ci-pipeline-client:0.11
+#     action: InstallSecret
+#     clusterSecret:
+#       name: '{{ .CICD_REPO_NAME }}-mysql'
+#       namespace: default
+#       merge: true
+#       spec:
+#         - name: mysql-username
+#           source: username
+#         - name: mysql-password
+#           source: password
+
+#   install_mysql_root_secret:
+#     when:
+#       branch:
+#         include: [master]
+#     image: banzaicloud/ci-pipeline-client:0.11
+#     action: InstallSecret
+#     clusterSecret:
+#       name: '{{ .CICD_REPO_NAME }}-mysql'
+#       namespace: default
+#       merge: true
+#       spec:
+#         - name: mysql-root-password
+#           source: password
