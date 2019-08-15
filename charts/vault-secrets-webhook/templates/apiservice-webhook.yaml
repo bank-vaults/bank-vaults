@@ -15,9 +15,9 @@ items:
   metadata:
     name: {{ template "vault-secrets-webhook.fullname" . }}
   data:
-    servingCert: {{ b64enc $server.Cert }}
-    servingKey: {{ b64enc $server.Key }}
-    caCert: {{ b64enc $ca.Cert }}
+    tls.crt: {{ b64enc $server.Cert }}
+    tls.key: {{ b64enc $server.Key }}
+    ca.crt:  {{ b64enc $ca.Cert }}
 
 - apiVersion: admissionregistration.k8s.io/v1beta1
   kind: MutatingWebhookConfiguration
@@ -44,7 +44,7 @@ items:
     namespaceSelector:
     {{- if .Values.namespaceSelector.matchLabels }}
       matchLabels:
-{{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
+{{ toYaml .Values.namespaceSelector.matchLabels | indent 8 }}
     {{- end }}
       matchExpressions:
       {{- if .Values.namespaceSelector.matchExpressions }}
@@ -75,7 +75,7 @@ items:
     namespaceSelector:
     {{- if .Values.namespaceSelector.matchLabels }}
       matchLabels:
-{{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
+{{ toYaml .Values.namespaceSelector.matchLabels | indent 8 }}
     {{- end }}
       matchExpressions:
       {{- if .Values.namespaceSelector.matchExpressions }}
@@ -107,7 +107,7 @@ items:
     namespaceSelector:
     {{- if .Values.namespaceSelector.matchLabels }}
       matchLabels:
-{{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
+{{ toYaml .Values.namespaceSelector.matchLabels | indent 8 }}
     {{- end }}
       matchExpressions:
     {{- if .Values.namespaceSelector.matchExpressions }}

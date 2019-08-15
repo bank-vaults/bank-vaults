@@ -51,8 +51,6 @@ resources: {}
 
 nodeSelector: {}
 
-namespaceSelector: {}
-
 tolerations: []
 
 affinity: {}
@@ -77,3 +75,5 @@ namespaceSelector:
     operator: NotIn
     values:
     - kube-system
+  # matchLabels:
+  #   vault-injection: enabled
