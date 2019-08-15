@@ -51,8 +51,6 @@ resources: {}
 
 nodeSelector: {}
 
-namespaceSelector: {}
-
 tolerations: []
 
 affinity: {}
