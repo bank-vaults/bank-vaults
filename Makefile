@@ -138,3 +138,14 @@ operator-down:
 	kubectl delete -f operator/deploy/crd.yaml
 	kubectl delete -f operator/deploy/rbac.yaml
 
+.PHONY: webhook-run
+webhook-run: ## Install the webhook chart and run the webhook locally
+	helm upgrade --install vault-secrets-webhook charts/vault-secrets-webhook --namespace vault-infra --set replicaCount=0
+	go run ./cmd/vault-secrets-webhook
+
+.PHONY: webhook-forward ## Run kurun to port-forward the local webhook into Kubernetes
+webhook-forward:
+	kurun port-forward localhost:8443 --namespace vault-infra --servicename vault-secrets-webhook --tlssecret vault-secrets-webhook
+
+.PHONY: webhook-up ## Run the webhook and `kurun port-forward` in foreground. Use with make -j.
+webhook-up: webhook-run webhook-forward
