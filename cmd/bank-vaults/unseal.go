@@ -97,7 +97,7 @@ from one of the followings:
 			logrus.Info("joining leader vault...")
 
 			podName := os.Getenv("POD_NAME")
-			// If first instance we have to init it, this happens once in the clusters lifetime
+			// If this is the first instance we have to init it, this happens once in the clusters lifetime
 			if strings.HasSuffix(podName, "-0") {
 				logrus.Info("initializing vault...")
 				if err := v.Init(); err != nil {
