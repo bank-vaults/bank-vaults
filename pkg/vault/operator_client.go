@@ -763,10 +763,28 @@ func (v *vault) configureAWSCrossAccountRoles(path string, crossAccountRoles []i
 // https://www.vaultproject.io/api/auth/gcp/index.html
 // https://www.vaultproject.io/api/auth/github/index.html
 func (v *vault) configureGenericAuthConfig(method, path string, config map[string]interface{}) error {
+	var tune map[string]interface{}
+	if tuneConfig, ok := config["tune"]; ok {
+		var err error
+		tune, err = cast.ToStringMapE(tuneConfig)
+		if err != nil {
+			return fmt.Errorf("error converting tune config for auth at %s: %s", path, err.Error())
+		}
+		delete(config, "tune")
+	}
+
 	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
 
 	if err != nil {
 		return fmt.Errorf("error putting %s auth config into vault: %s", method, err.Error())
+	}
+
+	if tune != nil {
+		_, err := v.cl.Logical().Write(fmt.Sprintf("sys/mounts/auth/%s/tune", path), tune)
+
+		if err != nil {
+			return fmt.Errorf("error putting %s tune auth config into vault: %s", method, err.Error())
+		}
 	}
 	return nil
 }
