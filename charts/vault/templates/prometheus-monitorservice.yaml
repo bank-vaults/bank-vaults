@@ -1,0 +1,80 @@
+{{- if and .Values.unsealer.metrics.enabled .Values.unsealer.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "vault.fullname" . }}-unsealer
+  labels:
+    app: {{ include "vault.name" . }}
+    chart: {{ template "vault.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    {{- if .Values.unsealer.metrics.serviceMonitor.additionalLabels }}
+{{ toYaml .Values.unsealer.metrics.serviceMonitor.additionalLabels | indent 4 }}
+    {{- end }}
+spec:
+  endpoints:
+  - interval: 30s
+    port: metrics
+    {{- if .Values.unsealer.metrics.serviceMonitor.relabellings }}
+    metricRelabelings:
+{{ toYaml .Values.unsealer.metrics.serviceMonitor.relabellings | indent 4 }}
+    {{- end }}
+  jobLabel: {{ include "vault.name" . }}
+  namespaceSelector:
+    matchNames:
+    - "{{ $.Release.Namespace }}"
+  selector:
+    matchLabels:
+      app: {{ template "vault.name" . }}
+      release: "{{ .Release.Name }}"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+  name: {{ include "vault.fullname" . }}-statsd
+  labels:
+    app: {{ include "vault.name" . }}
+    chart: {{ template "vault.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: {{ .Values.statsd.metrics.port }}
+    protocol: TCP
+    targetPort: {{ .Values.statsd.metrics.port }}
+  selector:
+    app: {{ include "vault.name" . }}
+    release: "{{ .Release.Name }}"
+  sessionAffinity: None
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+  name: {{ include "vault.fullname" . }}-unsealer
+  labels:
+    app: {{ include "vault.name" . }}
+    chart: {{ template "vault.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: {{ .Values.unsealer.metrics.port }}
+    protocol: TCP
+    targetPort: {{ .Values.unsealer.metrics.port }}
+  selector:
+    app: {{ include "vault.name" . }}
+    release: "{{ .Release.Name }}"
+  sessionAffinity: None
+  type: ClusterIP
+
+{{- end }}

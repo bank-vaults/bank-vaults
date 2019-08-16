@@ -185,11 +185,7 @@ func (in *Resources) DeepCopy() *Resources {
 func (in *UnsealConfig) DeepCopyInto(out *UnsealConfig) {
 	*out = *in
 	out.Options = in.Options
-	if in.Kubernetes != nil {
-		in, out := &in.Kubernetes, &out.Kubernetes
-		*out = new(KubernetesUnsealConfig)
-		**out = **in
-	}
+	out.Kubernetes = in.Kubernetes
 	if in.Google != nil {
 		in, out := &in.Google, &out.Google
 		*out = new(GoogleUnsealConfig)
@@ -355,6 +351,7 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 			(*out)[key] = val
 		}
 	}
+	in.VaultPodSpec.DeepCopyInto(&out.VaultPodSpec)
 	if in.VaultConfigurerAnnotations != nil {
 		in, out := &in.VaultConfigurerAnnotations, &out.VaultConfigurerAnnotations
 		*out = make(map[string]string, len(*in))
@@ -369,6 +366,7 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 			(*out)[key] = val
 		}
 	}
+	in.VaultConfigurerPodSpec.DeepCopyInto(&out.VaultConfigurerPodSpec)
 	out.Config = in.Config.DeepCopy()
 	out.ExternalConfig = in.ExternalConfig.DeepCopy()
 	in.UnsealConfig.DeepCopyInto(&out.UnsealConfig)

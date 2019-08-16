@@ -1,0 +1,79 @@
+# Default values for spot-config-webhook.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+debug: false
+
+image:
+  repository: banzaicloud/vault-secrets-webhook
+  tag: 0.5.0
+  pullPolicy: IfNotPresent
+  imagePullSecrets: []
+
+service:
+  name: vault-secrets-webhook
+  type: ClusterIP
+  externalPort: 443
+  internalPort: 8443
+
+env:
+  VAULT_IMAGE: vault:latest
+  VAULT_ENV_IMAGE: banzaicloud/vault-env:latest
+  # VAULT_CAPATH: /vault/tls
+  # used when the pod that should get secret injected does not specify
+  # an imagePullSecret
+  # DEFAULT_IMAGE_PULL_SECRET:
+  # DEFAULT_IMAGE_PULL_SECRET_NAMESPACE:
+
+metrics:
+  enabled: false
+  port: 8443
+  serviceMonitor:
+    enabled: false
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+
+volumes: []
+# - name: vault-tls
+#   secret:
+#     secretName: vault-tls
+
+volumeMounts: []
+# - name: vault-tls
+#   mountPath: /vault/tls
+
+podAnnotations: {}
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+rbac:
+  enabled: true
+  psp:
+    enabled: false
+
+# This can cause issues when used with Helm, so it is not enabled by default
+configMapMutation: false
+
+configmapFailurePolicy: Ignore
+
+podsFailurePolicy: Ignore
+
+secretsFailurePolicy: Ignore
+
+namespaceSelector:
+  matchExpressions:
+  - key: name
+    operator: NotIn
+    values:
+    - kube-system
+  # matchLabels:
+  #   vault-injection: enabled

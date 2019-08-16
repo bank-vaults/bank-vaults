@@ -29,6 +29,8 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -39,10 +41,10 @@ import (
 var log = logf.Log.WithName("cmd")
 
 const (
-	operatorNamespace       = "OPERATOR_NAMESPACE"
-	livenessPort            = "8080"
-	metricsHost             = "0.0.0.0"
-	metricsPort       int32 = 8383
+	operatorNamespace = "OPERATOR_NAMESPACE"
+	livenessPort      = "8080"
+	metricsHost       = "0.0.0.0"
+	metricsPort       = 8383
 )
 
 func printVersion() {
@@ -65,6 +67,7 @@ func handleLiveness() {
 func main() {
 
 	syncPeriod := flag.Duration("sync_period", 30*time.Second, "SyncPeriod determines the minimum frequency at which watched resources are reconciled")
+	verbose := flag.Bool("verbose", false, "enable verbose logging")
 
 	flag.Parse()
 
@@ -72,7 +75,7 @@ func main() {
 	// implementing the logr.Logger interface. This logger will
 	// be propagated through the whole operator, generating
 	// uniform and structured logs.
-	logf.SetLogger(logf.ZapLogger(false))
+	logf.SetLogger(logf.ZapLogger(*verbose))
 
 	printVersion()
 
@@ -136,7 +139,23 @@ func main() {
 	}
 
 	// Expose Controller Metrics
-	_, err = metrics.ExposeMetricsPort(context.TODO(), metricsPort)
+	k8sConfig, err := config.GetConfig()
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Add to the below struct any other metrics ports you want to expose.
+	servicePorts := []v1.ServicePort{
+		{
+			Port:       metricsPort,
+			Name:       metrics.OperatorPortName,
+			Protocol:   v1.ProtocolTCP,
+			TargetPort: intstr.FromInt(metricsPort),
+		},
+	}
+
+	_, err = metrics.CreateMetricsService(context.TODO(), k8sConfig, servicePorts)
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)

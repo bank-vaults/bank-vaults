@@ -22,6 +22,6 @@ ignored = [
   "contrib.go.opencensus.io/exporter/stackdriver",
   "go.uber.org/atomic",
   "go.uber.org/multierr",
-  "go.uber.org/zap",
   "sigs.k8s.io/yaml",
+  "go.uber.org/zap",
 ]

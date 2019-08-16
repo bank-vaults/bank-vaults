@@ -143,7 +143,7 @@ func init() {
 	unsealCmd.PersistentFlags().Bool(cfgOnce, false, "Run unseal only once")
 	unsealCmd.PersistentFlags().String(cfgInitRootToken, "", "Root token for the new vault cluster (only if -init=true)")
 	unsealCmd.PersistentFlags().Bool(cfgStoreRootToken, true, "Should the root token be stored in the key store (only if -init=true)")
-	unsealCmd.PersistentFlags().Bool(cfgPreFlightChecks, false, "should the key store be tested first to validate access rights")
+	unsealCmd.PersistentFlags().Bool(cfgPreFlightChecks, true, "should the key store be tested first to validate access rights")
 	unsealCmd.PersistentFlags().Bool(cfgAuto, false, "Run in auto-unseal mode")
 
 	rootCmd.AddCommand(unsealCmd)

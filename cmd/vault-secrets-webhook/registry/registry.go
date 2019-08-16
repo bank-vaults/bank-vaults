@@ -15,10 +15,10 @@
 package registry
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 	"sync"
 
@@ -26,6 +26,7 @@ import (
 	"github.com/heroku/docker-registry-client/registry"
 	imagev1 "github.com/opencontainers/image-spec/specs-go/v1"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -106,12 +107,12 @@ func GetImageConfig(
 func getImageBlob(container ContainerInfo) (*imagev1.ImageConfig, error) {
 	imageName, tag := parseContainerImage(container.Image)
 
-	registrySkipVerify := os.Getenv("REGISTRY_SKIP_VERIFY")
+	registrySkipVerify := viper.GetBool("registry_skip_verify")
 
 	var hub *registry.Registry
 	var err error
 
-	if registrySkipVerify == "true" {
+	if registrySkipVerify {
 		hub, err = registry.NewInsecure(container.RegistryAddress, container.RegistryUsername, container.RegistryPassword)
 	} else {
 		hub, err = registry.New(container.RegistryAddress, container.RegistryUsername, container.RegistryPassword)
@@ -196,8 +197,39 @@ func (k *ContainerInfo) parseDockerConfig(dockerCreds DockerCreds) (bool, error)
 			} else {
 				k.RegistryAddress = fmt.Sprintf("https://%s", registryName)
 			}
-			k.RegistryUsername = registryAuth.Username
-			k.RegistryPassword = registryAuth.Password
+			if len(registryAuth.Username) > 0 && len(registryAuth.Password) > 0 {
+				// auths.<registry>.username and auths.<registry>.username are present
+				// in the config.json, use them
+				k.RegistryUsername = registryAuth.Username
+				k.RegistryPassword = registryAuth.Password
+			} else if len(registryAuth.Auth) > 0 {
+				// auths.<registry>.username and auths.<registry>.username are not present
+				// in the config.json, fall back to the base64 encoded auths.<registry>.auth field
+				// The registry.Auth field contains a base64 encoded string of the format <username>:<password>
+				decodedAuth, err := base64.StdEncoding.DecodeString(registryAuth.Auth)
+				if err != nil {
+					return false, fmt.Errorf("failed to decode auth field for registry %s: %s", registryName, err.Error())
+				}
+				auth := strings.Split(string(decodedAuth), ":")
+				if len(auth) != 2 {
+					return false, fmt.Errorf("unexpected number of elements in auth field for registry %s: %d (expected 2)", registryName, len(auth))
+				}
+				// decodedAuth is something like ":xxx"
+				if len(auth[0]) <= 0 {
+					return false, fmt.Errorf("username element of auth field for registry %s missing", registryName)
+				}
+				// decodedAuth is something like "xxx:"
+				if len(auth[1]) <= 0 {
+					return false, fmt.Errorf("password element of auth field for registry %s missing", registryName)
+				}
+				k.RegistryUsername = auth[0]
+				k.RegistryPassword = auth[1]
+			} else {
+				// the auths section has an entry for the registry, but it neither contains
+				// username/password fields nor an auth field, fail
+				return false, fmt.Errorf("found %s in imagePullSecrets but it contains no usable credentials; either username/password fields or an auth field are required", registryName)
+			}
+
 			return true, nil
 		}
 	}
@@ -222,35 +254,77 @@ func (k *ContainerInfo) fixDockerHubImage(image string) string {
 	return image
 }
 
+func (k *ContainerInfo) checkImagePullSecret(namespace string, secret string) (bool, error) {
+	data, err := k.readDockerSecret(namespace, secret)
+	if err != nil {
+		return false, fmt.Errorf("cannot read imagePullSecret '%s' in namespace '%s': %s", secret, namespace, err.Error())
+	}
+
+	var dockerCreds DockerCreds
+
+	err = json.Unmarshal(data[corev1.DockerConfigJsonKey], &dockerCreds)
+	if err != nil {
+		return false, fmt.Errorf("cannot unmarshal docker configuration from imagePullSecret: %s", err.Error())
+	}
+
+	found, err := k.parseDockerConfig(dockerCreds)
+	return found, err
+}
+
 // Collect reads information from k8s and load them into the structure
 func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.PodSpec) error {
 
 	k.Image = k.fixDockerHubImage(container.Image)
 
-	// k.clientset.Core().ServiceAccounts(k.Namespace).Get(podSpec.ServiceAccountName)
-
-	// TODO read ServiceAccount's imagePullSecrets as well
+	var err error
+	found := false
+	// Check for registry credentials in imagePullSecrets attached to the pod
+	// ImagePullSecrets attached to ServiceAccounts do not have to be considered
+	// explicitely as ServiceAccount ImagePullSecrets are automatically attached
+	// to a pod.
 	for _, imagePullSecret := range podSpec.ImagePullSecrets {
-		data, err := k.readDockerSecret(k.Namespace, imagePullSecret.Name)
+		found, err = k.checkImagePullSecret(k.Namespace, imagePullSecret.Name)
 		if err != nil {
-			return fmt.Errorf("cannot read imagePullSecrets '%s': %s", imagePullSecret.Name, err.Error())
-		}
-
-		var dockerCreds DockerCreds
-
-		err = json.Unmarshal(data[corev1.DockerConfigJsonKey], &dockerCreds)
-		if err != nil {
-			return fmt.Errorf("cannot unmarshal docker configuration from imagePullSecrets: %s", err.Error())
-		}
-
-		found, err := k.parseDockerConfig(dockerCreds)
-		if err != nil {
-			return nil
+			return err
 		}
 
 		if found {
+			logger.Infof("found credentials for registry %s in pod imagePullSecret: %s/%s", k.RegistryName, k.Namespace, imagePullSecret.Name)
 			break
 		}
+	}
+
+	// The pod imagePullSecrets did not contained matching credentials.
+	// Try to find matching registry credentials in the default imagePullSecret if one was provided.
+	if !found {
+		defaultImagePullSecret := viper.GetString("default_image_pull_secret")
+		defaultImagePullSecretNamespace := viper.GetString("default_image_pull_secret_namespace")
+		if len(defaultImagePullSecret) > 0 && len(defaultImagePullSecretNamespace) > 0 {
+			found, err = k.checkImagePullSecret(defaultImagePullSecretNamespace, defaultImagePullSecret)
+			if err != nil {
+				return err
+			}
+
+			if found {
+				logger.Infof("found credentials for registry %s in default imagePullSecret: %s/s", k.RegistryName, defaultImagePullSecretNamespace, defaultImagePullSecret)
+			}
+		}
+	}
+
+	if !found {
+		logger.Infof("found no credentials for registry %s, assuming it is public", k.RegistryName)
+	}
+
+	// In case of other public docker registry
+	if k.RegistryName == "" && k.RegistryAddress == "" {
+		registryName := container.Image
+		if strings.HasPrefix(registryName, "https://") {
+			registryName = strings.TrimPrefix(registryName, "https://")
+		}
+
+		registryName = strings.Split(registryName, "/")[0]
+		k.RegistryName = registryName
+		k.RegistryAddress = fmt.Sprintf("https://%s", registryName)
 	}
 
 	// Clean registry from image

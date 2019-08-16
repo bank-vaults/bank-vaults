@@ -1,0 +1,40 @@
+{{- if .Values.rbac.enabled }}
+apiVersion: v1
+kind: List
+metadata: {}
+items:
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRoleBinding
+  metadata:
+    name: {{ template "vault.fullname" . }}-auth-delegator
+    labels:
+      app: {{ template "vault.name" . }}
+      chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+      release: {{ .Release.Name }}
+      heritage: {{ .Release.Service }}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: system:auth-delegator
+  subjects:
+  - kind: ServiceAccount
+    name: {{ template "vault.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: {{ template "vault.fullname" . }}-secret-access
+    labels:
+      app: {{ template "vault.name" . }}
+      chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+      release: {{ .Release.Name }}
+      heritage: {{ .Release.Service }}
+  roleRef:
+    kind: Role
+    name: {{ template "vault.fullname" . }}-secret-access
+    apiGroup: rbac.authorization.k8s.io
+  subjects:
+  - kind: ServiceAccount
+    name: {{ template "vault.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

@@ -22,8 +22,13 @@ import (
 	"strings"
 
 	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
+	"github.com/banzaicloud/bank-vaults/pkg/vault"
+	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	whhttp "github.com/slok/kubewebhook/pkg/http"
+	"github.com/slok/kubewebhook/pkg/observability/metrics"
 	whcontext "github.com/slok/kubewebhook/pkg/webhook/context"
 	"github.com/slok/kubewebhook/pkg/webhook/mutating"
 	"github.com/spf13/viper"
@@ -33,7 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeVer "k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	kubernetesConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 type vaultConfig struct {
@@ -78,6 +83,17 @@ auto_auth {
 
 type mutatingWebhook struct {
 	k8sClient *kubernetes.Clientset
+}
+
+// If the original Pod contained a Volume "vault-tls", for example Vault instances provisioned by the Operator
+// we need to handle that edge case and choose another name for the vault-tls volume for accessing Vault with TLS.
+func hasTLSVolume(volumes []corev1.Volume) bool {
+	for _, volume := range volumes {
+		if volume.Name == "vault-tls" {
+			return true
+		}
+	}
+	return false
 }
 
 func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
@@ -208,7 +224,7 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 	return containers
 }
 
-func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger *log.Logger) []corev1.Volume {
+func getVolumes(existingVolumes []corev1.Volume, agentConfigMapName string, vaultConfig vaultConfig, logger *log.Logger) []corev1.Volume {
 	logger.Debugf("Add generic volumes to podspec")
 
 	volumes := []corev1.Volume{
@@ -238,8 +254,14 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger *log.
 
 	if vaultConfig.tlsSecret != "" {
 		logger.Debugf("Add vault TLS volume to podspec")
+
+		volumeName := "vault-tls"
+		if hasTLSVolume(existingVolumes) {
+			volumeName = "vault-env-tls"
+		}
+
 		volumes = append(volumes, corev1.Volume{
-			Name: "vault-tls",
+			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: vaultConfig.tlsSecret,
@@ -285,18 +307,15 @@ func getVolumes(agentConfigMapName string, vaultConfig vaultConfig, logger *log.
 func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
 	switch v := obj.(type) {
 	case *corev1.Pod:
-		podSpec := &v.Spec
-		return false, mw.mutatePodSpec(obj, podSpec, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
+		return false, mw.mutatePod(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.IsAdmissionRequestDryRun(ctx))
 	case *corev1.Secret:
-		secret := v
 		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/vault-addr"]; ok {
-			return false, mutateSecret(obj, secret, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
+			return false, mutateSecret(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
 		}
 		return false, nil
 	case *corev1.ConfigMap:
-		configMap := v
 		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/mutate-configmap"]; ok {
-			return false, mutateConfigMap(obj, configMap, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
+			return false, mutateConfigMap(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
 		}
 		return false, nil
 	default:
@@ -316,12 +335,18 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 
 	vaultConfig.role = annotations["vault.security.banzaicloud.io/vault-role"]
 	if vaultConfig.role == "" {
-		vaultConfig.role = "default"
+		switch p := obj.(type) {
+		case *corev1.Pod:
+			vaultConfig.role = p.Spec.ServiceAccountName
+		default:
+			vaultConfig.role = "default"
+		}
 	}
 
-	vaultConfig.path = annotations["vault.security.banzaicloud.io/vault-path"]
-	if vaultConfig.path == "" {
-		vaultConfig.path = "kubernetes"
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-path"]; ok {
+		vaultConfig.path = val
+	} else {
+		vaultConfig.path = viper.GetString("vault_path")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-skip-verify"]; ok {
@@ -563,7 +588,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 
 		mutated = true
 
-		args := append(container.Command, container.Args...)
+		args := container.Command
 
 		// the container has no explicitly specified command
 		if len(args) == 0 {
@@ -573,8 +598,15 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			}
 
 			args = append(args, imageConfig.Entrypoint...)
-			args = append(args, imageConfig.Cmd...)
+
+			// If no Args are defined we can use the Docker CMD from the image
+			// https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#notes
+			if len(container.Args) == 0 {
+				args = append(args, imageConfig.Cmd...)
+			}
 		}
+
+		args = append(args, container.Args...)
 
 		container.Command = []string{"/vault/vault-env"}
 		container.Args = args
@@ -613,6 +645,26 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			},
 		}...)
 
+		if vaultConfig.tlsSecret != "" {
+
+			mountPath := "/vault/tls/ca.crt"
+			volumeName := "vault-tls"
+			if hasTLSVolume(podSpec.Volumes) {
+				mountPath = "/vault-env/tls/ca.crt"
+				volumeName = "vault-env-tls"
+			}
+
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  "VAULT_CACERT",
+				Value: mountPath,
+			})
+			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+				Name:      volumeName,
+				MountPath: mountPath,
+				SubPath:   "ca.crt",
+			})
+		}
+
 		if vaultConfig.useAgent {
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  "VAULT_TOKEN_FILE",
@@ -641,28 +693,42 @@ func addSecretsVolToContainers(containers []corev1.Container, logger *log.Logger
 
 		containers[i] = container
 	}
-
 }
 
-// TODO replace all the calls with a global clientset
-func newClientSet() (*kubernetes.Clientset, error) {
-	kubeConfig, err := rest.InClusterConfig()
+func newVaultClient(vaultConfig vaultConfig) (*vault.Client, error) {
+	clientConfig := vaultapi.DefaultConfig()
+	clientConfig.Address = vaultConfig.addr
+
+	vaultInsecure, err := strconv.ParseBool(vaultConfig.skipVerify)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
+	}
+
+	tlsConfig := vaultapi.TLSConfig{Insecure: vaultInsecure}
+
+	clientConfig.ConfigureTLS(&tlsConfig)
+
+	return vault.NewClientFromConfig(
+		clientConfig,
+		vault.ClientRole(vaultConfig.role),
+		vault.ClientAuthPath(vaultConfig.path),
+	)
+}
+
+func newK8SClient() (*kubernetes.Clientset, error) {
+	kubeConfig, err := kubernetesConfig.GetConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	clientset, err := kubernetes.NewForConfig(kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-	return clientset, nil
+	return kubernetes.NewForConfig(kubeConfig)
 }
 
-func (mw *mutatingWebhook) mutatePodSpec(obj metav1.Object, podSpec *corev1.PodSpec, vaultConfig vaultConfig, ns string) error {
+func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig vaultConfig, ns string, dryRun bool) error {
 
 	logger.Debugf("Successfully connected to the API")
 
-	initContainersMutated, err := mw.mutateContainers(podSpec.InitContainers, podSpec, vaultConfig, ns)
+	initContainersMutated, err := mw.mutateContainers(pod.Spec.InitContainers, &pod.Spec, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
@@ -673,7 +739,7 @@ func (mw *mutatingWebhook) mutatePodSpec(obj metav1.Object, podSpec *corev1.PodS
 		logger.Debugf("No pod init containers were mutated")
 	}
 
-	containersMutated, err := mw.mutateContainers(podSpec.Containers, podSpec, vaultConfig, ns)
+	containersMutated, err := mw.mutateContainers(pod.Spec.Containers, &pod.Spec, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
@@ -701,13 +767,22 @@ func (mw *mutatingWebhook) mutatePodSpec(obj metav1.Object, podSpec *corev1.PodS
 		},
 	}
 	if vaultConfig.tlsSecret != "" {
+
+		mountPath := "/vault/tls/ca.crt"
+		volumeName := "vault-tls"
+		if hasTLSVolume(pod.Spec.Volumes) {
+			mountPath = "/vault-env/tls/ca.crt"
+			volumeName = "vault-env-tls"
+		}
+
 		containerEnvVars = append(containerEnvVars, corev1.EnvVar{
 			Name:  "VAULT_CACERT",
-			Value: "/vault/tls/ca.crt",
+			Value: mountPath,
 		})
 		containerVolMounts = append(containerVolMounts, corev1.VolumeMount{
-			Name:      "vault-tls",
-			MountPath: "/vault/tls",
+			Name:      volumeName,
+			MountPath: mountPath,
+			SubPath:   "ca.crt",
 		})
 	}
 
@@ -715,34 +790,36 @@ func (mw *mutatingWebhook) mutatePodSpec(obj metav1.Object, podSpec *corev1.PodS
 		var agentConfigMapName string
 
 		if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
-			configMap := getConfigMapForVaultAgent(obj, vaultConfig)
+			configMap := getConfigMapForVaultAgent(pod, vaultConfig)
 			agentConfigMapName = configMap.Name
 
-			_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(configMap)
-			if err != nil {
-				if errors.IsAlreadyExists(err) {
-					_, err = mw.k8sClient.CoreV1().ConfigMaps(ns).Update(configMap)
-					if err != nil {
+			if !dryRun {
+				_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(configMap)
+				if err != nil {
+					if errors.IsAlreadyExists(err) {
+						_, err = mw.k8sClient.CoreV1().ConfigMaps(ns).Update(configMap)
+						if err != nil {
+							return err
+						}
+					} else {
 						return err
 					}
-				} else {
-					return err
 				}
 			}
 
 		}
 
-		podSpec.InitContainers = append(getInitContainers(podSpec.Containers, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), podSpec.InitContainers...)
+		pod.Spec.InitContainers = append(getInitContainers(pod.Spec.Containers, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), pod.Spec.InitContainers...)
 		logger.Debugf("Successfully appended pod init containers to spec")
 
-		podSpec.Volumes = append(podSpec.Volumes, getVolumes(agentConfigMapName, vaultConfig, logger)...)
+		pod.Spec.Volumes = append(pod.Spec.Volumes, getVolumes(pod.Spec.Volumes, agentConfigMapName, vaultConfig, logger)...)
 		logger.Debugf("Successfully appended pod spec volumes")
 	}
 
 	if vaultConfig.ctConfigMap != "" {
 		logger.Debugf("Consul Template config found")
 
-		addSecretsVolToContainers(podSpec.Containers, logger)
+		addSecretsVolToContainers(pod.Spec.Containers, logger)
 
 		if vaultConfig.ctShareProcessDefault == "empty" {
 			logger.Debugf("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
@@ -760,9 +837,9 @@ func (mw *mutatingWebhook) mutatePodSpec(obj metav1.Object, podSpec *corev1.PodS
 		if vaultConfig.ctShareProcess {
 			logger.Debugf("Detected shared process namespace")
 			shareProcessNamespace := true
-			podSpec.ShareProcessNamespace = &shareProcessNamespace
+			pod.Spec.ShareProcessNamespace = &shareProcessNamespace
 		}
-		podSpec.Containers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), podSpec.Containers...)
+		pod.Spec.Containers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
 
 		logger.Debugf("Successfully appended pod containers to spec")
 	}
@@ -776,20 +853,36 @@ func init() {
 	viper.SetDefault("vault_ct_image", "hashicorp/consul-template:0.19.6-dev-alpine")
 	viper.SetDefault("vault_addr", "https://vault:8200")
 	viper.SetDefault("vault_skip_verify", "false")
+	viper.SetDefault("vault_path", "kubernetes")
 	viper.SetDefault("vault_tls_secret", "")
-	viper.SetDefault("vault_agent", "true")
+	viper.SetDefault("vault_agent", "false")
 	viper.SetDefault("vault_ct_share_process_namespace", "")
 	viper.SetDefault("psp_allow_privilege_escalation", "false")
 	viper.SetDefault("vault_ignore_missing_secrets", "false")
 	viper.SetDefault("vault_env_passthrough", "")
 	viper.SetDefault("mutate_configmap", "false")
+	viper.SetDefault("tls_cert_file", "")
+	viper.SetDefault("tls_private_key_file", "")
+	viper.SetDefault("listen_address", ":8443")
+	viper.SetDefault("default_image_pull_secret", "")
+	viper.SetDefault("default_image_pull_secret_namespace", "")
+	viper.SetDefault("registry_skip_verify", "false")
+	viper.SetDefault("debug", "false")
 	viper.AutomaticEnv()
 
 	logger = log.New()
+	if viper.GetBool("debug") {
+		logger.SetLevel(log.DebugLevel)
+		logger.Debug("Debug mode enabled")
+	}
 }
 
-func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, logger *log.Logger) http.Handler {
-	webhook, err := mutating.NewWebhook(config, mutator, nil, nil, logger)
+func healthzHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(200)
+}
+
+func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, recorder metrics.Recorder, logger *log.Logger) http.Handler {
+	webhook, err := mutating.NewWebhook(config, mutator, nil, recorder, logger)
 	if err != nil {
 		logger.Fatalf("error creating webhook: %s", err)
 	}
@@ -805,8 +898,7 @@ func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, log
 var logger *log.Logger
 
 func main() {
-
-	k8sClient, err := newClientSet()
+	k8sClient, err := newK8SClient()
 	if err != nil {
 		log.Fatalf("error creating k8s client: %s", err)
 	}
@@ -815,17 +907,31 @@ func main() {
 
 	mutator := mutating.MutatorFunc(mutatingWebhook.vaultSecretsMutator)
 
-	podHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-pods", Obj: &corev1.Pod{}}, mutator, logger)
-	secretHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-secret", Obj: &corev1.Secret{}}, mutator, logger)
-	configMapHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-configmap", Obj: &corev1.ConfigMap{}}, mutator, logger)
+	metricsRecorder := metrics.NewPrometheus(prometheus.DefaultRegisterer)
+
+	podHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-pods", Obj: &corev1.Pod{}}, mutator, metricsRecorder, logger)
+	secretHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-secret", Obj: &corev1.Secret{}}, mutator, metricsRecorder, logger)
+	configMapHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-configmap", Obj: &corev1.ConfigMap{}}, mutator, metricsRecorder, logger)
 
 	mux := http.NewServeMux()
 	mux.Handle("/pods", podHandler)
 	mux.Handle("/secrets", secretHandler)
 	mux.Handle("/configmaps", configMapHandler)
+	mux.Handle("/healthz", http.HandlerFunc(healthzHandler))
+	mux.Handle("/metrics", promhttp.Handler())
 
-	logger.Infof("Listening on :8443")
-	err = http.ListenAndServeTLS(":8443", viper.GetString("tls_cert_file"), viper.GetString("tls_private_key_file"), mux)
+	listenAddress := viper.GetString("listen_address")
+	tlsCertFile := viper.GetString("tls_cert_file")
+	tlsPrivateKeyFile := viper.GetString("tls_private_key_file")
+
+	if tlsCertFile == "" && tlsPrivateKeyFile == "" {
+		logger.Infof("Listening on http://%s", listenAddress)
+		err = http.ListenAndServe(listenAddress, mux)
+	} else {
+		logger.Infof("Listening on https://%s", listenAddress)
+		err = http.ListenAndServeTLS(listenAddress, tlsCertFile, tlsPrivateKeyFile, mux)
+	}
+
 	if err != nil {
 		logger.Fatalf("error serving webhook: %s", err)
 	}

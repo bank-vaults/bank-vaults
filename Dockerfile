@@ -11,6 +11,7 @@ COPY go.* /build/
 RUN go mod download
 
 COPY . /build
+RUN go install ./cmd/template
 RUN go install ./cmd/bank-vaults
 
 
@@ -18,6 +19,7 @@ FROM alpine:3.9
 
 RUN apk add --no-cache ca-certificates
 
+COPY --from=builder /go/bin/template /usr/local/bin/template
 COPY --from=builder /go/bin/bank-vaults /usr/local/bin/bank-vaults
 USER 65534
 

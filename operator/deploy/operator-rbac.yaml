@@ -6,7 +6,7 @@ metadata:
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: vault-operator
 rules:
@@ -40,6 +40,7 @@ rules:
     resources:
       - replicasets
     verbs:
+      - list
       - get
   - apiGroups:
       - apps
@@ -73,7 +74,7 @@ rules:
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   name: vault-operator
 rules:

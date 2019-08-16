@@ -28,7 +28,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	hclPrinter "github.com/hashicorp/hcl/hcl/printer"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	json "github.com/json-iterator/go"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
@@ -1009,6 +1009,24 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 
 					logrus.Infof("skipping reconfiguration of %s because of credential rotation", configPath)
 					continue
+				}
+
+				// Control if the configs should be updated or just Created once and skipped later on
+				// This is a workaround to secrets backend like GCP that will destroy and recreate secrets at every iteration
+				createOnly := cast.ToBool(subConfigData["create_only"])
+				// Delete the create_only key from the map, so we don't push it to vault
+				delete(subConfigData, "create_only")
+
+				if createOnly && mountExists {
+					sec, err := v.cl.Logical().Read(configPath)
+					if err != nil {
+						return fmt.Errorf("error reading configPath %s: %s", configPath, err.Error())
+					}
+
+					if sec != nil {
+						logrus.Infoln("Secret at configpath ", configPath, "already exists, create_only was set so this will skipped and not updated")
+						continue
+					}
 				}
 
 				_, err = v.cl.Logical().Write(configPath, subConfigData)
