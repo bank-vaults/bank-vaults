@@ -870,7 +870,6 @@ func init() {
 	viper.SetDefault("vault_agent", "false")
 	viper.SetDefault("vault_ct_share_process_namespace", "")
 	viper.SetDefault("psp_allow_privilege_escalation", "false")
-	viper.SetDefault("security_context_run_as_user", "true")
 	viper.SetDefault("security_context_run_as_user_id", 100)
 	viper.SetDefault("vault_ignore_missing_secrets", "false")
 	viper.SetDefault("vault_env_passthrough", "")
