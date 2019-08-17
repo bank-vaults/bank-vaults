@@ -38,7 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeVer "k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	kubernetesConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 type vaultConfig struct {
@@ -716,16 +716,12 @@ func newVaultClient(vaultConfig vaultConfig) (*vault.Client, error) {
 }
 
 func newK8SClient() (*kubernetes.Clientset, error) {
-	kubeConfig, err := rest.InClusterConfig()
+	kubeConfig, err := kubernetesConfig.GetConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	clientset, err := kubernetes.NewForConfig(kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-	return clientset, nil
+	return kubernetes.NewForConfig(kubeConfig)
 }
 
 func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig vaultConfig, ns string, dryRun bool) error {

@@ -6,6 +6,7 @@
 - [Operator](operator/README.md)
 - [Mutating Webhook](mutating-webhook/README.md)
 - [Unseal Keys](unseal-keys/README.md)
+- [Cloud Permissions](cloud-permissions/README.md)
 - [Getting and Installing](installing/README.md)
 - [Monitoring](monitoring/README.md)
 - [Annotations and Labels](annotations-and-labels/README.md)

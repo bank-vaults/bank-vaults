@@ -21,6 +21,9 @@ spec:
         release: {{ .Release.Name }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/apiservice-webhook.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       serviceAccountName: {{ template "vault-secrets-webhook.fullname" . }}
       volumes:
@@ -40,9 +43,9 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           env:
             - name: TLS_CERT_FILE
-              value: /var/serving-cert/servingCert
+              value: /var/serving-cert/tls.crt
             - name: TLS_PRIVATE_KEY_FILE
-              value: /var/serving-cert/servingKey
+              value: /var/serving-cert/tls.key
             - name: DEBUG
               value: {{ .Values.debug | quote }}
             {{- range $key, $value := .Values.env }}
