@@ -57,6 +57,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | image.imagePullSecrets | image pull secrets for private repositories         | []                                |
 | namespaceSelector      | namespace selector to use, will limit webhook scope | {}                                |
 | nodeSelector           | node selector to use                                | {}                                |
+| podAnnotations         | extra annotations to add to pod metadata            | {}                                |
 | replicaCount           | number of replicas                                  | 1                                 |
 | resources              | resources to request                                | {}                                |
 | service.externalPort   | webhook service external port                       | 443                               |

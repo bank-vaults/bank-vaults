@@ -312,7 +312,7 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 	}
 
 	if !found {
-		logger.Infof("found no credentials for registry %s, assuming it is public")
+		logger.Infof("found no credentials for registry %s, assuming it is public", k.RegistryName)
 	}
 
 	// In case of other public docker registry
