@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: configMap
+metadata:
+  name: sample-configmap
+  annotations:
+    vault.security.banzaicloud.io/vault-addr: "https://vault.default.svc.cluster.local:8200"
+    vault.security.banzaicloud.io/vault-role: "default"
+    vault.security.banzaicloud.io/vault-skip-verify: "true"
+    vault.security.banzaicloud.io/vault-path: "kubernetes"
+data:
+  certificate.pem: vault:secret/data/certificates/web#certificate
+binaryData:
+  certificate.key: dmF1bHQ6c2VjcmV0L2RhdGEvY2VydGlmaWNhdGVzL3dlYiNjZXJ0aWZpY2F0ZV9rZXk=

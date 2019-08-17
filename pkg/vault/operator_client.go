@@ -479,19 +479,47 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 			}
 		}
 
+		// get auth mount options
+		// https://www.vaultproject.io/api/system/auth.html#config
+		var authConfigInput api.AuthConfigInput
+		var hasMountOptions bool
+		if _, hasMountOptions = authMethod["options"]; hasMountOptions {
+			err = mapstructure.Decode(authMethod["options"], &authConfigInput)
+			if err != nil {
+				return fmt.Errorf("error parsing auth method options: %s", err.Error())
+			}
+		}
+
 		if !exists {
 			logrus.Debugf("enabling %s auth backend in vault...", authMethodType)
 
 			// https://www.vaultproject.io/api/system/auth.html
-			options := api.EnableAuthOptions{
-				Type:        authMethodType,
-				Description: description,
+			var options api.EnableAuthOptions
+			if hasMountOptions {
+				options = api.EnableAuthOptions{
+					Type:        authMethodType,
+					Description: description,
+					Config:      authConfigInput,
+				}
+			} else {
+				options = api.EnableAuthOptions{
+					Type:        authMethodType,
+					Description: description,
+				}
 			}
 
 			err := v.cl.Sys().EnableAuthWithOptions(path, &options)
 
 			if err != nil {
 				return fmt.Errorf("error enabling %s auth method for vault: %s", authMethodType, err.Error())
+			}
+		} else if hasMountOptions {
+			logrus.Debugf("tuning existing %s auth backend in vault...", path)
+			// all auth methods are mounted below auth/
+			tunePath := fmt.Sprintf("auth/%s", path)
+			err = v.cl.Sys().TuneMount(tunePath, authConfigInput)
+			if err != nil {
+				return fmt.Errorf("error tuning %s auth method in vault: %s", path, err.Error())
 			}
 		}
 
