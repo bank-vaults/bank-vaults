@@ -136,7 +136,7 @@ func unseal(unsealConfig unsealCfg, v vault.Vault) {
 		return
 	}
 
-	// If vault is not sealed, we stop here and wait another unsealPeriod
+	// If vault is not sealed, we stop here and wait for another unsealPeriod
 	if !sealed {
 		logrus.Debug("vault is not sealed")
 		exitIfNecessary(unsealConfig, 0)
