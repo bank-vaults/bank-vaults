@@ -55,6 +55,9 @@ tolerations: []
 
 affinity: {}
 
+## Assign a PriorityClassName to pods if set
+priorityClassName: ""
+
 rbac:
   enabled: true
   psp:

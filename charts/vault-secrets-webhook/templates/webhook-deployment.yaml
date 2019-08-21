@@ -26,6 +26,9 @@ spec:
         {{- end }}
     spec:
       serviceAccountName: {{ template "vault-secrets-webhook.fullname" . }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
       volumes:
         - name: serving-cert
           secret:
