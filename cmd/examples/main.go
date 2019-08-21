@@ -35,7 +35,7 @@ func vaultExample() {
 
 	log.Println("Created Vault client")
 
-	secret, err := client.Vault().Logical().List("secret/metadata/accounts")
+	secret, err := client.RawClient().Logical().List("secret/metadata/accounts")
 	if err != nil {
 		log.Fatal(err)
 	}
