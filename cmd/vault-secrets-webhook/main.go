@@ -34,6 +34,7 @@ import (
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeVer "k8s.io/apimachinery/pkg/version"
@@ -492,7 +493,11 @@ func (mw *mutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns str
 		if ef.ConfigMapRef != nil {
 			data, err := mw.getDataFromConfigmap(ef.ConfigMapRef.Name, ns)
 			if err != nil {
-				return envVars, err
+				if apierrors.IsNotFound(err) && ef.ConfigMapRef.Optional != nil && *ef.ConfigMapRef.Optional {
+					continue
+				} else {
+					return envVars, err
+				}
 			}
 			for key, value := range data {
 				if strings.HasPrefix(value, "vault:") || strings.HasPrefix(value, ">>vault:") {
@@ -507,7 +512,11 @@ func (mw *mutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns str
 		if ef.SecretRef != nil {
 			data, err := mw.getDataFromSecret(ef.SecretRef.Name, ns)
 			if err != nil {
-				return envVars, err
+				if apierrors.IsNotFound(err) && ef.SecretRef.Optional != nil && *ef.SecretRef.Optional {
+					continue
+				} else {
+					return envVars, err
+				}
 			}
 			for key, value := range data {
 				if strings.HasPrefix(string(value), "vault:") || strings.HasPrefix(string(value), ">>vault:") {
