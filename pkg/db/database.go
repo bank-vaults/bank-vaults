@@ -55,7 +55,7 @@ func DynamicSecretDataSource(dialect string, source string) (dynamicSecretDataSo
 		return "", err
 	}
 
-	secret, err := vaultClient.Vault().Logical().Read(vaultCredsEndpoint)
+	secret, err := vaultClient.RawClient().Logical().Read(vaultCredsEndpoint)
 	if err != nil {
 		err = errors.Wrap(err, "failed to read db credentials")
 		return "", err
@@ -66,7 +66,7 @@ func DynamicSecretDataSource(dialect string, source string) (dynamicSecretDataSo
 		return "", err
 	}
 
-	secretRenewer, err := vaultClient.Vault().NewRenewer(&vaultapi.RenewerInput{Secret: secret})
+	secretRenewer, err := vaultClient.RawClient().NewRenewer(&vaultapi.RenewerInput{Secret: secret})
 
 	if err != nil {
 		vaultClient.Close()

@@ -144,14 +144,14 @@ func main() {
 
 			if secret = secretCache[path]; secret == nil {
 				if update {
-					secret, err = client.Vault().Logical().Write(path, map[string]interface{}{})
+					secret, err = client.RawClient().Logical().Write(path, map[string]interface{}{})
 					if err != nil {
 						log.Fatalln("failed to write secret to path:", path, err.Error())
 					} else {
 						secretCache[path] = secret
 					}
 				} else {
-					secret, err = client.Vault().Logical().ReadWithData(path, map[string][]string{"version": {version}})
+					secret, err = client.RawClient().Logical().ReadWithData(path, map[string][]string{"version": {version}})
 					if err != nil {
 						if ignoreMissingSecrets {
 							log.Errorln("failed to read secret from path:", path, err.Error())
