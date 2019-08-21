@@ -165,7 +165,7 @@ func getDataFromVault(data map[string]string, vaultClient *vault.Client) (map[st
 
 				var vaultSecret map[string]interface{}
 
-				secret, err := vaultClient.Vault().Logical().ReadWithData(path, map[string][]string{"version": {version}})
+				secret, err := vaultClient.RawClient().Logical().ReadWithData(path, map[string][]string{"version": {version}})
 				if err != nil {
 					logger.Errorf("Failed to read secret path: %s error: %s", path, err.Error())
 				}

@@ -182,7 +182,7 @@ func NewVaultTokenStore(role string) TokenStore {
 	if err != nil {
 		panic(err)
 	}
-	logical := client.Vault().Logical()
+	logical := client.RawClient().Logical()
 	return vaultTokenStore{client: client, logical: logical}
 }
 
