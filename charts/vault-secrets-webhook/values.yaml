@@ -6,6 +6,9 @@ replicaCount: 1
 
 debug: false
 
+## Assign a PriorityClassName to pods if set
+priorityClassName: ""
+
 image:
   repository: banzaicloud/vault-secrets-webhook
   tag: 0.5.0
