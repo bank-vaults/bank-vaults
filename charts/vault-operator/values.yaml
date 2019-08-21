@@ -45,6 +45,9 @@ resources:
 
 affinity: {}
 
+## Assign a PriorityClassName to pods if set
+priorityClassName: ""
+
 terminationGracePeriodSeconds: 10
 
 probePath: /
