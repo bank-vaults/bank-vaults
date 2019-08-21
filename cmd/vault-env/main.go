@@ -98,6 +98,8 @@ func main() {
 		}
 	}
 
+	secretCache := map[string]*vaultapi.Secret{}
+
 	// initial and sanitized environs
 	environ := syscall.Environ()
 	sanitized := make(sanitizedEnviron, 0, len(environ))
@@ -140,19 +142,24 @@ func main() {
 			var secret *vaultapi.Secret
 			var err error
 
-			if update {
-				var empty map[string]interface{}
-				secret, err = client.Vault().Logical().Write(path, empty)
-				if err != nil {
-					log.Fatalln("failed to write secret to path:", path, err.Error())
-				}
-			} else {
-				secret, err = client.Vault().Logical().ReadWithData(path, map[string][]string{"version": {version}})
-				if err != nil {
-					if ignoreMissingSecrets {
-						log.Errorln("failed to read secret from path:", path, err.Error())
+			if secret = secretCache[path]; secret == nil {
+				if update {
+					secret, err = client.Vault().Logical().Write(path, map[string]interface{}{})
+					if err != nil {
+						log.Fatalln("failed to write secret to path:", path, err.Error())
 					} else {
-						log.Fatalln("failed to read secret from path:", path, err.Error())
+						secretCache[path] = secret
+					}
+				} else {
+					secret, err = client.Vault().Logical().ReadWithData(path, map[string][]string{"version": {version}})
+					if err != nil {
+						if ignoreMissingSecrets {
+							log.Errorln("failed to read secret from path:", path, err.Error())
+						} else {
+							log.Fatalln("failed to read secret from path:", path, err.Error())
+						}
+					} else {
+						secretCache[path] = secret
 					}
 				}
 			}
