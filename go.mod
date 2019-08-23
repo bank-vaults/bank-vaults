@@ -37,24 +37,18 @@ require (
 	github.com/gorilla/mux v1.7.2 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
-	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/api v1.0.4
-	github.com/hashicorp/vault/sdk v0.1.13
 	github.com/heroku/docker-registry-client v0.0.0-20181004091502-47ecf50fd8d4
 	github.com/imdario/mergo v0.3.7
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/jpillora/backoff v0.0.0-20180909062703-3050d21c67d7
-	github.com/json-iterator/go v1.1.7
 	github.com/mattn/go-isatty v0.0.8 // indirect
-	github.com/mitchellh/mapstructure v1.1.2
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/operator-framework/operator-sdk v0.9.0
 	github.com/pierrec/lz4 v2.2.5+incompatible // indirect
-	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/common v0.6.0 // indirect
 	github.com/prometheus/procfs v0.0.3 // indirect
-	github.com/qor/qor v0.0.0-20190319081902-186b0237364b
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/slok/kubewebhook v0.3.0
