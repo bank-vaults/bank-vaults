@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
-	"github.com/banzaicloud/bank-vaults/pkg/vault"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

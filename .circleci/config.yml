@@ -127,6 +127,7 @@ jobs:
             make docker-operator
             make docker-vault-env
             make docker-webhook
+          no_output_timeout: 30m
 
       - run:
           name: Wait for minikube

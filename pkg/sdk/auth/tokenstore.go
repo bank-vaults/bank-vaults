@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/banzaicloud/bank-vaults/pkg/vault"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/spf13/cast"
 )
