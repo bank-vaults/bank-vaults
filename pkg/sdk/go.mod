@@ -22,10 +22,10 @@ require (
 	github.com/spf13/cast v1.3.0
 	github.com/spf13/viper v1.4.0
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	k8s.io/api v0.0.0-00010101000000-000000000000 // indirect
+	k8s.io/api v0.0.0-20190820101039-d651a1528133 // indirect
 	k8s.io/apimachinery v0.0.0-20190823012420-8ca64af22337 // indirect
 	k8s.io/client-go v11.0.0+incompatible
-	k8s.io/klog v0.3.0 // indirect
+	k8s.io/klog v0.4.0 // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )
 
