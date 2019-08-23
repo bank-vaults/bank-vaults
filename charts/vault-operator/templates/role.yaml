@@ -3,7 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ include "vault-operator.fullname" . }}
   labels:
-    chart: {{ include "vault-operator.chart" . }}
+    helm.sh/chart: {{ include "vault-operator.chart" . }}
 rules:
 - apiGroups:
   - vault.banzaicloud.com

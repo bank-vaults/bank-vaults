@@ -4,11 +4,11 @@ kind: ServiceMonitor
 metadata:
   name: {{ template "vault-secrets-webhook.fullname" . }}
   labels:
-    app: {{ template "vault-secrets-webhook.name" . }}
-    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
-    component: mutating-webhook
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/component: mutating-webhook
     {{- if .Values.metrics.serviceMonitor.additionalLabels }}
 {{ toYaml .Values.metrics.serviceMonitor.additionalLabels | indent 4 }}
     {{- end }}
@@ -28,8 +28,8 @@ spec:
   jobLabel: {{ template "vault-secrets-webhook.name" . }}
   selector:
     matchLabels:
-      app: {{ template "vault-secrets-webhook.name" . }}
-      release: "{{ .Release.Name }}"
+      app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}
+      app.kubernetes.io/instance: "{{ .Release.Name }}"
 ---
 apiVersion: v1
 kind: Service
@@ -37,11 +37,11 @@ metadata:
   annotations:
   name: {{ template "vault-secrets-webhook.fullname" . }}-metrics
   labels:
-    app: {{ template "vault-secrets-webhook.name" . }}
-    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
-    component: mutating-webhook
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/component: mutating-webhook
 spec:
   clusterIP: None
   ports:
@@ -50,8 +50,8 @@ spec:
     protocol: TCP
     targetPort: {{ .Values.metrics.port }}
   selector:
-    app: {{ template "vault-secrets-webhook.name" . }}
-    release: "{{ .Release.Name }}"
+    app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}
+    app.kubernetes.io/instance: "{{ .Release.Name }}"
   sessionAffinity: None
   type: ClusterIP
 {{- end }}

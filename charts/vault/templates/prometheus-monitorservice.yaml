@@ -4,10 +4,10 @@ kind: ServiceMonitor
 metadata:
   name: {{ include "vault.fullname" . }}-unsealer
   labels:
-    app: {{ include "vault.name" . }}
-    chart: {{ template "vault.chart" . }}
-    heritage: {{ .Release.Service }}
-    release: {{ .Release.Name }}
+    helm.sh/chart: {{ template "vault.chart" . }}
+    app.kubernetes.io/name: {{ include "vault.name" . }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
     {{- if .Values.unsealer.metrics.serviceMonitor.additionalLabels }}
 {{ toYaml .Values.unsealer.metrics.serviceMonitor.additionalLabels | indent 4 }}
     {{- end }}
@@ -25,8 +25,8 @@ spec:
     - "{{ $.Release.Namespace }}"
   selector:
     matchLabels:
-      app: {{ template "vault.name" . }}
-      release: "{{ .Release.Name }}"
+      app.kubernetes.io/name: {{ template "vault.name" . }}
+      app.kubernetes.io/instance: "{{ .Release.Name }}"
 
 ---
 
@@ -36,10 +36,10 @@ metadata:
   annotations:
   name: {{ include "vault.fullname" . }}-statsd
   labels:
-    app: {{ include "vault.name" . }}
-    chart: {{ template "vault.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    helm.sh/chart: {{ template "vault.chart" . }}
+    app.kubernetes.io/name: {{ include "vault.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   clusterIP: None
   ports:
@@ -48,8 +48,8 @@ spec:
     protocol: TCP
     targetPort: {{ .Values.statsd.metrics.port }}
   selector:
-    app: {{ include "vault.name" . }}
-    release: "{{ .Release.Name }}"
+    app.kubernetes.io/name: {{ include "vault.name" . }}
+    app.kubernetes.io/instance: "{{ .Release.Name }}"
   sessionAffinity: None
   type: ClusterIP
 
@@ -60,10 +60,10 @@ metadata:
   annotations:
   name: {{ include "vault.fullname" . }}-unsealer
   labels:
-    app: {{ include "vault.name" . }}
-    chart: {{ template "vault.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    helm.sh/chart: {{ template "vault.chart" . }}
+    app.kubernetes.io/name: {{ include "vault.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   clusterIP: None
   ports:
@@ -72,8 +72,8 @@ spec:
     protocol: TCP
     targetPort: {{ .Values.unsealer.metrics.port }}
   selector:
-    app: {{ include "vault.name" . }}
-    release: "{{ .Release.Name }}"
+    app.kubernetes.io/name: {{ include "vault.name" . }}
+    app.kubernetes.io/instance: "{{ .Release.Name }}"
   sessionAffinity: None
   type: ClusterIP
 

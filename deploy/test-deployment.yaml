@@ -6,11 +6,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hello-secrets
+      app.kubernetes.io/name: hello-secrets
   template:
     metadata:
       labels:
-        app: hello-secrets
+        app.kubernetes.io/name: hello-secrets
       annotations:
         vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
         vault.security.banzaicloud.io/vault-tls-secret: vault-tls

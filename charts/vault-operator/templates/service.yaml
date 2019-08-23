@@ -7,10 +7,10 @@ metadata:
   name: {{ include "vault-operator.fullname" . }}
 {{- end }}
   labels:
-    app: {{ include "vault-operator.name" . }}
-    chart: {{ include "vault-operator.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    helm.sh/chart: {{ include "vault-operator.chart" . }}
+    app.kubernetes.io/name: {{ include "vault-operator.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- if .Values.service.annotations }}
   annotations:
 {{ toYaml .Values.service.annotations | indent 4 }}
@@ -23,4 +23,4 @@ spec:
     protocol: TCP
     name: http
   selector:
-    app: {{ include "vault-operator.name" . }}
+    app.kubernetes.io/name: {{ include "vault-operator.name" . }}
