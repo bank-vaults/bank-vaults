@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/banzaicloud/bank-vaults/internal/configuration"
-	"github.com/banzaicloud/bank-vaults/pkg/vault"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/jpillora/backoff"

@@ -20,9 +20,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/banzaicloud/bank-vaults/pkg/auth"
-	database "github.com/banzaicloud/bank-vaults/pkg/db"
-	"github.com/banzaicloud/bank-vaults/pkg/vault"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/auth"
+	database "github.com/banzaicloud/bank-vaults/pkg/sdk/db"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 )
