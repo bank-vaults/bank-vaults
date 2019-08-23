@@ -18,7 +18,6 @@ require (
 	github.com/banzaicloud/k8s-objectmatcher v1.0.0
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/coreos/etcd-operator v0.9.3
-	github.com/coreos/go-etcd v2.0.0+incompatible // indirect
 	github.com/coreos/prometheus-operator v0.29.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dimchansky/utfbom v1.1.0 // indirect
