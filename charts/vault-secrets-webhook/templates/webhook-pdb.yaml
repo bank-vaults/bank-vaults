@@ -10,7 +10,7 @@ metadata:
     heritage: {{ .Release.Service }}
     component: mutating-webhook
 spec:
-  minAvailable: {{ .Values.pdb.minAvailable }}
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
   selector:
     matchLabels:
       app: {{ template "vault-secrets-webhook.name" . }}
