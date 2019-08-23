@@ -1158,13 +1158,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Name:            "vault",
 				Args:            []string{"server"},
 				Ports:           containerPorts,
-				Env:             withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
-					// // https://github.com/hashicorp/docker-vault/blob/master/0.X/docker-entrypoint.sh#L12
-					// {
-					// 	Name:  "VAULT_CLUSTER_INTERFACE",
-					// 	Value: "eth0",
-					// },
-				}))),
+				Env:             withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{}))),
 				SecurityContext: &corev1.SecurityContext{
 					Capabilities: &corev1.Capabilities{
 						Add: []corev1.Capability{"IPC_LOCK"},
