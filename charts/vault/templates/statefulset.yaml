@@ -3,10 +3,10 @@ kind: StatefulSet
 metadata:
   name: {{ template "vault.fullname" . }}
   labels:
-    app: {{ template "vault.name" . }}
-    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ template "vault.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.replicaCount }}
   updateStrategy:
@@ -14,13 +14,13 @@ spec:
   serviceName: {{ template "vault.fullname" . }}
   selector:
     matchLabels:
-      app: {{ template "vault.name" . }}
-      release: {{ .Release.Name }}
+      app.kubernetes.io/name: {{ template "vault.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: {{ template "vault.name" . }}
-        release: {{ .Release.Name }}
+        app.kubernetes.io/name: {{ template "vault.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
@@ -234,8 +234,8 @@ spec:
               topologyKey: kubernetes.io/hostname
               labelSelector:
                 matchLabels:
-                  app: {{ template "vault.fullname" . }}
-                  release: {{ .Release.Name | quote }}
+                  app.kubernetes.io/name: {{ template "vault.fullname" . }}
+                  app.kubernetes.io/instance: {{ .Release.Name | quote }}
       serviceAccountName: {{ template "vault.fullname" . }}
       volumes:
         - name: vault-raw-config

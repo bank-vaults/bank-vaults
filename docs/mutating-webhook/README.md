@@ -59,14 +59,14 @@ In this case the a init-container will be injected to the given Pod which copies
 
 Currently the Kubernetes Service Account based Vault authentication mechanism is used by `vault-env`, so it requests a Vault token based on the Service Account of the container it is injected into. Implementation is ongoing to use [Vault Agent's Auto-Auth](https://www.vaultproject.io/docs/agent/autoauth/index.html) to request tokens in an init-container with all the supported authentication mechanisms.
 
-Kubernetes 1.12 introduced a feature called [APIServer dry-run](https://kubernetes.io/blog/2019/01/14/apiserver-dry-run-and-kubectl-diff/) which became beta as of 1.13. This feature requires some changes in webhooks with side effects. 
+Kubernetes 1.12 introduced a feature called [APIServer dry-run](https://kubernetes.io/blog/2019/01/14/apiserver-dry-run-and-kubectl-diff/) which became beta as of 1.13. This feature requires some changes in webhooks with side effects.
 Vault mutating admission webhook is `dry-run aware`.
 
 ## Deploying the webhook
 
 ### Helm chart
 
-There is a Helm chart available to deploy the [Vault Secrets Webhook](https://github.com/banzaicloud/banzai-charts/tree/master/vault-secrets-webhook). 
+There is a Helm chart available to deploy the [Vault Secrets Webhook](https://github.com/banzaicloud/banzai-charts/tree/master/vault-secrets-webhook).
 
 ```bash
 helm init -c
@@ -95,11 +95,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: vault
+      app.kubernetes.io/name: vault
   template:
     metadata:
       labels:
-        app: vault
+        app.kubernetes.io/name: vault
       annotations:
         vault.security.banzaicloud.io/vault-addr: "https://vault:8200" # optional, the address of the Vault service, default values is https://vault:8200
         vault.security.banzaicloud.io/vault-role: "default" # optional, the default value is the name of the ServiceAccount the Pod runs in, in case of Secrets and ConfigMaps it is "default"
@@ -274,11 +274,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hello-secrets
+      app.kubernetes.io/name: hello-secrets
   template:
     metadata:
       labels:
-        app: hello-secrets
+        app.kubernetes.io/name: hello-secrets
       annotations:
         vault.security.banzaicloud.io/vault-addr: "https://vault-dns-name:443"
         vault.security.banzaicloud.io/vault-role: "default"

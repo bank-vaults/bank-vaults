@@ -3,10 +3,10 @@ kind: CustomResourceDefinition
 metadata:
   name: vaults.vault.banzaicloud.com
   labels:
-    app: {{ include "vault-operator.name" . }}
-    chart: {{ include "vault-operator.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    helm.sh/chart: {{ include "vault-operator.chart" . }}
+    app.kubernetes.io/name: {{ include "vault-operator.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
   annotations:
 {{ toYaml .Values.crdAnnotations | indent 4 }}
 spec:
