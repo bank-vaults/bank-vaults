@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/banzaicloud/bank-vaults/pkg/vault"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	corev1 "k8s.io/api/core/v1"
 )
 
