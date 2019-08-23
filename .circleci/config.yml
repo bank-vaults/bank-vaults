@@ -9,6 +9,7 @@ jobs:
       - image: circleci/golang:1.12
         environment:
           GOFLAG: -mod=readonly
+          GOPROXY: https://proxy.golang.org
       - image: vault:1.1.0
         environment:
           SKIP_SETCAP: true
