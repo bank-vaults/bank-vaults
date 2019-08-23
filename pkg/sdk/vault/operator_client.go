@@ -25,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	hclPrinter "github.com/hashicorp/hcl/hcl/printer"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -69,7 +68,7 @@ type Config struct {
 // vault is an implementation of the Vault interface that will perform actions
 // against a Vault server, using a provided KMS to retrieve
 type vault struct {
-	keyStore    kv.Service
+	keyStore    KVService
 	cl          *api.Client
 	config      *Config
 	rotateCache map[string]bool
@@ -90,8 +89,30 @@ type Vault interface {
 	StepDownActive(string) error
 }
 
+//
+type KVService interface {
+	Set(key string, value []byte) error
+	Get(key string) ([]byte, error)
+}
+
+type kvTester struct {
+	Service KVService
+}
+
+func (t kvTester) Test(key string) error {
+	_, err := t.Service.Get(key)
+
+	if err != nil {
+		if e, ok := err.(notFoundError); !ok || !e.NotFound() {
+			return err
+		}
+	}
+
+	return t.Service.Set(key, []byte(key))
+}
+
 // New returns a new vault Vault, or an error.
-func New(k kv.Service, cl *api.Client, config Config) (Vault, error) {
+func New(k KVService, cl *api.Client, config Config) (Vault, error) {
 
 	if config.SecretShares < config.SecretThreshold {
 		return nil, errors.New("the secret threshold can't be bigger than the shares")
@@ -172,9 +193,13 @@ func (v *vault) Unseal() error {
 	}
 }
 
+type notFoundError interface {
+	NotFound() bool
+}
+
 func (v *vault) keyStoreNotFound(key string) (bool, error) {
 	_, err := v.keyStore.Get(key)
-	if _, ok := err.(*kv.NotFoundError); ok {
+	if e, ok := err.(notFoundError); ok && e.NotFound() {
 		return true, nil
 	}
 	return false, err
@@ -206,7 +231,7 @@ func (v *vault) Init() error {
 
 	// test backend first
 	if v.config.PreFlightChecks {
-		tester := kv.Tester{Service: v.keyStore}
+		tester := kvTester{Service: v.keyStore}
 		err = tester.Test(v.testKey())
 		if err != nil {
 			return fmt.Errorf("error testing keystore before init: %s", err.Error())

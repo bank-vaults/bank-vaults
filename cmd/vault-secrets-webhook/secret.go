@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
-	"github.com/banzaicloud/bank-vaults/pkg/vault"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/spf13/cast"
 	corev1 "k8s.io/api/core/v1"
