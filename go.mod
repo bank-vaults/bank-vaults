@@ -53,14 +53,8 @@ require (
 	github.com/slok/kubewebhook v0.3.0
 	github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff // indirect
 	github.com/spf13/cast v1.3.0
-	github.com/spf13/cobra v0.0.3
-	github.com/spf13/viper v1.4.0
-	github.com/stretchr/objx v0.2.0 // indirect
-	github.com/ugorji/go v1.1.7 // indirect
-	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 // indirect
-	golang.org/x/net v0.0.0-20190724013045-ca1201d0de80 // indirect
 	github.com/spf13/cobra v0.0.4
-	github.com/spf13/viper v1.3.2
+	github.com/spf13/viper v1.4.0
 	github.com/ugorji/go v1.1.7 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/tools v0.0.0-20190731214159-1e85ed8060aa // indirect
@@ -68,10 +62,8 @@ require (
 	google.golang.org/genproto v0.0.0-20190716160619-c506a9f90610 // indirect
 	google.golang.org/grpc v1.22.1 // indirect
 	gopkg.in/ini.v1 v1.42.0 // indirect
-	k8s.io/api v0.0.0-20190612125737-db0771252981
-	k8s.io/apimachinery v0.0.0-20190823012420-8ca64af22337
 	k8s.io/api v0.0.0-20190809220925-3ab596449d6f
-	k8s.io/apimachinery v0.0.0-20190809020650-423f5d784010
+	k8s.io/apimachinery v0.0.0-20190823012420-8ca64af22337
 	k8s.io/client-go v11.0.1-0.20190516230509-ae8359b20417+incompatible
 	k8s.io/code-generator v0.0.0-20190808180452-d0071a119380
 	k8s.io/kube-openapi v0.0.0-20190722073852-5e22f3d471e6
