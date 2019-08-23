@@ -56,8 +56,6 @@ github.com/aws/aws-sdk-go v1.15.31 h1:ExgD8W8QDeD8Y4CPVlcP/laumxvikDbkVWB+VCHgXx
 github.com/aws/aws-sdk-go v1.15.31/go.mod h1:mFuSZ37Z9YOHbQEwBWztmVzqXrEkub65tZoCYDt7FT0=
 github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f h1:ZNv7On9kyUzm7fvRZumSyy/IUiSC7AzL0I1jKKtwooA=
 github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f/go.mod h1:AuiFmCCPBSrqvVMvuqFuk0qogytodnVFVSN5CeJB8Gc=
-github.com/banzaicloud/k8s-objectmatcher v1.0.1-0.20190813142559-d49f531f7335 h1:ds8HQnb2p7le76mYHReQbXCSo0LKfFM3x8322ZlRb5Y=
-github.com/banzaicloud/k8s-objectmatcher v1.0.1-0.20190813142559-d49f531f7335/go.mod h1:iD4rvgXpgGfdLSp1MdIKqmHGtocZOTWbpNnDMcmsGB0=
 github.com/banzaicloud/k8s-objectmatcher v1.0.1-0.20190813150246-386389f72468 h1:RyI7TRWw8NVAenv3CkTp8cMMorFeZjI+yqPy7+MH5JY=
 github.com/banzaicloud/k8s-objectmatcher v1.0.1-0.20190813150246-386389f72468/go.mod h1:iD4rvgXpgGfdLSp1MdIKqmHGtocZOTWbpNnDMcmsGB0=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 h1:xJ4a3vCFaGF/jqvzLMYoU8P317H5OQ+Via4RmuPwCS0=
