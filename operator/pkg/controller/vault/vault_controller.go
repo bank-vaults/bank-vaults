@@ -1661,13 +1661,13 @@ func withSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
 // labelsForVault returns the labels for selecting the resources
 // belonging to the given vault CR name.
 func labelsForVault(name string) map[string]string {
-	return map[string]string{"app": "vault", "vault_cr": name}
+	return map[string]string{"app.kubernetes.io/name": "vault", "vault_cr": name}
 }
 
 // labelsForVaultConfigurer returns the labels for selecting the resources
 // belonging to the given vault CR name.
 func labelsForVaultConfigurer(name string) map[string]string {
-	return map[string]string{"app": "vault-configurator", "vault_cr": name}
+	return map[string]string{"app.kubernetes.io/name": "vault-configurator", "vault_cr": name}
 }
 
 // Extend Labels with Vault User defined ones
