@@ -937,25 +937,23 @@ func main() {
 	tlsCertFile := viper.GetString("tls_cert_file")
 	tlsPrivateKeyFile := viper.GetString("tls_private_key_file")
 
-	errChan := make(chan error, 1)
-
-	go func() {
-		if tlsCertFile == "" && tlsPrivateKeyFile == "" {
-			logger.Infof("Listening on http://%s", listenAddress)
-			errChan <- http.ListenAndServe(listenAddress, mux)
-		} else {
-			logger.Infof("Listening on https://%s", listenAddress)
-			errChan <- http.ListenAndServeTLS(listenAddress, tlsCertFile, tlsPrivateKeyFile, mux)
-		}
-	}()
-
 	go func() {
 		// Serving telemetry on another address avoid TLS problems
 		logger.Infof("Telemetry on http://%s", telemetryAddress)
-		errChan <- http.ListenAndServe(telemetryAddress, tMux)
+		err = http.ListenAndServe(telemetryAddress, tMux)
+		if err != nil {
+			logger.Fatalf("error serving webhook: %s", err)
+		}
 	}()
 
-	err = <-errChan
+	if tlsCertFile == "" && tlsPrivateKeyFile == "" {
+		logger.Infof("Listening on http://%s", listenAddress)
+		err = http.ListenAndServe(listenAddress, mux)
+	} else {
+		logger.Infof("Listening on https://%s", listenAddress)
+		err = http.ListenAndServeTLS(listenAddress, tlsCertFile, tlsPrivateKeyFile, mux)
+	}
+
 	if err != nil {
 		logger.Fatalf("error serving webhook: %s", err)
 	}
