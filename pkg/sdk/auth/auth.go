@@ -45,7 +45,13 @@ type ScopedClaims struct {
 	Text string    `json:"text,omitempty"`
 }
 
-// JWTAuth returns a new JWT authentication handler
+// JWTAuth returns a new JWT authentication Gin Handler
+// Parameters:
+// - tokenStore (optional) - checks if the incoming JWT Bearer token's ID is present in this TokenStore
+//							(can be nil, which pypasses the check)
+// - signingKey - the HMAC JWT token signing key
+// - claimConverter - converts the JWT token into a JWT claim object, which will be saved into the request context
+// - extractors... (optional) - additional token extractors to use besides github.com/dgrijalva/jwt-go/request.OAuth2Extractor
 func JWTAuth(tokenStore TokenStore, signingKey string, claimConverter ClaimConverter, extractors ...jwtRequest.Extractor) gin.HandlerFunc {
 
 	signingKeyBase32 := []byte(base32.StdEncoding.EncodeToString([]byte(signingKey)))
@@ -102,6 +108,9 @@ func JWTAuth(tokenStore TokenStore, signingKey string, claimConverter ClaimConve
 }
 
 func isTokenWhitelisted(tokenStore TokenStore, claims *ScopedClaims) (bool, error) {
+	if tokenStore == nil {
+		return true, nil
+	}
 	userID := claims.Subject
 	tokenID := claims.Id
 	token, err := tokenStore.Lookup(userID, tokenID)
