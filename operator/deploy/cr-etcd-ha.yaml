@@ -105,3 +105,4 @@ spec:
         data:
           data:
             MYSQL_ROOT_PASSWORD: s3cr3t
+            MYSQL_PASSWORD: 3xtr3ms3cr3t

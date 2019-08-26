@@ -161,7 +161,9 @@ Future improvements:
 Some examples (apply `cr.yaml` from the operator samples first):
 
 ```bash
-helm upgrade --install mysql stable/mysql --set mysqlRootPassword=vault:secret/data/mysql#MYSQL_ROOT_PASSWORD \
+helm upgrade --install mysql stable/mysql \
+  --set mysqlRootPassword=vault:secret/data/mysql#MYSQL_ROOT_PASSWORD \
+  --set mysqlPassword=vault:secret/data/mysql#MYSQL_PASSWORD \
   --set "podAnnotations.vault\.security\.banzaicloud\.io/vault-addr"=https://vault:8200 \
   --set "podAnnotations.vault\.security\.banzaicloud\.io/vault-tls-secret"=vault-tls
 ```
