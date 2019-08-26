@@ -1,26 +1,26 @@
 # The Go library
 
-This repository contains several Go packages for interacting with Vault:
+This repository contains several Go packages for interacting with Vault, these packages are organized into the `sdk` Go module, which can be pulled in with `go get github.com/banzaicloud/bank-vaults/pkg/sdk` and is versioned by the `pkg/sdk/vX.Y.Z` Git tags:
 
-- `pkg/auth`
+- `pkg/sdk/auth`
 
     A GitHub OAuth2 based authentication system as a Gin Middleware, stores JWT bearer tokens in Vault.
 
     ![authn](images/authn-vault-flow.png)
 
-- `pkg/vault`
+- `pkg/sdk/vault`
 
     A wrapper for the official Vault client with automatic token renewal, and Kubernetes support.
 
     ![token](images/token-request-vault-flow.png)
 
-- `pkg/db`
+- `pkg/sdk/db`
 
     A helper for creating database source strings (MySQL/PostgreSQL) with database credentials dynamically based on configured Vault roles (instead of `username:password`).
 
     ![token](images/vault-mySQL.gif)
 
-- `pkg/tls`
+- `pkg/sdk/tls`
 
     A simple package to generate self-signed TLS certificates. Useful for bootstrapping situations, when you can't use Vault's [PKI secret engine](https://www.vaultproject.io/docs/secrets/pki/index.html).
 
