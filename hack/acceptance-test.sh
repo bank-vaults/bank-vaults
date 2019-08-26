@@ -25,16 +25,6 @@ function finish {
     kubectl describe pod hello-secrets
     kubectl logs deployment/hello-secrets --all-containers
     kubectl get secret -n vswh -o yaml
-
-    kubectl describe deployment/hello-secrets-runasuser-0
-    kubectl describe rs hello-secrets-runasuser-0
-    kubectl describe pod hello-secrets-runasuser-0
-    kubectl logs deployment/hello-secrets-runasuser-0 --all-containers
-
-    kubectl describe deployment/hello-secrets-runasuser-101
-    kubectl describe rs hello-secrets-runasuser-101
-    kubectl describe pod hello-secrets-runasuser-101
-    kubectl logs deployment/hello-secrets-runasuser-101 --all-containers
 }
 
 trap finish EXIT
@@ -101,5 +91,19 @@ kubectl wait --for=condition=available deployment/hello-secrets --timeout=120s
 kubectl apply -f deploy/test-deployment-runasuser-0.yaml
 kubectl wait --for=condition=available deployment/hello-secrets-runasuser-0 --timeout=120s
 
+kubectl describe deployment/hello-secrets-runasuser-0
+kubectl describe rs hello-secrets-runasuser-0
+kubectl describe pod hello-secrets-runasuser-0
+kubectl logs deployment/hello-secrets-runasuser-0 --all-containers
+
+kubectl delete -f deploy/test-deployment-runasuser-0.yaml
+
 kubectl apply -f deploy/test-deployment-runasuser-101.yaml
 kubectl wait --for=condition=available deployment/hello-secrets-runasuser-101 --timeout=120s
+
+kubectl describe deployment/hello-secrets-runasuser-101
+kubectl describe rs hello-secrets-runasuser-101
+kubectl describe pod hello-secrets-runasuser-101
+kubectl logs deployment/hello-secrets-runasuser-101 --all-containers
+    
+kubectl delete -f eploy/test-deployment-runasuser-101.yaml
