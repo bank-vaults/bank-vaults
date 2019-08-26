@@ -942,7 +942,7 @@ func main() {
 		logger.Infof("Telemetry on http://%s", telemetryAddress)
 		err = http.ListenAndServe(telemetryAddress, tMux)
 		if err != nil {
-			logger.Fatalf("error serving webhook: %s", err)
+			logger.Fatalf("error serving telemetry: %s", err)
 		}
 	}()
 
