@@ -4,10 +4,10 @@ kind: Role
 metadata:
   name: {{ template "vault.fullname" . }}-secret-access
   labels:
-    app: {{ template "vault.name" . }}
-    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ template "vault.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 rules:
 - apiGroups: [""]
   resources: ["secrets"]

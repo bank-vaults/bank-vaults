@@ -3,11 +3,11 @@ kind: Service
 metadata:
   name: {{ template "vault-secrets-webhook.fullname" . }}
   labels:
-    app: {{ template "vault-secrets-webhook.fullname" . }}
-    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
-    component: mutating-webhook
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ template "vault-secrets-webhook.fullname" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/component: mutating-webhook
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -16,5 +16,5 @@ spec:
       protocol: TCP
       name: {{ .Values.service.name }}
   selector:
-    app: {{ template "vault-secrets-webhook.name" . }}
-    release: {{ .Release.Name }}
+    app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}

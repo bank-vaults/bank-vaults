@@ -41,8 +41,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: my-app
-    my-app: my-app-consul-template
+    app.kubernetes.io/name: my-app
+    my-app.kubernetes.io/name: my-app-consul-template
     branches: "true"
   name: my-app-consul-template
 data:
