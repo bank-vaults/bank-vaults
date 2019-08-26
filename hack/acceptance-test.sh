@@ -88,6 +88,13 @@ test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}'
 kubectl apply -f deploy/test-deployment.yaml
 kubectl wait --for=condition=available deployment/hello-secrets --timeout=120s
 
+kubectl describe deployment/hello-secrets
+kubectl describe rs hello-secrets
+kubectl describe pod hello-secrets
+kubectl logs deployment/hello-secrets --all-containers
+kubectl get secret -n vswh -o yaml
+kubectl delete -f deploy/test-deployment.yaml
+
 kubectl apply -f deploy/test-deployment-runasuser-0.yaml
 kubectl wait --for=condition=available deployment/hello-secrets-runasuser-0 --timeout=120s
 
