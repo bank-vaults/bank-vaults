@@ -95,7 +95,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: prometheus
+    app.kubernetes.io/name: prometheus
     prometheus: consul-template
   name: prometheus-consul-template
 data:
@@ -204,8 +204,8 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    app: vault
-    release: prometheus-operator
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/instance: prometheus-operator
   name: prometheus-operator-vault
 spec:
   endpoints:
@@ -223,6 +223,6 @@ spec:
         insecureSkipVerify: true
   selector:
     matchLabels:
-      app: vault
+      app.kubernetes.io/name: vault
       vault_cr: vault
 ```

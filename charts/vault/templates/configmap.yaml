@@ -3,10 +3,10 @@ kind: ConfigMap
 metadata:
   name: "{{ template "vault.fullname" . }}-statsd-mapping"
   labels:
-    app: "{{ template "vault.name" . }}"
-    release: {{ .Release.Name | quote }}
-    heritage: {{ .Release.Service | quote }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    app.kubernetes.io/name: "{{ template "vault.name" . }}"
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
 data:
   statsd-mapping.conf: |
 {{ toYaml .Values.statsd.config | indent 6 }}
