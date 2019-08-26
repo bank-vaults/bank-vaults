@@ -873,6 +873,7 @@ func init() {
 	viper.SetDefault("tls_cert_file", "")
 	viper.SetDefault("tls_private_key_file", "")
 	viper.SetDefault("listen_address", ":8443")
+	viper.SetDefault("telemetry_listen_address", ":8444")
 	viper.SetDefault("default_image_pull_secret", "")
 	viper.SetDefault("default_image_pull_secret_namespace", "")
 	viper.SetDefault("registry_skip_verify", "false")
@@ -927,20 +928,34 @@ func main() {
 	mux.Handle("/secrets", secretHandler)
 	mux.Handle("/configmaps", configMapHandler)
 	mux.Handle("/healthz", http.HandlerFunc(healthzHandler))
-	mux.Handle("/metrics", promhttp.Handler())
 
+	tMux := http.NewServeMux()
+	tMux.Handle("/metrics", promhttp.Handler())
+
+	telemetryAddress := viper.GetString("telemetry_listen_address")
 	listenAddress := viper.GetString("listen_address")
 	tlsCertFile := viper.GetString("tls_cert_file")
 	tlsPrivateKeyFile := viper.GetString("tls_private_key_file")
 
-	if tlsCertFile == "" && tlsPrivateKeyFile == "" {
-		logger.Infof("Listening on http://%s", listenAddress)
-		err = http.ListenAndServe(listenAddress, mux)
-	} else {
-		logger.Infof("Listening on https://%s", listenAddress)
-		err = http.ListenAndServeTLS(listenAddress, tlsCertFile, tlsPrivateKeyFile, mux)
-	}
+	errChan := make(chan error, 1)
 
+	go func() {
+		if tlsCertFile == "" && tlsPrivateKeyFile == "" {
+			logger.Infof("Listening on http://%s", listenAddress)
+			errChan <- http.ListenAndServe(listenAddress, mux)
+		} else {
+			logger.Infof("Listening on https://%s", listenAddress)
+			errChan <- http.ListenAndServeTLS(listenAddress, tlsCertFile, tlsPrivateKeyFile, mux)
+		}
+	}()
+
+	go func() {
+		// Serving telemetry on another address avoid TLS problems
+		logger.Infof("Telemetry on http://%s", telemetryAddress)
+		errChan <- http.ListenAndServe(telemetryAddress, tMux)
+	}()
+
+	err = <-errChan
 	if err != nil {
 		logger.Fatalf("error serving webhook: %s", err)
 	}
