@@ -158,10 +158,12 @@ Future improvements:
 - on AWS and GKE get a credential dynamically with the specific SDK
 - query the ServiceAccount's `imagePullSecrets` as well
 
-Some examples:
+Some examples (apply `cr.yaml` from the operator samples first):
 
 ```bash
-helm upgrade --install mysql stable/mysql --set mysqlRootPassword=vault:secret/data/mysql#MYSQL_ROOT_PASSWORD --set-string "podAnnotations.vault\.security\.banzaicloud\.io/vault-skip-verify=true"
+helm upgrade --install mysql stable/mysql --set mysqlRootPassword=vault:secret/data/mysql#MYSQL_ROOT_PASSWORD \
+  --set "podAnnotations.vault\.security\.banzaicloud\.io/vault-addr"=https://vault:8200 \
+  --set "podAnnotations.vault\.security\.banzaicloud\.io/vault-tls-secret"=vault-tls
 ```
 
 When using a private image repository:
