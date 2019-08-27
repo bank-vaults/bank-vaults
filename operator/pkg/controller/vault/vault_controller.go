@@ -183,9 +183,9 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 			o.(metav1.ObjectMetaAccessor).GetObjectMeta().SetResourceVersion(resourceVersion)
 
 			return c.Update(context.TODO(), o)
-		} else {
-			log.V(1).Info(fmt.Sprintf("Skipping update for object %s:%s", o.GetObjectKind(), o.(metav1.ObjectMetaAccessor).GetObjectMeta().GetName()))
 		}
+
+		log.V(1).Info(fmt.Sprintf("Skipping update for object %s:%s", o.GetObjectKind(), o.(metav1.ObjectMetaAccessor).GetObjectMeta().GetName()))
 	}
 
 	return err
@@ -790,9 +790,10 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 				Labels:      withVaultLabels(v, ls),
 			},
 			Spec: corev1.ServiceSpec{
-				Type:     corev1.ServiceTypeClusterIP,
-				Selector: ls,
-				Ports:    servicePorts,
+				Type:                     corev1.ServiceTypeClusterIP,
+				Selector:                 ls,
+				Ports:                    servicePorts,
+				PublishNotReadyAddresses: true,
 			},
 		}
 
@@ -1114,6 +1115,10 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	if v.Spec.IsAutoUnseal() {
 		unsealCommand = append(unsealCommand, "--auto")
 	}
+	if v.Spec.IsRaftStorage() {
+		unsealCommand = append(unsealCommand, "--raft", "--raft-leader-address", "https://"+v.Name+":8200")
+	}
+
 	_, containerPorts := getServicePorts(v)
 
 	podSpec := corev1.PodSpec{
@@ -1133,6 +1138,14 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						Name:  "VAULT_LOCAL_CONFIG",
 						Value: configJSON,
 					},
+					{
+						Name: "POD_NAME",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "metadata.name",
+							},
+						},
+					},
 				})),
 				VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
 				Resources:    *getVaultResource(v),
@@ -1145,13 +1158,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Name:            "vault",
 				Args:            []string{"server"},
 				Ports:           containerPorts,
-				Env: withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
-					// https://github.com/hashicorp/docker-vault/blob/master/0.X/docker-entrypoint.sh#L12
-					{
-						Name:  "VAULT_CLUSTER_INTERFACE",
-						Value: "eth0",
-					},
-				}))),
+				Env:             withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{}))),
 				SecurityContext: &corev1.SecurityContext{
 					Capabilities: &corev1.Capabilities{
 						Add: []corev1.Capability{"IPC_LOCK"},
@@ -1193,6 +1200,14 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						Name:  k8s.EnvK8SOwnerReference,
 						Value: string(ownerJSON),
 					},
+					{
+						Name: "POD_NAME",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "metadata.name",
+							},
+						},
+					},
 				}))),
 				Ports: []corev1.ContainerPort{{
 					Name:          "metrics",
@@ -1215,7 +1230,12 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		return nil, err
 	}
 
-	dep := &appsv1.StatefulSet{
+	podManagementPolicy := appsv1.PodManagementPolicyType(appsv1.ParallelPodManagement) // TODO this unncessary cast can be removed after k8s.io/api 1.14.0
+	if v.Spec.IsRaftStorage() {
+		podManagementPolicy = appsv1.OrderedReadyPodManagement
+	}
+
+	return &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
 			Kind:       "StatefulSet",
@@ -1230,7 +1250,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
 			},
-			PodManagementPolicy: appsv1.ParallelPodManagement,
+			PodManagementPolicy: podManagementPolicy,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
@@ -1241,9 +1261,9 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				},
 				Spec: podSpec,
 			},
+			VolumeClaimTemplates: v.Spec.VolumeClaimTemplates,
 		},
-	}
-	return dep, nil
+	}, nil
 }
 
 // Annotations Functions
@@ -1641,13 +1661,13 @@ func withSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
 // labelsForVault returns the labels for selecting the resources
 // belonging to the given vault CR name.
 func labelsForVault(name string) map[string]string {
-	return map[string]string{"app": "vault", "vault_cr": name}
+	return map[string]string{"app.kubernetes.io/name": "vault", "vault_cr": name}
 }
 
 // labelsForVaultConfigurer returns the labels for selecting the resources
 // belonging to the given vault CR name.
 func labelsForVaultConfigurer(name string) map[string]string {
-	return map[string]string{"app": "vault-configurator", "vault_cr": name}
+	return map[string]string{"app.kubernetes.io/name": "vault-configurator", "vault_cr": name}
 }
 
 // Extend Labels with Vault User defined ones
