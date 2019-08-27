@@ -1,10 +1,17 @@
+# Installing Prometheus Operator is required to make this example work:
+# kubectl apply -f https://raw.githubusercontent.com/coreos/prometheus-operator/master/bundle.yaml
+#
+# After applying this check the Vault targets on the Prometheus UI:
+#  1. kubectl port-forward prometheus-prometheus-0 9090
+#  2. open http://localhost:9090/targets
+
 apiVersion: "vault.banzaicloud.com/v1alpha1"
 kind: "Vault"
 metadata:
   name: "vault"
 spec:
   size: 1
-  image: vault:1.1.0
+  image: vault:1.2.2
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
@@ -53,23 +60,19 @@ spec:
   # See: https://github.com/banzaicloud/bank-vaults#example-external-vault-configuration for more details.
   externalConfig:
     policies:
-      - name: allow_secrets
-        rules: path "secret/*" {
-          capabilities = ["create", "read", "update", "delete", "list"]
-          }
-      - name: metrics
+      - name: prometheus-operator
         rules: path "sys/metrics" {
-          capabilities = ["read"]
+          capabilities = ["list", "read"]
           }
+
     auth:
       - type: kubernetes
         roles:
-          # Allow every pod in the default namespace to use the secret kv store
-          - name: default
-            bound_service_account_names: default
+          - name: prometheus
+            bound_service_account_names: prometheus
             bound_service_account_namespaces: default
-            policies: allow_secrets
-            ttl: 1h
+            policies: prometheus-operator
+            ttl: 4h
 
 ---
 apiVersion: v1
@@ -77,24 +80,75 @@ kind: PersistentVolumeClaim
 metadata:
   name: vault-file
 spec:
-  # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class-1
-  # storageClassName: ""
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 1Gi
 
-# ---
-# apiVersion: v1
-# kind: PersistentVolume
-# metadata:
-#   name: vault-file
-# spec:
-#   capacity:
-#     storage: 1Gi
-#   accessModes:
-#   - ReadWriteOnce
-#   persistentVolumeReclaimPolicy: Delete
-#   hostPath:
-#     path: /vault/file
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-agent-config
+data:
+  vault-agent-config.hcl: |
+    auto_auth {
+      method "kubernetes" {
+        mount_path = "auth/kubernetes"
+        config = {
+          role = "prometheus"
+        }
+      }
+
+      sink "file" {
+        config = {
+          path = "/home/vault/config-out/.vault-token"
+        }
+      }
+    }
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+
+---
+
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: prometheus
+spec:
+  serviceAccountName: prometheus
+  serviceMonitorSelector:
+    matchLabels:
+      app.kubernetes.io/name: vault
+  configMaps:
+  - vault-agent-config
+  containers:
+  - name: vault-agent-auth
+    image: vault
+    securityContext:
+      runAsUser: 65534
+    volumeMounts:
+      - name: configmap-vault-agent-config
+        mountPath: /etc/vault
+      - name: config-out
+        mountPath: /home/vault/config-out
+    env:
+      - name: VAULT_ADDR
+        value: https://vault:8200
+      - name: VAULT_SKIP_VERIFY
+        value: "true"
+    command: ["vault"]
+    args:
+      [
+        "agent",
+        "-config=/etc/vault/vault-agent-config.hcl",
+        "-log-level=debug",
+      ]
