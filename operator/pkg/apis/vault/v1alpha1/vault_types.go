@@ -306,14 +306,15 @@ type VaultSpec struct {
 
 // HAStorageTypes is the set of storage backends supporting High Availability
 var HAStorageTypes = map[string]bool{
-	"consul":    true,
-	"dynamodb":  true,
-	"etcd":      true,
-	"gcs":       true,
-	"mysql":     true,
-	"raft":      true,
-	"spanner":   true,
-	"zookeeper": true,
+	"consul":     true,
+	"dynamodb":   true,
+	"etcd":       true,
+	"gcs":        true,
+	"mysql":      true,
+	"postgresql": true,
+	"raft":       true,
+	"spanner":    true,
+	"zookeeper":  true,
 }
 
 // HasHAStorage detects if Vault is configured to use a storage backend which supports High Availability or if it has
