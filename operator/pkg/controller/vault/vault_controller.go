@@ -708,7 +708,7 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 			TLSConfig: &monitorv1.TLSConfig{
 				InsecureSkipVerify: true,
 			},
-			BearerTokenFile: fmt.Sprintf("/etc/prometheus/secrets/%s/vault.token", v.Name),
+			BearerTokenFile: fmt.Sprintf("/etc/prometheus/config_out/.%s-token", v.Name),
 		}}
 	} else {
 		serviceMonitor.Spec.Endpoints = []monitorv1.Endpoint{{
