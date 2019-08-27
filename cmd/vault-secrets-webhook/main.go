@@ -873,7 +873,7 @@ func init() {
 	viper.SetDefault("tls_cert_file", "")
 	viper.SetDefault("tls_private_key_file", "")
 	viper.SetDefault("listen_address", ":8443")
-	viper.SetDefault("telemetry_listen_address", ":8444")
+	viper.SetDefault("telemetry_listen_address", "")
 	viper.SetDefault("default_image_pull_secret", "")
 	viper.SetDefault("default_image_pull_secret_namespace", "")
 	viper.SetDefault("registry_skip_verify", "false")
@@ -907,6 +907,17 @@ func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, rec
 
 var logger *log.Logger
 
+func serveMetrics(addr string) {
+	logger.Infof("Telemetry on http://%s", addr)
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	err := http.ListenAndServe(addr, mux)
+	if err != nil {
+		logger.Fatalf("error serving telemetry: %s", err)
+	}
+}
+
 func main() {
 	k8sClient, err := newK8SClient()
 	if err != nil {
@@ -929,22 +940,17 @@ func main() {
 	mux.Handle("/configmaps", configMapHandler)
 	mux.Handle("/healthz", http.HandlerFunc(healthzHandler))
 
-	tMux := http.NewServeMux()
-	tMux.Handle("/metrics", promhttp.Handler())
-
 	telemetryAddress := viper.GetString("telemetry_listen_address")
 	listenAddress := viper.GetString("listen_address")
 	tlsCertFile := viper.GetString("tls_cert_file")
 	tlsPrivateKeyFile := viper.GetString("tls_private_key_file")
 
-	go func() {
-		// Serving telemetry on another address avoid TLS problems
-		logger.Infof("Telemetry on http://%s", telemetryAddress)
-		err = http.ListenAndServe(telemetryAddress, tMux)
-		if err != nil {
-			logger.Fatalf("error serving telemetry: %s", err)
-		}
-	}()
+	if len(telemetryAddress) > 0 {
+		// Serving metrics without TLS on separated address
+		go serveMetrics(telemetryAddress)
+	} else {
+		mux.Handle("/metrics", promhttp.Handler())
+	}
 
 	if tlsCertFile == "" && tlsPrivateKeyFile == "" {
 		logger.Infof("Listening on http://%s", listenAddress)
