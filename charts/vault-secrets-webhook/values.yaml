@@ -33,6 +33,8 @@ metrics:
   serviceMonitor:
     enabled: false
     scrapeInterval: 30s
+    # metricRelabelings: []
+    # relabelings: []
 
 volumes: []
 # - name: vault-tls
