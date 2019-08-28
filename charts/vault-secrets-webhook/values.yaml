@@ -31,8 +31,8 @@ metrics:
   enabled: false
   port: 8444
   serviceMonitor:
-    scrapeInterval: 30s
     enabled: false
+    scrapeInterval: 30s
 
 volumes: []
 # - name: vault-tls
