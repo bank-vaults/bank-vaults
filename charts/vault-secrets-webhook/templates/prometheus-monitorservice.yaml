@@ -14,7 +14,7 @@ metadata:
     {{- end }}
 spec:
   endpoints:
-  - interval: 30s
+  - interval: {{ .Values.metrics.serviceMonitor.scrapeInterval }}
     port: metrics
     {{- if .Values.metrics.serviceMonitor.relabellings }}
     metricrelabelings:
