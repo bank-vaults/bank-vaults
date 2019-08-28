@@ -29,12 +29,9 @@ env:
 
 metrics:
   enabled: false
-  port: 8443
+  port: 8444
   serviceMonitor:
     enabled: false
-    scheme: https
-    tlsConfig:
-      insecureSkipVerify: true
 
 volumes: []
 # - name: vault-tls
