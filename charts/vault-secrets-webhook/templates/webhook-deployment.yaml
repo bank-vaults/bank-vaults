@@ -55,6 +55,8 @@ spec:
               value: /var/serving-cert/tls.key
             - name: DEBUG
               value: {{ .Values.debug | quote }}
+            - name: LISTEN_ADDRESS
+              value: {{ .Values.service.internalPort }}
             {{- if .Values.metrics.enabled }}
             - name: TELEMETRY_LISTEN_ADDRESS
               value: {{ .Values.metrics.port }}
