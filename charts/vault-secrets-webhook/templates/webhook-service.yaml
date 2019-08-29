@@ -13,7 +13,7 @@ spec:
   ports:
     - name: https
       port: {{ .Values.service.externalPort }}
-      targetPort: {{ .Values.service.externalPort }}
+      targetPort: https
       protocol: TCP
   selector:
     app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}
@@ -36,7 +36,7 @@ spec:
   ports:
   - name: metrics
     port: {{ .Values.metrics.port }}
-    targetPort: {{ .Values.metrics.port }}
+    targetPort: metrics
     protocol: TCP
   selector:
     app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}
