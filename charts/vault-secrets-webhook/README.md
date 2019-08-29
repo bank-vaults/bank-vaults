@@ -78,6 +78,8 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | metrics.enabled                          | enable serving metrics                                                       | `false`                             |
 | metrics.port                             | port to serving metrics                                                      | `:8444`                             |
 | metrics.serviceMonitor.enabled           | enable monitoring via Prometheus Operator (`metrics.enabled` must be `true`) | `false`                             |
-| metrics.serviceMonitor.scrapeInterval    | scrape interval for ServiceMonitor                                           | `30s`                               |
+| metrics.serviceMonitor.scheme            | HTTP scheme to use for scraping                                              | `https`                             |
+| metrics.serviceMonitor.tlsConfig         | TLS configuration to use when scraping the endpoint                          | `{insecureSkipVerify: true}`        |
+| metrics.serviceMonitor.scrapeInterval    | interval between consecutive scrapes                                         | `30s`                               |
 | metrics.serviceMonitor.metricRelabelings | [MetricRelabelConfigs](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig) to apply to samples before ingestion                    | `[]`                                |
 | metrics.serviceMonitor.relabelings       | [RelabelConfigs](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig) to apply to samples before scraping                           | `[]`                                |
