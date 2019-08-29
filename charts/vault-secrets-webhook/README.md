@@ -83,3 +83,4 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | metrics.serviceMonitor.scrapeInterval    | interval between consecutive scrapes                                         | `30s`                               |
 | metrics.serviceMonitor.metricRelabelings | [MetricRelabelConfigs](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig) to apply to samples before ingestion                    | `[]`                                |
 | metrics.serviceMonitor.relabelings       | [RelabelConfigs](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig) to apply to samples before scraping                           | `[]`                                |
+| metrics.serviceMonitor.additionalLabels  | additional labels for ServiceMonitor                                         | `{}`                                |
