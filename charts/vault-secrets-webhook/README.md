@@ -76,7 +76,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | podDisruptionBudget.enabled              | enable PodDisruptionBudget for Kong                                          | `false`                             |
 | podDisruptionBudget.minAvailable         | represents the number of Pods that must be available (integer or percentage) | `1`                                 |
 | metrics.enabled                          | enable serving metrics                                                       | `false`                             |
-| metrics.port                             | port to serving metrics                                                      | `:8444`                             |
+| metrics.port                             | port to serving metrics                                                      | `8444`                              |
 | metrics.serviceMonitor.enabled           | enable monitoring via Prometheus Operator (`metrics.enabled` must be `true`) | `false`                             |
 | metrics.serviceMonitor.scheme            | HTTP scheme to use for scraping                                              | `https`                             |
 | metrics.serviceMonitor.tlsConfig         | TLS configuration to use when scraping the endpoint                          | `{insecureSkipVerify: true}`        |
