@@ -57,7 +57,7 @@ spec:
               value: ":{{ .Values.service.internalPort }}"
             - name: DEBUG
               value: {{ .Values.debug | quote }}
-            {{- if .Values.metrics.enabled }}
+            {{- if and .Values.metrics.enabled (not (eq .Values.service.internalPort .Values.metrics.port)) }}
             - name: TELEMETRY_LISTEN_ADDRESS
               value: ":{{ .Values.metrics.port }}"
             {{- end }}

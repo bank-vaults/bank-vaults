@@ -16,6 +16,7 @@ spec:
   endpoints:
   - interval: {{ .Values.metrics.serviceMonitor.scrapeInterval }}
     port: metrics
+    scheme: {{ .Values.metrics.serviceMonitor.scheme }}
     {{- if .Values.metrics.serviceMonitor.metricRelabelings }}
     metricRelabelings:
 {{ toYaml .Values.metrics.serviceMonitor.metricRelabelings | indent 6 }}
@@ -23,6 +24,10 @@ spec:
     {{- if .Values.metrics.serviceMonitor.relabelings }}
     relabelings:
 {{ toYaml .Values.metrics.serviceMonitor.relabelings | indent 6 }}
+    {{- end }}
+    {{- if and .Values.metrics.serviceMonitor.tlsConfig }}
+    tlsConfig:
+{{ toYaml .Values.metrics.serviceMonitor.tlsConfig | indent 6 }}
     {{- end }}
   jobLabel: {{ template "vault-secrets-webhook.name" . }}
   selector:

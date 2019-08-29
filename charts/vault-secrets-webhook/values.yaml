@@ -29,10 +29,13 @@ env:
 
 metrics:
   enabled: false
-  port: 8444
+  port: 8443
   serviceMonitor:
     enabled: false
     scrapeInterval: 30s
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
     # metricRelabelings: []
     # relabelings: []
 
