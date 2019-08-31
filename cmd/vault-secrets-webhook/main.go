@@ -127,7 +127,7 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 		containers = append(containers, corev1.Container{
 			Name:            "vault-agent",
 			Image:           viper.GetString("vault_image"),
-			ImagePullPolicy: corev1.PullIfNotPresent,
+			ImagePullPolicy: corev1.PullPolicy(viper.GetString("vault_image_pull_policy")),
 			SecurityContext: securityContext,
 			Command:         []string{"vault", "agent", "-config=/vault/agent/config.hcl"},
 			Env:             containerEnvVars,
@@ -145,7 +145,7 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 		containers = append(containers, corev1.Container{
 			Name:            "copy-vault-env",
 			Image:           viper.GetString("vault_env_image"),
-			ImagePullPolicy: corev1.PullIfNotPresent,
+			ImagePullPolicy: corev1.PullPolicy(viper.GetString("vault_env_image_pull_policy")),
 			Command:         []string{"sh", "-c", "cp /usr/local/bin/vault-env /vault/"},
 			VolumeMounts: []corev1.VolumeMount{
 				{
@@ -858,7 +858,9 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig vaultConfig, n
 
 func init() {
 	viper.SetDefault("vault_image", "vault:latest")
+	viper.SetDefault("vault_image_pull_policy", string(corev1.PullIfNotPresent))
 	viper.SetDefault("vault_env_image", "banzaicloud/vault-env:latest")
+	viper.SetDefault("vault_env_image_pull_policy", string(corev1.PullIfNotPresent))
 	viper.SetDefault("vault_ct_image", "hashicorp/consul-template:0.19.6-dev-alpine")
 	viper.SetDefault("vault_addr", "https://vault:8200")
 	viper.SetDefault("vault_skip_verify", "false")
