@@ -62,7 +62,7 @@ require (
 	google.golang.org/genproto v0.0.0-20190716160619-c506a9f90610 // indirect
 	google.golang.org/grpc v1.22.1 // indirect
 	gopkg.in/ini.v1 v1.42.0 // indirect
-	k8s.io/api v0.0.0-20190809220925-3ab596449d6f
+	k8s.io/api v0.0.0-20190820101039-d651a1528133
 	k8s.io/apimachinery v0.0.0-20190823012420-8ca64af22337
 	k8s.io/client-go v11.0.1-0.20190516230509-ae8359b20417+incompatible
 	k8s.io/code-generator v0.0.0-20190808180452-d0071a119380
@@ -78,7 +78,7 @@ replace k8s.io/api => k8s.io/api v0.0.0-20181213150558-05914d821849
 
 replace k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20181127025237-2b1284ed4c93
 
-replace k8s.io/client-go => k8s.io/client-go v11.0.0
+replace k8s.io/client-go => k8s.io/client-go v10.0.0+incompatible
 
 replace k8s.io/code-generator => k8s.io/code-generator v0.0.0-20190416052311-01a054e913a9
 
