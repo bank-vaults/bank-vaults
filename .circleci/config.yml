@@ -20,21 +20,9 @@ jobs:
     steps:
       - checkout
 
-      # - restore_cache:
-      #     name: Restore Go module cache
-      #     keys:
-      #     - gomod-v3-{{ checksum "go.sum" }}
-      #     - gomod-v3
-
       - run:
           name: Install dependencies
           command: go mod download
-
-      # - save_cache:
-      #     name: Save Go module cache
-      #     key: gomod-v3-{{ checksum "go.sum" }}
-      #     paths:
-      #         - /go/pkg/mod
 
       - restore_cache:
           name: Restore license cache
