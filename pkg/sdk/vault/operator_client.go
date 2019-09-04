@@ -1081,7 +1081,44 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 					configPath = fmt.Sprintf("%s/%s", path, configOption)
 				}
 
+				// Control if the configs should be updated or just Created once and skipped later on
+				// This is a workaround to secrets backend like GCP that will destroy and recreate secrets at every iteration
+				createOnly := cast.ToBool(subConfigData["create_only"])
+				// Delete the create_only key from the map, so we don't push it to vault
+				delete(subConfigData, "create_only")
+
 				rotate := cast.ToBool(subConfigData["rotate"])
+				// Delete the rotate key from the map, so we don't push it to vault
+				delete(subConfigData, "rotate")
+
+				var dontUpdate = false
+				if (createOnly || rotate) && mountExists {
+					sec, err := v.cl.Logical().Read(configPath)
+					if err != nil {
+						return fmt.Errorf("error reading configPath %s: %s", configPath, err.Error())
+					}
+
+					if sec != nil {
+						reason := "rotate"
+						if createOnly {
+							reason = "create_only"
+						}
+						logrus.Infoln("Secret at configpath %s already exists, %s was set so this will not be updated", configPath, reason)
+						dontUpdate = true
+					}
+				}
+
+				if !dontUpdate {
+					_, err = v.cl.Logical().Write(configPath, subConfigData)
+
+					if err != nil {
+						if isOverwriteProhibitedError(err) {
+							logrus.Infoln("can't reconfigure", configPath, "please delete it manually")
+							continue
+						}
+						return fmt.Errorf("error configuring %s config in vault: %s", configPath, err.Error())
+					}
+				}
 
 				// For secret engines where the root credentials are rotatable we don't wan't to reconfigure again
 				// with the old credentials, because that would cause access denied issues. Currently these are:
@@ -1092,43 +1129,6 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 						(secretEngineType == "aws" && configOption == "config/root")) {
 
 					// TODO we need to find out if it was rotated or not
-					err = v.rotateSecretEngineCredentials(secretEngineType, path, name.(string), configPath)
-					if err != nil {
-						return fmt.Errorf("error rotating credentials for '%s' config in vault: %s", configPath, err.Error())
-					}
-
-					logrus.Infof("skipping reconfiguration of %s because of credential rotation", configPath)
-					continue
-				}
-
-				// Control if the configs should be updated or just Created once and skipped later on
-				// This is a workaround to secrets backend like GCP that will destroy and recreate secrets at every iteration
-				createOnly := cast.ToBool(subConfigData["create_only"])
-				// Delete the create_only key from the map, so we don't push it to vault
-				delete(subConfigData, "create_only")
-
-				if createOnly && mountExists {
-					sec, err := v.cl.Logical().Read(configPath)
-					if err != nil {
-						return fmt.Errorf("error reading configPath %s: %s", configPath, err.Error())
-					}
-
-					if sec != nil {
-						logrus.Infoln("Secret at configpath ", configPath, "already exists, create_only was set so this will skipped and not updated")
-						continue
-					}
-				}
-
-				_, err = v.cl.Logical().Write(configPath, subConfigData)
-				if err != nil {
-					if isOverwriteProhibitedError(err) {
-						logrus.Infoln("can't reconfigure", configPath, "please delete it manually")
-						continue
-					}
-					return fmt.Errorf("error configuring %s config in vault: %s", configPath, err.Error())
-				}
-
-				if rotate {
 					err = v.rotateSecretEngineCredentials(secretEngineType, path, name.(string), configPath)
 					if err != nil {
 						return fmt.Errorf("error rotating credentials for '%s' config in vault: %s", configPath, err.Error())
