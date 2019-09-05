@@ -118,7 +118,7 @@ spec:
           value: vault:secret/data/valami/aws#AWS_SECRET_ACCESS_KEY
 ```
 
-## Getting secret data from Vault and replace it in Kubernetes Sercret
+## Getting secret data from Vault and replace it in Kubernetes Secret
 
 You can mutate secrets as well if you set annotations and define proper vault path in secret data:
 ```
