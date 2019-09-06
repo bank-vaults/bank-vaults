@@ -218,6 +218,13 @@ func (k *ContainerInfo) parseDockerConfig(dockerCreds DockerCreds) (bool, error)
 				if len(username) <= 0 {
 					return false, fmt.Errorf("username element of auth field for registry %s missing", registryName)
 				}
+				// In Google Cloud Registry decoded string looks like:
+				// ```
+				// _json_key:{
+				// 	"type": "service_account",
+				// 	...
+				// }
+				// ```
 				password := strings.TrimPrefix(string(decodedAuth), fmt.Sprintf("%s:", username))
 				if len(password) <= 0 {
 					return false, fmt.Errorf("password element of auth field for registry %s missing", registryName)
