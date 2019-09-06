@@ -211,19 +211,19 @@ func (k *ContainerInfo) parseDockerConfig(dockerCreds DockerCreds) (bool, error)
 					return false, fmt.Errorf("failed to decode auth field for registry %s: %s", registryName, err.Error())
 				}
 				auth := strings.Split(string(decodedAuth), ":")
-				if len(auth) != 2 {
+				if len(auth) < 2 {
 					return false, fmt.Errorf("unexpected number of elements in auth field for registry %s: %d (expected 2)", registryName, len(auth))
 				}
-				// decodedAuth is something like ":xxx"
-				if len(auth[0]) <= 0 {
+				username := auth[0]
+				if len(username) <= 0 {
 					return false, fmt.Errorf("username element of auth field for registry %s missing", registryName)
 				}
-				// decodedAuth is something like "xxx:"
-				if len(auth[1]) <= 0 {
+				password := strings.TrimPrefix(string(decodedAuth), fmt.Sprintf("%s:", username))
+				if len(password) <= 0 {
 					return false, fmt.Errorf("password element of auth field for registry %s missing", registryName)
 				}
-				k.RegistryUsername = auth[0]
-				k.RegistryPassword = auth[1]
+				k.RegistryUsername = username
+				k.RegistryPassword = password
 			} else {
 				// the auths section has an entry for the registry, but it neither contains
 				// username/password fields nor an auth field, fail
