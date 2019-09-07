@@ -306,7 +306,7 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 			}
 
 			if found {
-				logger.Infof("found credentials for registry %s in default imagePullSecret: %s/s", k.RegistryName, defaultImagePullSecretNamespace, defaultImagePullSecret)
+				logger.Infof("found credentials for registry %s in default imagePullSecret: %s/%s", k.RegistryName, defaultImagePullSecretNamespace, defaultImagePullSecret)
 			}
 		}
 	}
