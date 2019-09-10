@@ -48,6 +48,7 @@ type clientOptions struct {
 	role      string
 	authPath  string
 	tokenPath string
+	token	  string
 }
 
 // ClientOption configures a Vault client using the functional options paradigm popularized by Rob Pike and Dave Cheney.
@@ -77,6 +78,13 @@ type ClientTokenPath string
 
 func (co ClientTokenPath) apply(o *clientOptions) {
 	o.tokenPath = string(co)
+}
+
+// ClientToken is a Vault token.
+type ClientToken string
+
+func (co ClientToken) apply(o *clientOptions) {
+	o.token = string(co)
 }
 
 // Client is a Vault client with Kubernetes support and token automatic renewing
@@ -168,6 +176,8 @@ func NewClientFromConfig(config *vaultapi.Config, opts ...ClientOption) (*Client
 // NewClientFromRawClient creates a new Vault client from custom raw client.
 func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*Client, error) {
 	logical := rawClient.Logical()
+	client := &Client{client: rawClient, logical: logical}
+
 	var tokenRenewer *vaultapi.Renewer
 
 	o := &clientOptions{}
@@ -194,9 +204,11 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		}
 	}
 
-	client := &Client{client: rawClient, logical: logical}
+	// Add token if set
+	if o.token != "" {
+		rawClient.SetToken(o.token)
 
-	if rawClient.Token() == "" {
+	} else if rawClient.Token() == "" {
 		token, err := ioutil.ReadFile(o.tokenPath)
 		if err == nil {
 			rawClient.SetToken(string(token))
