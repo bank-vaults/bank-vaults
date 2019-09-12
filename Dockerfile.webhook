@@ -5,6 +5,7 @@ FROM golang:${GO_VERSION}-buster AS builder
 RUN apt-get update && apt-get install -y ca-certificates make git curl mercurial
 
 ARG GOPROXY
+ENV GO_EXTLINK_ENABLED true
 
 RUN mkdir -p /build
 WORKDIR /build
@@ -14,7 +15,7 @@ COPY pkg/sdk/go.* /build/pkg/sdk/
 RUN go mod download
 
 COPY . /build
-RUN go install ./cmd/vault-secrets-webhook
+RUN go install -ldflags -linkmode=external ./cmd/vault-secrets-webhook
 
 FROM debian:buster-slim
 
