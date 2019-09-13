@@ -153,9 +153,6 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 					MountPath: "/vault/",
 				},
 			},
-			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
-			},
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("50m"),
