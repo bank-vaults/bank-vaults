@@ -878,6 +878,7 @@ func init() {
 	viper.SetDefault("telemetry_listen_address", "")
 	viper.SetDefault("default_image_pull_secret", "")
 	viper.SetDefault("default_image_pull_secret_namespace", "")
+	viper.SetDefault("default_image_pull_docker_config_json_key", corev1.DockerConfigJsonKey)
 	viper.SetDefault("registry_skip_verify", "false")
 	viper.SetDefault("debug", "false")
 	viper.AutomaticEnv()
