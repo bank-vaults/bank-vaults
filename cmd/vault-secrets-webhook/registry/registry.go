@@ -262,7 +262,8 @@ func (k *ContainerInfo) checkImagePullSecret(namespace string, secret string) (b
 
 	var dockerCreds DockerCreds
 
-	err = json.Unmarshal(data[corev1.DockerConfigJsonKey], &dockerCreds)
+	dockerConfigJSONKey := viper.GetString("default_image_pull_docker_config_json_key")
+	err = json.Unmarshal(data[dockerConfigJSONKey], &dockerCreds)
 	if err != nil {
 		return false, fmt.Errorf("cannot unmarshal docker configuration from imagePullSecret: %s", err.Error())
 	}
