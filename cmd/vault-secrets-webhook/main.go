@@ -60,6 +60,7 @@ type vaultConfig struct {
 	pspAllowPrivilegeEscalation bool
 	ignoreMissingSecrets        string
 	vaultEnvPassThrough         string
+	configfilePath              string
 	mutateConfigMap             bool
 }
 
@@ -390,6 +391,11 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	} else {
 		vaultConfig.vaultEnvPassThrough = viper.GetString("vault_env_passthrough")
 	}
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-configfile-path"]; ok {
+		vaultConfig.configfilePath = val
+	} else {
+		vaultConfig.configfilePath = "/vault/secrets"
+	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-pull-policy"]; ok {
 		switch val {
@@ -687,7 +693,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 	return mutated, nil
 }
 
-func addSecretsVolToContainers(containers []corev1.Container, logger *log.Logger) {
+func addSecretsVolToContainers(vaultConfig vaultConfig, containers []corev1.Container, logger *log.Logger) {
 
 	for i, container := range containers {
 
@@ -696,7 +702,7 @@ func addSecretsVolToContainers(containers []corev1.Container, logger *log.Logger
 		container.VolumeMounts = append(container.VolumeMounts, []corev1.VolumeMount{
 			{
 				Name:      "ct-secrets",
-				MountPath: "/vault/secrets",
+				MountPath: vaultConfig.configfilePath,
 			},
 		}...)
 
@@ -828,7 +834,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig vaultConfig, n
 	if vaultConfig.ctConfigMap != "" {
 		logger.Debugf("Consul Template config found")
 
-		addSecretsVolToContainers(pod.Spec.Containers, logger)
+		addSecretsVolToContainers(vaultConfig, pod.Spec.Containers, logger)
 
 		if vaultConfig.ctShareProcessDefault == "empty" {
 			logger.Debugf("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
