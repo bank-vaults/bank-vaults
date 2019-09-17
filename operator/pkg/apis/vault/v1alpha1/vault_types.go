@@ -280,7 +280,7 @@ type VaultSpec struct {
 
 	// VolumeClaimTemplates define some extra Kubernetes PersistentVolumeClaim templates for the Vault Statefulset.
 	// default:
-	VolumeClaimTemplates []v1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
+	VolumeClaimTemplates []corev1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
 
 	// VaultEnvsConfig is a list of Kubernetes environment variable definitions that will be passed to Vault Pods.
 	// default:

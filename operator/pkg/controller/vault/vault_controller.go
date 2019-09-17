@@ -1190,6 +1190,10 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		return nil, err
 	}
 
+	if v.Spec.IsRaftStorage() {
+		unsealCommand = append(unsealCommand, "--raft", "--raft-leader-address", "https://"+v.Name+":8200")
+	}
+
 	podSpec := corev1.PodSpec{
 		Affinity: &corev1.Affinity{
 			PodAntiAffinity: getPodAntiAffinity(v),
@@ -1227,7 +1231,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Name:            "vault",
 				Args:            []string{"server"},
 				Ports:           containerPorts,
-				Env:             withCredentialsEnv(v, withVaultEnv(v, withVaultClusterInterfaceEnv(env))),
+				Env:             withCredentialsEnv(v, withVaultEnv(v, env)),
 				SecurityContext: &corev1.SecurityContext{
 					Capabilities: &corev1.Capabilities{
 						Add: []corev1.Capability{"IPC_LOCK"},
