@@ -34,9 +34,7 @@ require (
 	github.com/gorilla/mux v1.7.2 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
-	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/api v1.0.4
-	github.com/hashicorp/vault/sdk v0.1.13
 	github.com/heroku/docker-registry-client v0.0.0-20181004091502-47ecf50fd8d4
 	github.com/imdario/mergo v0.3.7
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
@@ -48,20 +46,6 @@ require (
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/common v0.6.0 // indirect
 	github.com/prometheus/procfs v0.0.3 // indirect
-	github.com/json-iterator/go v1.1.7
-	github.com/lib/pq v1.0.0 // indirect
-	github.com/mattn/go-isatty v0.0.8 // indirect
-	github.com/microcosm-cc/bluemonday v0.0.0-20180327211928-995366fdf961 // indirect
-	github.com/mitchellh/mapstructure v1.1.2
-	github.com/opencontainers/image-spec v1.0.1
-	github.com/operator-framework/operator-sdk v0.9.0
-	github.com/pierrec/lz4 v2.2.5+incompatible // indirect
-	github.com/pkg/errors v0.8.1
-	github.com/prometheus/client_golang v1.0.0
-	github.com/prometheus/common v0.6.0 // indirect
-	github.com/prometheus/procfs v0.0.3 // indirect
-	github.com/qor/qor v0.0.0-20180518090926-f171bc73933e
-	github.com/rainycape/unidecode v0.0.0-20150907023854-cb7f23ec59be // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/slok/kubewebhook v0.3.0
@@ -69,19 +53,12 @@ require (
 	github.com/spf13/cast v1.3.0
 	github.com/spf13/cobra v0.0.4
 	github.com/spf13/viper v1.4.0
-	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/ugorji/go v1.1.7 // indirect
-	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 // indirect
-	golang.org/x/net v0.0.0-20190724013045-ca1201d0de80 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	golang.org/x/sys v0.0.0-20190801041406-cbf593c0f2f3 // indirect
 	golang.org/x/tools v0.0.0-20190731214159-1e85ed8060aa // indirect
 	google.golang.org/api v0.3.0
-	google.golang.org/appengine v1.6.1 // indirect
 	google.golang.org/genproto v0.0.0-20190716160619-c506a9f90610 // indirect
 	google.golang.org/grpc v1.22.1 // indirect
-	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
-	gopkg.in/go-playground/validator.v8 v8.18.2 // indirect
 	gopkg.in/ini.v1 v1.42.0 // indirect
 	k8s.io/api v0.0.0-20190820101039-d651a1528133
 	k8s.io/apimachinery v0.0.0-20190823012420-8ca64af22337
