@@ -329,7 +329,12 @@ var HAStorageTypes = map[string]bool{
 }
 
 func (spec *VaultSpec) Validate() error {
-	if len(spec.GetListeners()) == 0 {
+	listeners, err := spec.GetListeners()
+	if err != nil {
+		return err
+	}
+
+	if len(listeners) == 0 {
 		return errors.New("vault: at least one listener has to be defined")
 	}
 
@@ -433,26 +438,50 @@ func (spec *VaultSpec) GetTLSExpiryThreshold() time.Duration {
 }
 
 // GetTLSDisable returns if Vault's TLS should be disabled
-func (spec *VaultSpec) GetTLSDisable(listener int) bool {
-	listeners := spec.GetListeners()
-	tcp := cast.ToStringMap(listeners[listener]["tcp"])
-	return cast.ToBool(tcp["tls_disable"])
+func (spec *VaultSpec) GetTLSDisable(listener int) (bool, error) {
+	listeners, err := spec.GetListeners()
+	if err != nil {
+		return false, err
+	}
+	tcp, err := cast.ToStringMapE(listeners[listener]["tcp"])
+	if err != nil {
+		return false, err
+	}
+	return cast.ToBool(tcp["tls_disable"]), nil
 }
 
 // GetTLSDisabledGlobally returns if Vault's TLS should be disabled entirely
-func (spec *VaultSpec) GetTLSDisabledGlobally() bool {
-	for listener := range spec.GetListeners() {
-		if !spec.GetTLSDisable(listener) {
-			return false
+func (spec *VaultSpec) GetTLSDisabledGlobally() (bool, error) {
+	liseners, err := spec.GetListeners()
+	if err != nil {
+		return false, err
+	}
+	for listener := range liseners {
+		disabled, err := spec.GetTLSDisable(listener)
+		if err != nil {
+			return false, err
+		}
+		if !disabled {
+			return false, nil
 		}
 	}
-	return true
+	return true, nil
 }
 
-func (spec *VaultSpec) GetListenerPort(listener int) (corev1.ServicePort, error) {
-	listeners := spec.GetListeners()
-	tcp := cast.ToStringMap(listeners[listener]["tcp"])
-	_, port, err := net.SplitHostPort(cast.ToString(tcp["address"]))
+func (spec *VaultSpec) GetListenerPort(index int) (corev1.ServicePort, error) {
+	listeners, err := spec.GetListeners()
+
+	tcp, err := cast.ToStringMapE(listeners[index]["tcp"])
+	if err != nil {
+		return corev1.ServicePort{}, err
+	}
+
+	address, err := cast.ToStringE(tcp["address"])
+	if err != nil {
+		return corev1.ServicePort{}, err
+	}
+
+	_, port, err := net.SplitHostPort(address)
 	if err != nil {
 		return corev1.ServicePort{}, err
 	}
@@ -468,18 +497,22 @@ func (spec *VaultSpec) GetListenerPort(listener int) (corev1.ServicePort, error)
 	}, nil
 }
 
-func (spec *VaultSpec) GetListeners() []map[string]interface{} {
+func (spec *VaultSpec) GetListeners() ([]map[string]interface{}, error) {
 	switch listeners := spec.Config["listener"].(type) {
 	case map[string]interface{}:
-		return []map[string]interface{}{listeners}
+		return []map[string]interface{}{listeners}, nil
 	case []interface{}:
 		var casted []map[string]interface{}
 		for _, listener := range listeners {
-			casted = append(casted, cast.ToStringMap(listener))
+			listenerAsMap, err := cast.ToStringMapE(listener)
+			if err != nil {
+				return nil, err
+			}
+			casted = append(casted, listenerAsMap)
 		}
-		return casted
+		return casted, nil
 	default:
-		return []map[string]interface{}{}
+		return []map[string]interface{}{}, nil
 	}
 }
 
@@ -605,7 +638,7 @@ func (spec *VaultSpec) IsRaftStorage() bool {
 // GetIngress the Ingress configuration for Vault if any
 func (vault *Vault) GetIngress() (*Ingress, error) {
 	if vault.Spec.Ingress != nil {
-		port, err := vault.Spec.GetListenerPort(0)
+		mainPort, err := vault.Spec.GetListenerPort(0)
 		if err != nil {
 			return nil, err
 		}
@@ -614,7 +647,7 @@ func (vault *Vault) GetIngress() (*Ingress, error) {
 		if vault.Spec.Ingress.Spec.Backend == nil {
 			vault.Spec.Ingress.Spec.Backend = &v1beta1.IngressBackend{
 				ServiceName: vault.Name,
-				ServicePort: intstr.FromString(port.Name),
+				ServicePort: intstr.FromString(mainPort.Name),
 			}
 		}
 
@@ -623,7 +656,12 @@ func (vault *Vault) GetIngress() (*Ingress, error) {
 		}
 
 		// If TLS is enabled add the Ingress TLS backend annotations
-		if !vault.Spec.GetTLSDisable(0) {
+		tlsDisabledForMainPort, err := vault.Spec.GetTLSDisable(0)
+		if err != nil {
+			return nil, err
+		}
+
+		if !tlsDisabledForMainPort {
 			// Supporting the NGINX ingress controller with TLS backends
 			// https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#backend-protocol
 			vault.Spec.Ingress.Annotations["nginx.ingress.kubernetes.io/backend-protocol"] = "HTTPS"

@@ -272,7 +272,12 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	tlsExpiration := time.Time{}
-	if !v.Spec.GetTLSDisabledGlobally() {
+	tlsDisabledGlobally, err := v.Spec.GetTLSDisabledGlobally()
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to parse tlsDisabledGlobally from Vault config: %v", err)
+	}
+
+	if !tlsDisabledGlobally {
 		// Check if we have an existing TLS Secret for Vault
 		var sec *corev1.Secret
 		existingSec := corev1.Secret{}
@@ -532,12 +537,17 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	port, err := v.Spec.GetListenerPort(0)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to fabricate ingress: %v", err)
+		return reconcile.Result{}, fmt.Errorf("failed to get vault port: %v", err)
+	}
+
+	portURIScheme, err := getVaultURIScheme(v, 0)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to get vault uri scheme: %v", err)
 	}
 
 	var leader string
 	for _, podName := range podNames {
-		url := fmt.Sprintf("%s://%s.%s:%d/v1/sys/health", strings.ToLower(string(getVaultURIScheme(v, 0))), podName, v.Namespace, port.Port)
+		url := fmt.Sprintf("%s://%s.%s:%d/v1/sys/health", strings.ToLower(string(portURIScheme)), podName, v.Namespace, port.Port)
 		resp, err := r.httpClient.Get(url)
 		if err == nil {
 			defer resp.Body.Close()
@@ -684,13 +694,23 @@ func serviceForVault(v *vaultv1alpha1.Vault) (*corev1.Service, error) {
 	if ingress != nil {
 		appProtocols := map[string]string{}
 
-		for listener := range v.Spec.GetListeners() {
+		listeners, err := v.Spec.GetListeners()
+		if err != nil {
+			return nil, err
+		}
+
+		for listener := range listeners {
 			port, err := v.Spec.GetListenerPort(listener)
 			if err != nil {
 				return nil, err
 			}
 
-			if v.Spec.GetTLSDisable(listener) {
+			tlsDisabled, err := v.Spec.GetTLSDisable(listener)
+			if err != nil {
+				return nil, err
+			}
+
+			if tlsDisabled {
 				appProtocols[port.Name] = "HTTP"
 			} else {
 				appProtocols[port.Name] = "HTTPS"
@@ -755,10 +775,14 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) (*monitorv1.ServiceMonitor, 
 		if err != nil {
 			return nil, err
 		}
+		portURIScheme, err := getVaultURIScheme(v, 0)
+		if err != nil {
+			return nil, err
+		}
 		serviceMonitor.Spec.Endpoints = []monitorv1.Endpoint{{
 			Interval: "30s",
 			Port:     port.Name,
-			Scheme:   strings.ToLower(string(getVaultURIScheme(v, 0))),
+			Scheme:   strings.ToLower(string(portURIScheme)),
 			Params:   map[string][]string{"format": []string{"prometheus"}},
 			Path:     "/v1/sys/metrics",
 			TLSConfig: &monitorv1.TLSConfig{
@@ -782,7 +806,12 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 
 	if len(v.Spec.ServicePorts) == 0 {
 
-		for listener := range v.Spec.GetListeners() {
+		listeners, err := v.Spec.GetListeners()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for listener := range listeners {
 			port, err := v.Spec.GetListenerPort(listener)
 			if err != nil {
 				return nil, nil, err
@@ -985,6 +1014,16 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 		return nil, err
 	}
 
+	volumeMounts, err = withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts))
+	if err != nil {
+		return nil, err
+	}
+
+	volumes, err = withTLSVolume(v, withCredentialsVolume(v, volumes))
+	if err != nil {
+		return nil, err
+	}
+
 	podSpec := corev1.PodSpec{
 		ServiceAccountName: v.Spec.GetServiceAccount(),
 		Containers: []corev1.Container{
@@ -1000,12 +1039,12 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 					Protocol:      "TCP",
 				}},
 				Env:          withSecretEnv(v, withCredentialsEnv(v, env)),
-				VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
+				VolumeMounts: volumeMounts,
 				WorkingDir:   "/config",
 				Resources:    *getBankVaultsResource(v),
 			},
 		},
-		Volumes:         withTLSVolume(v, withCredentialsVolume(v, volumes)),
+		Volumes:         volumes,
 		SecurityContext: withSecurityContext(v),
 		NodeSelector:    v.Spec.NodeSelector,
 		Tolerations:     v.Spec.Tolerations,
@@ -1096,7 +1135,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 
 	configSizeLimit := resource.MustParse("1Mi")
 
-	volumes := withTLSVolume(v, withCredentialsVolume(v, []corev1.Volume{
+	volumes, err := withTLSVolume(v, withCredentialsVolume(v, []corev1.Volume{
 		{
 			Name: "vault-config",
 			VolumeSource: corev1.VolumeSource{
@@ -1113,10 +1152,13 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			},
 		},
 	}))
+	if err != nil {
+		return nil, err
+	}
 
 	volumes = withStatsdVolume(v, withAuditLogVolume(v, volumes))
 
-	volumeMounts := withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{
+	volumeMounts, err := withTLSVolumeMount(v, withAuditLogVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{
 		{
 			Name:      "vault-config",
 			MountPath: "/vault/config",
@@ -1124,9 +1166,10 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			Name:      "vault-file",
 			MountPath: "/vault/file",
 		},
-	}))
-
-	volumeMounts = withAuditLogVolumeMount(v, volumeMounts)
+	})))
+	if err != nil {
+		return nil, err
+	}
 
 	// TODO Configure Vault to wait for etcd in an init container in this case
 	// If etcd size is < 0 means not create new etcd cluster
@@ -1194,6 +1237,21 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		unsealCommand = append(unsealCommand, "--raft", "--raft-leader-address", "https://"+v.Name+":8200")
 	}
 
+	mainPortScheme, err := getVaultURIScheme(v, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	volumeMountsForTemplater, err := withTLSVolumeMount(v, withCredentialsVolumeMount(v, withVaultVolumeMounts(v, volumeMounts)))
+	if err != nil {
+		return nil, err
+	}
+
+	volumeMountsForServer, err := withTLSVolumeMount(v, withCredentialsVolumeMount(v, withVaultVolumeMounts(v, []corev1.VolumeMount{})))
+	if err != nil {
+		return nil, err
+	}
+
 	podSpec := corev1.PodSpec{
 		Affinity: &corev1.Affinity{
 			PodAntiAffinity: getPodAntiAffinity(v),
@@ -1220,7 +1278,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						},
 					},
 				})),
-				VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
+				VolumeMounts: volumeMountsForTemplater,
 				Resources:    *getVaultResource(v),
 			},
 		},
@@ -1242,7 +1300,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				LivenessProbe: &corev1.Probe{
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
-							Scheme: getVaultURIScheme(v, 0),
+							Scheme: mainPortScheme,
 							Port:   intstr.FromString(containerPorts[0].Name),
 							Path:   "/v1/sys/init",
 						}},
@@ -1252,14 +1310,14 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				ReadinessProbe: &corev1.Probe{
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
-							Scheme: getVaultURIScheme(v, 0),
+							Scheme: mainPortScheme,
 							Port:   intstr.FromString(containerPorts[0].Name),
 							Path:   "/v1/sys/health?standbyok&perfstandbyok",
 						}},
 					PeriodSeconds:    5,
 					FailureThreshold: 2,
 				},
-				VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
+				VolumeMounts: volumeMountsForServer,
 				Resources:    *getVaultResource(v),
 			},
 			{
@@ -1281,7 +1339,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					ContainerPort: 9091,
 					Protocol:      "TCP",
 				}},
-				VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{})),
+				VolumeMounts: volumeMounts,
 				Resources:    *getBankVaultsResource(v),
 			},
 		})),
@@ -1427,12 +1485,20 @@ func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool) ([]corev1.EnvVar, error)
 	if localhost {
 		host = "127.0.0.1"
 	}
+
 	port, err := v.Spec.GetListenerPort(0)
 	if err != nil {
 		return nil, err
 	}
+
+	tlsDisabled, err := v.Spec.GetTLSDisable(0)
+	if err != nil {
+		return nil, err
+	}
+
 	var envs []corev1.EnvVar
-	if !v.Spec.GetTLSDisable(0) {
+
+	if !tlsDisabled {
 		envs = append(envs, []corev1.EnvVar{
 			{
 				Name:  api.EnvVaultAddress,
@@ -1450,11 +1516,16 @@ func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool) ([]corev1.EnvVar, error)
 			Value: fmt.Sprintf("http://%s:%d", host, port.Port),
 		})
 	}
+
 	return envs, nil
 }
 
-func withTLSVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
-	if !v.Spec.GetTLSDisabledGlobally() {
+func withTLSVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) ([]corev1.Volume, error) {
+	tlsDisabledGlobally, err := v.Spec.GetTLSDisabledGlobally()
+	if err != nil {
+		return nil, err
+	}
+	if !tlsDisabledGlobally {
 		volumes = append(volumes, corev1.Volume{
 			Name: "vault-tls",
 			VolumeSource: corev1.VolumeSource{
@@ -1464,17 +1535,21 @@ func withTLSVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Vol
 			},
 		})
 	}
-	return volumes
+	return volumes, nil
 }
 
-func withTLSVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
-	if !v.Spec.GetTLSDisabledGlobally() {
+func withTLSVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMount) ([]corev1.VolumeMount, error) {
+	tlsDisabledGlobally, err := v.Spec.GetTLSDisabledGlobally()
+	if err != nil {
+		return nil, err
+	}
+	if !tlsDisabledGlobally {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "vault-tls",
 			MountPath: "/vault/tls",
 		})
 	}
-	return volumeMounts
+	return volumeMounts, nil
 }
 
 func configMapForStatsD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
@@ -1677,11 +1752,15 @@ func getNodeAffinity(v *vaultv1alpha1.Vault) *corev1.NodeAffinity {
 	return &v.Spec.NodeAffinity
 }
 
-func getVaultURIScheme(v *vaultv1alpha1.Vault, listener int) corev1.URIScheme {
-	if v.Spec.GetTLSDisable(listener) {
-		return corev1.URISchemeHTTP
+func getVaultURIScheme(v *vaultv1alpha1.Vault, listener int) (corev1.URIScheme, error) {
+	tlsDisabled, err := v.Spec.GetTLSDisable(listener)
+	if err != nil {
+		return "", nil
 	}
-	return corev1.URISchemeHTTPS
+	if tlsDisabled {
+		return corev1.URISchemeHTTP, nil
+	}
+	return corev1.URISchemeHTTPS, nil
 }
 
 func withVaultVolumes(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
