@@ -1158,18 +1158,19 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 
 	volumes = withStatsdVolume(v, withAuditLogVolume(v, volumes))
 
-	volumeMounts, err := withTLSVolumeMount(v, withAuditLogVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{
+	volumeMountsForTemplater := []corev1.VolumeMount{
 		{
 			Name:      "vault-config",
 			MountPath: "/vault/config",
-		}, {
-			Name:      "vault-file",
-			MountPath: "/vault/file",
 		},
-	})))
+	}
+
+	volumeMountsForUnsealer, err := withTLSVolumeMount(v, withVaultVolumeMounts(v, withCredentialsVolumeMount(v, nil)))
 	if err != nil {
 		return nil, err
 	}
+
+	volumeMountsForServer := withAuditLogVolumeMount(v, append(volumeMountsForUnsealer, volumeMountsForTemplater...))
 
 	// TODO Configure Vault to wait for etcd in an init container in this case
 	// If etcd size is < 0 means not create new etcd cluster
@@ -1205,7 +1206,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			Name:      "etcd-tls",
 			MountPath: "/etcd/tls",
 		}
-		volumeMounts = append(volumeMounts, etcdVolumeMount)
+		volumeMountsForServer = append(volumeMountsForServer, etcdVolumeMount)
 	}
 
 	configJSON := v.Spec.ConfigJSON()
@@ -1238,16 +1239,6 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	}
 
 	mainPortScheme, err := getVaultURIScheme(v, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	volumeMountsForTemplater, err := withTLSVolumeMount(v, withCredentialsVolumeMount(v, withVaultVolumeMounts(v, volumeMounts)))
-	if err != nil {
-		return nil, err
-	}
-
-	volumeMountsForServer, err := withTLSVolumeMount(v, withCredentialsVolumeMount(v, withVaultVolumeMounts(v, []corev1.VolumeMount{})))
 	if err != nil {
 		return nil, err
 	}
@@ -1339,7 +1330,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					ContainerPort: 9091,
 					Protocol:      "TCP",
 				}},
-				VolumeMounts: volumeMounts,
+				VolumeMounts: volumeMountsForUnsealer,
 				Resources:    *getBankVaultsResource(v),
 			},
 		})),
@@ -1646,7 +1637,7 @@ func withStatsDContainer(v *vaultv1alpha1.Vault, owner string, containers []core
 			Image:           v.Spec.GetStatsDImage(),
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Name:            "prometheus-exporter",
-			Args:            []string{"--statsd.mapping-config=/tmp/statsd-mapping.conf"},
+			Args:            []string{"--statsd.mapping-config=/statsd-config/statsd-mapping.conf"},
 			Ports: []corev1.ContainerPort{{
 				Name:          "statsd",
 				ContainerPort: 9125,
@@ -1658,7 +1649,7 @@ func withStatsDContainer(v *vaultv1alpha1.Vault, owner string, containers []core
 			}},
 			VolumeMounts: []corev1.VolumeMount{{
 				Name:      "statsd-mapping",
-				MountPath: "/tmp/",
+				MountPath: "/statsd-config/",
 			}},
 			Resources: *getPrometheusExporterResource(v),
 		})
