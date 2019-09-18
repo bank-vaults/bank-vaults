@@ -66,6 +66,12 @@ func (environ *sanitizedEnviron) append(iname interface{}, ivalue interface{}) {
 }
 
 func main() {
+
+	if os.Getpid() != 1 {
+		fmt.Println("only allowed to run as PID 1")
+		os.Exit(-1)
+	}
+
 	ignoreMissingSecrets := os.Getenv("VAULT_IGNORE_MISSING_SECRETS") == "true"
 
 	// The login procedure takes the token from a file (if using Vault Agent)
