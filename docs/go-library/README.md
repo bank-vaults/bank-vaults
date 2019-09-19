@@ -4,7 +4,9 @@ This repository contains several Go packages for interacting with Vault, these p
 
 - `pkg/sdk/auth`
 
-    A GitHub OAuth2 based authentication system as a Gin Middleware, stores JWT bearer tokens in Vault.
+    Stores JWT bearer tokens in Vault.
+
+    (*NOTE: The Gin handler has been moved out to [gin-utilz](https://github.com/banzaicloud/gin-utilz/tree/master/.idea)* )
 
     ![authn](images/authn-vault-flow.png)
 

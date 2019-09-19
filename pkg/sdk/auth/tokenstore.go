@@ -41,6 +41,7 @@ type Token struct {
 type TokenStore interface {
 	Store(userID string, token *Token) error
 	Lookup(userID string, tokenID string) (*Token, error)
+	Exists(userID string, tokenID string) (bool, error)
 	Revoke(userID string, tokenID string) error
 	List(userID string) ([]*Token, error)
 	GC() error
@@ -126,6 +127,11 @@ func (tokenStore *inMemoryTokenStore) Store(userID string, token *Token) error {
 	return nil
 }
 
+func (tokenStore *inMemoryTokenStore) Exists(userID, tokenID string) (bool, error) {
+	token, err := tokenStore.Lookup(userID, tokenID)
+	return token != nil, err
+}
+
 func (tokenStore *inMemoryTokenStore) Lookup(userID, tokenID string) (*Token, error) {
 	tokenStore.RLock()
 	defer tokenStore.RUnlock()
@@ -198,6 +204,11 @@ func (tokenStore vaultTokenStore) Store(userID string, token *Token) error {
 	data := map[string]interface{}{"token": token}
 	_, err := tokenStore.logical.Write(tokenDataPath(userID, token.ID), vault.NewData(0, data))
 	return err
+}
+
+func (tokenStore vaultTokenStore) Exists(userID, tokenID string) (bool, error) {
+	token, err := tokenStore.Lookup(userID, tokenID)
+	return token != nil, err
 }
 
 func (tokenStore vaultTokenStore) Lookup(userID, tokenID string) (*Token, error) {

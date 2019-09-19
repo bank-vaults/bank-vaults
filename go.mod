@@ -8,11 +8,9 @@ require (
 	github.com/Azure/go-autorest v11.7.0+incompatible
 	github.com/Masterminds/semver v1.4.2
 	github.com/Masterminds/sprig v2.15.0+incompatible
-	github.com/NYTimes/gziphandler v1.0.1 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190308093441-53f19b3c6bee
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20171213061034-52de7239022c
 	github.com/aokoli/goutils v1.0.1 // indirect
-	github.com/apache/thrift v0.12.0
 	github.com/aws/aws-sdk-go v1.15.31
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/banzaicloud/bank-vaults/pkg/sdk v0.0.0-00010101000000-000000000000
@@ -20,7 +18,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/coreos/etcd-operator v0.9.3
 	github.com/coreos/prometheus-operator v0.29.0
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dimchansky/utfbom v1.1.0 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1
@@ -84,5 +81,3 @@ replace k8s.io/client-go => k8s.io/client-go v10.0.0+incompatible
 replace k8s.io/code-generator => k8s.io/code-generator v0.0.0-20190416052311-01a054e913a9
 
 replace golang.org/x/oauth2 => golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
-
-replace git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
