@@ -105,7 +105,7 @@ func GetImageConfig(
 
 // GetImageBlob download image blob from registry
 func getImageBlob(container ContainerInfo) (*imagev1.ImageConfig, error) {
-	imageName, tag := parseContainerImage(container.Image)
+	imageName, reference := parseContainerImage(container.Image)
 
 	registrySkipVerify := viper.GetBool("registry_skip_verify")
 
@@ -121,7 +121,7 @@ func getImageBlob(container ContainerInfo) (*imagev1.ImageConfig, error) {
 		return nil, fmt.Errorf("cannot create client for registry: %s", err.Error())
 	}
 
-	manifest, err := hub.ManifestV2(imageName, tag)
+	manifest, err := hub.ManifestV2(imageName, reference)
 	if err != nil {
 		return nil, fmt.Errorf("cannot download manifest for image: %s", err.Error())
 	}
@@ -148,18 +148,24 @@ func getImageBlob(container ContainerInfo) (*imagev1.ImageConfig, error) {
 	return &imageMetadata.Config, nil
 }
 
-// parseContainerImage returns image and tag
+// parseContainerImage returns image and reference
 func parseContainerImage(image string) (string, string) {
-	split := strings.SplitN(image, ":", 2)
+	var split []string
 
-	imageName := split[0]
-	tag := "latest"
-
-	if len(split) > 1 {
-		tag = split[1]
+	if strings.Contains(image, "@") {
+		split = strings.SplitN(image, "@", 2)
+	} else {
+		split = strings.SplitN(image, ":", 2)
 	}
 
-	return imageName, tag
+	imageName := split[0]
+	reference := "latest"
+
+	if len(split) > 1 {
+		reference = split[1]
+	}
+
+	return imageName, reference
 }
 
 // K8s structure keeps information retrieved from POD definition
