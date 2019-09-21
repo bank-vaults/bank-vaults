@@ -40,8 +40,10 @@ MYSQL_ROOT_PASSWORD    s3cr3t
 
 The secret shown above is referenced like this:
 
+```
 vault:[PATH]/data/[SECRET_NAME]/#KEY
 vault:kv/rax/data/test/#MYSQL_PASSWORD
+```
 
 Also, you will need to create the following RBAC policy to handle the Vault Auth tokens.
 
