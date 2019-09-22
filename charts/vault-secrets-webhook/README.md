@@ -41,9 +41,15 @@ MYSQL_ROOT_PASSWORD    s3cr3t
 The secret shown above is referenced like this:
 
 ```
-vault:[PATH]/data/[SECRET_NAME]/#KEY
-vault:kv/rax/data/test/#MYSQL_PASSWORD
+vault:[ENGINE]/data/[SECRET_NAME]#KEY
+vault:kv/rax/data/test#MYSQL_PASSWORD
 ```
+
+If you want to use a specific key version, you can append it after the key so it becomes like this:
+
+`vault:kv/rax/data/test#MYSQL_PASSWORD#1`
+
+Omitting the version will tell Vault to pull the latest version.
 
 Also, you will need to create the following RBAC policy to handle the Vault Auth tokens.
 
