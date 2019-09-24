@@ -840,7 +840,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig vaultConfig, n
 			logger.Debugf("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
 			apiVersion, _ := mw.k8sClient.Discovery().ServerVersion()
 			versionCompared := kubeVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
-			logger.Debugf("Kuberentes API version detected: %s", apiVersion.String())
+			logger.Debugf("Kubernetes API version detected: %s", apiVersion.String())
 
 			if versionCompared >= 0 {
 				vaultConfig.ctShareProcess = true
