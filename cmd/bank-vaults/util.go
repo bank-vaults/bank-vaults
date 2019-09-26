@@ -28,6 +28,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv/gcs"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/s3"
+	kvvault "github.com/banzaicloud/bank-vaults/pkg/kv/vault"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	"github.com/spf13/viper"
 )
@@ -135,6 +136,16 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		}
 
 		return kms, nil
+
+	case cfgModeValueVault:
+		cli, err := kvvault.New(
+			cfg.GetString(cfgVaultAddress),
+			cfg.GetString(cfgVaultPath))
+		if err != nil {
+			return nil, fmt.Errorf("error creating Vault kv store: %s", err.Error())
+		}
+
+		return cli, nil
 
 	case cfgModeValueK8S:
 		k8s, err := k8s.New(
