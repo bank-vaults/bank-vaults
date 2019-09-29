@@ -49,7 +49,7 @@ type clientOptions struct {
 	role      string
 	authPath  string
 	tokenPath string
-	token	  string
+	token     string
 }
 
 // ClientOption configures a Vault client using the functional options paradigm popularized by Rob Pike and Dave Cheney.
@@ -116,12 +116,12 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 
 // NewClientFromConfig creates a new Vault client from custom configuration.
 func NewClientFromConfig(config *vaultapi.Config, opts ...ClientOption) (*Client, error) {
-    enableJsonLog := os.Getenv("VAULT_JSON_LOG")
+	enableJSONLog := os.Getenv("VAULT_JSON_LOG")
 
-    logger = log.New()
-    if enableJsonLog == "true" {
-        logger.SetFormatter(&log.JSONFormatter{})
-    }
+	logger = log.New()
+	if enableJSONLog == "true" {
+		logger.SetFormatter(&log.JSONFormatter{})
+	}
 
 	rawClient, err := vaultapi.NewClient(config)
 	if err != nil {

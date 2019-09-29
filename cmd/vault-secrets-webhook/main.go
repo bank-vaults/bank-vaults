@@ -62,7 +62,7 @@ type vaultConfig struct {
 	vaultEnvPassThrough         string
 	configfilePath              string
 	mutateConfigMap             bool
-	enableJsonLog               string
+	enableJSONLog               string
 }
 
 var vaultAgentConfig = `
@@ -450,9 +450,9 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/enable-json-log"]; ok {
-		vaultConfig.enableJsonLog = val
+		vaultConfig.enableJSONLog = val
 	} else {
-		vaultConfig.enableJsonLog = viper.GetString("enable_json_log")
+		vaultConfig.enableJSONLog = viper.GetString("enable_json_log")
 	}
 
 	return vaultConfig
@@ -667,7 +667,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			},
 			{
 				Name:  "VAULT_JSON_LOG",
-				Value: vaultConfig.enableJsonLog,
+				Value: vaultConfig.enableJSONLog,
 			},
 		}...)
 
@@ -902,17 +902,17 @@ func init() {
 	viper.AutomaticEnv()
 
 	logger = log.New()
-    // Add additonal fields to all log messages
+	// Add additonal fields to all log messages
 	logger.AddHook(&GlobalHook{})
 
 	if viper.GetBool("enable_json_log") {
-	    logger.SetFormatter(&log.JSONFormatter{})
+		logger.SetFormatter(&log.JSONFormatter{})
 	}
 
 	if viper.GetBool("debug") {
-        logger.SetLevel(log.DebugLevel)
-        logger.SetReportCaller(true)
-	    logger.Debug("Debug mode enabled")
+		logger.SetLevel(log.DebugLevel)
+		logger.SetReportCaller(true)
+		logger.Debug("Debug mode enabled")
 	}
 }
 
@@ -936,16 +936,19 @@ func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, rec
 
 var logger *log.Logger
 
+// GlobalHook struct used for adding additional fields to the log
 type GlobalHook struct {
 }
 
+// Levels returning all log levels
 func (h *GlobalHook) Levels() []log.Level {
-    return log.AllLevels
+	return log.AllLevels
 }
 
+// Fire adding the additional fields to all log entries
 func (h *GlobalHook) Fire(e *log.Entry) error {
-    e.Data["app"] = "vault-secrets-webhook"
-    return nil
+	e.Data["app"] = "vault-secrets-webhook"
+	return nil
 }
 
 func serveMetrics(addr string) {

@@ -54,21 +54,24 @@ var sanitizeEnvmap = map[string]bool{
 	"VAULT_PATH":                   true,
 	"VAULT_IGNORE_MISSING_SECRETS": true,
 	"VAULT_ENV_PASSTHROUGH":        true,
-    "VAULT_JSON_LOG":               true,
+	"VAULT_JSON_LOG":               true,
 }
 
 var logger *log.Logger
 
+// GlobalHook struct used for adding additional fields to the log
 type GlobalHook struct {
 }
 
+// Levels returning all log levels
 func (h *GlobalHook) Levels() []log.Level {
-    return log.AllLevels
+	return log.AllLevels
 }
 
+// Fire adding the additional fields to all log entries
 func (h *GlobalHook) Fire(e *log.Entry) error {
-    e.Data["app"] = "vault-env"
-    return nil
+	e.Data["app"] = "vault-env"
+	return nil
 }
 
 // Appends variable an entry (name=value) into the environ list.
@@ -81,14 +84,14 @@ func (environ *sanitizedEnviron) append(iname interface{}, ivalue interface{}) {
 }
 
 func main() {
-    enableJsonLog := os.Getenv("VAULT_JSON_LOG")
+	enableJSONLog := os.Getenv("VAULT_JSON_LOG")
 
-    logger = log.New()
-    // Add additonal fields to all log messages
+	logger = log.New()
+	// Add additonal fields to all log messages
 	logger.AddHook(&GlobalHook{})
-    if enableJsonLog == "true" {
-        logger.SetFormatter(&log.JSONFormatter{})
-    }
+	if enableJSONLog == "true" {
+		logger.SetFormatter(&log.JSONFormatter{})
+	}
 
 	ignoreMissingSecrets := os.Getenv("VAULT_IGNORE_MISSING_SECRETS") == "true"
 
