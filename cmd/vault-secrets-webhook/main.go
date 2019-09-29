@@ -911,7 +911,6 @@ func init() {
 
 	if viper.GetBool("debug") {
 		logger.SetLevel(log.DebugLevel)
-		logger.SetReportCaller(true)
 		logger.Debug("Debug mode enabled")
 	}
 }
