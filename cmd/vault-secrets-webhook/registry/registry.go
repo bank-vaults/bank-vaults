@@ -38,9 +38,9 @@ var imageCache ImageCache
 
 func init() {
 	logger = log.New()
-    if viper.GetBool("enable_json_log") {
-        logger.SetFormatter(&log.JSONFormatter{})
-    }
+	if viper.GetBool("enable_json_log") {
+		logger.SetFormatter(&log.JSONFormatter{})
+	}
 	imageCache = NewInMemoryImageCache()
 }
 
