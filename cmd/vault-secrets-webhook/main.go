@@ -898,7 +898,7 @@ func init() {
 	viper.SetDefault("default_image_pull_docker_config_json_key", corev1.DockerConfigJsonKey)
 	viper.SetDefault("registry_skip_verify", "false")
 	viper.SetDefault("debug", "false")
-	viper.SetDefault("enable_json_log", "true")
+	viper.SetDefault("enable_json_log", "false")
 	viper.AutomaticEnv()
 
 	logger = log.New()
