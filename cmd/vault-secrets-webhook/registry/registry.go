@@ -32,12 +32,15 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-var logger log.FieldLogger
+var logger *log.Logger
 
 var imageCache ImageCache
 
 func init() {
 	logger = log.New()
+	if viper.GetBool("enable_json_log") {
+		logger.SetFormatter(&log.JSONFormatter{})
+	}
 	imageCache = NewInMemoryImageCache()
 }
 

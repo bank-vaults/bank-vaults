@@ -54,6 +54,24 @@ var sanitizeEnvmap = map[string]bool{
 	"VAULT_PATH":                   true,
 	"VAULT_IGNORE_MISSING_SECRETS": true,
 	"VAULT_ENV_PASSTHROUGH":        true,
+	"VAULT_JSON_LOG":               true,
+}
+
+var logger *log.Logger
+
+// GlobalHook struct used for adding additional fields to the log
+type GlobalHook struct {
+}
+
+// Levels returning all log levels
+func (h *GlobalHook) Levels() []log.Level {
+	return log.AllLevels
+}
+
+// Fire adding the additional fields to all log entries
+func (h *GlobalHook) Fire(e *log.Entry) error {
+	e.Data["app"] = "vault-env"
+	return nil
 }
 
 // Appends variable an entry (name=value) into the environ list.
@@ -66,6 +84,15 @@ func (environ *sanitizedEnviron) append(iname interface{}, ivalue interface{}) {
 }
 
 func main() {
+	enableJSONLog := os.Getenv("VAULT_JSON_LOG")
+
+	logger = log.New()
+	// Add additonal fields to all log messages
+	logger.AddHook(&GlobalHook{})
+	if enableJSONLog == "true" {
+		logger.SetFormatter(&log.JSONFormatter{})
+	}
+
 	ignoreMissingSecrets := os.Getenv("VAULT_IGNORE_MISSING_SECRETS") == "true"
 
 	// The login procedure takes the token from a file (if using Vault Agent)
@@ -81,7 +108,7 @@ func main() {
 		vault.ClientAuthPath(os.Getenv("VAULT_PATH")),
 	)
 	if err != nil {
-		log.Fatal("failed to create vault client", err.Error())
+		logger.Fatal("failed to create vault client", err.Error())
 	}
 
 	passthroughEnvVars := strings.Split(os.Getenv("VAULT_ENV_PASSTHROUGH"), ",")
@@ -146,7 +173,7 @@ func main() {
 				if update {
 					secret, err = client.RawClient().Logical().Write(path, map[string]interface{}{})
 					if err != nil {
-						log.Fatalln("failed to write secret to path:", path, err.Error())
+						logger.Fatalln("failed to write secret to path:", path, err.Error())
 					} else {
 						secretCache[path] = secret
 					}
@@ -154,9 +181,9 @@ func main() {
 					secret, err = client.RawClient().Logical().ReadWithData(path, map[string][]string{"version": {version}})
 					if err != nil {
 						if ignoreMissingSecrets {
-							log.Errorln("failed to read secret from path:", path, err.Error())
+							logger.Errorln("failed to read secret from path:", path, err.Error())
 						} else {
-							log.Fatalln("failed to read secret from path:", path, err.Error())
+							logger.Fatalln("failed to read secret from path:", path, err.Error())
 						}
 					} else {
 						secretCache[path] = secret
@@ -166,9 +193,9 @@ func main() {
 
 			if secret == nil {
 				if ignoreMissingSecrets {
-					log.Warnln("path not found:", path)
+					logger.Warnln("path not found:", path)
 				} else {
-					log.Fatalln("path not found:", path)
+					logger.Fatalln("path not found:", path)
 				}
 			} else {
 				var data map[string]interface{}
@@ -179,12 +206,12 @@ func main() {
 					// Check if a given version of a path is destroyed
 					metadata := secret.Data["metadata"].(map[string]interface{})
 					if metadata["destroyed"].(bool) {
-						log.Warnln("version of secret has been permanently destroyed version:", version, "path:", path)
+						logger.Warnln("version of secret has been permanently destroyed version:", version, "path:", path)
 					}
 
 					// Check if a given version of a path still exists
 					if deletionTime, ok := metadata["deletion_time"].(string); ok && deletionTime != "" {
-						log.Warnln("cannot find data for path, given version has been deleted",
+						logger.Warnln("cannot find data for path, given version has been deleted",
 							"path:", path, "version:", version,
 							"deletion_time", deletionTime)
 					}
@@ -194,7 +221,7 @@ func main() {
 				if value, ok := data[key]; ok {
 					sanitized.append(name, value)
 				} else {
-					log.Fatalln("key not found:", key)
+					logger.Fatalln("key not found:", key)
 				}
 			}
 		} else {
@@ -204,16 +231,16 @@ func main() {
 
 	var entrypointCmd []string
 	if len(os.Args) == 1 {
-		log.Fatalln("no command is given, vault-env can't determine the entrypoint (command), please specify it explicitly or let the webhook query it (see documentation)")
+		logger.Fatalln("no command is given, vault-env can't determine the entrypoint (command), please specify it explicitly or let the webhook query it (see documentation)")
 	} else {
 		entrypointCmd = os.Args[1:]
 	}
 	binary, err := exec.LookPath(entrypointCmd[0])
 	if err != nil {
-		log.Fatalln("binary not found", entrypointCmd[0])
+		logger.Fatalln("binary not found", entrypointCmd[0])
 	}
 	err = syscall.Exec(binary, entrypointCmd, sanitized)
 	if err != nil {
-		log.Fatalln("failed to exec process", binary, entrypointCmd, err.Error())
+		logger.Fatalln("failed to exec process", binary, entrypointCmd, err.Error())
 	}
 }

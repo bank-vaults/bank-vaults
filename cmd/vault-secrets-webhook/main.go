@@ -62,6 +62,7 @@ type vaultConfig struct {
 	vaultEnvPassThrough         string
 	configfilePath              string
 	mutateConfigMap             bool
+	enableJSONLog               string
 }
 
 var vaultAgentConfig = `
@@ -448,6 +449,12 @@ func parseVaultConfig(obj metav1.Object) vaultConfig {
 		vaultConfig.mutateConfigMap, _ = strconv.ParseBool(viper.GetString("mutate_configmap"))
 	}
 
+	if val, ok := annotations["vault.security.banzaicloud.io/enable-json-log"]; ok {
+		vaultConfig.enableJSONLog = val
+	} else {
+		vaultConfig.enableJSONLog = viper.GetString("enable_json_log")
+	}
+
 	return vaultConfig
 }
 
@@ -657,6 +664,10 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			{
 				Name:  "VAULT_ENV_PASSTHROUGH",
 				Value: vaultConfig.vaultEnvPassThrough,
+			},
+			{
+				Name:  "VAULT_JSON_LOG",
+				Value: vaultConfig.enableJSONLog,
 			},
 		}...)
 
@@ -887,9 +898,17 @@ func init() {
 	viper.SetDefault("default_image_pull_docker_config_json_key", corev1.DockerConfigJsonKey)
 	viper.SetDefault("registry_skip_verify", "false")
 	viper.SetDefault("debug", "false")
+	viper.SetDefault("enable_json_log", "false")
 	viper.AutomaticEnv()
 
 	logger = log.New()
+	// Add additonal fields to all log messages
+	logger.AddHook(&GlobalHook{})
+
+	if viper.GetBool("enable_json_log") {
+		logger.SetFormatter(&log.JSONFormatter{})
+	}
+
 	if viper.GetBool("debug") {
 		logger.SetLevel(log.DebugLevel)
 		logger.Debug("Debug mode enabled")
@@ -916,6 +935,21 @@ func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, rec
 
 var logger *log.Logger
 
+// GlobalHook struct used for adding additional fields to the log
+type GlobalHook struct {
+}
+
+// Levels returning all log levels
+func (h *GlobalHook) Levels() []log.Level {
+	return log.AllLevels
+}
+
+// Fire adding the additional fields to all log entries
+func (h *GlobalHook) Fire(e *log.Entry) error {
+	e.Data["app"] = "vault-secrets-webhook"
+	return nil
+}
+
 func serveMetrics(addr string) {
 	logger.Infof("Telemetry on http://%s", addr)
 
@@ -930,7 +964,7 @@ func serveMetrics(addr string) {
 func main() {
 	k8sClient, err := newK8SClient()
 	if err != nil {
-		log.Fatalf("error creating k8s client: %s", err)
+		logger.Fatalf("error creating k8s client: %s", err)
 	}
 
 	mutatingWebhook := mutatingWebhook{k8sClient: k8sClient}
