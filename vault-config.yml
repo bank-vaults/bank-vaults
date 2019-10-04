@@ -262,6 +262,25 @@ secrets:
           credential_type: iam_user
           policy_arns:
             - arn:aws:iam::123456789012:policy/UsersManageOwnCredentials
+  
+  # The Google Cloud Vault secrets engine dynamically generates Google Cloud service account keys and
+  # OAuth tokens based on IAM policies.
+  # See https://www.vaultproject.io/docs/secrets/gcp/index.html for more information
+  - type: gcp
+    config:
+      credentials: ${env `VAULT_GCP_SA_CREDENTIALS`}
+    description: GCP secret engine.
+    configuration:
+      roleset:
+      - name: kubernetes-engine-admin
+        secret_type: access_token
+        project: my-project
+        token_scopes: https://www.googleapis.com/auth/cloud-platform
+        bindings: |
+          resource "//cloudresourcemanager.googleapis.com/projects/my-project" {
+            roles = [ "roles/container.admin" ]
+          }
+
 
 # Registers a new plugin in Vault's plugin catalog. "plugin_directory" setting should be set it Vault server configuration
 # and plugin binary should be present in plugin directory. Also, for some plugins readOnlyRootFilesystem Pod Security Policy
