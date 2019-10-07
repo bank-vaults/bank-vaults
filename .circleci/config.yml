@@ -9,7 +9,6 @@ jobs:
       - image: circleci/golang:1.13
         environment:
           GOFLAG: -mod=readonly
-          GOPROXY: https://proxy.golang.org
       - image: vault:1.2.3
         environment:
           SKIP_SETCAP: true
@@ -58,7 +57,7 @@ jobs:
 
     environment:
       GO_VERSION: "1.13.1"
-      K8S_VERSION: v1.16.0
+      K8S_VERSION: v1.15.3
       VAULT_VERSION: "1.2.3"
       KUBECONFIG: /home/circleci/.kube/config
       MINIKUBE_VERSION: v1.4.0
