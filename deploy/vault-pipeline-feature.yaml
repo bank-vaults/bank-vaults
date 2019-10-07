@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-secrets
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hello-secrets
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hello-secrets
+      # annotations:
+      #   vault.security.banzaicloud.io/vault-skip-verify: "true"
+    spec:
+      containers:
+      - name: alpine
+        image: alpine
+        command: ["sh", "-c", "echo DOCKER_USERNAME: ${DOCKER_USERNAME} && echo going to sleep... && sleep 10000"]
+        env:
+        - name: DOCKER_USERNAME
+          value: "vault:secret/data/orgs/36/a89460009bc034452ac1b28937c5063b295b5fc163f314d384aeb66eb067d2de#My username on DockerHub is: ${.value.values.username}"
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
