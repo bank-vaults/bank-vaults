@@ -6,11 +6,11 @@ orbs:
 jobs:
   check:
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.13
         environment:
           GOFLAG: -mod=readonly
           GOPROXY: https://proxy.golang.org
-      - image: vault:1.1.0
+      - image: vault:1.2.3
         environment:
           SKIP_SETCAP: true
           VAULT_DEV_ROOT_TOKEN_ID: 227e1cce-6bf7-30bb-2d2a-acc854318caf
@@ -57,11 +57,11 @@ jobs:
       docker_layer_caching: true
 
     environment:
-      GO_VERSION: "1.12.3"
-      K8S_VERSION: v1.14.0
-      VAULT_VERSION: "1.1.0"
+      GO_VERSION: "1.13.1"
+      K8S_VERSION: v1.16.0
+      VAULT_VERSION: "1.2.3"
       KUBECONFIG: /home/circleci/.kube/config
-      MINIKUBE_VERSION: v1.0.0
+      MINIKUBE_VERSION: v1.4.0
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       MINIKUBE_HOME: /home/circleci
