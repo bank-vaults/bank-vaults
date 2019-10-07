@@ -16,64 +16,50 @@ package vault
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"strings"
-
-	vaultapi "github.com/hashicorp/vault/api"
 
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 type VaultStorage struct {
-	client *vaultapi.Client
+	client *vault.Client
 	path   string
 }
 
 // New creates a new kv.Service backed by Vault
-func New(addr, path string) (kv.Service, error) {
+func New(addr, unsealKeysPath, role, authPath, tokenPath, token string) (kv.Service, error) {
 
-	config := vaultapi.DefaultConfig()
-	config.Address = addr
-
-	cli, err := vaultapi.NewClient(config)
+	client, err := vault.NewClientWithOptions(
+		vault.ClientURL(addr),
+		vault.ClientRole(role),
+		vault.ClientAuthPath(authPath),
+		vault.ClientTokenPath(tokenPath),
+		vault.ClientToken(token))
 	if err != nil {
-		return nil, fmt.Errorf("err creating Vault Client: %s", err.Error())
+		return nil, fmt.Errorf("failed to create vault client: %s", err.Error())
 	}
-
-	credentialPath := os.Getenv("VAULT_CREDENTIAL_PATH")
-	if credentialPath == "" {
-		return nil, fmt.Errorf("No Credential path for vault storage set")
-	}
-
-	tokenbytes, err := ioutil.ReadFile(credentialPath)
-	if err != nil {
-		return nil, fmt.Errorf("err reading token from credentialFile: %s", err.Error())
-	}
-	token := strings.TrimSpace(string(tokenbytes))
-	cli.SetToken(token)
 
 	return &VaultStorage{
-		client: cli,
-		path:   path,
+		client: client,
+		path:   unsealKeysPath,
 	}, nil
 }
 
 func (v *VaultStorage) Set(key string, val []byte) error {
 	// Done to prevent overwrite in Vault
 	path := fmt.Sprintf("%s/%s", v.path, key)
-	if _, err := v.client.Logical().Write(
+	if _, err := v.client.RawClient().Logical().Write(
 		path,
 		map[string]interface{}{key: val},
 	); err != nil {
-		return fmt.Errorf("error writing key '%s' to vault addr %s and path '%s': '%s'", key, v.client.Address(), v.path, err.Error())
+		return fmt.Errorf("error writing key '%s' to vault addr %s and path '%s': '%s'", key, v.client.RawClient().Address(), v.path, err.Error())
 	}
 	return nil
 }
 
 func (v *VaultStorage) Get(key string) ([]byte, error) {
 	path := fmt.Sprintf("%s/%s", v.path, key)
-	secret, err := v.client.Logical().Read(path)
+	secret, err := v.client.RawClient().Logical().Read(path)
 	if err != nil {
 		return nil, fmt.Errorf("error getting object for key '%s': %s", key, err.Error())
 	}

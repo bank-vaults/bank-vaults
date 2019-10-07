@@ -8,11 +8,15 @@ spec:
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Describe where you would like to store the Vault unseal keys and root token
-  # in Seperate remote Vault instance.
+  # in Seperate remote Vault instance. 
   unsealConfig:
     vault:
       vault-addr: https://vault.vault.svc:8200 # Remote Address for Vault
-      vault-path: /secret/data/vault-keys
+      vault-unseal-keys-path: /secret/data/vault-keys
+      vault-token-path: /etc/vault/.token
+      # vault-role: default
+      # vault-auth-path: kubernetes
+      # vault-token: sometokenforvault.
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault
@@ -57,10 +61,3 @@ spec:
             bound_service_account_namespaces: default
             policies: allow_secrets
             ttl: 1h
-
-  # This can be utilizes using a secret (altho this is significantly less secure). 
-  # Suggested use would be a hostPath mount with a token.
-  credentialsConfig:
-    env: VAULT_CREDENTIAL_PATH
-    path: /etc/vault/vault.token
-    secretName: kv-vault-token

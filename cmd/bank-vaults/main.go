@@ -65,7 +65,11 @@ const cfgAlibabaKMSRegion = "alibaba-kms-region"
 const cfgAlibabaKMSKeyID = "alibaba-kms-key-id"
 
 const cfgVaultAddress = "vault-addr"
-const cfgVaultPath = "vault-path"
+const cfgVaultUnsealKeysPath = "vault-unseal-keys-path"
+const cfgVaultRole = "vault-role"
+const cfgVaultAuthPath = "vault-auth-path"
+const cfgVaultTokenPath = "vault-token-path"
+const cfgVaultToken = "vault-token"
 
 const cfgK8SNamespace = "k8s-secret-namespace"
 const cfgK8SSecret = "k8s-secret-name"
@@ -113,6 +117,7 @@ func init() {
 						'%s' => AWS S3 Object Storage using AWS KMS encryption;
 						'%s' => Azure Key Vault secret;
 						'%s' => Alibaba OSS with KMS encryption;
+						'%s' => Remote Vault;
 						'%s' => Kubernetes Secrets;
 						'%s' => Dev (vault server -dev) mode
 						'%s' => File mode`,
@@ -120,6 +125,7 @@ func init() {
 			cfgModeValueAWSKMS3,
 			cfgModeValueAzureKeyVault,
 			cfgModeValueAlibabaKMSOSS,
+			cfgModeValueVault,
 			cfgModeValueK8S,
 			cfgModeValueDev,
 			cfgModeValueFile,
@@ -164,6 +170,14 @@ func init() {
 	configStringVar(cfgAlibabaOSSEndpoint, "", "The name of the Alibaba OSS endpoint to store values in")
 	configStringVar(cfgAlibabaOSSBucket, "", "The name of the Alibaba OSS bucket to store values in")
 	configStringVar(cfgAlibabaOSSPrefix, "", "The prefix to use for values store in Alibaba OSS")
+
+	// Vault Service Flags
+	configStringVar(cfgVaultAddress, "", "The URL of the remote Vault to use as KV. Example: https://vault.myvault.org:8200")
+	configStringVar(cfgVaultUnsealKeysPath, "", "Path at the remote URL to store Unseal Keys")
+	configStringVar(cfgVaultRole, "", "Vault Role to authenticate as")
+	configStringVar(cfgVaultAuthPath, "", "Auth path for Kubernetes auth type")
+	configStringVar(cfgVaultTokenPath, "", "Path to file containing Vault token")
+	configStringVar(cfgVaultToken, "", "Vault token")
 
 	// K8S Secret Storage flags
 	configStringVar(cfgK8SNamespace, "", "The namespace of the K8S Secret to store values in")
