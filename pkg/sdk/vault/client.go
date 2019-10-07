@@ -225,6 +225,8 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		}
 	}
 
+	rawClient.SetAddress(o.url)
+
 	// Add token if set
 	if o.token != "" {
 		rawClient.SetToken(o.token)

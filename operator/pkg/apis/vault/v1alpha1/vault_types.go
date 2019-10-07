@@ -594,6 +594,7 @@ type UnsealConfig struct {
 	Alibaba    *AlibabaUnsealConfig   `json:"alibaba,omitempty"`
 	Azure      *AzureUnsealConfig     `json:"azure,omitempty"`
 	AWS        *AWSUnsealConfig       `json:"aws,omitempty"`
+	Vault      *VaultUnsealConfig     `json:"vault,omitempty"`
 }
 
 // UnsealOptions represents the common options to all unsealing backends
@@ -673,6 +674,36 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			usc.Alibaba.OSSPrefix,
 		)
 
+	} else if usc.Vault != nil {
+
+		args = append(args,
+			"--mode",
+			"vault",
+			"--vault-addr",
+			usc.Vault.Address,
+			"--vault-unseal-keys-path",
+			usc.Vault.UnsealKeysPath,
+		)
+
+		if usc.Vault.Token != "" {
+			args = append(args,
+				"--vault-token",
+				usc.Vault.Token,
+			)
+		} else if usc.Vault.TokenPath != "" {
+			args = append(args,
+				"--vault-token-path",
+				usc.Vault.TokenPath,
+			)
+		} else if usc.Vault.Role != "" {
+			args = append(args,
+				"--vault-role",
+				usc.Vault.Role,
+				"--vault-auth-path",
+				usc.Vault.AuthPath,
+			)
+		}
+
 	} else {
 
 		secretNamespace := vault.Namespace
@@ -734,6 +765,16 @@ type AWSUnsealConfig struct {
 	S3Bucket  string `json:"s3Bucket"`
 	S3Prefix  string `json:"s3Prefix"`
 	S3Region  string `json:"s3Region"`
+}
+
+// VaultUnsealConfig holds the parameters for remote Vault based unsealing
+type VaultUnsealConfig struct {
+	Address        string `json:"address"`
+	UnsealKeysPath string `json:"unsealKeysPath"`
+	Role           string `json:"role"`
+	AuthPath       string `json:"authPath"`
+	TokenPath      string `json:"tokenPath"`
+	Token          string `json:"token"`
 }
 
 // CredentialsConfig configuration for a credentials file provided as a secret
