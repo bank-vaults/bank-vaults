@@ -27,16 +27,7 @@ import (
 const templateName = "config"
 
 // EnvTemplate interpolates environment variables in a configuration text
-func EnvTemplate(config string) (*bytes.Buffer, error) {
-
-	configTemplate, err := template.New(templateName).
-		Funcs(sprig.TxtFuncMap()).
-		Delims("${", "}").
-		Parse(config)
-
-	if err != nil {
-		return nil, emperror.Wrapf(err, "error parsing config template")
-	}
+func EnvTemplate(t string) (*bytes.Buffer, error) {
 
 	var env struct {
 		Env map[string]string
@@ -48,12 +39,32 @@ func EnvTemplate(config string) (*bytes.Buffer, error) {
 		env.Env[split[0]] = split[1]
 	}
 
+	return Template(t, env)
+}
+
+// Template interpolates a data structure in a template
+func Template(t string, data interface{}) (*bytes.Buffer, error) {
+
+	configTemplate, err := template.New(templateName).
+		Funcs(sprig.TxtFuncMap()).
+		Delims("${", "}").
+		Parse(t)
+
+	if err != nil {
+		return nil, emperror.Wrapf(err, "error parsing template")
+	}
+
 	buffer := bytes.NewBuffer(nil)
 
-	err = configTemplate.ExecuteTemplate(buffer, templateName, &env)
+	err = configTemplate.ExecuteTemplate(buffer, templateName, data)
 	if err != nil {
-		return nil, emperror.Wrapf(err, "error executing config template")
+		return nil, emperror.Wrapf(err, "error executing template")
 	}
 
 	return buffer, nil
+}
+
+// IsGoTemplate returns true if s is probably a Go Template
+func IsGoTemplate(s string) bool {
+	return strings.Contains(s, "${") && strings.Contains(s, "}")
 }
