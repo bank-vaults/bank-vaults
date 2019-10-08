@@ -202,9 +202,9 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		opt.apply(o)
 	}
 
-	// Default URL
-	if o.url == "" {
-		o.url = vaultapi.DefaultConfig().Address
+	// Set URL if defined
+	if o.url != "" {
+		rawClient.SetAddress(o.url)
 	}
 
 	// Default role
@@ -224,8 +224,6 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 			o.tokenPath = env
 		}
 	}
-
-	rawClient.SetAddress(o.url)
 
 	// Add token if set
 	if o.token != "" {
