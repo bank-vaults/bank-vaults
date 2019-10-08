@@ -112,6 +112,10 @@ type VaultSpec struct {
 	// BankVaultsImage specifies the Bank Vaults image to use for Vault unsealing and configuration
 	// default: banzaicloud/bank-vaults:latest
 	BankVaultsImage string `json:"bankVaultsImage"`
+	
+	// BankVaultsVolumeMounts define some extra Kubernetes Volume mounts for the Bank Vaults Sidecar container.
+	// default:
+	BankVaultsVolumeMounts []v1.VolumeMount `json:"bankVaultsVolumeMounts,omitempty"`
 
 	// StatsDDisabled specifies if StatsD based metrics should be disabled
 	// default: false
