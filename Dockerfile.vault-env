@@ -1,4 +1,4 @@
-ARG GO_VERSION=1.12
+ARG GO_VERSION=1.13
 
 FROM golang:${GO_VERSION}-alpine AS builder
 
@@ -20,6 +20,6 @@ COPY . /go/src/${PACKAGE}
 RUN CGO_ENABLED=0 go install ./cmd/vault-env
 
 
-FROM vault:1.1.0
+FROM vault:1.2.3
 
 COPY --from=builder /go/bin/vault-env /usr/local/bin/vault-env

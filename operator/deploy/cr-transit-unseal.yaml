@@ -16,7 +16,7 @@ metadata:
   namespace: default
 spec:
   size: 1
-  image: vault:1.1.5
+  image: vault:1.2.3
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults
@@ -128,7 +128,7 @@ metadata:
   namespace: tenant
 spec:
   size: 1
-  image: vault:1.1.5
+  image: vault:1.2.3
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # We don't need any extra RBAC rules besides the default ones
