@@ -3,6 +3,7 @@ apiVersion: extensions/v1beta1
 kind: PodSecurityPolicy
 metadata:
   name: {{ template "vault-secrets-webhook.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   annotations:
     seccomp.security.alpha.kubernetes.io/allowedProfileNames: docker/default
     seccomp.security.alpha.kubernetes.io/defaultProfileName: docker/default
@@ -37,6 +38,7 @@ metadata:
     seccomp.security.alpha.kubernetes.io/allowedProfileNames: docker/default
     seccomp.security.alpha.kubernetes.io/defaultProfileName: docker/default
   name: {{ template "vault-secrets-webhook.fullname" . }}.mutate
+  namespace: {{ .Release.Namespace }}
 spec:
   allowPrivilegeEscalation: false
   fsGroup:
