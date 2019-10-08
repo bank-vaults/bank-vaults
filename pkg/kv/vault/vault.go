@@ -15,10 +15,12 @@
 package vault
 
 import (
+	"encoding/base64"
 	"fmt"
 
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
+	"github.com/spf13/cast"
 )
 
 type VaultStorage struct {
@@ -26,7 +28,7 @@ type VaultStorage struct {
 	path   string
 }
 
-// New creates a new kv.Service backed by Vault
+// New creates a new kv.Service backed by Vault KV Version 2
 func New(addr, unsealKeysPath, role, authPath, tokenPath, token string) (kv.Service, error) {
 
 	client, err := vault.NewClientWithOptions(
@@ -50,7 +52,11 @@ func (v *VaultStorage) Set(key string, val []byte) error {
 	path := fmt.Sprintf("%s/%s", v.path, key)
 	if _, err := v.client.RawClient().Logical().Write(
 		path,
-		map[string]interface{}{key: val},
+		map[string]interface{}{
+			"data": map[string]interface{}{
+				key: val,
+			},
+		},
 	); err != nil {
 		return fmt.Errorf("error writing key '%s' to vault addr %s and path '%s': '%s'", key, v.client.RawClient().Address(), v.path, err.Error())
 	}
@@ -63,5 +69,12 @@ func (v *VaultStorage) Get(key string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error getting object for key '%s': %s", key, err.Error())
 	}
-	return secret.Data[key].([]byte), nil
+	if secret == nil {
+		return nil, kv.NewNotFoundError("key not found under path: %s", key)
+	}
+	data, err := cast.ToStringMapE(secret.Data["data"])
+	if err != nil {
+		return nil, fmt.Errorf("error findind data under path '%s': %s", key, err.Error())
+	}
+	return base64.StdEncoding.DecodeString(data[key].(string))
 }

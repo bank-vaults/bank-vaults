@@ -1,22 +1,23 @@
+# NOTE: for this example, please apply cr.yaml first, to have a "remote" Vault for unsealing.
 apiVersion: "vault.banzaicloud.com/v1alpha1"
 kind: "Vault"
 metadata:
-  name: "vault"
+  name: "vault-kv-unseal"
 spec:
-  size: 2
+  size: 1
   image: vault:1.2.3
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Describe where you would like to store the Vault unseal keys and root token
-  # in Seperate remote Vault instance. 
+  # in seperate remote Vault instance. 
   unsealConfig:
     vault:
-      vault-addr: https://vault.vault.svc:8200 # Remote Address for Vault
-      vault-unseal-keys-path: /secret/data/vault-keys
-      vault-token-path: /etc/vault/.token
-      # vault-role: default
-      # vault-auth-path: kubernetes
-      # vault-token: sometokenforvault.
+      address: https://vault:8200 # Remote Address for Vault
+      unsealKeysPath: secret/data/vault-keys
+      role: default
+      authPath: kubernetes
+      # tokenPath: /etc/vault/.token
+      # token: sometokenforvault.
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault
@@ -26,20 +27,13 @@ spec:
   # See https://www.vaultproject.io/docs/configuration/ for more information.
   config:
     storage:
-      gcs:
-        bucket: "vault-ha"
-        ha_enabled: "true"
+      file:
+        path: "/vault/file"
     listener:
       tcp:
         address: "0.0.0.0:8200"
         tls_cert_file: /vault/tls/server.crt
         tls_key_file: /vault/tls/server.key
-    seal:
-      gcpckms:
-        project: "continual-air-196513"
-        region: "global"
-        key_ring: "vault"
-        crypto_key: "vault-unsealer"
     api_addr: https://vault.default:8200
     telemetry:
       statsd_address: localhost:9125
@@ -61,3 +55,31 @@ spec:
             bound_service_account_namespaces: default
             policies: allow_secrets
             ttl: 1h
+
+  envsConfig:
+    - name: VAULT_SKIP_VERIFY
+      value: "true"
+
+  # Use local disk to store Vault file data, see config section.
+  volumes:
+    - name: vault-file
+      persistentVolumeClaim:
+        claimName: vault-kv-unseal-file
+
+  volumeMounts:
+    - name: vault-file
+      mountPath: /vault/file
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vault-kv-unseal-file
+spec:
+  # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class-1
+  # storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
