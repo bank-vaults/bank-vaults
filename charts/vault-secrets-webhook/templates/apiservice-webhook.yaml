@@ -14,6 +14,7 @@ items:
   kind: Secret
   metadata:
     name: {{ template "vault-secrets-webhook.fullname" . }}
+    namespace: {{ .Release.Namespace }}
   data:
     tls.crt: {{ b64enc $server.Cert }}
     tls.key: {{ b64enc $server.Key }}
@@ -23,6 +24,7 @@ items:
   kind: MutatingWebhookConfiguration
   metadata:
     name: {{ template "vault-secrets-webhook.fullname" . }}
+    namespace: {{ .Release.Namespace }}
   webhooks:
   - name: pods.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
     clientConfig:
