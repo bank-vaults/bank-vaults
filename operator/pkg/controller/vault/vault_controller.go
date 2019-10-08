@@ -885,10 +885,14 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 				},
 			})
 
+			volumes = withVaultVolumes(v, volumes)
+
 			volumeMounts = append(volumeMounts, corev1.VolumeMount{
 				Name:      cm.Name,
 				MountPath: "/config/" + cm.Name,
 			})
+
+			volumeMounts = withBanksVaultsVolumeMounts(v, volumeMounts)
 
 			configArgs = append(configArgs, "--vault-config-file", "/config/"+cm.Name+"/"+vault.DefaultConfigFile)
 		}
