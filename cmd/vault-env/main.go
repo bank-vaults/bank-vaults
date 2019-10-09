@@ -243,6 +243,7 @@ func main() {
 	}
 
 	if os.Getenv("VAULT_REVOKE_TOKEN") == "true" {
+		// ref: https://www.vaultproject.io/api/auth/token/index.html#revoke-a-token-self-
 		err = client.RawClient().Auth().Token().RevokeSelf(client.RawClient().Token())
 		if err != nil {
 			// Do not exit on error, token revoking can be denied by policy
