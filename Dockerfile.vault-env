@@ -17,9 +17,9 @@ COPY . /build
 RUN go mod download
 
 COPY . /go/src/${PACKAGE}
-RUN CGO_ENABLED=0 go install ./cmd/vault-env
+RUN CGO_ENABLED=0 go build ./cmd/vault-env
 
+FROM alpine:3.10
 
-FROM vault:1.2.3
-
-COPY --from=builder /go/bin/vault-env /usr/local/bin/vault-env
+RUN apk add --update --no-cache ca-certificates
+COPY --from=builder /build/vault-env /usr/local/bin/vault-env
