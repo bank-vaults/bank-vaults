@@ -55,6 +55,7 @@ var sanitizeEnvmap = map[string]bool{
 	"VAULT_IGNORE_MISSING_SECRETS": true,
 	"VAULT_ENV_PASSTHROUGH":        true,
 	"VAULT_JSON_LOG":               true,
+	"VAULT_REVOKE_TOKEN":           true,
 }
 
 var logger *log.Logger
@@ -241,9 +242,12 @@ func main() {
 		}
 	}
 
-	err = client.RawClient().Auth().Token().RevokeSelf(client.RawClient().Token())
-	if err != nil {
-		logger.Warnln("failed to revoke token")
+	if os.Getenv("VAULT_REVOKE_TOKEN") == "true" {
+		err = client.RawClient().Auth().Token().RevokeSelf(client.RawClient().Token())
+		if err != nil {
+			// Do not exit on error, token revoking can be denied by policy
+			logger.Warnln("failed to revoke token")
+		}
 	}
 
 	err = syscall.Exec(binary, entrypointCmd, sanitized)
