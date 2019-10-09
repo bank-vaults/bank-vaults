@@ -932,7 +932,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 					ContainerPort: 9091,
 					Protocol:      "TCP",
 				}},
-				Env:          withSecretEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{}))),
+				Env:          withSecretEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{})))),
 				VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
 				WorkingDir:   "/config",
 				Resources:    *getBankVaultsResource(v),
@@ -1199,7 +1199,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Name:            "bank-vaults",
 				Command:         unsealCommand,
 				Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
-				Env: withSecretEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, []corev1.EnvVar{
+				Env: withSecretEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
 					{
 						Name:  k8s.EnvK8SOwnerReference,
 						Value: string(ownerJSON),
@@ -1212,7 +1212,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 							},
 						},
 					},
-				}))),
+				})))),
 				Ports: []corev1.ContainerPort{{
 					Name:          "metrics",
 					ContainerPort: 9091,
