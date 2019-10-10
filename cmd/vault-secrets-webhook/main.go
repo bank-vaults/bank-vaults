@@ -99,7 +99,15 @@ func hasTLSVolume(volumes []corev1.Volume) bool {
 	return false
 }
 
-func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
+func hasPodSecurityContextRunAsUser(p *corev1.PodSecurityContext) bool {
+	if p.RunAsUser == nil {
+		return false
+	}
+
+	return true
+}
+
+func getInitContainers(originalContainers []corev1.Container, podSecurityContext *corev1.PodSecurityContext, vaultConfig vaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	var containers = []corev1.Container{}
 
 	if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
@@ -155,9 +163,7 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 					MountPath: "/vault/",
 				},
 			},
-			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
-			},
+			SecurityContext: getSecurityContext(podSecurityContext, vaultConfig),
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -170,11 +176,11 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig vaultC
 	return containers
 }
 
-func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
+func getContainers(podSecurityContext *corev1.PodSecurityContext, vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	var containers = []corev1.Container{}
-	securityContext := &corev1.SecurityContext{
-		AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
-	}
+	var securityContext *corev1.SecurityContext
+
+	securityContext = getSecurityContext(podSecurityContext, vaultConfig)
 
 	if vaultConfig.ctShareProcess {
 		securityContext = &corev1.SecurityContext{
@@ -225,6 +231,19 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 	})
 
 	return containers
+}
+
+func getSecurityContext(podSecurityContext *corev1.PodSecurityContext, vaultConfig vaultConfig) *corev1.SecurityContext {
+	if hasPodSecurityContextRunAsUser(podSecurityContext) == true {
+		return &corev1.SecurityContext{
+			RunAsUser:                podSecurityContext.RunAsUser,
+			AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
+		}
+	}
+
+	return &corev1.SecurityContext{
+		AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
+	}
 }
 
 func getVolumes(existingVolumes []corev1.Volume, agentConfigMapName string, vaultConfig vaultConfig, logger *log.Logger) []corev1.Volume {
@@ -835,7 +854,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig vaultConfig, n
 
 		}
 
-		pod.Spec.InitContainers = append(getInitContainers(pod.Spec.Containers, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), pod.Spec.InitContainers...)
+		pod.Spec.InitContainers = append(getInitContainers(pod.Spec.Containers, pod.Spec.SecurityContext, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), pod.Spec.InitContainers...)
 		logger.Debugf("Successfully appended pod init containers to spec")
 
 		pod.Spec.Volumes = append(pod.Spec.Volumes, getVolumes(pod.Spec.Volumes, agentConfigMapName, vaultConfig, logger)...)
@@ -865,7 +884,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig vaultConfig, n
 			shareProcessNamespace := true
 			pod.Spec.ShareProcessNamespace = &shareProcessNamespace
 		}
-		pod.Spec.Containers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
+		pod.Spec.Containers = append(getContainers(pod.Spec.SecurityContext, vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
 
 		logger.Debugf("Successfully appended pod containers to spec")
 	}
