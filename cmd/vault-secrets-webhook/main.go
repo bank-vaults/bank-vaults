@@ -176,11 +176,11 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 	return containers
 }
 
-func getContainers(podSecurityContext *corev1.PodSecurityContext, vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
+func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	var containers = []corev1.Container{}
-	var securityContext *corev1.SecurityContext
-
-	securityContext = getSecurityContext(podSecurityContext, vaultConfig)
+	securityContext := &corev1.SecurityContext{
+		AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
+	}
 
 	if vaultConfig.ctShareProcess {
 		securityContext = &corev1.SecurityContext{
@@ -884,7 +884,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig vaultConfig, n
 			shareProcessNamespace := true
 			pod.Spec.ShareProcessNamespace = &shareProcessNamespace
 		}
-		pod.Spec.Containers = append(getContainers(pod.Spec.SecurityContext, vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
+		pod.Spec.Containers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
 
 		logger.Debugf("Successfully appended pod containers to spec")
 	}
