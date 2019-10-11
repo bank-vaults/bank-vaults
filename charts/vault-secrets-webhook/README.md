@@ -134,5 +134,5 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | volumes                          | extra volume definitions                                                     | `[]`                                |
 | volumeMounts                     | extra volume mounts                                                          | `[]`                                |
 | configMapMutation                | enable injecting values from Vault to ConfigMaps                             | `false`                             |
-| podDisruptionBudget.enabled      | Enable PodDisruptionBudget for Kong                                          | `false`                             |
-| podDisruptionBudget.minAvailable | Represents the number of Pods that must be available (integer or percentage) | `1`                                 |
+| podDisruptionBudget.enabled      | enable PodDisruptionBudget                                                   | `false`                             |
+| podDisruptionBudget.minAvailable | represents the number of Pods that must be available (integer or percentage) | `1`                                 |

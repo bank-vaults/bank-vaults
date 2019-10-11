@@ -138,7 +138,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		return kms, nil
 
 	case cfgModeValueVault:
-		cli, err := kvvault.New(
+		vault, err := kvvault.New(
 			cfg.GetString(cfgVaultAddress),
 			cfg.GetString(cfgVaultUnsealKeysPath),
 			cfg.GetString(cfgVaultRole),
@@ -149,7 +149,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			return nil, fmt.Errorf("error creating Vault kv store: %s", err.Error())
 		}
 
-		return cli, nil
+		return vault, nil
 
 	case cfgModeValueK8S:
 		k8s, err := k8s.New(
