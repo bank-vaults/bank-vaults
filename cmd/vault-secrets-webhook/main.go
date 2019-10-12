@@ -85,7 +85,7 @@ auto_auth {
 }`
 
 type mutatingWebhook struct {
-	k8sClient *kubernetes.Clientset
+	k8sClient kubernetes.Interface
 }
 
 // If the original Pod contained a Volume "vault-tls", for example Vault instances provisioned by the Operator
@@ -741,7 +741,7 @@ func newVaultClient(vaultConfig vaultConfig) (*vault.Client, error) {
 	)
 }
 
-func newK8SClient() (*kubernetes.Clientset, error) {
+func newK8SClient() (kubernetes.Interface, error) {
 	kubeConfig, err := kubernetesConfig.GetConfig()
 	if err != nil {
 		return nil, err
