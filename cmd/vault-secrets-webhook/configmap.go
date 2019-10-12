@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	internal "github.com/banzaicloud/bank-vaults/internal/configuration"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -37,7 +38,7 @@ func configMapNeedsMutation(configMap *corev1.ConfigMap) bool {
 	return false
 }
 
-func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig vaultConfig, ns string) error {
+func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConfig, ns string) error {
 
 	// do an early exit and don't construct the Vault client if not needed
 	if !configMapNeedsMutation(configMap) {

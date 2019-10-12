@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
+	internal "github.com/banzaicloud/bank-vaults/internal/configuration"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/spf13/cast"
@@ -37,7 +38,7 @@ func secretNeedsMutation(secret *corev1.Secret) bool {
 	return false
 }
 
-func mutateSecret(secret *corev1.Secret, vaultConfig vaultConfig, ns string) error {
+func mutateSecret(secret *corev1.Secret, vaultConfig internal.VaultConfig, ns string) error {
 
 	// do an early exit and don't construct the Vault client if not needed
 	if !secretNeedsMutation(secret) {
