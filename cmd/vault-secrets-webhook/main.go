@@ -492,7 +492,7 @@ func (mw *mutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns str
 				}
 			}
 			for key, value := range data {
-				if strings.HasPrefix(value, "vault:") || strings.HasPrefix(value, ">>vault:") {
+				if hasVaultPrefix(value) {
 					envFromCM := corev1.EnvVar{
 						Name:  key,
 						Value: value,
@@ -511,7 +511,7 @@ func (mw *mutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns str
 				}
 			}
 			for key, value := range data {
-				if strings.HasPrefix(string(value), "vault:") || strings.HasPrefix(string(value), ">>vault:") {
+				if hasVaultPrefix(string(value)) {
 					envFromSec := corev1.EnvVar{
 						Name:  key,
 						Value: string(value),
@@ -524,13 +524,17 @@ func (mw *mutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns str
 	return envVars, nil
 }
 
+func hasVaultPrefix(value string) bool {
+	return strings.HasPrefix(value, "vault:") || strings.HasPrefix(value, ">>vault:")
+}
+
 func (mw *mutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*corev1.EnvVar, error) {
 	if env.ValueFrom.ConfigMapKeyRef != nil {
 		data, err := mw.getDataFromConfigmap(env.ValueFrom.ConfigMapKeyRef.Name, ns)
 		if err != nil {
 			return nil, err
 		}
-		if strings.HasPrefix(data[env.ValueFrom.ConfigMapKeyRef.Key], "vault:") {
+		if hasVaultPrefix(data[env.ValueFrom.ConfigMapKeyRef.Key]) {
 			fromCM := corev1.EnvVar{
 				Name:  env.Name,
 				Value: data[env.ValueFrom.ConfigMapKeyRef.Key],
@@ -543,7 +547,7 @@ func (mw *mutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*core
 		if err != nil {
 			return nil, err
 		}
-		if strings.HasPrefix(string(data[env.ValueFrom.SecretKeyRef.Key]), "vault:") {
+		if hasVaultPrefix(string(data[env.ValueFrom.SecretKeyRef.Key])) {
 			fromSecret := corev1.EnvVar{
 				Name:  env.Name,
 				Value: string(data[env.ValueFrom.SecretKeyRef.Key]),
@@ -568,7 +572,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 		}
 
 		for _, env := range container.Env {
-			if strings.HasPrefix(env.Value, "vault:") {
+			if hasVaultPrefix(env.Value) {
 				envVars = append(envVars, env)
 			}
 			if env.ValueFrom != nil {
