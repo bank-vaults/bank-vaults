@@ -28,6 +28,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gin-gonic/gin v1.4.0
 	github.com/go-ini/ini v1.34.0 // indirect
+	github.com/google/go-cmp v0.3.0
 	github.com/google/martian v2.1.0+incompatible // indirect
 	github.com/googleapis/gax-go v2.0.0+incompatible // indirect
 	github.com/goph/emperror v0.17.2
