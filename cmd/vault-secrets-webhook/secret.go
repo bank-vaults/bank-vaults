@@ -31,7 +31,7 @@ import (
 
 func secretNeedsMutation(secret *corev1.Secret) bool {
 	for key, value := range secret.Data {
-		if key == corev1.DockerConfigJsonKey || strings.HasPrefix(string(value), "vault:") {
+		if key == corev1.DockerConfigJsonKey || hasVaultPrefix(string(value)) {
 			return true
 		}
 	}
@@ -63,7 +63,7 @@ func mutateSecret(secret *corev1.Secret, vaultConfig internal.VaultConfig, ns st
 			if err != nil {
 				return fmt.Errorf("mutate dockerconfig json failed: %v", err)
 			}
-		} else if strings.HasPrefix(string(value), "vault:") {
+		} else if hasVaultPrefix(string(value)) {
 			sc := map[string]string{
 				key: string(value),
 			}
@@ -87,7 +87,7 @@ func mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultCli
 			return fmt.Errorf("auth base64 decoding failed: %v", err)
 		}
 		auth := string(authBytes)
-		if strings.HasPrefix(auth, "vault:") {
+		if hasVaultPrefix(auth) {
 			split := strings.Split(auth, ":")
 			if len(split) != 4 {
 				return errors.New("splitting auth credentials failed")
@@ -151,8 +151,8 @@ func getDataFromVault(data map[string]string, vaultClient *vault.Client) (map[st
 	for key, value := range data {
 		for _, val := range strings.Fields(value) {
 			val = strings.Map(removePunctuation, val)
-			if strings.HasPrefix(val, "vault:") {
-				path := strings.TrimPrefix(val, "vault:")
+			if hasVaultPrefix(val) {
+				path := trimVaultPrefix(val)
 				split := strings.SplitN(path, "#", 3)
 				path = split[0]
 				var vaultKey string
@@ -186,4 +186,13 @@ func getDataFromVault(data map[string]string, vaultClient *vault.Client) (map[st
 		vaultData[key] = value
 	}
 	return vaultData, nil
+}
+
+func trimVaultPrefix(value string) string {
+	if strings.HasPrefix(value, "vault:") {
+		return strings.TrimPrefix(value, "vault:")
+	} else if strings.HasPrefix(value, ">>vault:") {
+		return strings.TrimPrefix(value, ">>vault:")
+	}
+	return value
 }
