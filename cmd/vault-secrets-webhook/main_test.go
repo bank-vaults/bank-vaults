@@ -22,7 +22,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	fake "k8s.io/client-go/kubernetes/fake"
 
+	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
 	internal "github.com/banzaicloud/bank-vaults/internal/configuration"
+	imagev1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var vaultConfig = internal.VaultConfig{
@@ -35,10 +37,19 @@ var vaultConfig = internal.VaultConfig{
 	EnableJSONLog:        "enableJSONLog",
 }
 
+type MockRegistry struct {
+	Image imagev1.ImageConfig
+}
+
+func (r *MockRegistry) GetImageConfig(_ kubernetes.Interface, _ string, _ *corev1.Container, _ *corev1.PodSpec) (*imagev1.ImageConfig, error) {
+	return &r.Image, nil
+}
+
 func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 
 	type fields struct {
 		k8sClient kubernetes.Interface
+		registry  registry.ImageRegistry
 	}
 	type args struct {
 		containers  []corev1.Container
@@ -57,6 +68,9 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 		{name: "Will mutate container with command, no args",
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
+				registry: &MockRegistry{
+					Image: imagev1.ImageConfig{},
+				},
 			},
 			args: args{
 				containers: []corev1.Container{
@@ -100,6 +114,9 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 		{name: "Will mutate container with command, other syntax",
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
+				registry: &MockRegistry{
+					Image: imagev1.ImageConfig{},
+				},
 			},
 			args: args{
 				containers: []corev1.Container{
@@ -146,6 +163,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mw := &mutatingWebhook{
 				k8sClient: tt.fields.k8sClient,
+				registry:  tt.fields.registry,
 			}
 			got, err := mw.mutateContainers(tt.args.containers, tt.args.podSpec, tt.args.vaultConfig, tt.args.ns)
 			if (err != nil) != tt.wantErr {
