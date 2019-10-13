@@ -70,7 +70,7 @@ There is a Helm chart available to deploy the [Vault Secrets Webhook](https://gi
 
 ```bash
 helm init -c
-helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch/master
+helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com
 helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook
 ```
 
