@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
-	"sync"
 
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/heroku/docker-registry-client/registry"
@@ -34,43 +33,29 @@ import (
 
 var logger *log.Logger
 
-var imageCache ImageCache
+// ImageRegistry is a docker registry
+type ImageRegistry interface {
+	GetImageConfig(
+		clientset kubernetes.Interface,
+		namespace string,
+		container *corev1.Container,
+		podSpec *corev1.PodSpec) (*imagev1.ImageConfig, error)
+}
 
-func init() {
+// Registry impl
+type Registry struct {
+	imageCache ImageCache
+}
+
+// NewRegistry creates and initializes registry
+func NewRegistry() ImageRegistry {
+	var r *Registry = &Registry{}
 	logger = log.New()
 	if viper.GetBool("enable_json_log") {
 		logger.SetFormatter(&log.JSONFormatter{})
 	}
-	imageCache = NewInMemoryImageCache()
-}
-
-type ImageCache interface {
-	Get(image string) *imagev1.ImageConfig
-	Put(image string, imageConfig *imagev1.ImageConfig)
-}
-
-type InMemoryImageCache struct {
-	mutex sync.Mutex
-	cache map[string]imagev1.ImageConfig
-}
-
-func NewInMemoryImageCache() ImageCache {
-	return &InMemoryImageCache{cache: map[string]imagev1.ImageConfig{}}
-}
-
-func (c *InMemoryImageCache) Get(image string) *imagev1.ImageConfig {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	if imageConfig, ok := c.cache[image]; ok {
-		return &imageConfig
-	}
-	return nil
-}
-
-func (c *InMemoryImageCache) Put(image string, imageConfig *imagev1.ImageConfig) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	c.cache[image] = *imageConfig
+	r.imageCache = NewInMemoryImageCache()
+	return r
 }
 
 type DockerCreds struct {
@@ -78,13 +63,13 @@ type DockerCreds struct {
 }
 
 // GetImageConfig returns entrypoint and command of container
-func GetImageConfig(
+func (r *Registry) GetImageConfig(
 	clientset kubernetes.Interface,
 	namespace string,
 	container *corev1.Container,
 	podSpec *corev1.PodSpec) (*imagev1.ImageConfig, error) {
 
-	if imageConfig := imageCache.Get(container.Image); imageConfig != nil {
+	if imageConfig := r.imageCache.Get(container.Image); imageConfig != nil {
 		logger.Infof("found image %s in cache", container.Image)
 		return imageConfig, nil
 	}
@@ -100,7 +85,7 @@ func GetImageConfig(
 
 	imageConfig, err := getImageBlob(containerInfo)
 	if imageConfig != nil {
-		imageCache.Put(container.Image, imageConfig)
+		r.imageCache.Put(container.Image, imageConfig)
 	}
 
 	return imageConfig, err
