@@ -76,6 +76,10 @@ helm install ./charts/vault-secrets-webhook \
     --name vault-secrets-webhook \
     --set image.tag=latest \
     --set image.pullPolicy=IfNotPresent \
+    --set configMapMutation=true \
+    --set configmapFailurePolicy=Fail \
+    --set podsFailurePolicy=Fail \
+    --set secretsFailurePolicy=Fail \
     --set env.VAULT_ENV_IMAGE=banzaicloud/vault-env:latest \
     --namespace vswh \
     --wait
