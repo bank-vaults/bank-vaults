@@ -65,6 +65,18 @@ resources: {}
   # requests:
   #   cpu: 100m
   #   memory: 128Mi
+
+## Node labels for pod assignment
+nodeSelector: {}
+
+
+## Add tolerations if specified
+tolerations: []
+# - effect: NoSchedule
+#   key: "key"
+#   operator: Equal
+#   value: "value"
+
 vault:
   # Allows the mounting of various custom secrets to enable production vault
   # configurations. The comments show an example usage for mounting a TLS

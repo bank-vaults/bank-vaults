@@ -129,8 +129,10 @@ The following tables lists the configurable parameters of the vault chart and th
 | `resources.limits.cpu`  | Container requested CPU             | `nil`                                               |
 | `resources.limits.memory` | Container requested memory        | `nil`                                               |
 | `unsealer.args`         | Bank Vaults args | `["--mode", "k8s", "--k8s-secret-namespace", "default", "--k8s-secret-name", "bank-vaults"]` |
-| `rabc.enabled`          | Use rbac                            | `true`                                              |
-| `rabc.psp.enabled`      | Use pod security policy             | `false`                                             |
+| `rbac.enabled`          | Use rbac                            | `true`                                              |
+| `rbac.psp.enabled`      | Use pod security policy             | `false`                                             |
+| `nodeSelector`          | Node labels for pod assignment. https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector                                                           | `{}`        
+| `tolerations`                                  | List of node tolerations for the pods. https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                                           | `[]`        
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
