@@ -79,7 +79,7 @@ type DockerCreds struct {
 
 // GetImageConfig returns entrypoint and command of container
 func GetImageConfig(
-	clientset *kubernetes.Clientset,
+	clientset kubernetes.Interface,
 	namespace string,
 	container *corev1.Container,
 	podSpec *corev1.PodSpec) (*imagev1.ImageConfig, error) {
@@ -173,7 +173,7 @@ func parseContainerImage(image string) (string, string) {
 
 // K8s structure keeps information retrieved from POD definition
 type ContainerInfo struct {
-	clientset        *kubernetes.Clientset
+	clientset        kubernetes.Interface
 	Namespace        string
 	ImagePullSecrets string
 	RegistryAddress  string

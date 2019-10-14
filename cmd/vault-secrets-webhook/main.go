@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"strings"
 
+	internal "github.com/banzaicloud/bank-vaults/internal/configuration"
+
 	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	vaultapi "github.com/hashicorp/vault/api"
@@ -42,29 +44,6 @@ import (
 	kubernetesConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
-type vaultConfig struct {
-	addr                        string
-	role                        string
-	path                        string
-	skipVerify                  string
-	tlsSecret                   string
-	useAgent                    bool
-	ctConfigMap                 string
-	ctImage                     string
-	ctOnce                      bool
-	ctImagePullPolicy           corev1.PullPolicy
-	ctShareProcess              bool
-	ctShareProcessDefault       string
-	ctCPU                       resource.Quantity
-	ctMemory                    resource.Quantity
-	pspAllowPrivilegeEscalation bool
-	ignoreMissingSecrets        string
-	vaultEnvPassThrough         string
-	configfilePath              string
-	mutateConfigMap             bool
-	enableJSONLog               string
-}
-
 var vaultAgentConfig = `
 pid_file = "/tmp/pidfile"
 exit_after_auth = true
@@ -85,7 +64,7 @@ auto_auth {
 }`
 
 type mutatingWebhook struct {
-	k8sClient *kubernetes.Clientset
+	k8sClient kubernetes.Interface
 }
 
 // If the original Pod contained a Volume "vault-tls", for example Vault instances provisioned by the Operator
@@ -107,10 +86,10 @@ func hasPodSecurityContextRunAsUser(p *corev1.PodSecurityContext) bool {
 	return true
 }
 
-func getInitContainers(originalContainers []corev1.Container, podSecurityContext *corev1.PodSecurityContext, vaultConfig vaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
+func getInitContainers(originalContainers []corev1.Container, podSecurityContext *corev1.PodSecurityContext, vaultConfig internal.VaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	var containers = []corev1.Container{}
 
-	if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
+	if vaultConfig.UseAgent || vaultConfig.CtConfigMap != "" {
 		var serviceAccountMount corev1.VolumeMount
 
 	mountSearch:
@@ -131,7 +110,7 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 		runAsUser := int64(100)
 		securityContext := &corev1.SecurityContext{
 			RunAsUser:                &runAsUser,
-			AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
+			AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 		}
 
 		containers = append(containers, corev1.Container{
@@ -163,6 +142,7 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 					MountPath: "/vault/",
 				},
 			},
+
 			SecurityContext: getSecurityContext(podSecurityContext, vaultConfig),
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
@@ -176,15 +156,15 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 	return containers
 }
 
-func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
+func getContainers(vaultConfig internal.VaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	var containers = []corev1.Container{}
 	securityContext := &corev1.SecurityContext{
-		AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
+		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 	}
 
-	if vaultConfig.ctShareProcess {
+	if vaultConfig.CtShareProcess {
 		securityContext = &corev1.SecurityContext{
-			AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
+			AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{
 					"SYS_PTRACE",
@@ -208,7 +188,7 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 	)
 
 	var ctCommandString []string
-	if vaultConfig.ctOnce {
+	if vaultConfig.CtOnce {
 		ctCommandString = []string{"-config", "/vault/ct-config/config.hcl", "-once"}
 	} else {
 		ctCommandString = []string{"-config", "/vault/ct-config/config.hcl"}
@@ -216,16 +196,16 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 
 	containers = append(containers, corev1.Container{
 		Name:            "consul-template",
-		Image:           vaultConfig.ctImage,
+		Image:           vaultConfig.CtImage,
 		Args:            ctCommandString,
-		ImagePullPolicy: vaultConfig.ctImagePullPolicy,
+		ImagePullPolicy: vaultConfig.CtImagePullPolicy,
 		SecurityContext: securityContext,
 		Env:             containerEnvVars,
 		VolumeMounts:    containerVolMounts,
 		Resources: corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    vaultConfig.ctCPU,
-				corev1.ResourceMemory: vaultConfig.ctMemory,
+				corev1.ResourceCPU:    vaultConfig.CtCPU,
+				corev1.ResourceMemory: vaultConfig.CtMemory,
 			},
 		},
 	})
@@ -233,20 +213,20 @@ func getContainers(vaultConfig vaultConfig, containerEnvVars []corev1.EnvVar, co
 	return containers
 }
 
-func getSecurityContext(podSecurityContext *corev1.PodSecurityContext, vaultConfig vaultConfig) *corev1.SecurityContext {
+func getSecurityContext(podSecurityContext *corev1.PodSecurityContext, vaultConfig internal.VaultConfig) *corev1.SecurityContext {
 	if hasPodSecurityContextRunAsUser(podSecurityContext) == true {
 		return &corev1.SecurityContext{
 			RunAsUser:                podSecurityContext.RunAsUser,
-			AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
+			AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 		}
 	}
 
 	return &corev1.SecurityContext{
-		AllowPrivilegeEscalation: &vaultConfig.pspAllowPrivilegeEscalation,
+		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 	}
 }
 
-func getVolumes(existingVolumes []corev1.Volume, agentConfigMapName string, vaultConfig vaultConfig, logger *log.Logger) []corev1.Volume {
+func getVolumes(existingVolumes []corev1.Volume, agentConfigMapName string, vaultConfig internal.VaultConfig, logger *log.Logger) []corev1.Volume {
 	logger.Debugf("Add generic volumes to podspec")
 
 	volumes := []corev1.Volume{
@@ -260,7 +240,7 @@ func getVolumes(existingVolumes []corev1.Volume, agentConfigMapName string, vaul
 		},
 	}
 
-	if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
+	if vaultConfig.UseAgent || vaultConfig.CtConfigMap != "" {
 		logger.Debugf("Add vault agent volumes to podspec")
 		volumes = append(volumes, corev1.Volume{
 			Name: "vault-agent-config",
@@ -274,7 +254,7 @@ func getVolumes(existingVolumes []corev1.Volume, agentConfigMapName string, vaul
 		})
 	}
 
-	if vaultConfig.tlsSecret != "" {
+	if vaultConfig.TLSSecret != "" {
 		logger.Debugf("Add vault TLS volume to podspec")
 
 		volumeName := "vault-tls"
@@ -286,12 +266,12 @@ func getVolumes(existingVolumes []corev1.Volume, agentConfigMapName string, vaul
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: vaultConfig.tlsSecret,
+					SecretName: vaultConfig.TLSSecret,
 				},
 			},
 		})
 	}
-	if vaultConfig.ctConfigMap != "" {
+	if vaultConfig.CtConfigMap != "" {
 		logger.Debugf("Add consul template volumes to podspec")
 
 		defaultMode := int32(420)
@@ -309,7 +289,7 @@ func getVolumes(existingVolumes []corev1.Volume, agentConfigMapName string, vaul
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: vaultConfig.ctConfigMap,
+							Name: vaultConfig.CtConfigMap,
 						},
 						DefaultMode: &defaultMode,
 						Items: []corev1.KeyToPath{
@@ -345,139 +325,139 @@ func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.O
 	}
 }
 
-func parseVaultConfig(obj metav1.Object) vaultConfig {
-	var vaultConfig vaultConfig
+func parseVaultConfig(obj metav1.Object) internal.VaultConfig {
+	var vaultConfig internal.VaultConfig
 	annotations := obj.GetAnnotations()
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-addr"]; ok {
-		vaultConfig.addr = val
+		vaultConfig.Addr = val
 	} else {
-		vaultConfig.addr = viper.GetString("vault_addr")
+		vaultConfig.Addr = viper.GetString("vault_addr")
 	}
 
-	vaultConfig.role = annotations["vault.security.banzaicloud.io/vault-role"]
-	if vaultConfig.role == "" {
+	vaultConfig.Role = annotations["vault.security.banzaicloud.io/vault-role"]
+	if vaultConfig.Role == "" {
 		switch p := obj.(type) {
 		case *corev1.Pod:
-			vaultConfig.role = p.Spec.ServiceAccountName
+			vaultConfig.Role = p.Spec.ServiceAccountName
 		default:
-			vaultConfig.role = "default"
+			vaultConfig.Role = "default"
 		}
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-path"]; ok {
-		vaultConfig.path = val
+		vaultConfig.Path = val
 	} else {
-		vaultConfig.path = viper.GetString("vault_path")
+		vaultConfig.Path = viper.GetString("vault_path")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-skip-verify"]; ok {
-		vaultConfig.skipVerify = val
+		vaultConfig.SkipVerify = val
 	} else {
-		vaultConfig.skipVerify = viper.GetString("vault_skip_verify")
+		vaultConfig.SkipVerify = viper.GetString("vault_skip_verify")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-tls-secret"]; ok {
-		vaultConfig.tlsSecret = val
+		vaultConfig.TLSSecret = val
 	} else {
-		vaultConfig.tlsSecret = viper.GetString("vault_tls_secret")
+		vaultConfig.TLSSecret = viper.GetString("vault_tls_secret")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-agent"]; ok {
-		vaultConfig.useAgent, _ = strconv.ParseBool(val)
+		vaultConfig.UseAgent, _ = strconv.ParseBool(val)
 	} else {
-		vaultConfig.useAgent, _ = strconv.ParseBool(viper.GetString("vault_agent"))
+		vaultConfig.UseAgent, _ = strconv.ParseBool(viper.GetString("vault_agent"))
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-configmap"]; ok {
-		vaultConfig.ctConfigMap = val
+		vaultConfig.CtConfigMap = val
 	} else {
-		vaultConfig.ctConfigMap = ""
+		vaultConfig.CtConfigMap = ""
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-image"]; ok {
-		vaultConfig.ctImage = val
+		vaultConfig.CtImage = val
 	} else {
-		vaultConfig.ctImage = viper.GetString("vault_ct_image")
+		vaultConfig.CtImage = viper.GetString("vault_ct_image")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ignore-missing-secrets"]; ok {
-		vaultConfig.ignoreMissingSecrets = val
+		vaultConfig.IgnoreMissingSecrets = val
 	} else {
-		vaultConfig.ignoreMissingSecrets = viper.GetString("vault_ignore_missing_secrets")
+		vaultConfig.IgnoreMissingSecrets = viper.GetString("vault_ignore_missing_secrets")
 	}
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-env-passthrough"]; ok {
-		vaultConfig.vaultEnvPassThrough = val
+		vaultConfig.VaultEnvPassThrough = val
 	} else {
-		vaultConfig.vaultEnvPassThrough = viper.GetString("vault_env_passthrough")
+		vaultConfig.VaultEnvPassThrough = viper.GetString("vault_env_passthrough")
 	}
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-configfile-path"]; ok {
-		vaultConfig.configfilePath = val
+		vaultConfig.ConfigfilePath = val
 	} else {
-		vaultConfig.configfilePath = "/vault/secrets"
+		vaultConfig.ConfigfilePath = "/vault/secrets"
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-pull-policy"]; ok {
 		switch val {
 		case "Never", "never":
-			vaultConfig.ctImagePullPolicy = corev1.PullNever
+			vaultConfig.CtImagePullPolicy = corev1.PullNever
 		case "Always", "always":
-			vaultConfig.ctImagePullPolicy = corev1.PullAlways
+			vaultConfig.CtImagePullPolicy = corev1.PullAlways
 		case "IfNotPresent", "ifnotpresent":
-			vaultConfig.ctImagePullPolicy = corev1.PullIfNotPresent
+			vaultConfig.CtImagePullPolicy = corev1.PullIfNotPresent
 		}
 	} else {
-		vaultConfig.ctImagePullPolicy = corev1.PullIfNotPresent
+		vaultConfig.CtImagePullPolicy = corev1.PullIfNotPresent
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-once"]; ok {
-		vaultConfig.ctOnce, _ = strconv.ParseBool(val)
+		vaultConfig.CtOnce, _ = strconv.ParseBool(val)
 	} else {
-		vaultConfig.ctOnce = false
+		vaultConfig.CtOnce = false
 	}
 
 	if val, err := resource.ParseQuantity(annotations["vault.security.banzaicloud.io/vault-ct-cpu"]); err != nil {
-		vaultConfig.ctCPU = val
+		vaultConfig.CtCPU = val
 	} else {
-		vaultConfig.ctCPU = resource.MustParse("100m")
+		vaultConfig.CtCPU = resource.MustParse("100m")
 	}
 
 	if val, err := resource.ParseQuantity(annotations["vault.security.banzaicloud.io/vault-ct-memory"]); err != nil {
-		vaultConfig.ctMemory = val
+		vaultConfig.CtMemory = val
 	} else {
-		vaultConfig.ctMemory = resource.MustParse("128Mi")
+		vaultConfig.CtMemory = resource.MustParse("128Mi")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-share-process-namespace"]; ok {
-		vaultConfig.ctShareProcessDefault = "found"
-		vaultConfig.ctShareProcess, _ = strconv.ParseBool(val)
+		vaultConfig.CtShareProcessDefault = "found"
+		vaultConfig.CtShareProcess, _ = strconv.ParseBool(val)
 	} else {
-		vaultConfig.ctShareProcessDefault = "empty"
-		vaultConfig.ctShareProcess = false
+		vaultConfig.CtShareProcessDefault = "empty"
+		vaultConfig.CtShareProcess = false
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/psp-allow-privilege-escalation"]; ok {
-		vaultConfig.pspAllowPrivilegeEscalation, _ = strconv.ParseBool(val)
+		vaultConfig.PspAllowPrivilegeEscalation, _ = strconv.ParseBool(val)
 	} else {
-		vaultConfig.pspAllowPrivilegeEscalation, _ = strconv.ParseBool(viper.GetString("psp_allow_privilege_escalation"))
+		vaultConfig.PspAllowPrivilegeEscalation, _ = strconv.ParseBool(viper.GetString("psp_allow_privilege_escalation"))
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/mutate-configmap"]; ok {
-		vaultConfig.mutateConfigMap, _ = strconv.ParseBool(val)
+		vaultConfig.MutateConfigMap, _ = strconv.ParseBool(val)
 	} else {
-		vaultConfig.mutateConfigMap, _ = strconv.ParseBool(viper.GetString("mutate_configmap"))
+		vaultConfig.MutateConfigMap, _ = strconv.ParseBool(viper.GetString("mutate_configmap"))
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/enable-json-log"]; ok {
-		vaultConfig.enableJSONLog = val
+		vaultConfig.EnableJSONLog = val
 	} else {
-		vaultConfig.enableJSONLog = viper.GetString("enable_json_log")
+		vaultConfig.EnableJSONLog = viper.GetString("enable_json_log")
 	}
 
 	return vaultConfig
 }
 
-func getConfigMapForVaultAgent(obj metav1.Object, vaultConfig vaultConfig) *corev1.ConfigMap {
+func getConfigMapForVaultAgent(obj metav1.Object, vaultConfig internal.VaultConfig) *corev1.ConfigMap {
 	var ownerReferences []metav1.OwnerReference
 	name := obj.GetName()
 	if name == "" {
@@ -497,7 +477,7 @@ func getConfigMapForVaultAgent(obj metav1.Object, vaultConfig vaultConfig) *core
 			OwnerReferences: ownerReferences,
 		},
 		Data: map[string]string{
-			"config.hcl": fmt.Sprintf(vaultAgentConfig, vaultConfig.path, vaultConfig.role),
+			"config.hcl": fmt.Sprintf(vaultAgentConfig, vaultConfig.Path, vaultConfig.Role),
 		},
 	}
 }
@@ -532,7 +512,7 @@ func (mw *mutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns str
 				}
 			}
 			for key, value := range data {
-				if strings.HasPrefix(value, "vault:") || strings.HasPrefix(value, ">>vault:") {
+				if hasVaultPrefix(value) {
 					envFromCM := corev1.EnvVar{
 						Name:  key,
 						Value: value,
@@ -551,7 +531,7 @@ func (mw *mutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns str
 				}
 			}
 			for key, value := range data {
-				if strings.HasPrefix(string(value), "vault:") || strings.HasPrefix(string(value), ">>vault:") {
+				if hasVaultPrefix(string(value)) {
 					envFromSec := corev1.EnvVar{
 						Name:  key,
 						Value: string(value),
@@ -564,13 +544,17 @@ func (mw *mutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns str
 	return envVars, nil
 }
 
+func hasVaultPrefix(value string) bool {
+	return strings.HasPrefix(value, "vault:") || strings.HasPrefix(value, ">>vault:")
+}
+
 func (mw *mutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*corev1.EnvVar, error) {
 	if env.ValueFrom.ConfigMapKeyRef != nil {
 		data, err := mw.getDataFromConfigmap(env.ValueFrom.ConfigMapKeyRef.Name, ns)
 		if err != nil {
 			return nil, err
 		}
-		if strings.HasPrefix(data[env.ValueFrom.ConfigMapKeyRef.Key], "vault:") {
+		if hasVaultPrefix(data[env.ValueFrom.ConfigMapKeyRef.Key]) {
 			fromCM := corev1.EnvVar{
 				Name:  env.Name,
 				Value: data[env.ValueFrom.ConfigMapKeyRef.Key],
@@ -583,7 +567,7 @@ func (mw *mutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*core
 		if err != nil {
 			return nil, err
 		}
-		if strings.HasPrefix(string(data[env.ValueFrom.SecretKeyRef.Key]), "vault:") {
+		if hasVaultPrefix(string(data[env.ValueFrom.SecretKeyRef.Key])) {
 			fromSecret := corev1.EnvVar{
 				Name:  env.Name,
 				Value: string(data[env.ValueFrom.SecretKeyRef.Key]),
@@ -594,7 +578,7 @@ func (mw *mutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*core
 	return nil, nil
 }
 
-func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSpec *corev1.PodSpec, vaultConfig vaultConfig, ns string) (bool, error) {
+func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSpec *corev1.PodSpec, vaultConfig internal.VaultConfig, ns string) (bool, error) {
 	mutated := false
 
 	for i, container := range containers {
@@ -608,7 +592,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 		}
 
 		for _, env := range container.Env {
-			if strings.HasPrefix(env.Value, "vault:") {
+			if hasVaultPrefix(env.Value) {
 				envVars = append(envVars, env)
 			}
 			if env.ValueFrom != nil {
@@ -662,35 +646,35 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 		container.Env = append(container.Env, []corev1.EnvVar{
 			{
 				Name:  "VAULT_ADDR",
-				Value: vaultConfig.addr,
+				Value: vaultConfig.Addr,
 			},
 			{
 				Name:  "VAULT_SKIP_VERIFY",
-				Value: vaultConfig.skipVerify,
+				Value: vaultConfig.SkipVerify,
 			},
 			{
 				Name:  "VAULT_PATH",
-				Value: vaultConfig.path,
+				Value: vaultConfig.Path,
 			},
 			{
 				Name:  "VAULT_ROLE",
-				Value: vaultConfig.role,
+				Value: vaultConfig.Role,
 			},
 			{
 				Name:  "VAULT_IGNORE_MISSING_SECRETS",
-				Value: vaultConfig.ignoreMissingSecrets,
+				Value: vaultConfig.IgnoreMissingSecrets,
 			},
 			{
 				Name:  "VAULT_ENV_PASSTHROUGH",
-				Value: vaultConfig.vaultEnvPassThrough,
+				Value: vaultConfig.VaultEnvPassThrough,
 			},
 			{
 				Name:  "VAULT_JSON_LOG",
-				Value: vaultConfig.enableJSONLog,
+				Value: vaultConfig.EnableJSONLog,
 			},
 		}...)
 
-		if vaultConfig.tlsSecret != "" {
+		if vaultConfig.TLSSecret != "" {
 
 			mountPath := "/vault/tls/ca.crt"
 			volumeName := "vault-tls"
@@ -710,7 +694,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			})
 		}
 
-		if vaultConfig.useAgent {
+		if vaultConfig.UseAgent {
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  "VAULT_TOKEN_FILE",
 				Value: "/vault/.vault-token",
@@ -723,7 +707,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 	return mutated, nil
 }
 
-func addSecretsVolToContainers(vaultConfig vaultConfig, containers []corev1.Container, logger *log.Logger) {
+func addSecretsVolToContainers(vaultConfig internal.VaultConfig, containers []corev1.Container, logger *log.Logger) {
 
 	for i, container := range containers {
 
@@ -732,7 +716,7 @@ func addSecretsVolToContainers(vaultConfig vaultConfig, containers []corev1.Cont
 		container.VolumeMounts = append(container.VolumeMounts, []corev1.VolumeMount{
 			{
 				Name:      "ct-secrets",
-				MountPath: vaultConfig.configfilePath,
+				MountPath: vaultConfig.ConfigfilePath,
 			},
 		}...)
 
@@ -740,11 +724,11 @@ func addSecretsVolToContainers(vaultConfig vaultConfig, containers []corev1.Cont
 	}
 }
 
-func newVaultClient(vaultConfig vaultConfig) (*vault.Client, error) {
+func newVaultClient(vaultConfig internal.VaultConfig) (*vault.Client, error) {
 	clientConfig := vaultapi.DefaultConfig()
-	clientConfig.Address = vaultConfig.addr
+	clientConfig.Address = vaultConfig.Addr
 
-	vaultInsecure, err := strconv.ParseBool(vaultConfig.skipVerify)
+	vaultInsecure, err := strconv.ParseBool(vaultConfig.SkipVerify)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
 	}
@@ -755,12 +739,12 @@ func newVaultClient(vaultConfig vaultConfig) (*vault.Client, error) {
 
 	return vault.NewClientFromConfig(
 		clientConfig,
-		vault.ClientRole(vaultConfig.role),
-		vault.ClientAuthPath(vaultConfig.path),
+		vault.ClientRole(vaultConfig.Role),
+		vault.ClientAuthPath(vaultConfig.Path),
 	)
 }
 
-func newK8SClient() (*kubernetes.Clientset, error) {
+func newK8SClient() (kubernetes.Interface, error) {
 	kubeConfig, err := kubernetesConfig.GetConfig()
 	if err != nil {
 		return nil, err
@@ -769,7 +753,7 @@ func newK8SClient() (*kubernetes.Clientset, error) {
 	return kubernetes.NewForConfig(kubeConfig)
 }
 
-func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig vaultConfig, ns string, dryRun bool) error {
+func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig internal.VaultConfig, ns string, dryRun bool) error {
 
 	logger.Debugf("Successfully connected to the API")
 
@@ -798,11 +782,11 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig vaultConfig, n
 	containerEnvVars := []corev1.EnvVar{
 		{
 			Name:  "VAULT_ADDR",
-			Value: vaultConfig.addr,
+			Value: vaultConfig.Addr,
 		},
 		{
 			Name:  "VAULT_SKIP_VERIFY",
-			Value: vaultConfig.skipVerify,
+			Value: vaultConfig.SkipVerify,
 		},
 	}
 	containerVolMounts := []corev1.VolumeMount{
@@ -811,7 +795,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig vaultConfig, n
 			MountPath: "/vault/",
 		},
 	}
-	if vaultConfig.tlsSecret != "" {
+	if vaultConfig.TLSSecret != "" {
 
 		mountPath := "/vault/tls/ca.crt"
 		volumeName := "vault-tls"
@@ -831,10 +815,10 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig vaultConfig, n
 		})
 	}
 
-	if initContainersMutated || containersMutated || vaultConfig.ctConfigMap != "" {
+	if initContainersMutated || containersMutated || vaultConfig.CtConfigMap != "" {
 		var agentConfigMapName string
 
-		if vaultConfig.useAgent || vaultConfig.ctConfigMap != "" {
+		if vaultConfig.UseAgent || vaultConfig.CtConfigMap != "" {
 			configMap := getConfigMapForVaultAgent(pod, vaultConfig)
 			agentConfigMapName = configMap.Name
 
@@ -861,25 +845,25 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig vaultConfig, n
 		logger.Debugf("Successfully appended pod spec volumes")
 	}
 
-	if vaultConfig.ctConfigMap != "" {
+	if vaultConfig.CtConfigMap != "" {
 		logger.Debugf("Consul Template config found")
 
 		addSecretsVolToContainers(vaultConfig, pod.Spec.Containers, logger)
 
-		if vaultConfig.ctShareProcessDefault == "empty" {
+		if vaultConfig.CtShareProcessDefault == "empty" {
 			logger.Debugf("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
 			apiVersion, _ := mw.k8sClient.Discovery().ServerVersion()
 			versionCompared := kubeVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
 			logger.Debugf("Kubernetes API version detected: %s", apiVersion.String())
 
 			if versionCompared >= 0 {
-				vaultConfig.ctShareProcess = true
+				vaultConfig.CtShareProcess = true
 			} else {
-				vaultConfig.ctShareProcess = false
+				vaultConfig.CtShareProcess = false
 			}
 		}
 
-		if vaultConfig.ctShareProcess {
+		if vaultConfig.CtShareProcess {
 			logger.Debugf("Detected shared process namespace")
 			shareProcessNamespace := true
 			pod.Spec.ShareProcessNamespace = &shareProcessNamespace
