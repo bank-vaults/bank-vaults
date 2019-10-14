@@ -88,5 +88,9 @@ kubectl apply -f deploy/test-secret.yaml
 test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].username'` = "dockerrepouser"
 test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].password'` = "dockerrepopassword"
 
+kubectl apply -f deploy/test-configmap.yaml
+test `kubectl get cm sample-configmap -o jsonpath='{.data.\.aws-access-key-id}'` = "secretId"
+test `kubectl get cm sample-configmap -o jsonpath='{.binaryData.\.aws-access-key-id-binary}' | base64 --decode` = "secretId"
+
 kubectl apply -f deploy/test-deployment.yaml
 kubectl wait --for=condition=available deployment/hello-secrets --timeout=120s
