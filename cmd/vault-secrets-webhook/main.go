@@ -78,7 +78,15 @@ func hasTLSVolume(volumes []corev1.Volume) bool {
 	return false
 }
 
-func getInitContainers(originalContainers []corev1.Container, vaultConfig internal.VaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
+func hasPodSecurityContextRunAsUser(p *corev1.PodSecurityContext) bool {
+	if p.RunAsUser == nil {
+		return false
+	}
+
+	return true
+}
+
+func getInitContainers(originalContainers []corev1.Container, podSecurityContext *corev1.PodSecurityContext, vaultConfig internal.VaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	var containers = []corev1.Container{}
 
 	if vaultConfig.UseAgent || vaultConfig.CtConfigMap != "" {
@@ -134,9 +142,8 @@ func getInitContainers(originalContainers []corev1.Container, vaultConfig intern
 					MountPath: "/vault/",
 				},
 			},
-			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
-			},
+
+			SecurityContext: getSecurityContext(podSecurityContext, vaultConfig),
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -204,6 +211,19 @@ func getContainers(vaultConfig internal.VaultConfig, containerEnvVars []corev1.E
 	})
 
 	return containers
+}
+
+func getSecurityContext(podSecurityContext *corev1.PodSecurityContext, vaultConfig internal.VaultConfig) *corev1.SecurityContext {
+	if hasPodSecurityContextRunAsUser(podSecurityContext) == true {
+		return &corev1.SecurityContext{
+			RunAsUser:                podSecurityContext.RunAsUser,
+			AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
+		}
+	}
+
+	return &corev1.SecurityContext{
+		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
+	}
 }
 
 func getVolumes(existingVolumes []corev1.Volume, agentConfigMapName string, vaultConfig internal.VaultConfig, logger *log.Logger) []corev1.Volume {
@@ -818,7 +838,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig internal.Vault
 
 		}
 
-		pod.Spec.InitContainers = append(getInitContainers(pod.Spec.Containers, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), pod.Spec.InitContainers...)
+		pod.Spec.InitContainers = append(getInitContainers(pod.Spec.Containers, pod.Spec.SecurityContext, vaultConfig, initContainersMutated, containersMutated, containerEnvVars, containerVolMounts), pod.Spec.InitContainers...)
 		logger.Debugf("Successfully appended pod init containers to spec")
 
 		pod.Spec.Volumes = append(pod.Spec.Volumes, getVolumes(pod.Spec.Volumes, agentConfigMapName, vaultConfig, logger)...)
