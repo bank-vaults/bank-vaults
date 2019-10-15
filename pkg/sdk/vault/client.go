@@ -347,8 +347,9 @@ func (client *Client) Close() {
 	client.mu.Lock()
 	defer client.mu.Unlock()
 
+	client.closed = true
+
 	if client.tokenRenewer != nil {
-		client.closed = true
 		client.tokenRenewer.Stop()
 	}
 
