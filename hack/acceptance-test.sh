@@ -27,6 +27,13 @@ function finish {
     kubectl get secret -n vswh -o yaml
 }
 
+function check_webhook_seccontext {
+    kubectl describe deployment/hello-secrets-seccontext
+    kubectl describe rs hello-secrets-seccontext
+    kubectl describe pod hello-secrets-seccontext
+    kubectl logs deployment/hello-secrets-seccontext --all-containers
+}
+
 trap finish EXIT
 
 # Create a resource quota in the default namespace
@@ -91,6 +98,11 @@ test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}'
 kubectl apply -f deploy/test-configmap.yaml
 test `kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id}'` = "secretId"
 test `kubectl get cm sample-configmap -o jsonpath='{.binaryData.aws-access-key-id-binary}'` = "secretId"
+
+kubectl apply -f deploy/test-deployment-seccontext.yaml
+kubectl wait --for=condition=available deployment/hello-secrets-seccontext --timeout=120s
+check_webhook_seccontext
+kubectl delete -f deploy/test-deployment-seccontext.yaml
 
 kubectl apply -f deploy/test-deployment.yaml
 kubectl wait --for=condition=available deployment/hello-secrets --timeout=120s
