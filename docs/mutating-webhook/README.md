@@ -66,7 +66,7 @@ Vault mutating admission webhook is `dry-run aware`.
 
 ### Helm chart
 
-There is a Helm chart available to deploy the [Vault Secrets Webhook](https://github.com/banzaicloud/banzai-charts/tree/master/vault-secrets-webhook).
+There is a Helm chart available to deploy the [Vault Secrets Webhook](https://github.com/banzaicloud/bank-vaults/tree/master/charts/vault-secrets-webhook).
 
 ```bash
 helm init -c
@@ -74,7 +74,7 @@ helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com
 helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook
 ```
 
-For further details follow the webhook's Helm chart [repository](https://github.com/banzaicloud/banzai-charts/tree/master/vault-secrets-webhook).
+For further details follow the webhook's Helm chart [repository](https://github.com/banzaicloud/bank-vaults/tree/master/charts/vault-secrets-webhook).
 
 ## Example
 
