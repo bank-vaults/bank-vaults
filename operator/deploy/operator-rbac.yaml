@@ -46,6 +46,7 @@ rules:
       - apps
     resources:
       - deployments
+      - deployments/finalizers
       - statefulsets
     verbs:
       - '*'
