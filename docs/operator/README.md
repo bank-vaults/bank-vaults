@@ -10,7 +10,7 @@ The operator flow is the following:
 
 ![operator](images/vaultoperator.png)
 
-The source code can be found inside the [operator](https://github.com/banzaicloud/bank-vaults/tree/master/charts/vault-operator) directory.
+The source code can be found inside the [operator](https://github.com/banzaicloud/bank-vaults/operator/) directory.
 
 ## Deploying the operator
 
