@@ -447,6 +447,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	externalConfigMaps := corev1.ConfigMapList{}
 	externalConfigMapsFilter := client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(labelsForVaultConfigurer(v.Name)),
+		Namespace:     v.Namespace,
 	}
 	if err = r.client.List(context.TODO(), &externalConfigMapsFilter, &externalConfigMaps); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to list configmaps: %v", err)
@@ -455,6 +456,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	externalSecrets := corev1.SecretList{}
 	externalSecretsFilter := client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(labelsForVaultConfigurer(v.Name)),
+		Namespace:     v.Namespace,
 	}
 	if err = r.client.List(context.TODO(), &externalSecretsFilter, &externalSecrets); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to list secrets: %v", err)
@@ -503,7 +505,10 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	// Update the Vault status with the pod names
 	podList := podList()
 	labelSelector := labels.SelectorFromSet(labelsForVault(v.Name))
-	listOps := &client.ListOptions{LabelSelector: labelSelector}
+	listOps := &client.ListOptions{
+		LabelSelector: labelSelector,
+		Namespace:     v.Namespace,
+	}
 	err = r.client.List(context.TODO(), listOps, podList)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to list pods: %v", err)
