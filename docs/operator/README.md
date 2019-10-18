@@ -29,7 +29,7 @@ A documented example of this CRD can be found in [operator/deploy/cr.yaml](https
 
 ### Helm chart
 
-There is a Helm chart available to deploy the [Vault Operator](https://github.com/banzaicloud/banzai-charts/tree/master/vault-operator). 
+There is a Helm chart available to deploy the [Vault Operator](https://github.com/banzaicloud/bank-vaults/tree/master/charts/vault-operator). 
 
 ```bash
 helm init -c
@@ -37,4 +37,4 @@ helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch
 helm install banzaicloud-stable/vault-operator
 ```
 
-For further details follow the operator's Helm chart [repository](https://github.com/banzaicloud/banzai-charts/tree/master/vault-operator).
+For further details follow the operator's Helm chart [repository](https://github.com/banzaicloud/bank-vaults/tree/master/charts/vault-operator).
