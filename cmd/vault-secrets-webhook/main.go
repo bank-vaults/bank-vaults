@@ -454,6 +454,10 @@ func parseVaultConfig(obj metav1.Object) internal.VaultConfig {
 		vaultConfig.EnableJSONLog = viper.GetString("enable_json_log")
 	}
 
+	if val, ok := annotations["vault.security.banzaicloud.io/transit-key-id"]; ok {
+		vaultConfig.TransitKeyID = val
+	}
+
 	return vaultConfig
 }
 
@@ -671,6 +675,10 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			{
 				Name:  "VAULT_JSON_LOG",
 				Value: vaultConfig.EnableJSONLog,
+			},
+			{
+				Name:  "VAULT_TRANSIT_KEY_ID",
+				Value: vaultConfig.TransitKeyID,
 			},
 		}...)
 
