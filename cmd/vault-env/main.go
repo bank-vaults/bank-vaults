@@ -207,7 +207,7 @@ func main() {
 			}
 			decodedData, err := base64.StdEncoding.DecodeString(out.Data["plaintext"].(string))
 			if err != nil {
-				logger.Fatalln("failed to decode", err)
+				logger.Fatalln("failed to decode:", value, err)
 			}
 			encodedCache[value] = decodedData
 			sanitized.append(name, string(decodedData))
