@@ -38,29 +38,30 @@ type sanitizedEnviron []string
 
 var (
 	sanitizeEnvmap = map[string]bool{
-		"VAULT_TOKEN":                  true,
-		"VAULT_ADDR":                   true,
-		"VAULT_CACERT":                 true,
-		"VAULT_CAPATH":                 true,
-		"VAULT_CLIENT_CERT":            true,
-		"VAULT_CLIENT_KEY":             true,
-		"VAULT_CLIENT_TIMEOUT":         true,
-		"VAULT_CLUSTER_ADDR":           true,
-		"VAULT_MAX_RETRIES":            true,
-		"VAULT_REDIRECT_ADDR":          true,
-		"VAULT_SKIP_VERIFY":            true,
-		"VAULT_TLS_SERVER_NAME":        true,
-		"VAULT_CLI_NO_COLOR":           true,
-		"VAULT_RATE_LIMIT":             true,
-		"VAULT_NAMESPACE":              true,
-		"VAULT_MFA":                    true,
-		"VAULT_ROLE":                   true,
-		"VAULT_PATH":                   true,
-		"VAULT_TRANSIT_KEY_ID":         true,
-		"VAULT_IGNORE_MISSING_SECRETS": true,
-		"VAULT_ENV_PASSTHROUGH":        true,
-		"VAULT_JSON_LOG":               true,
-		"VAULT_REVOKE_TOKEN":           true,
+		"VAULT_TOKEN":                        true,
+		"VAULT_ADDR":                         true,
+		"VAULT_CACERT":                       true,
+		"VAULT_CAPATH":                       true,
+		"VAULT_CLIENT_CERT":                  true,
+		"VAULT_CLIENT_KEY":                   true,
+		"VAULT_CLIENT_TIMEOUT":               true,
+		"VAULT_CLUSTER_ADDR":                 true,
+		"VAULT_MAX_RETRIES":                  true,
+		"VAULT_REDIRECT_ADDR":                true,
+		"VAULT_SKIP_VERIFY":                  true,
+		"VAULT_TLS_SERVER_NAME":              true,
+		"VAULT_CLI_NO_COLOR":                 true,
+		"VAULT_RATE_LIMIT":                   true,
+		"VAULT_NAMESPACE":                    true,
+		"VAULT_MFA":                          true,
+		"VAULT_ROLE":                         true,
+		"VAULT_PATH":                         true,
+		"VAULT_TRANSIT_KEY_ID":               true,
+		"VAULT_IGNORE_TRANSIT_DECRYPT_ERROR": true,
+		"VAULT_IGNORE_MISSING_SECRETS":       true,
+		"VAULT_ENV_PASSTHROUGH":              true,
+		"VAULT_JSON_LOG":                     true,
+		"VAULT_REVOKE_TOKEN":                 true,
 	}
 
 	transitEncodedVariable = regexp.MustCompile(`vault:v\d+:.*`)
@@ -115,6 +116,7 @@ func main() {
 	}
 
 	ignoreMissingSecrets := os.Getenv("VAULT_IGNORE_MISSING_SECRETS") == "true"
+	ignoreTransitDecryptError := os.Getenv("VAULT_IGNORE_TRANSIT_DECRYPT_ERROR") == "true"
 
 	// The login procedure takes the token from a file (if using Vault Agent)
 	// or requests one for itself (Kubernetes Auth), so if we got a VAULT_TOKEN
@@ -197,7 +199,11 @@ func main() {
 				},
 			)
 			if err != nil {
-				logger.Fatalln("failed to decrypt:", value, err)
+				if !ignoreTransitDecryptError {
+					logger.Fatalln("failed to decrypt:", value, err)
+				}
+				logger.Errorln("failed to decrypt:", value, err)
+				continue
 			}
 			decodedData, err := base64.StdEncoding.DecodeString(out.Data["plaintext"].(string))
 			if err != nil {
