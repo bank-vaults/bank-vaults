@@ -208,6 +208,7 @@ func main() {
 				logger.Errorln("failed to decrypt:", value, err)
 				continue
 			}
+			// decrypted data returns in base64-format
 			decodedData, err := base64.StdEncoding.DecodeString(out.Data["plaintext"].(string))
 			if err != nil {
 				logger.Fatalln("failed to decode:", value, err)
