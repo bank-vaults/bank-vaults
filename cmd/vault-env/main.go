@@ -258,7 +258,7 @@ func main() {
 			if !ignoreMissingSecrets {
 				logger.Fatalln("path not found:", secretPath)
 			}
-			logger.Fatalln("path not found:", secretPath)
+			logger.Errorln("path not found:", secretPath)
 			continue
 		}
 
