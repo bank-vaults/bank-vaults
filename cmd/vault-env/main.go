@@ -66,7 +66,7 @@ var (
 
 	// Example: vault:v1:8SDd3WHDOjf7mq69CyCqYjBXAiQQAVZRkFM13ok481zoCmHnSeDX9vyf7w==
 	// ref: https://www.vaultproject.io/docs/secrets/transit/index.html#usage
-	transitEncodedVariable = regexp.MustCompile(`vault:v\d+:.*`)
+	transitEncrypterVariable = regexp.MustCompile(`vault:v\d+:.*`)
 
 	logger *log.Logger
 )
@@ -186,7 +186,7 @@ func main() {
 
 		// decrypt value with Vault Transit Secret Engine
 		// ref: https://www.vaultproject.io/docs/secrets/transit/index.html
-		if transitEncodedVariable.MatchString(value) {
+		if transitEncrypterVariable.MatchString(value) {
 			transitKeyID := os.Getenv("VAULT_TRANSIT_KEY_ID")
 			if len(transitKeyID) == 0 {
 				logger.Fatal("Found encrypted data, but transit key ID is empty")
