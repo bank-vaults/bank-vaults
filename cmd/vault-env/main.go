@@ -187,7 +187,7 @@ func main() {
 				logger.Fatal("Found encrypted data, but transit key ID is empty")
 			}
 			if v, ok := encodedCache[value]; ok {
-				sanitized.append(value, v)
+				sanitized.append(name, v)
 				continue
 			}
 			out, err := client.RawClient().Logical().Write(
@@ -204,7 +204,7 @@ func main() {
 				logger.Fatalln("failed to decode", err)
 			}
 			encodedCache[value] = decodedData
-			sanitized.append(value, decodedData)
+			sanitized.append(name, string(decodedData))
 			continue
 		}
 
