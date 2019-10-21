@@ -676,14 +676,18 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 				Name:  "VAULT_JSON_LOG",
 				Value: vaultConfig.EnableJSONLog,
 			},
-			{
-				Name:  "VAULT_TRANSIT_KEY_ID",
-				Value: vaultConfig.TransitKeyID,
-			},
 		}...)
 
-		if vaultConfig.TLSSecret != "" {
+		if len(vaultConfig.TransitKeyID) > 0 {
+			container.Env = append(container.Env, []corev1.EnvVar{
+				{
+					Name:  "VAULT_TRANSIT_KEY_ID",
+					Value: vaultConfig.TransitKeyID,
+				},
+			}...)
+		}
 
+		if vaultConfig.TLSSecret != "" {
 			mountPath := "/vault/tls/ca.crt"
 			volumeName := "vault-tls"
 			if hasTLSVolume(podSpec.Volumes) {
