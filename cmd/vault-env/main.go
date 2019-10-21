@@ -239,17 +239,15 @@ func main() {
 				secret, err = client.RawClient().Logical().Write(secretPath, map[string]interface{}{})
 				if err != nil {
 					logger.Fatalln("failed to write secret to path:", secretPath, err.Error())
-				} else {
-					secretCache[secretPath] = secret
 				}
+				secretCache[secretPath] = secret
 			} else {
 				secret, err = client.RawClient().Logical().ReadWithData(secretPath, map[string][]string{"version": {version}})
 				if err != nil {
-					if ignoreMissingSecrets {
-						logger.Errorln("failed to read secret from path:", secretPath, err.Error())
-					} else {
+					if !ignoreMissingSecrets {
 						logger.Fatalln("failed to read secret from path:", secretPath, err.Error())
 					}
+					logger.Errorln("failed to read secret from path:", secretPath, err.Error())
 				} else {
 					secretCache[secretPath] = secret
 				}
