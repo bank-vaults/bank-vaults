@@ -15,9 +15,12 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
+	"regexp"
 	"strings"
 	"syscall"
 
@@ -33,32 +36,37 @@ const vaultLogin = "vault:login"
 
 type sanitizedEnviron []string
 
-var sanitizeEnvmap = map[string]bool{
-	"VAULT_TOKEN":                  true,
-	"VAULT_ADDR":                   true,
-	"VAULT_CACERT":                 true,
-	"VAULT_CAPATH":                 true,
-	"VAULT_CLIENT_CERT":            true,
-	"VAULT_CLIENT_KEY":             true,
-	"VAULT_CLIENT_TIMEOUT":         true,
-	"VAULT_CLUSTER_ADDR":           true,
-	"VAULT_MAX_RETRIES":            true,
-	"VAULT_REDIRECT_ADDR":          true,
-	"VAULT_SKIP_VERIFY":            true,
-	"VAULT_TLS_SERVER_NAME":        true,
-	"VAULT_CLI_NO_COLOR":           true,
-	"VAULT_RATE_LIMIT":             true,
-	"VAULT_NAMESPACE":              true,
-	"VAULT_MFA":                    true,
-	"VAULT_ROLE":                   true,
-	"VAULT_PATH":                   true,
-	"VAULT_IGNORE_MISSING_SECRETS": true,
-	"VAULT_ENV_PASSTHROUGH":        true,
-	"VAULT_JSON_LOG":               true,
-	"VAULT_REVOKE_TOKEN":           true,
-}
+var (
+	sanitizeEnvmap = map[string]bool{
+		"VAULT_TOKEN":                  true,
+		"VAULT_ADDR":                   true,
+		"VAULT_CACERT":                 true,
+		"VAULT_CAPATH":                 true,
+		"VAULT_CLIENT_CERT":            true,
+		"VAULT_CLIENT_KEY":             true,
+		"VAULT_CLIENT_TIMEOUT":         true,
+		"VAULT_CLUSTER_ADDR":           true,
+		"VAULT_MAX_RETRIES":            true,
+		"VAULT_REDIRECT_ADDR":          true,
+		"VAULT_SKIP_VERIFY":            true,
+		"VAULT_TLS_SERVER_NAME":        true,
+		"VAULT_CLI_NO_COLOR":           true,
+		"VAULT_RATE_LIMIT":             true,
+		"VAULT_NAMESPACE":              true,
+		"VAULT_MFA":                    true,
+		"VAULT_ROLE":                   true,
+		"VAULT_PATH":                   true,
+		"VAULT_TRANSIT_KEY_ID":         true,
+		"VAULT_IGNORE_MISSING_SECRETS": true,
+		"VAULT_ENV_PASSTHROUGH":        true,
+		"VAULT_JSON_LOG":               true,
+		"VAULT_REVOKE_TOKEN":           true,
+	}
 
-var logger *log.Logger
+	transitEncodedVariable = regexp.MustCompile(`vault:v\d+:.*`)
+
+	logger *log.Logger
+)
 
 // GlobalHook struct used for adding additional fields to the log
 type GlobalHook struct {
@@ -138,6 +146,7 @@ func main() {
 		}
 	}
 
+	encodedCache := map[string][]byte{}
 	secretCache := map[string]*vaultapi.Secret{}
 
 	// initial and sanitized environs
@@ -148,6 +157,7 @@ func main() {
 		split := strings.SplitN(env, "=", 2)
 		name := split[0]
 		value := split[1]
+
 		var update bool
 		if strings.HasPrefix(value, ">>") {
 			value = strings.TrimPrefix(value, ">>")
@@ -155,90 +165,119 @@ func main() {
 		} else {
 			update = false
 		}
-		if strings.HasPrefix(value, "vault:") {
-			path := strings.TrimPrefix(value, "vault:")
 
-			// handle special case for vault:login env value
-			// namely pass through the the VAULT_TOKEN received from the Vault login procedure
-			if name == "VAULT_TOKEN" && path == "login" {
-				value = client.RawClient().Token()
-				sanitized.append(name, value)
+		if !strings.HasPrefix(value, "vault:") {
+			sanitized.append(name, value)
+			continue
+		}
+		secretPath := strings.TrimPrefix(value, "vault:")
+
+		// handle special case for vault:login env value
+		// namely pass through the the VAULT_TOKEN received from the Vault login procedure
+		if name == "VAULT_TOKEN" && secretPath == "login" {
+			value = client.RawClient().Token()
+			sanitized.append(name, value)
+			continue
+		}
+
+		// ref: https://www.vaultproject.io/docs/secrets/transit/index.html
+		if transitEncodedVariable.MatchString(value) {
+			transitKeyID := os.Getenv("VAULT_TRANSIT_KEY_ID")
+			if len(transitKeyID) == 0 {
+				logger.Fatal("Found encrypted data, but transit key ID is empty")
+			}
+			if v, ok := encodedCache[value]; ok {
+				sanitized.append(value, v)
 				continue
 			}
-
-			split := strings.SplitN(path, "#", 3)
-			path = split[0]
-
-			var key string
-			if len(split) > 1 {
-				key = split[1]
+			out, err := client.RawClient().Logical().Write(
+				path.Join("transit/decrypt", transitKeyID),
+				map[string]interface{}{
+					"ciphertext": value,
+				},
+			)
+			if err != nil {
+				logger.Fatalln("failed to decrypt:", value, err)
 			}
-
-			version := "-1"
-			if len(split) == 3 {
-				version = split[2]
+			decodedData, err := base64.StdEncoding.DecodeString(out.Data["plaintext"].(string))
+			if err != nil {
+				logger.Fatalln("failed to decode", err)
 			}
+			encodedCache[value] = decodedData
+			sanitized.append(value, decodedData)
+			continue
+		}
 
-			var secret *vaultapi.Secret
-			var err error
+		split = strings.SplitN(secretPath, "#", 3)
+		secretPath = split[0]
 
-			if secret = secretCache[path]; secret == nil {
-				if update {
-					secret, err = client.RawClient().Logical().Write(path, map[string]interface{}{})
-					if err != nil {
-						logger.Fatalln("failed to write secret to path:", path, err.Error())
-					} else {
-						secretCache[path] = secret
-					}
+		var key string
+		if len(split) > 1 {
+			key = split[1]
+		}
+
+		version := "-1"
+		if len(split) == 3 {
+			version = split[2]
+		}
+
+		var secret *vaultapi.Secret
+		var err error
+
+		if secret = secretCache[secretPath]; secret == nil {
+			if update {
+				secret, err = client.RawClient().Logical().Write(secretPath, map[string]interface{}{})
+				if err != nil {
+					logger.Fatalln("failed to write secret to path:", secretPath, err.Error())
 				} else {
-					secret, err = client.RawClient().Logical().ReadWithData(path, map[string][]string{"version": {version}})
-					if err != nil {
-						if ignoreMissingSecrets {
-							logger.Errorln("failed to read secret from path:", path, err.Error())
-						} else {
-							logger.Fatalln("failed to read secret from path:", path, err.Error())
-						}
-					} else {
-						secretCache[path] = secret
-					}
-				}
-			}
-
-			if secret == nil {
-				if ignoreMissingSecrets {
-					logger.Warnln("path not found:", path)
-				} else {
-					logger.Fatalln("path not found:", path)
+					secretCache[secretPath] = secret
 				}
 			} else {
-				var data map[string]interface{}
-				v2Data, ok := secret.Data["data"]
-				if ok {
-					data = cast.ToStringMap(v2Data)
-
-					// Check if a given version of a path is destroyed
-					metadata := secret.Data["metadata"].(map[string]interface{})
-					if metadata["destroyed"].(bool) {
-						logger.Warnln("version of secret has been permanently destroyed version:", version, "path:", path)
-					}
-
-					// Check if a given version of a path still exists
-					if deletionTime, ok := metadata["deletion_time"].(string); ok && deletionTime != "" {
-						logger.Warnln("cannot find data for path, given version has been deleted",
-							"path:", path, "version:", version,
-							"deletion_time", deletionTime)
+				secret, err = client.RawClient().Logical().ReadWithData(secretPath, map[string][]string{"version": {version}})
+				if err != nil {
+					if ignoreMissingSecrets {
+						logger.Errorln("failed to read secret from path:", secretPath, err.Error())
+					} else {
+						logger.Fatalln("failed to read secret from path:", secretPath, err.Error())
 					}
 				} else {
-					data = cast.ToStringMap(secret.Data)
-				}
-				if value, ok := data[key]; ok {
-					sanitized.append(name, value)
-				} else {
-					logger.Fatalln("key not found:", key)
+					secretCache[secretPath] = secret
 				}
 			}
+		}
+
+		if secret == nil {
+			if ignoreMissingSecrets {
+				logger.Warnln("path not found:", secretPath)
+			} else {
+				logger.Fatalln("path not found:", secretPath)
+			}
 		} else {
-			sanitized.append(name, value)
+			var data map[string]interface{}
+			v2Data, ok := secret.Data["data"]
+			if ok {
+				data = cast.ToStringMap(v2Data)
+
+				// Check if a given version of a path is destroyed
+				metadata := secret.Data["metadata"].(map[string]interface{})
+				if metadata["destroyed"].(bool) {
+					logger.Warnln("version of secret has been permanently destroyed version:", version, "path:", secretPath)
+				}
+
+				// Check if a given version of a path still exists
+				if deletionTime, ok := metadata["deletion_time"].(string); ok && deletionTime != "" {
+					logger.Warnln("cannot find data for path, given version has been deleted",
+						"path:", secretPath, "version:", version,
+						"deletion_time", deletionTime)
+				}
+			} else {
+				data = cast.ToStringMap(secret.Data)
+			}
+			if value, ok := data[key]; ok {
+				sanitized.append(name, value)
+			} else {
+				logger.Fatalln("key not found:", key)
+			}
 		}
 	}
 
