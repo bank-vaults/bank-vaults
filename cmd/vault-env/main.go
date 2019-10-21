@@ -64,6 +64,8 @@ var (
 		"VAULT_REVOKE_TOKEN":                 true,
 	}
 
+	// Example: vault:v1:8SDd3WHDOjf7mq69CyCqYjBXAiQQAVZRkFM13ok481zoCmHnSeDX9vyf7w==
+	// ref: https://www.vaultproject.io/docs/secrets/transit/index.html#usage
 	transitEncodedVariable = regexp.MustCompile(`vault:v\d+:.*`)
 
 	logger *log.Logger
@@ -182,6 +184,7 @@ func main() {
 			continue
 		}
 
+		// decrypt value with Vault Transit Secret Engine
 		// ref: https://www.vaultproject.io/docs/secrets/transit/index.html
 		if transitEncodedVariable.MatchString(value) {
 			transitKeyID := os.Getenv("VAULT_TRANSIT_KEY_ID")
@@ -253,37 +256,38 @@ func main() {
 		}
 
 		if secret == nil {
-			if ignoreMissingSecrets {
-				logger.Warnln("path not found:", secretPath)
-			} else {
+			if !ignoreMissingSecrets {
 				logger.Fatalln("path not found:", secretPath)
 			}
+			logger.Fatalln("path not found:", secretPath)
+			continue
+		}
+
+		var data map[string]interface{}
+		v2Data, ok := secret.Data["data"]
+		if ok {
+			data = cast.ToStringMap(v2Data)
+
+			// Check if a given version of a path is destroyed
+			metadata := secret.Data["metadata"].(map[string]interface{})
+			if metadata["destroyed"].(bool) {
+				logger.Warnln("version of secret has been permanently destroyed version:", version, "path:", secretPath)
+			}
+
+			// Check if a given version of a path still exists
+			if deletionTime, ok := metadata["deletion_time"].(string); ok && deletionTime != "" {
+				logger.Warnln("cannot find data for path, given version has been deleted",
+					"path:", secretPath, "version:", version,
+					"deletion_time", deletionTime)
+			}
 		} else {
-			var data map[string]interface{}
-			v2Data, ok := secret.Data["data"]
-			if ok {
-				data = cast.ToStringMap(v2Data)
+			data = cast.ToStringMap(secret.Data)
+		}
 
-				// Check if a given version of a path is destroyed
-				metadata := secret.Data["metadata"].(map[string]interface{})
-				if metadata["destroyed"].(bool) {
-					logger.Warnln("version of secret has been permanently destroyed version:", version, "path:", secretPath)
-				}
-
-				// Check if a given version of a path still exists
-				if deletionTime, ok := metadata["deletion_time"].(string); ok && deletionTime != "" {
-					logger.Warnln("cannot find data for path, given version has been deleted",
-						"path:", secretPath, "version:", version,
-						"deletion_time", deletionTime)
-				}
-			} else {
-				data = cast.ToStringMap(secret.Data)
-			}
-			if value, ok := data[key]; ok {
-				sanitized.append(name, value)
-			} else {
-				logger.Fatalln("key not found:", key)
-			}
+		if value, ok := data[key]; ok {
+			sanitized.append(name, value)
+		} else {
+			logger.Fatalln("key not found:", key)
 		}
 	}
 
