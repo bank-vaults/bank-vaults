@@ -15,12 +15,9 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
-	"regexp"
 	"strings"
 	"syscall"
 
@@ -63,10 +60,6 @@ var (
 		"VAULT_JSON_LOG":                     true,
 		"VAULT_REVOKE_TOKEN":                 true,
 	}
-
-	// Example: vault:v1:8SDd3WHDOjf7mq69CyCqYjBXAiQQAVZRkFM13ok481zoCmHnSeDX9vyf7w==
-	// ref: https://www.vaultproject.io/docs/secrets/transit/index.html#usage
-	transitEncryptedVariable = regexp.MustCompile(`vault:v\d+:.*`)
 
 	logger *log.Logger
 )
@@ -184,9 +177,8 @@ func main() {
 			continue
 		}
 
-		// decrypt value with Vault Transit Secret Engine
-		// ref: https://www.vaultproject.io/docs/secrets/transit/index.html
-		if transitEncryptedVariable.MatchString(value) {
+		// decrypts value with Vault Transit Secret Engine
+		if client.Transit.IsEncrypted(value) {
 			transitKeyID := os.Getenv("VAULT_TRANSIT_KEY_ID")
 			if len(transitKeyID) == 0 {
 				logger.Fatal("Found encrypted data, but transit key ID is empty")
@@ -195,26 +187,16 @@ func main() {
 				sanitized.append(name, v)
 				continue
 			}
-			out, err := client.RawClient().Logical().Write(
-				path.Join("transit/decrypt", transitKeyID),
-				map[string]interface{}{
-					"ciphertext": value,
-				},
-			)
+			out, err := client.Transit.Decrypt(transitKeyID, []byte(value))
 			if err != nil {
 				if !ignoreTransitDecryptError {
-					logger.Fatalln("failed to decrypt:", value, err)
+					logger.Fatalln("failed to decrypt variable:", name, err)
 				}
-				logger.Errorln("failed to decrypt:", value, err)
+				logger.Errorln("failed to decrypt variable:", name, err)
 				continue
 			}
-			// decrypted data returns in base64-format
-			decodedData, err := base64.StdEncoding.DecodeString(out.Data["plaintext"].(string))
-			if err != nil {
-				logger.Fatalln("failed to decode:", value, err)
-			}
-			encodedCache[value] = decodedData
-			sanitized.append(name, string(decodedData))
+			encodedCache[value] = out
+			sanitized.append(name, string(out))
 			continue
 		}
 
