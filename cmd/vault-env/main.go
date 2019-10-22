@@ -143,7 +143,7 @@ func main() {
 		}
 	}
 
-	encodedCache := map[string][]byte{}
+	transitCache := map[string][]byte{}
 	secretCache := map[string]*vaultapi.Secret{}
 
 	// initial and sanitized environs
@@ -183,8 +183,8 @@ func main() {
 			if len(transitKeyID) == 0 {
 				logger.Fatal("Found encrypted data, but transit key ID is empty")
 			}
-			if v, ok := encodedCache[value]; ok {
-				sanitized.append(name, v)
+			if v, ok := transitCache[value]; ok {
+				sanitized.append(name, string(v))
 				continue
 			}
 			out, err := client.Transit.Decrypt(transitKeyID, []byte(value))
@@ -195,7 +195,7 @@ func main() {
 				logger.Errorln("failed to decrypt variable:", name, err)
 				continue
 			}
-			encodedCache[value] = out
+			transitCache[value] = out
 			sanitized.append(name, string(out))
 			continue
 		}
