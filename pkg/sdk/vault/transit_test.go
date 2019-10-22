@@ -25,6 +25,10 @@ func TestIsEncrypted(t *testing.T) {
 			valid: false,
 		},
 		{
+			value: "vault:v0:",
+			valid: false,
+		},
+		{
 			value: "vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY",
 			valid: false,
 		},
