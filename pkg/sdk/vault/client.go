@@ -46,6 +46,7 @@ func NewData(cas int, data map[string]interface{}) map[string]interface{} {
 }
 
 type clientOptions struct {
+	url       string
 	role      string
 	authPath  string
 	tokenPath string
@@ -58,6 +59,13 @@ type clientOptions struct {
 // https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis.
 type ClientOption interface {
 	apply(o *clientOptions)
+}
+
+// ClientURL is the vault url EX: https://my-vault.vault.org
+type ClientURL string
+
+func (co ClientURL) apply(o *clientOptions) {
+	o.url = string(co)
 }
 
 // ClientRole is the vault role which the client would like to receive
@@ -192,6 +200,11 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 
 	for _, opt := range opts {
 		opt.apply(o)
+	}
+
+	// Set URL if defined
+	if o.url != "" {
+		rawClient.SetAddress(o.url)
 	}
 
 	// Default role
@@ -334,8 +347,9 @@ func (client *Client) Close() {
 	client.mu.Lock()
 	defer client.mu.Unlock()
 
+	client.closed = true
+
 	if client.tokenRenewer != nil {
-		client.closed = true
 		client.tokenRenewer.Stop()
 	}
 

@@ -1,4 +1,4 @@
-ARG GO_VERSION=1.12
+ARG GO_VERSION=1.13
 
 FROM golang:${GO_VERSION}-alpine AS builder
 
@@ -18,7 +18,7 @@ RUN go install ./cmd/template
 RUN go install ./cmd/bank-vaults
 
 
-FROM alpine:3.9
+FROM alpine:3.10
 
 RUN apk add --no-cache ca-certificates
 

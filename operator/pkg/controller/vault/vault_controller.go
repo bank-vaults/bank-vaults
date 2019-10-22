@@ -447,6 +447,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	externalConfigMaps := corev1.ConfigMapList{}
 	externalConfigMapsFilter := client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(labelsForVaultConfigurer(v.Name)),
+		Namespace:     v.Namespace,
 	}
 	if err = r.client.List(context.TODO(), &externalConfigMapsFilter, &externalConfigMaps); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to list configmaps: %v", err)
@@ -455,6 +456,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	externalSecrets := corev1.SecretList{}
 	externalSecretsFilter := client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(labelsForVaultConfigurer(v.Name)),
+		Namespace:     v.Namespace,
 	}
 	if err = r.client.List(context.TODO(), &externalSecretsFilter, &externalSecrets); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to list secrets: %v", err)
@@ -503,7 +505,10 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	// Update the Vault status with the pod names
 	podList := podList()
 	labelSelector := labels.SelectorFromSet(labelsForVault(v.Name))
-	listOps := &client.ListOptions{LabelSelector: labelSelector}
+	listOps := &client.ListOptions{
+		LabelSelector: labelSelector,
+		Namespace:     v.Namespace,
+	}
 	err = r.client.List(context.TODO(), listOps, podList)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to list pods: %v", err)
@@ -885,10 +890,14 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 				},
 			})
 
+			volumes = withVaultVolumes(v, volumes)
+
 			volumeMounts = append(volumeMounts, corev1.VolumeMount{
 				Name:      cm.Name,
 				MountPath: "/config/" + cm.Name,
 			})
+
+			volumeMounts = withBanksVaultsVolumeMounts(v, volumeMounts)
 
 			configArgs = append(configArgs, "--vault-config-file", "/config/"+cm.Name+"/"+vault.DefaultConfigFile)
 		}
@@ -928,7 +937,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 					ContainerPort: 9091,
 					Protocol:      "TCP",
 				}},
-				Env:          withSecretEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{}))),
+				Env:          withSecretEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{})))),
 				VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
 				WorkingDir:   "/config",
 				Resources:    *getBankVaultsResource(v),
@@ -1195,7 +1204,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Name:            "bank-vaults",
 				Command:         unsealCommand,
 				Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
-				Env: withSecretEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, []corev1.EnvVar{
+				Env: withSecretEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
 					{
 						Name:  k8s.EnvK8SOwnerReference,
 						Value: string(ownerJSON),
@@ -1208,13 +1217,13 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 							},
 						},
 					},
-				}))),
+				})))),
 				Ports: []corev1.ContainerPort{{
 					Name:          "metrics",
 					ContainerPort: 9091,
 					Protocol:      "TCP",
 				}},
-				VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{})),
+				VolumeMounts: withBanksVaultsVolumeMounts(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{}))),
 				Resources:    *getBankVaultsResource(v),
 			},
 		})),
@@ -1603,6 +1612,21 @@ func getVaultURIScheme(v *vaultv1alpha1.Vault) corev1.URIScheme {
 		return corev1.URISchemeHTTP
 	}
 	return corev1.URISchemeHTTPS
+}
+
+func withBanksVaultsVolumeMounts(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
+	index := map[string]corev1.VolumeMount{}
+	for _, v := range append(volumeMounts, v.Spec.BankVaultsVolumeMounts...) {
+		index[v.Name] = v
+	}
+
+	volumeMounts = []corev1.VolumeMount{}
+	for _, v := range index {
+		volumeMounts = append(volumeMounts, v)
+	}
+
+	sort.Slice(volumeMounts, func(i, j int) bool { return volumeMounts[i].Name < volumeMounts[j].Name })
+	return volumeMounts
 }
 
 func withVaultVolumes(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {

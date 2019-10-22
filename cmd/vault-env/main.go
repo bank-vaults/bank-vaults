@@ -55,6 +55,7 @@ var sanitizeEnvmap = map[string]bool{
 	"VAULT_IGNORE_MISSING_SECRETS": true,
 	"VAULT_ENV_PASSTHROUGH":        true,
 	"VAULT_JSON_LOG":               true,
+	"VAULT_REVOKE_TOKEN":           true,
 }
 
 var logger *log.Logger
@@ -91,6 +92,18 @@ func main() {
 	logger.AddHook(&GlobalHook{})
 	if enableJSONLog == "true" {
 		logger.SetFormatter(&log.JSONFormatter{})
+	}
+
+	var entrypointCmd []string
+	if len(os.Args) == 1 {
+		logger.Fatalln("no command is given, vault-env can't determine the entrypoint (command), please specify it explicitly or let the webhook query it (see documentation)")
+	} else {
+		entrypointCmd = os.Args[1:]
+	}
+
+	binary, err := exec.LookPath(entrypointCmd[0])
+	if err != nil {
+		logger.Fatalln("binary not found", entrypointCmd[0])
 	}
 
 	ignoreMissingSecrets := os.Getenv("VAULT_IGNORE_MISSING_SECRETS") == "true"
@@ -229,16 +242,15 @@ func main() {
 		}
 	}
 
-	var entrypointCmd []string
-	if len(os.Args) == 1 {
-		logger.Fatalln("no command is given, vault-env can't determine the entrypoint (command), please specify it explicitly or let the webhook query it (see documentation)")
-	} else {
-		entrypointCmd = os.Args[1:]
+	if os.Getenv("VAULT_REVOKE_TOKEN") == "true" {
+		// ref: https://www.vaultproject.io/api/auth/token/index.html#revoke-a-token-self-
+		err = client.RawClient().Auth().Token().RevokeSelf(client.RawClient().Token())
+		if err != nil {
+			// Do not exit on error, token revoking can be denied by policy
+			logger.Warnln("failed to revoke token")
+		}
 	}
-	binary, err := exec.LookPath(entrypointCmd[0])
-	if err != nil {
-		logger.Fatalln("binary not found", entrypointCmd[0])
-	}
+
 	err = syscall.Exec(binary, entrypointCmd, sanitized)
 	if err != nil {
 		logger.Fatalln("failed to exec process", binary, entrypointCmd, err.Error())

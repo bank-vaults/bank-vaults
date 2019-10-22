@@ -3,6 +3,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: {{ template "vault-secrets-webhook.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}
@@ -36,6 +37,7 @@ kind: Service
 metadata:
   annotations:
   name: {{ template "vault-secrets-webhook.fullname" . }}-metrics
+  namespace: {{ .Release.Namespace }}
   labels:
     helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}

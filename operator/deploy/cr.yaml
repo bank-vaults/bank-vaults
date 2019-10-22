@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: vault:1.1.0
+  image: vault:1.2.3
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Common annotations for all created resources
@@ -121,7 +121,7 @@ spec:
         roles:
           # Allow every pod in the default namespace to use the secret kv store
           - name: default
-            bound_service_account_names: ["default", "vault-secrets-webhook"]
+            bound_service_account_names: ["default", "vault-secrets-webhook", "vault"]
             bound_service_account_namespaces: ["default", "vswh"]
             policies: allow_secrets
             ttl: 1h
