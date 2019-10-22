@@ -167,11 +167,11 @@ func main() {
 			sanitized.append(name, value)
 			continue
 		}
-		secretPath := strings.TrimPrefix(value, "vault:")
+		valuePath := strings.TrimPrefix(value, "vault:")
 
 		// handle special case for vault:login env value
 		// namely pass through the the VAULT_TOKEN received from the Vault login procedure
-		if name == "VAULT_TOKEN" && secretPath == "login" {
+		if name == "VAULT_TOKEN" && valuePath == "login" {
 			value = client.RawClient().Token()
 			sanitized.append(name, value)
 			continue
@@ -200,8 +200,8 @@ func main() {
 			continue
 		}
 
-		split = strings.SplitN(secretPath, "#", 3)
-		secretPath = split[0]
+		split = strings.SplitN(valuePath, "#", 3)
+		valuePath = split[0]
 
 		var key string
 		if len(split) > 1 {
@@ -216,31 +216,31 @@ func main() {
 		var secret *vaultapi.Secret
 		var err error
 
-		if secret = secretCache[secretPath]; secret == nil {
+		if secret = secretCache[valuePath]; secret == nil {
 			if update {
-				secret, err = client.RawClient().Logical().Write(secretPath, map[string]interface{}{})
+				secret, err = client.RawClient().Logical().Write(valuePath, map[string]interface{}{})
 				if err != nil {
-					logger.Fatalln("failed to write secret to path:", secretPath, err.Error())
+					logger.Fatalln("failed to write secret to path:", valuePath, err.Error())
 				}
-				secretCache[secretPath] = secret
+				secretCache[valuePath] = secret
 			} else {
-				secret, err = client.RawClient().Logical().ReadWithData(secretPath, map[string][]string{"version": {version}})
+				secret, err = client.RawClient().Logical().ReadWithData(valuePath, map[string][]string{"version": {version}})
 				if err != nil {
 					if !ignoreMissingSecrets {
-						logger.Fatalln("failed to read secret from path:", secretPath, err.Error())
+						logger.Fatalln("failed to read secret from path:", valuePath, err.Error())
 					}
-					logger.Errorln("failed to read secret from path:", secretPath, err.Error())
+					logger.Errorln("failed to read secret from path:", valuePath, err.Error())
 				} else {
-					secretCache[secretPath] = secret
+					secretCache[valuePath] = secret
 				}
 			}
 		}
 
 		if secret == nil {
 			if !ignoreMissingSecrets {
-				logger.Fatalln("path not found:", secretPath)
+				logger.Fatalln("path not found:", valuePath)
 			}
-			logger.Errorln("path not found:", secretPath)
+			logger.Errorln("path not found:", valuePath)
 			continue
 		}
 
@@ -252,13 +252,13 @@ func main() {
 			// Check if a given version of a path is destroyed
 			metadata := secret.Data["metadata"].(map[string]interface{})
 			if metadata["destroyed"].(bool) {
-				logger.Warnln("version of secret has been permanently destroyed version:", version, "path:", secretPath)
+				logger.Warnln("version of secret has been permanently destroyed version:", version, "path:", valuePath)
 			}
 
 			// Check if a given version of a path still exists
 			if deletionTime, ok := metadata["deletion_time"].(string); ok && deletionTime != "" {
 				logger.Warnln("cannot find data for path, given version has been deleted",
-					"path:", secretPath, "version:", version,
+					"path:", valuePath, "version:", version,
 					"deletion_time", deletionTime)
 			}
 		} else {
