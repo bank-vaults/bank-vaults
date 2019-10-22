@@ -143,7 +143,9 @@ func main() {
 		}
 	}
 
+	transitKeyID := os.Getenv("VAULT_TRANSIT_KEY_ID")
 	transitCache := map[string][]byte{}
+
 	secretCache := map[string]*vaultapi.Secret{}
 
 	// initial and sanitized environs
@@ -179,9 +181,8 @@ func main() {
 
 		// decrypts value with Vault Transit Secret Engine
 		if client.Transit.IsEncrypted(value) {
-			transitKeyID := os.Getenv("VAULT_TRANSIT_KEY_ID")
 			if len(transitKeyID) == 0 {
-				logger.Fatal("Found encrypted data, but transit key ID is empty")
+				logger.Fatalln("Found encrypted variable, but transit key ID is empty:", name)
 			}
 			if v, ok := transitCache[value]; ok {
 				sanitized.append(name, string(v))
