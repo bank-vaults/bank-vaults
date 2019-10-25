@@ -191,6 +191,75 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 	return err
 }
 
+// Check if passed object labels/annotation match the passed selector
+// all K/V in the selector must be equal in the object to return true
+func secretMatchLabelsOrAnnotationsCheck(object map[string]string, selector map[string]string) bool {
+	match := make([]bool, 0, len(selector))
+
+	for sk, sv := range selector {
+		// Key from selector is present in object
+		if ov, ok := object[sk]; ok {
+			// Value from selector match value in object
+			if ov == sv {
+				match = append(match, true)
+			} else {
+				match = append(match, false)
+				break
+			}
+		} else {
+			match = append(match, false)
+			break
+		}
+	}
+
+	// If any value is false then we have no match
+	log.V(1).Info(fmt.Sprintf("MATCH array POST: %#v", match))
+	for _, test := range match {
+		log.V(1).Info(fmt.Sprintf("MATCH: %#v", test))
+		if !test {
+			log.V(1).Info("return false")
+			return false
+		}
+	}
+
+	log.V(1).Info("return true")
+	return true
+}
+
+// Check if secret match the labels or annotations selectors
+// If any of the Labels selector OR Annotation Selector match it will return true
+func secretMatchLabelsOrAnnotations(s corev1.Secret, labels []map[string]string, annotations []map[string]string) bool {
+
+	sm := s.ObjectMeta
+	log.V(1).Info(fmt.Sprintf("External Secrets Watcher: Checking labels and annotations for secret:  %s/%s", sm.GetNamespace(), sm.GetName()))
+
+	// Secret Labels
+	ol := sm.GetLabels()
+	// Iterate over labels selectors []map[string]string
+	for _, l := range labels {
+		log.V(1).Info(fmt.Sprintf("External Secrets Watcher: Checking for labels selector: %v", l))
+		if secretMatchLabelsOrAnnotationsCheck(ol, l) {
+			log.V(1).Info(fmt.Sprintf("External Secrets Watcher: Secret %s/%s matched label selector: %v", sm.GetNamespace(), sm.GetName(), l))
+			log.V(1).Info(fmt.Sprintf("External Secrets Watcher: adding Secret %s/%s to watch list", sm.GetNamespace(), sm.GetName()))
+			return true
+		}
+	}
+
+	// Secret Annotations
+	oa := sm.GetAnnotations()
+	// Iterate over annotations selectors []map[string]string
+	for _, a := range annotations {
+		log.V(1).Info(fmt.Sprintf("External Secrets Watcher: Checking for annotation selector: %v", a))
+		if secretMatchLabelsOrAnnotationsCheck(oa, a) {
+			log.V(1).Info(fmt.Sprintf("External Secrets Watcher: Secret %s/%s matched annotation selector: %v", sm.GetNamespace(), sm.GetName(), a))
+			log.V(1).Info(fmt.Sprintf("External Secrets Watcher: adding Secret %s/%s to watch list", sm.GetNamespace(), sm.GetName()))
+			return true
+		}
+	}
+
+	return false
+}
+
 func (r *ReconcileVault) createObjectIfNotExists(o runtime.Object) error {
 	key, err := client.ObjectKeyFromObject(o)
 	if err != nil {
@@ -351,25 +420,25 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	// Manage annotation for external secrets to watch and trigger restart of StatefulSet
 	externalSecretsToWatchLabelsSelector := v.Spec.GetWatchedSecretsLabels()
+	externalSecretsToWatchAnnotationsSelector := v.Spec.GetWatchedSecretsAnnotations()
 	externalSecretsToWatchItems := []corev1.Secret{}
-	if len(externalSecretsToWatchLabelsSelector) != 0 {
 
-		for _, filter := range externalSecretsToWatchLabelsSelector {
+	if len(externalSecretsToWatchLabelsSelector) != 0 || len(externalSecretsToWatchAnnotationsSelector) != 0 {
 
-			externalSecretsToWatch := corev1.SecretList{}
-			externalSecretsToWatchFilter := client.ListOptions{
-				LabelSelector: labels.SelectorFromSet(filter),
-				Namespace:     v.Namespace,
-			}
+		externalSecretsInNamespace := corev1.SecretList{}
+		// Get all Secrets for the Vault CRD NAmespace
+		externalSecretsInNamespaceFilter := client.ListOptions{
+			Namespace: v.Namespace,
+		}
 
-			if err = r.client.List(context.TODO(), &externalSecretsToWatchFilter, &externalSecretsToWatch); err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to list secrets to watch: %v", err)
-			}
+		if err = r.client.List(context.TODO(), &externalSecretsInNamespaceFilter, &externalSecretsInNamespace); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to list secrets in the CRD namespace: %v", err)
+		}
 
-			for _, secret := range externalSecretsToWatch.Items {
+		for _, secret := range externalSecretsInNamespace.Items {
+			if secretMatchLabelsOrAnnotations(secret, externalSecretsToWatchLabelsSelector, externalSecretsToWatchAnnotationsSelector) {
 				externalSecretsToWatchItems = append(externalSecretsToWatchItems, secret)
 			}
-
 		}
 
 	}
