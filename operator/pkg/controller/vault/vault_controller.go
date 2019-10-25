@@ -213,16 +213,12 @@ func secretMatchLabelsOrAnnotationsCheck(object map[string]string, selector map[
 	}
 
 	// If any value is false then we have no match
-	log.V(1).Info(fmt.Sprintf("MATCH array POST: %#v", match))
 	for _, test := range match {
-		log.V(1).Info(fmt.Sprintf("MATCH: %#v", test))
 		if !test {
-			log.V(1).Info("return false")
 			return false
 		}
 	}
 
-	log.V(1).Info("return true")
 	return true
 }
 
