@@ -545,7 +545,7 @@ func (mw *mutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns str
 }
 
 func hasVaultPrefix(value string) bool {
-	return strings.HasPrefix(value, "vault:") || strings.HasPrefix(value, ">>vault:")
+	return strings.Contains(value, "vault:")
 }
 
 func (mw *mutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*corev1.EnvVar, error) {

@@ -191,8 +191,6 @@ func getDataFromVault(data map[string]string, vaultClient *vault.Client) (map[st
 func trimVaultPrefix(value string) string {
 	if strings.HasPrefix(value, "vault:") {
 		return strings.TrimPrefix(value, "vault:")
-	} else if strings.HasPrefix(value, ">>vault:") {
-		return strings.TrimPrefix(value, ">>vault:")
 	}
 	return value
 }

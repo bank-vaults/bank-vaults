@@ -26,12 +26,12 @@ import (
 
 func configMapNeedsMutation(configMap *corev1.ConfigMap) bool {
 	for _, value := range configMap.Data {
-		if strings.HasPrefix(value, "vault:") {
+		if strings.Contains(value, "vault:") {
 			return true
 		}
 	}
 	for _, value := range configMap.BinaryData {
-		if strings.HasPrefix(string(value), "vault:") {
+		if strings.Contains(string(value), "vault:") {
 			return true
 		}
 	}
@@ -53,7 +53,7 @@ func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConf
 	defer vaultClient.Close()
 
 	for key, value := range configMap.Data {
-		if strings.HasPrefix(value, "vault:") {
+		if strings.Contains(value, "vault:") {
 			data := map[string]string{
 				key: string(value),
 			}
@@ -65,7 +65,7 @@ func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConf
 	}
 
 	for key, value := range configMap.BinaryData {
-		if strings.HasPrefix(string(value), "vault:") {
+		if strings.Contains(string(value), "vault:") {
 			binaryData := map[string]string{
 				key: string(value),
 			}
