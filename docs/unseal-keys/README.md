@@ -17,5 +17,5 @@ To use KMS-encrypted root token with vault CLI
 1. Download root token file to your local file system
 1. Decrypt the token and save it as an environment variable
     ```bash
-    export VAULT_TOKEN="$(aws kms decrypt --ciphertext-blob fileb://<encrypted token file> --encryption-context Tool=bank-vaults --query Plaintext --output text | base64 -D)"
+    export VAULT_TOKEN="$(aws kms decrypt --ciphertext-blob fileb://<encrypted token file> --encryption-context Tool=bank-vaults --query Plaintext --output text | base64 --decode)"
     ```
