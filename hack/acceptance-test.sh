@@ -59,8 +59,8 @@ waitfor kubectl get pod/vault-0
 waitfor kubectl get pod/vault-1
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
 kubectl delete -f operator/deploy/cr-etcd-ha.yaml
-kubectl wait --for=delete pod/vault-0 --timeout=120s
-kubectl wait --for=delete pod/vault-1 --timeout=120s
+kubectl wait --for=delete pod/vault-0 --timeout=120s || true
+kubectl wait --for=delete pod/vault-1 --timeout=120s || true
 
 # Second test: test the external secrets watcher work and match as expected
 kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
