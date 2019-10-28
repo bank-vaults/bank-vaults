@@ -112,7 +112,7 @@ type VaultSpec struct {
 	// BankVaultsImage specifies the Bank Vaults image to use for Vault unsealing and configuration
 	// default: banzaicloud/bank-vaults:latest
 	BankVaultsImage string `json:"bankVaultsImage"`
-	
+
 	// BankVaultsVolumeMounts define some extra Kubernetes Volume mounts for the Bank Vaults Sidecar container.
 	// default:
 	BankVaultsVolumeMounts []v1.VolumeMount `json:"bankVaultsVolumeMounts,omitempty"`
@@ -142,6 +142,12 @@ type VaultSpec struct {
 	// managing a public Certificate for Vault using let's Encrypt.
 	// default:
 	WatchedSecretsLabels []map[string]string `json:"watchedSecretsLabels"`
+
+	// WatchedSecretsAnnotations specifices a set of Kubernetes annotations selectors which select Secrets to watch.
+	// If these Secrets change the Vault cluster gets restarted. For example a Secret that Cert-Manager is
+	// managing a public Certificate for Vault using let's Encrypt.
+	// default:
+	WatchedSecretsAnnotations []map[string]string `json:"watchedSecretsAnnotations"`
 
 	// Annotations define a set of common Kubernetes annotations that will be added to all operator managed resources.
 	// default:
@@ -459,6 +465,15 @@ func (spec *VaultSpec) GetWatchedSecretsLabels() []map[string]string {
 	}
 
 	return spec.WatchedSecretsLabels
+}
+
+// GetWatchedSecretsAnnotations returns the set of annotations for secrets to watch in the vault namespace
+func (spec *VaultSpec) GetWatchedSecretsAnnotations() []map[string]string {
+	if spec.WatchedSecretsAnnotations == nil {
+		spec.WatchedSecretsAnnotations = []map[string]string{}
+	}
+
+	return spec.WatchedSecretsAnnotations
 }
 
 // GetAnnotations returns the Common Annotations
