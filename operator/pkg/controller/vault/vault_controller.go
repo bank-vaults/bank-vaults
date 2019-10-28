@@ -191,40 +191,9 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 	return err
 }
 
-// Check if passed object labels/annotation match the passed selector
-// all K/V in the selector must be equal in the object to return true
-func secretMatchLabelsOrAnnotationsCheck(object map[string]string, selector map[string]string) bool {
-	match := make([]bool, 0, len(selector))
-
-	for sk, sv := range selector {
-		// Key from selector is present in object
-		if ov, ok := object[sk]; ok {
-			// Value from selector match value in object
-			if ov == sv {
-				match = append(match, true)
-			} else {
-				match = append(match, false)
-				break
-			}
-		} else {
-			match = append(match, false)
-			break
-		}
-	}
-
-	// If any value is false then we have no match
-	for _, test := range match {
-		if !test {
-			return false
-		}
-	}
-
-	return true
-}
-
 // Check if secret match the labels or annotations selectors
 // If any of the Labels selector OR Annotation Selector match it will return true
-func secretMatchLabelsOrAnnotations(s corev1.Secret, labels []map[string]string, annotations []map[string]string) bool {
+func secretMatchLabelsOrAnnotations(s corev1.Secret, labelsSelectors []map[string]string, annotationsSelectors []map[string]string) bool {
 
 	sm := s.ObjectMeta
 	log.V(1).Info(fmt.Sprintf("External Secrets Watcher: Checking labels and annotations for secret:  %s/%s", sm.GetNamespace(), sm.GetName()))
@@ -232,9 +201,9 @@ func secretMatchLabelsOrAnnotations(s corev1.Secret, labels []map[string]string,
 	// Secret Labels
 	ol := sm.GetLabels()
 	// Iterate over labels selectors []map[string]string
-	for _, l := range labels {
+	for _, l := range labelsSelectors {
 		log.V(1).Info(fmt.Sprintf("External Secrets Watcher: Checking for labels selector: %v", l))
-		if secretMatchLabelsOrAnnotationsCheck(ol, l) {
+		if labels.SelectorFromSet(l).Matches(labels.Set(ol)) {
 			log.V(1).Info(fmt.Sprintf("External Secrets Watcher: Secret %s/%s matched label selector: %v", sm.GetNamespace(), sm.GetName(), l))
 			log.V(1).Info(fmt.Sprintf("External Secrets Watcher: adding Secret %s/%s to watch list", sm.GetNamespace(), sm.GetName()))
 			return true
@@ -244,9 +213,9 @@ func secretMatchLabelsOrAnnotations(s corev1.Secret, labels []map[string]string,
 	// Secret Annotations
 	oa := sm.GetAnnotations()
 	// Iterate over annotations selectors []map[string]string
-	for _, a := range annotations {
+	for _, a := range annotationsSelectors {
 		log.V(1).Info(fmt.Sprintf("External Secrets Watcher: Checking for annotation selector: %v", a))
-		if secretMatchLabelsOrAnnotationsCheck(oa, a) {
+		if labels.SelectorFromSet(a).Matches(labels.Set(oa)) {
 			log.V(1).Info(fmt.Sprintf("External Secrets Watcher: Secret %s/%s matched annotation selector: %v", sm.GetNamespace(), sm.GetName(), a))
 			log.V(1).Info(fmt.Sprintf("External Secrets Watcher: adding Secret %s/%s to watch list", sm.GetNamespace(), sm.GetName()))
 			return true
