@@ -58,6 +58,8 @@ spec:
           mountPath: /vault/raw-config/
         - name: vault-config
           mountPath: /vault/config/
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
         
       containers:
       - name: vault
