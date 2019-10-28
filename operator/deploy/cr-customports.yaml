@@ -44,8 +44,13 @@ spec:
     spec: {}
 
   # Optionally Watch for the cert-manager managed secret and trigger restart of Vault when the secret change
+  # cert-manager 0.11+ changed behaviour and it sets annotations rather than labels
   watchedSecretsLabels:
-    - certmanager.k8s.io/certificate-name: <my-cert-manager-tls-secret-name>
+    - certmanager.k8s.io/certificate-name: my-cert-manager-tls-secret-name
+  watchedSecretsAnnotations:
+    - cert-manager.io/certificate-name: my-cert-manager-tls-secret-name
+    - mycompany.com/match1: multi-annotation-match
+      mycompany.com/match2: multi-annotation-match
 
   # Use local disk to store Vault file data, see config section.
   volumes:
@@ -55,7 +60,7 @@ spec:
     - name: wildcard-ssl
       secret:
         defaultMode: 420
-        secretName: <my-cert-manager-tls-secret-name>
+        secretName: my-cert-manager-tls-secret-name
 
   volumeMounts:
     - name: vault-file
