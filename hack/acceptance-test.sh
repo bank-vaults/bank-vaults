@@ -69,7 +69,7 @@ kubectl apply -f deploy/test-external-secrets-watch-secrets.yaml
 kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
 waitfor kubectl get pod/vault-0
 kubectl describe pod vault-0
-kubectl logs vault-operator
+kubectl logs deployment/vault-operator
 test x`kubectl get pod vault-0 -o jsonpath='{.metadata.annotations.vault\.banzaicloud\.io/watched-secrets-sum}'` = "xbac8dfa8bdf03009f89303c8eb4a6c8f2fd80eb03fa658f53d6d65eec14666d4"
 kubectl delete -f deploy/test-external-secrets-watch-deployment.yaml
 kubectl apply -f deploy/test-external-secrets-watch-secrets.yaml
