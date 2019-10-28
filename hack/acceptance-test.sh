@@ -65,11 +65,12 @@ kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
 waitfor kubectl get pod/vault-0
 test x`kubectl get pod vault-0 -o jsonpath='{.metadata.annotations.vault\.banzaicloud\.io/watched-secrets-sum}'` = "x"
 kubectl delete -f deploy/test-external-secrets-watch-deployment.yaml
-kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
 kubectl apply -f deploy/test-external-secrets-watch-secrets.yaml
+kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
 waitfor kubectl get pod/vault-0
 test x`kubectl get pod vault-0 -o jsonpath='{.metadata.annotations.vault\.banzaicloud\.io/watched-secrets-sum}'` = "xbac8dfa8bdf03009f89303c8eb4a6c8f2fd80eb03fa658f53d6d65eec14666d4"
 kubectl delete -f deploy/test-external-secrets-watch-deployment.yaml
+kubectl apply -f deploy/test-external-secrets-watch-secrets.yaml
 
 # Third test: single node cluster with defined PriorityClass via vaultPodSpec and vaultConfigurerPodSpec
 kubectl apply -f operator/deploy/priorityclass.yaml
