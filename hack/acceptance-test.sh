@@ -63,11 +63,15 @@ kubectl delete -f operator/deploy/cr-etcd-ha.yaml
 # Second test: test the external secrets watcher work and match as expected
 kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
 waitfor kubectl get pod/vault-0
+kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
 test x`kubectl get pod vault-0 -o jsonpath='{.metadata.annotations.vault\.banzaicloud\.io/watched-secrets-sum}'` = "x"
 kubectl delete -f deploy/test-external-secrets-watch-deployment.yaml
+kubectl get pods
 kubectl apply -f deploy/test-external-secrets-watch-secrets.yaml
 kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
+kubectl get pods
 waitfor kubectl get pod/vault-0
+kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
 kubectl describe pod vault-0
 kubectl logs deployment/vault-operator
 test x`kubectl get pod vault-0 -o jsonpath='{.metadata.annotations.vault\.banzaicloud\.io/watched-secrets-sum}'` = "xbac8dfa8bdf03009f89303c8eb4a6c8f2fd80eb03fa658f53d6d65eec14666d4"
