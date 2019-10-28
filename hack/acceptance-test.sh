@@ -3,7 +3,7 @@ set -xeo pipefail
 
 function waitfor {
     WAIT_MAX=0
-    until $@ &> /dev/null || [ $WAIT_MAX -eq 30 ]; do
+    until $@ &> /dev/null || [ $WAIT_MAX -eq 45 ]; do
         sleep 1
         (( WAIT_MAX = WAIT_MAX + 1 ))
     done
