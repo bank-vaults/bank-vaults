@@ -12,10 +12,8 @@ function waitfor {
 function finish {
     echo "The last command was: $(history 1 | awk '{print $2}')"
     kubectl get pods
+    kubectl describe pods
     kubectl logs deployment/vault-operator
-    kubectl describe pod -l name=vault-operator
-    kubectl describe pod -l app=vault
-    kubectl describe pod -l app=vault-configurator
     kubectl get services --show-labels -l vault_cr=vault
     kubectl get ep --show-labels -l vault_cr=vault
     kubectl logs deployment/vault-configurer
@@ -92,9 +90,6 @@ kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
 sleep 20
 
 # Run an internal client which tries to read from Vault with the configured Kubernetes auth backend
-go get github.com/banzaicloud/kurun
-git checkout -- go.mod go.sum
-export PATH=${PATH}:${GOPATH}/bin
 kurun run cmd/examples/main.go
 
 
