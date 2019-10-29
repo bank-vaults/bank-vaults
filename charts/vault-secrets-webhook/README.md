@@ -111,7 +111,7 @@ You can read more information on how to add firewall rules for the GKE control p
 The following tables lists configurable parameters of the vault-secrets-webhook chart and their default values:
 
 | Parameter                        | Description                                                                  | Default                             |
-| -------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------- |
+|----------------------------------|------------------------------------------------------------------------------|-------------------------------------|
 | affinity                         | affinities to use                                                            | `{}`                                |
 | debug                            | debug logs for webhook                                                       | `false`                             |
 | image.pullPolicy                 | image pull policy                                                            | `IfNotPresent`                      |
@@ -136,3 +136,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | configMapMutation                | enable injecting values from Vault to ConfigMaps                             | `false`                             |
 | podDisruptionBudget.enabled      | enable PodDisruptionBudget                                                   | `false`                             |
 | podDisruptionBudget.minAvailable | represents the number of Pods that must be available (integer or percentage) | `1`                                 |
+| certificate.generate             | should a new CA and TLS certificate be generated for the webhook             | `true`                              |
+| certificate.ca.crt               | Base64 encoded CA certificate                                                | ``                                  |
+| certificate.server.tls.crt       | Base64 encoded TLS certificate signed by the CA                              | ``                                  |
+| certificate.server.tls.key       | Base64 encoded  private key of TLS certificate signed by the CA              | ``                                  |
