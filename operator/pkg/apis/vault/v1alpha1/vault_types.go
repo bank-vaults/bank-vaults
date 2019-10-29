@@ -139,6 +139,12 @@ type VaultSpec struct {
 	// default:
 	WatchedSecretsLabels []map[string]string `json:"watchedSecretsLabels"`
 
+	// WatchedSecretsAnnotations specifices a set of Kubernetes annotations selectors which select Secrets to watch.
+	// If these Secrets change the Vault cluster gets restarted. For example a Secret that Cert-Manager is
+	// managing a public Certificate for Vault using let's Encrypt.
+	// default:
+	WatchedSecretsAnnotations []map[string]string `json:"watchedSecretsAnnotations"`
+
 	// Annotations define a set of common Kubernetes annotations that will be added to all operator managed resources.
 	// default:
 	Annotations map[string]string `json:"annotations"`
@@ -449,6 +455,15 @@ func (spec *VaultSpec) GetWatchedSecretsLabels() []map[string]string {
 	}
 
 	return spec.WatchedSecretsLabels
+}
+
+// GetWatchedSecretsAnnotations returns the set of annotations for secrets to watch in the vault namespace
+func (spec *VaultSpec) GetWatchedSecretsAnnotations() []map[string]string {
+	if spec.WatchedSecretsAnnotations == nil {
+		spec.WatchedSecretsAnnotations = []map[string]string{}
+	}
+
+	return spec.WatchedSecretsAnnotations
 }
 
 // GetAnnotations returns the Common Annotations
