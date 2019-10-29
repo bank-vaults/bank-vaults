@@ -65,6 +65,7 @@ auto_auth {
 
 type mutatingWebhook struct {
 	k8sClient kubernetes.Interface
+	registry  registry.ImageRegistry
 }
 
 // If the original Pod contained a Volume "vault-tls", for example Vault instances provisioned by the Operator
@@ -617,7 +618,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 
 		// the container has no explicitly specified command
 		if len(args) == 0 {
-			imageConfig, err := registry.GetImageConfig(mw.k8sClient, ns, &container, podSpec)
+			imageConfig, err := mw.registry.GetImageConfig(mw.k8sClient, ns, &container, podSpec)
 			if err != nil {
 				return false, err
 			}
@@ -970,7 +971,10 @@ func main() {
 		logger.Fatalf("error creating k8s client: %s", err)
 	}
 
-	mutatingWebhook := mutatingWebhook{k8sClient: k8sClient}
+	mutatingWebhook := mutatingWebhook{
+		k8sClient: k8sClient,
+		registry:  registry.NewRegistry(),
+	}
 
 	mutator := mutating.MutatorFunc(mutatingWebhook.vaultSecretsMutator)
 
