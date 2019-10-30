@@ -6,6 +6,14 @@ replicaCount: 2
 
 debug: false
 
+certificate:
+    generate: true
+    server:
+        tls:
+            crt:
+            key:
+    ca:
+        crt:
 image:
   repository: banzaicloud/vault-secrets-webhook
   tag: 0.5.1
