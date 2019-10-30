@@ -96,8 +96,12 @@ func (co ClientToken) apply(o *clientOptions) {
 	o.token = string(co)
 }
 
-// Client is a Vault client with Kubernetes support and token automatic renewing
+// Client is a Vault client with Kubernetes support, token automatic renewing and
+// access to Transit Secret Engine wrapper
 type Client struct {
+	// Easy to use wrapper for transit secret engine calls
+	Transit *Transit
+
 	client       *vaultapi.Client
 	logical      *vaultapi.Logical
 	tokenRenewer *vaultapi.Renewer
@@ -192,7 +196,14 @@ func NewClientFromConfig(config *vaultapi.Config, opts ...ClientOption) (*Client
 // NewClientFromRawClient creates a new Vault client from custom raw client.
 func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*Client, error) {
 	logical := rawClient.Logical()
-	client := &Client{client: rawClient, logical: logical}
+	transit := &Transit{
+		client: rawClient,
+	}
+	client := &Client{
+		Transit: transit,
+		client:  rawClient,
+		logical: logical,
+	}
 
 	var tokenRenewer *vaultapi.Renewer
 

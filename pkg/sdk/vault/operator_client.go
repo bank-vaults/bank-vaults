@@ -1103,7 +1103,7 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 						if createOnly {
 							reason = "create_only"
 						}
-						logrus.Infoln("Secret at configpath %s already exists, %s was set so this will not be updated", configPath, reason)
+						logrus.Infof("Secret at configpath %s already exists, %s was set so this will not be updated", configPath, reason)
 						dontUpdate = true
 					}
 				}
@@ -1330,7 +1330,6 @@ func getVaultGroupAliasMount(aliasId string, client *api.Client) (id string, err
 	return alias.Data["mount_accessor"].(string), nil
 }
 
-
 func findVaultGroupAliasIDFromNameAndMount(name string, accessor string, client *api.Client) (id string, err error) {
 	aliases, err := client.Logical().List("identity/group-alias/id")
 
@@ -1428,7 +1427,7 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 			"canonical_id":   id,
 		}
 
-		// Find a matching alias for NAME and MOUNT 
+		// Find a matching alias for NAME and MOUNT
 		ga, err := findVaultGroupAliasIDFromNameAndMount(cast.ToString(groupAlias["name"]), accessor, v.cl)
 		if err != nil {
 			return fmt.Errorf("error finding group-alias: %s", err)
