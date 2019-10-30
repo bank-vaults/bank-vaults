@@ -455,6 +455,10 @@ func parseVaultConfig(obj metav1.Object) internal.VaultConfig {
 		vaultConfig.EnableJSONLog = viper.GetString("enable_json_log")
 	}
 
+	if val, ok := annotations["vault.security.banzaicloud.io/transit-key-id"]; ok {
+		vaultConfig.TransitKeyID = val
+	}
+
 	return vaultConfig
 }
 
@@ -675,8 +679,16 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			},
 		}...)
 
-		if vaultConfig.TLSSecret != "" {
+		if len(vaultConfig.TransitKeyID) > 0 {
+			container.Env = append(container.Env, []corev1.EnvVar{
+				{
+					Name:  "VAULT_TRANSIT_KEY_ID",
+					Value: vaultConfig.TransitKeyID,
+				},
+			}...)
+		}
 
+		if vaultConfig.TLSSecret != "" {
 			mountPath := "/vault/tls/ca.crt"
 			volumeName := "vault-tls"
 			if hasTLSVolume(podSpec.Volumes) {
