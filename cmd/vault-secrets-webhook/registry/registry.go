@@ -58,7 +58,7 @@ func NewRegistry() ImageRegistry {
 
 	imageCacheStorage := viper.GetString("registry_cache_storage")
 	r.imageCache = NewImageCache(imageCacheStorage, &ImageCacheOptions{
-		DigestOnly: viper.GetBool("registry_cache_opts_digest_only"),
+		DigestOnly: viper.GetBool("registry_cache_digest_only"),
 	})
 	return r
 }
