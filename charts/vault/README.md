@@ -121,8 +121,12 @@ The following tables lists the configurable parameters of the vault chart and th
 | `image.pullPolicy`      | Container pull policy               | `IfNotPresent`                                      |
 | `image.repository`      | Container image to use              | `vault`                                             |
 | `image.tag`             | Container image tag to deploy       | `1.0.3`                                             |
+| `ingress.enabled`       | Enables Ingress                     | `false`                                             |
+| `ingress.annotations`   | Ingress annotations                 | `{}`                                                |
+| `ingress.hosts`         | Ingress accepted hostnames with path| `[]`                                                |
+| `ingress.tls`           | Ingress TLS configuration           | `[]`                                                |
 | `vault.customSecrets`   | Custom secrets available to Vault   | `[]`                                                |
-| `vault.envSecrets`      | Custom secrets available to Vault as env vars | `[]`                                    |
+| `vault.envSecrets`      | Custom secrets available to Vault as env vars | `[]`                                      |
 | `vault.config`          | Vault configuration                 | No default backend                                  |
 | `vault.externalConfig`  | Vault API based configuration       | No default backend                                  |
 | `replicaCount`          | k8s replicas                        | `1`                                                 |
