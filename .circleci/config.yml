@@ -60,6 +60,7 @@ jobs:
       K8S_VERSION: v1.15.3
       VAULT_VERSION: "1.2.3"
       KUBECONFIG: /home/circleci/.kube/config
+      KURUN_VERSION: "0.2.3"
       MINIKUBE_VERSION: v1.4.0
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
@@ -130,11 +131,15 @@ jobs:
             EOT
 
       - run:
-          name: Setup helm
+          name: Install helm and kurun
           command: |
+            # helm
             curl -L https://git.io/get_helm.sh | bash
             helm init
             helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com/
+            # kurun
+            curl -Lo kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-linux-amd64 && chmod +x kurun && sudo mv kurun /usr/local/bin/
+
 
       - run:
           name: Operator and webhook acceptance test
