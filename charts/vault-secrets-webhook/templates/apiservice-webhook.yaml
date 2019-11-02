@@ -85,7 +85,7 @@ webhooks:
     matchLabels:
 {{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
   {{- end }}
-  matchExpressions:
+    matchExpressions:
     {{- if .Values.namespaceSelector.matchExpressions }}
 {{ toYaml .Values.namespaceSelector.matchExpressions | indent 4 }}
     {{- end }}
