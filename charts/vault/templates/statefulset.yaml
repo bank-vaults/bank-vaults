@@ -7,6 +7,9 @@ metadata:
     app.kubernetes.io/name: {{ template "vault.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
+    {{- if .Values.additionalLabels }}
+{{ toYaml .Values.additionalLabels | indent 4 }}
+    {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
   updateStrategy:
@@ -21,6 +24,9 @@ spec:
       labels:
         app.kubernetes.io/name: {{ template "vault.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
+        {{- if .Values.additionalLabels }}
+{{ toYaml .Values.additionalLabels | indent 8 }}
+        {{- end }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
