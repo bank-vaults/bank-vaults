@@ -55,7 +55,7 @@ podAnnotations:
   prometheus.io/path: "/metrics"
   prometheus.io/port: "9102"
 
-additionalLabels: 
+labels: 
   #  team: banzai
 
 resources: {}

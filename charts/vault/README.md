@@ -137,7 +137,7 @@ The following tables lists the configurable parameters of the vault chart and th
 | `rbac.psp.enabled`      | Use pod security policy             | `false`                                             |
 | `nodeSelector`          | Node labels for pod assignment. https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector                                                           | `{}`        
 | `tolerations`           | List of node tolerations for the pods. https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                                           | `[]`        
-| `additionalLabels`      | Additonal labels to be applied to the Vault StatefulSet and Pods | `{}`
+| `labels`                | Additonal labels to be applied to the Vault StatefulSet and Pods | `{}`
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
