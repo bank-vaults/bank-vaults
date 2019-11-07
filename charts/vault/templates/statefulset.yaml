@@ -7,8 +7,8 @@ metadata:
     app.kubernetes.io/name: {{ template "vault.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
-    {{- if .Values.additionalLabels }}
-{{ toYaml .Values.additionalLabels | indent 4 }}
+    {{- if .Values.labels }}
+{{ toYaml .Values.labels | indent 4 }}
     {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
@@ -24,8 +24,8 @@ spec:
       labels:
         app.kubernetes.io/name: {{ template "vault.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
-        {{- if .Values.additionalLabels }}
-{{ toYaml .Values.additionalLabels | indent 8 }}
+        {{- if .Values.labels }}
+{{ toYaml .Values.labels | indent 8 }}
         {{- end }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
