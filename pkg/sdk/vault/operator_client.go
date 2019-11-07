@@ -749,6 +749,23 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 					}
 				}
 			}
+		case "azure":
+			config, err := cast.ToStringMapE(authMethod["config"])
+			if err != nil {
+				return fmt.Errorf("error finding config block for azure: %s", err.Error())
+			}
+			err = v.configureGenericAuthConfig(authMethodType, path, config)
+			if err != nil {
+				return fmt.Errorf("error configuring azure auth for vault: %s", err.Error())
+			}
+			roles, err := cast.ToSliceE(authMethod["roles"])
+			if err != nil {
+				return fmt.Errorf("error finding roles block for azure: %s", err.Error())
+			}
+			err = v.configureGenericAuthRoles(authMethodType, path, "role", roles)
+			if err != nil {
+				return fmt.Errorf("error configuring azure auth roles for vault: %s", err.Error())
+			}
 		}
 	}
 
