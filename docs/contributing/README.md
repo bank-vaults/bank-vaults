@@ -71,8 +71,8 @@ If you change the *bank-vaults sidecar* code you have to build a new Docker imag
 $ DOCKER_LATEST=1 make docker
 ```
 
-There are at least four ways distribute this image in your Kubernetes cluster, by default `IfNotPresent` image pull policy is used:
-- If you are using Docker for Mac you, you don't have to anything, the Kubernetes cluster and your host share the same Docker daemon.
+There are at least four ways to distribute this image in your Kubernetes cluster, by default `IfNotPresent` image pull policy is used:
+- If you are using Docker for Mac, you don't have to anything, the Kubernetes cluster and your host shares the same Docker daemon.
 - If you are using Minikube with `--vm-driver=none` (you are probably using Linux) the same applies as for Docker for Mac
 - If you are using Minikube with some real `vm-driver` you have to run `eval $(minikube docker-env)` before building the Docker image with the `make` command so you build it with the minikube Docker daemon and the image will be stored there
 - Build and re-tag the image and push it to the Docker registry of your choice, dont forget to change the `bankVaultsImage` attribute in the the Vault Custom Resource YAML file (`cr.yaml` in this case).
@@ -81,7 +81,7 @@ Restart the containers using the `bank-vaults` image: Vault instances and the co
 
 ## WebHook
 
-This will deploy the webhook via the Helm chart, scale it to 0, start it locally and proxy it into the cluster (somethink similar to `operator-up` but a bit more complex).
+This will deploy the webhook via the Helm chart, scale it to 0, start it locally and proxy it into the cluster (somehow similar to `operator-up` but a bit more complex).
 
 You will need Helm and `kurun` [installed](https://github.com/banzaicloud/kurun#installation) to run this:
 
