@@ -139,6 +139,7 @@ operator-down:
 
 .PHONY: webhook-forward
 webhook-forward: ## Install the webhook chart and kurun to port-forward the local webhook into Kubernetes
+	helm init --wait
 	helm upgrade --wait --install vault-secrets-webhook charts/vault-secrets-webhook --namespace vault-infra --set replicaCount=0 --set podsFailurePolicy=Fail --set secretsFailurePolicy=Fail
 	kurun port-forward localhost:8443 --namespace vault-infra --servicename vault-secrets-webhook --tlssecret vault-secrets-webhook
 
