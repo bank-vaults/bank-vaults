@@ -14,7 +14,7 @@ You will need to add the following annotations to the resources that you wish to
 
 ```
 vault.security.banzaicloud.io/vault-addr: https://[URL FOR VAULT]
-vault.security.banzaicloud.io/vault-path: [Auth Pass]
+vault.security.banzaicloud.io/vault-path: [Auth path]
 vault.security.banzaicloud.io/vault-role: [Auth role]
 vault.security.banzaicloud.io/vault-skip-verify: "true" # Container is missing Trusted Mozilla roots too.
 ```

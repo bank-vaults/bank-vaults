@@ -62,6 +62,19 @@ type DockerCreds struct {
 	Auths map[string]dockerTypes.AuthConfig `json:"auths"`
 }
 
+// IsAllowedToCache checks that information about Docker image can be cached
+// base on image name and container PullPolicy
+func IsAllowedToCache(container *corev1.Container) bool {
+	if container.ImagePullPolicy == corev1.PullAlways {
+		return false
+	}
+	_, reference := parseContainerImage(container.Image)
+	if reference == "latest" {
+		return false
+	}
+	return true
+}
+
 // GetImageConfig returns entrypoint and command of container
 func (r *Registry) GetImageConfig(
 	clientset kubernetes.Interface,
@@ -69,9 +82,12 @@ func (r *Registry) GetImageConfig(
 	container *corev1.Container,
 	podSpec *corev1.PodSpec) (*imagev1.ImageConfig, error) {
 
-	if imageConfig := r.imageCache.Get(container.Image); imageConfig != nil {
-		logger.Infof("found image %s in cache", container.Image)
-		return imageConfig, nil
+	allowToCache := IsAllowedToCache(container)
+	if allowToCache {
+		if imageConfig := r.imageCache.Get(container.Image); imageConfig != nil {
+			logger.Infof("found image %s in cache", container.Image)
+			return imageConfig, nil
+		}
 	}
 
 	containerInfo := ContainerInfo{Namespace: namespace, clientset: clientset}
@@ -84,7 +100,7 @@ func (r *Registry) GetImageConfig(
 	logger.Infoln("I'm using registry", containerInfo.RegistryAddress)
 
 	imageConfig, err := getImageBlob(containerInfo)
-	if imageConfig != nil {
+	if imageConfig != nil && allowToCache {
 		r.imageCache.Put(container.Image, imageConfig)
 	}
 
