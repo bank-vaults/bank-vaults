@@ -206,7 +206,24 @@ auth:
       token_ttl: 20m
       token_max_ttl: 30m
       secret_id_num_uses: 40
-
+  # The azure auth method allows authentication against Vault using Azure Active Directory credentials. 
+  # See https://www.vaultproject.io/docs/auth/azure.html for more information.
+  - type: azure
+    config:
+      tenant_id: 00000000-0000-0000-0000-000000000000
+      resource: https://vault-dev.example.com
+      client_id: 00000000-0000-0000-0000-000000000000
+      client_secret: 00000000-0000-0000-0000-000000000000
+    roles:
+    # Add roles for azure identities
+    # See https://www.vaultproject.io/api/auth/azure/index.html#create-role
+      - name: dev-mi
+        policies: allow_secrets
+        bound_subscription_ids: 
+          - "00000000-0000-0000-0000-000000000000"
+        bound_service_principal_ids: 
+          - "00000000-0000-0000-0000-000000000000"
+          
 # Add environment variables. Please reference below `my-mysql` part for usage.
 # This is a list of K8S env. You can reference K8S document for detail
 # https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/
