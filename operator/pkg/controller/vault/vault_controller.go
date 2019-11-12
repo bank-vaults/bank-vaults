@@ -1269,7 +1269,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 
 	// merge provided VaultPodSpec into the PodSpec defined above
 	// the values in VaultPodSpec will never overwrite fields defined in the PodSpec above
-	if err := mergo.Merge(&podSpec, v.Spec.VaultPodSpec); err != nil {
+	if err := mergo.MergeWithOverwrite(&podSpec, v.Spec.VaultPodSpec); err != nil {
 		return nil, err
 	}
 
@@ -1711,7 +1711,10 @@ func withSecretEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar
 
 func withSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
 	if v.Spec.SecurityContext.Size() == 0 {
-		return nil
+		vaultGID := int64(1000)
+		return &corev1.PodSecurityContext{
+			FSGroup: &vaultGID,
+		}
 	}
 	return &v.Spec.SecurityContext
 }
