@@ -116,7 +116,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | debug                            | debug logs for webhook                                                       | `false`                             |
 | image.pullPolicy                 | image pull policy                                                            | `IfNotPresent`                      |
 | image.repository                 | image repo that contains the admission server                                | `banzaicloud/vault-secrets-webhook` |
-| image.tag                        | image tag                                                                    | `0.5.1`                             |
+| image.tag                        | image tag                                                                    | `0.6.0`                             |
 | image.imagePullSecrets           | image pull secrets for private repositories                                  | `[]`                                |
 | namespaceSelector                | namespace selector to use, will limit webhook scope                          | `{}`                                |
 | nodeSelector                     | node selector to use                                                         | `{}`                                |
