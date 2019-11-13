@@ -25,7 +25,7 @@ spec:
         command: ["sh", "-c", "echo $AWS_SECRET_ACCESS_KEY && echo initContainers ready"]
         env:
         - name: AWS_SECRET_ACCESS_KEY
-          value: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
+          value: vault:secret/data/accounts/aws#${.AWS_SECRET_ACCESS_KEY} # Go templates are also supported with ${} delimiters
         resources:
           limits:
             memory: "128Mi"
