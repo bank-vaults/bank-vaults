@@ -33,6 +33,13 @@ import (
 
 var logger *log.Logger
 
+func init() {
+	logger = log.New()
+	if viper.GetBool("enable_json_log") {
+		logger.SetFormatter(&log.JSONFormatter{})
+	}
+}
+
 // ImageRegistry is a docker registry
 type ImageRegistry interface {
 	GetImageConfig(
@@ -49,13 +56,7 @@ type Registry struct {
 
 // NewRegistry creates and initializes registry
 func NewRegistry() ImageRegistry {
-	var r *Registry = &Registry{}
-	logger = log.New()
-	if viper.GetBool("enable_json_log") {
-		logger.SetFormatter(&log.JSONFormatter{})
-	}
-	r.imageCache = NewInMemoryImageCache()
-	return r
+	return &Registry{imageCache: NewInMemoryImageCache()}
 }
 
 type DockerCreds struct {
@@ -131,12 +132,11 @@ func getImageBlob(container ContainerInfo) (*imagev1.ImageConfig, error) {
 	}
 
 	reader, err := hub.DownloadBlob(imageName, manifest.Config.Digest)
-	if reader != nil {
-		defer reader.Close()
-	}
 	if err != nil {
 		return nil, fmt.Errorf("cannot download blob: %s", err.Error())
 	}
+
+	defer reader.Close()
 
 	b, err := ioutil.ReadAll(reader)
 	if err != nil {
@@ -253,6 +253,8 @@ func (k *ContainerInfo) fixDockerHubImage(image string) string {
 		image = "index.docker.io/library/" + image
 	} else if !strings.Contains(image[:slash], ".") { // DockerHub organization names can't contain '.'
 		image = "index.docker.io/" + image
+	} else if strings.HasPrefix(image, "docker.io/") {
+		image = "index." + image
 	} else {
 		return image
 	}
