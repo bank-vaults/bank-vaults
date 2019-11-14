@@ -81,8 +81,8 @@ export WEBHOOK_NS=`<namespace>`
 
 ```bash
 WEBHOOK_NS=${WEBHOOK_NS:-vswh}
-echo kubectl create namespace "${WEBHOOK_NS}"
-echo kubectl label ns "${WEBHOOK_NS}" name="${WEBHOOK_NS}"
+kubectl create namespace "${WEBHOOK_NS}"
+kubectl label ns "${WEBHOOK_NS}" name="${WEBHOOK_NS}"
 ```
 
 ## Installing the Chart
