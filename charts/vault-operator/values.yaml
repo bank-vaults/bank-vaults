@@ -35,6 +35,9 @@ syncPeriod: "1m"
 #     operator: Equal
 #     value: custom_worker
 
+labels: {}
+  #  team: banzai
+
 resources:
   limits:
     cpu: 100m
