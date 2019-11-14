@@ -7,6 +7,9 @@ metadata:
     app.kubernetes.io/name: {{ include "vault-operator.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
+    {{- if .Values.labels }}
+{{ toYaml .Values.labels | indent 4 }}
+    {{- end }}
 spec:
   strategy:
     type: Recreate
