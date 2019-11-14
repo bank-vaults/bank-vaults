@@ -55,6 +55,9 @@ volumeMounts: []
 
 podAnnotations: {}
 
+labels: {}
+  #  team: banzai
+
 resources: {}
 
 nodeSelector: {}
