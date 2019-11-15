@@ -464,6 +464,10 @@ func parseVaultConfig(obj metav1.Object) internal.VaultConfig {
 		vaultConfig.TransitKeyID = val
 	}
 
+	if val, ok := annotations["vault.security.banzaicloud.io/transit-path"]; ok {
+		vaultConfig.TransitPath = val
+	}
+
 	return vaultConfig
 }
 
@@ -689,6 +693,15 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 				{
 					Name:  "VAULT_TRANSIT_KEY_ID",
 					Value: vaultConfig.TransitKeyID,
+				},
+			}...)
+		}
+
+		if len(vaultConfig.TransitPath) > 0 {
+			container.Env = append(container.Env, []corev1.EnvVar{
+				{
+					Name:  "VAULT_TRANSIT_PATH",
+					Value: vaultConfig.TransitPath,
 				},
 			}...)
 		}

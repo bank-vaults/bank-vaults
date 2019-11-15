@@ -56,6 +56,7 @@ var (
 		"VAULT_ROLE":                   true,
 		"VAULT_PATH":                   true,
 		"VAULT_TRANSIT_KEY_ID":         true,
+		"VAULT_TRANSIT_PATH":           true,
 		"VAULT_IGNORE_MISSING_SECRETS": true,
 		"VAULT_ENV_PASSTHROUGH":        true,
 		"VAULT_JSON_LOG":               true,
@@ -144,6 +145,7 @@ func main() {
 	}
 
 	transitKeyID := os.Getenv("VAULT_TRANSIT_KEY_ID")
+	transitPath := os.Getenv("VAULT_TRANSIT_PATH")
 	transitCache := map[string][]byte{}
 
 	secretCache := map[string]*vaultapi.Secret{}
@@ -188,7 +190,7 @@ func main() {
 				sanitized.append(name, string(v))
 				continue
 			}
-			out, err := client.Transit.Decrypt(transitKeyID, []byte(value))
+			out, err := client.Transit.Decrypt(transitPath, transitKeyID, []byte(value))
 			if err != nil {
 				if !ignoreMissingSecrets {
 					logger.Fatalln("failed to decrypt variable:", name, err)
