@@ -64,6 +64,8 @@ import (
 
 var log = logf.Log.WithName("controller_vault")
 
+var configFileNames = []string{"vault-config.yml", "vault-config.yaml"}
+
 // Add creates a new Vault Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -914,46 +916,54 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	sort.Slice(secrets.Items, func(i, j int) bool { return secrets.Items[i].Name < secrets.Items[j].Name })
 
 	for _, cm := range configmaps.Items {
-		if _, ok := cm.Data[vault.DefaultConfigFile]; ok {
-			volumes = append(volumes, corev1.Volume{
-				Name: cm.Name,
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{Name: cm.Name},
+		for _, fileName := range configFileNames {
+			if _, ok := cm.Data[fileName]; ok {
+				volumes = append(volumes, corev1.Volume{
+					Name: cm.Name,
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{Name: cm.Name},
+						},
 					},
-				},
-			})
+				})
 
-			volumes = withVaultVolumes(v, volumes)
+				volumes = withVaultVolumes(v, volumes)
 
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      cm.Name,
-				MountPath: "/config/" + cm.Name,
-			})
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{
+					Name:      cm.Name,
+					MountPath: "/config/" + cm.Name,
+				})
 
-			volumeMounts = withBanksVaultsVolumeMounts(v, volumeMounts)
+				volumeMounts = withBanksVaultsVolumeMounts(v, volumeMounts)
 
-			configArgs = append(configArgs, "--vault-config-file", "/config/"+cm.Name+"/"+vault.DefaultConfigFile)
+				configArgs = append(configArgs, "--vault-config-file", "/config/"+cm.Name+"/"+fileName)
+
+				break
+			}
 		}
 	}
 
 	for _, secret := range secrets.Items {
-		if _, ok := secret.Data[vault.DefaultConfigFile]; ok {
-			volumes = append(volumes, corev1.Volume{
-				Name: secret.Name,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: secret.Name,
+		for _, fileName := range configFileNames {
+			if _, ok := secret.Data[fileName]; ok {
+				volumes = append(volumes, corev1.Volume{
+					Name: secret.Name,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: secret.Name,
+						},
 					},
-				},
-			})
+				})
 
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      secret.Name,
-				MountPath: "/config/" + secret.Name,
-			})
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{
+					Name:      secret.Name,
+					MountPath: "/config/" + secret.Name,
+				})
 
-			configArgs = append(configArgs, "--vault-config-file", "/config/"+secret.Name+"/"+vault.DefaultConfigFile)
+				configArgs = append(configArgs, "--vault-config-file", "/config/"+secret.Name+"/"+fileName)
+
+				break
+			}
 		}
 	}
 
