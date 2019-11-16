@@ -28,6 +28,7 @@ type VaultConfig struct {
 	TLSSecret                   string
 	UseAgent                    bool
 	TransitKeyID                string
+	TransitPath                 string
 	CtConfigMap                 string
 	CtImage                     string
 	CtOnce                      bool
