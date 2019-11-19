@@ -25,7 +25,7 @@ spec:
         command: ["sh", "-c", "echo $AWS_SECRET_ACCESS_KEY && echo initContainers ready"]
         env:
         - name: AWS_SECRET_ACCESS_KEY
-          value: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
+          value: vault:secret/data/accounts/aws#${.AWS_SECRET_ACCESS_KEY} # Go templates are also supported with ${} delimiters
         resources:
           limits:
             memory: "128Mi"
@@ -42,7 +42,7 @@ spec:
             memory: "128Mi"
             cpu: "100m"
       - name: mysql
-        image: mysql # see that containers without explicit command can work
+        image: mysql:5.7 # see that containers without explicit command can work
         env:
         - name: MYSQL_ROOT_PASSWORD
           value: vault:secret/data/mysql#MYSQL_ROOT_PASSWORD

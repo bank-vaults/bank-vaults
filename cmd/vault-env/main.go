@@ -21,7 +21,9 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/banzaicloud/bank-vaults/internal/configuration"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
+
 	vaultapi "github.com/hashicorp/vault/api"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
@@ -54,6 +56,7 @@ var (
 		"VAULT_ROLE":                   true,
 		"VAULT_PATH":                   true,
 		"VAULT_TRANSIT_KEY_ID":         true,
+		"VAULT_TRANSIT_PATH":           true,
 		"VAULT_IGNORE_MISSING_SECRETS": true,
 		"VAULT_ENV_PASSTHROUGH":        true,
 		"VAULT_JSON_LOG":               true,
@@ -80,8 +83,7 @@ func (h *GlobalHook) Fire(e *log.Entry) error {
 
 // Appends variable an entry (name=value) into the environ list.
 // VAULT_* variables are not populated into this list.
-func (environ *sanitizedEnviron) append(iname interface{}, ivalue interface{}) {
-	name, value := iname.(string), ivalue.(string)
+func (environ *sanitizedEnviron) append(name string, value string) {
 	if _, ok := sanitizeEnvmap[name]; !ok {
 		*environ = append(*environ, fmt.Sprintf("%s=%s", name, value))
 	}
@@ -143,6 +145,7 @@ func main() {
 	}
 
 	transitKeyID := os.Getenv("VAULT_TRANSIT_KEY_ID")
+	transitPath := os.Getenv("VAULT_TRANSIT_PATH")
 	transitCache := map[string][]byte{}
 
 	secretCache := map[string]*vaultapi.Secret{}
@@ -187,7 +190,7 @@ func main() {
 				sanitized.append(name, string(v))
 				continue
 			}
-			out, err := client.Transit.Decrypt(transitKeyID, []byte(value))
+			out, err := client.Transit.Decrypt(transitPath, transitKeyID, []byte(value))
 			if err != nil {
 				if !ignoreMissingSecrets {
 					logger.Fatalln("failed to decrypt variable:", name, err)
@@ -265,10 +268,22 @@ func main() {
 			data = cast.ToStringMap(secret.Data)
 		}
 
-		if value, ok := data[key]; ok {
-			sanitized.append(name, value)
+		if configuration.IsGoTemplate(key) {
+			if value, err := configuration.Template(key, data); err != nil {
+				logger.Fatalln("failed to interpolate template key with vault data:", key, err.Error())
+			} else {
+				sanitized.append(name, value.String())
+			}
 		} else {
-			logger.Fatalln("key not found:", key)
+			if value, ok := data[key]; ok {
+				value, err := cast.ToStringE(value)
+				if err != nil {
+					logger.Fatalln("value can't be cast to a string:", err.Error())
+				}
+				sanitized.append(name, value)
+			} else {
+				logger.Fatalln("key not found:", key)
+			}
 		}
 	}
 

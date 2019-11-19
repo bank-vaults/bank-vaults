@@ -120,7 +120,7 @@ The following tables lists the configurable parameters of the vault chart and th
 |-------------------------|-------------------------------------|-----------------------------------------------------|
 | `image.pullPolicy`      | Container pull policy               | `IfNotPresent`                                      |
 | `image.repository`      | Container image to use              | `vault`                                             |
-| `image.tag`             | Container image tag to deploy       | `1.0.3`                                             |
+| `image.tag`             | Container image tag to deploy       | `1.2.3`                                             |
 | `ingress.enabled`       | Enables Ingress                     | `false`                                             |
 | `ingress.annotations`   | Ingress annotations                 | `{}`                                                |
 | `ingress.hosts`         | Ingress accepted hostnames with path| `[]`                                                |
@@ -136,7 +136,8 @@ The following tables lists the configurable parameters of the vault chart and th
 | `rbac.enabled`          | Use rbac                            | `true`                                              |
 | `rbac.psp.enabled`      | Use pod security policy             | `false`                                             |
 | `nodeSelector`          | Node labels for pod assignment. https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector                                                           | `{}`        
-| `tolerations`                                  | List of node tolerations for the pods. https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                                           | `[]`        
+| `tolerations`           | List of node tolerations for the pods. https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                                           | `[]`        
+| `labels`                | Additonal labels to be applied to the Vault StatefulSet and Pods | `{}`
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 

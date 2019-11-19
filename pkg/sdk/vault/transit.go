@@ -41,9 +41,14 @@ func (t *Transit) IsEncrypted(value string) bool {
 
 // Decrypt decrypts the ciphertext into a plaintext
 // ref: https://www.vaultproject.io/api/secret/transit/index.html#decrypt-data
-func (t *Transit) Decrypt(keyID string, ciphertext []byte) ([]byte, error) {
+func (t *Transit) Decrypt(transitPath, keyID string, ciphertext []byte) ([]byte, error) {
+	if len(transitPath) == 0 {
+		// Rewrite to default if not defined, all examples from documentation
+		// uses `transit` path
+		transitPath = "transit"
+	}
 	out, err := t.client.Logical().Write(
-		path.Join("transit/decrypt", keyID),
+		path.Join(transitPath, "decrypt", keyID),
 		map[string]interface{}{
 			"ciphertext": string(ciphertext),
 		},

@@ -14,7 +14,7 @@ You will need to add the following annotations to the resources that you wish to
 
 ```
 vault.security.banzaicloud.io/vault-addr: https://[URL FOR VAULT]
-vault.security.banzaicloud.io/vault-path: [Auth Pass]
+vault.security.banzaicloud.io/vault-path: [Auth path]
 vault.security.banzaicloud.io/vault-role: [Auth role]
 vault.security.banzaicloud.io/vault-skip-verify: "true" # Container is missing Trusted Mozilla roots too.
 ```
@@ -81,8 +81,8 @@ export WEBHOOK_NS=`<namespace>`
 
 ```bash
 WEBHOOK_NS=${WEBHOOK_NS:-vswh}
-echo kubectl create namespace "${WEBHOOK_NS}"
-echo kubectl label ns "${WEBHOOK_NS}" name="${WEBHOOK_NS}"
+kubectl create namespace "${WEBHOOK_NS}"
+kubectl label ns "${WEBHOOK_NS}" name="${WEBHOOK_NS}"
 ```
 
 ## Installing the Chart
@@ -116,7 +116,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | debug                            | debug logs for webhook                                                       | `false`                             |
 | image.pullPolicy                 | image pull policy                                                            | `IfNotPresent`                      |
 | image.repository                 | image repo that contains the admission server                                | `banzaicloud/vault-secrets-webhook` |
-| image.tag                        | image tag                                                                    | `0.5.1`                             |
+| image.tag                        | image tag                                                                    | `0.6.1`                             |
 | image.imagePullSecrets           | image pull secrets for private repositories                                  | `[]`                                |
 | namespaceSelector                | namespace selector to use, will limit webhook scope                          | `{}`                                |
 | nodeSelector                     | node selector to use                                                         | `{}`                                |

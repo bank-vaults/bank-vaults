@@ -93,7 +93,7 @@ func main() {
 	log.Info(fmt.Sprintf("Watched namespace: %s", namespace))
 
 	// Get a config to talk to the apiserver
-	cfg, err := config.GetConfig()
+	k8sConfig, err := config.GetConfig()
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
@@ -114,7 +114,7 @@ func main() {
 	})
 
 	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(cfg, manager.Options{
+	mgr, err := manager.New(k8sConfig, manager.Options{
 		Namespace:          namespace,
 		SyncPeriod:         syncPeriod,
 		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
@@ -139,11 +139,6 @@ func main() {
 	}
 
 	// Expose Controller Metrics
-	k8sConfig, err := config.GetConfig()
-	if err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
 
 	// Add to the below struct any other metrics ports you want to expose.
 	servicePorts := []v1.ServicePort{

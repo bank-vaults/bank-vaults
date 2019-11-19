@@ -336,13 +336,18 @@ func parseVaultConfig(obj metav1.Object) internal.VaultConfig {
 		vaultConfig.Addr = viper.GetString("vault_addr")
 	}
 
-	vaultConfig.Role = annotations["vault.security.banzaicloud.io/vault-role"]
-	if vaultConfig.Role == "" {
-		switch p := obj.(type) {
-		case *corev1.Pod:
-			vaultConfig.Role = p.Spec.ServiceAccountName
-		default:
-			vaultConfig.Role = "default"
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-role"]; ok {
+		vaultConfig.Role = val
+	} else {
+		if val := viper.GetString("vault_role"); val != "" {
+			vaultConfig.Role = val
+		} else {
+			switch p := obj.(type) {
+			case *corev1.Pod:
+				vaultConfig.Role = p.Spec.ServiceAccountName
+			default:
+				vaultConfig.Role = "default"
+			}
 		}
 	}
 
@@ -457,6 +462,10 @@ func parseVaultConfig(obj metav1.Object) internal.VaultConfig {
 
 	if val, ok := annotations["vault.security.banzaicloud.io/transit-key-id"]; ok {
 		vaultConfig.TransitKeyID = val
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/transit-path"]; ok {
+		vaultConfig.TransitPath = val
 	}
 
 	return vaultConfig
@@ -688,6 +697,15 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			}...)
 		}
 
+		if len(vaultConfig.TransitPath) > 0 {
+			container.Env = append(container.Env, []corev1.EnvVar{
+				{
+					Name:  "VAULT_TRANSIT_PATH",
+					Value: vaultConfig.TransitPath,
+				},
+			}...)
+		}
+
 		if vaultConfig.TLSSecret != "" {
 			mountPath := "/vault/tls/ca.crt"
 			volumeName := "vault-tls"
@@ -898,6 +916,7 @@ func init() {
 	viper.SetDefault("vault_addr", "https://vault:8200")
 	viper.SetDefault("vault_skip_verify", "false")
 	viper.SetDefault("vault_path", "kubernetes")
+	viper.SetDefault("vault_role", "")
 	viper.SetDefault("vault_tls_secret", "")
 	viper.SetDefault("vault_agent", "false")
 	viper.SetDefault("vault_ct_share_process_namespace", "")

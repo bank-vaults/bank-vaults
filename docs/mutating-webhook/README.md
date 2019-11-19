@@ -32,6 +32,7 @@ The webhook checks if a container has envFrom and parse defined configmaps and s
 ```
 
 Secret and ConfigMap examples:
+
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -48,7 +49,27 @@ kind: ConfigMap
 metadata:
   name: aws-key-configmap
 data:
-  AWS_SECRET_ACCESS_KEY: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
+  AWS_SECRET_ACCESSKEY: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
+```
+
+Writing into Vault, for example getting a [dynamic database username/password pair for MySQL](https://www.vaultproject.io/docs/secrets/databases/mysql-maria.html#usage):
+
+***NOTE**: This feature takes advantage of secret caching, since we need to access the `my-role` endpoint twice, but in the background it is written only once in Vault:*
+
+```yaml
+    env:
+    - name: MYSQL_USERNAME
+      value: ">>vault:database/creds/my-role#username"
+    - name: MYSQL_PASSWORD
+      value: ">>vault:database/creds/my-role#password"
+```
+
+[Templating](https://golang.org/pkg/text/template/) is also supported on the secret sourced from Vault (in the key part, after the first `#`), in the very same fashion as in the Vault configuration and external configuration with all [the Sprig functions](http://masterminds.github.io/sprig/) (this is supported only for Pods right now):
+
+```yaml
+    env:
+    - name: DOCKER_USERNAME
+      value: "vault:secret/data/accounts/dockerhub#My username on DockerHub is: ${title .DOCKER_USERNAME}"
 ```
 
 In this case the a init-container will be injected to the given Pod which copies a small binary, called `vault-env` into an in-memory volume and mounts that Volume to all the containers which have an environment variable definition like that. It also changes the `command` of the container to run `vault-env` instead of your application directly. `vault-env` starts up, connects to Vault with (currently with the [Kubernetes Auth method](https://www.vaultproject.io/docs/auth/kubernetes.html) checks the environment variables, and that has a reference to a value stored in Vault (`vault:secret/....`) will be replaced with that value read from the Secret backend, after this `vault-env` immediately executes (with `syscall.Exec()`) your process with the given arguments, replacing itself with that process.

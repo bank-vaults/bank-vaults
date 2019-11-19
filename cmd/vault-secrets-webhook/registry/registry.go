@@ -33,6 +33,13 @@ import (
 
 var logger *log.Logger
 
+func init() {
+	logger = log.New()
+	if viper.GetBool("enable_json_log") {
+		logger.SetFormatter(&log.JSONFormatter{})
+	}
+}
+
 // ImageRegistry is a docker registry
 type ImageRegistry interface {
 	GetImageConfig(
@@ -49,17 +56,24 @@ type Registry struct {
 
 // NewRegistry creates and initializes registry
 func NewRegistry() ImageRegistry {
-	var r *Registry = &Registry{}
-	logger = log.New()
-	if viper.GetBool("enable_json_log") {
-		logger.SetFormatter(&log.JSONFormatter{})
-	}
-	r.imageCache = NewInMemoryImageCache()
-	return r
+	return &Registry{imageCache: NewInMemoryImageCache()}
 }
 
 type DockerCreds struct {
 	Auths map[string]dockerTypes.AuthConfig `json:"auths"`
+}
+
+// IsAllowedToCache checks that information about Docker image can be cached
+// base on image name and container PullPolicy
+func IsAllowedToCache(container *corev1.Container) bool {
+	if container.ImagePullPolicy == corev1.PullAlways {
+		return false
+	}
+	_, reference := parseContainerImage(container.Image)
+	if reference == "latest" {
+		return false
+	}
+	return true
 }
 
 // GetImageConfig returns entrypoint and command of container
@@ -69,9 +83,12 @@ func (r *Registry) GetImageConfig(
 	container *corev1.Container,
 	podSpec *corev1.PodSpec) (*imagev1.ImageConfig, error) {
 
-	if imageConfig := r.imageCache.Get(container.Image); imageConfig != nil {
-		logger.Infof("found image %s in cache", container.Image)
-		return imageConfig, nil
+	allowToCache := IsAllowedToCache(container)
+	if allowToCache {
+		if imageConfig := r.imageCache.Get(container.Image); imageConfig != nil {
+			logger.Infof("found image %s in cache", container.Image)
+			return imageConfig, nil
+		}
 	}
 
 	containerInfo := ContainerInfo{Namespace: namespace, clientset: clientset}
@@ -84,7 +101,7 @@ func (r *Registry) GetImageConfig(
 	logger.Infoln("I'm using registry", containerInfo.RegistryAddress)
 
 	imageConfig, err := getImageBlob(containerInfo)
-	if imageConfig != nil {
+	if imageConfig != nil && allowToCache {
 		r.imageCache.Put(container.Image, imageConfig)
 	}
 
@@ -115,12 +132,11 @@ func getImageBlob(container ContainerInfo) (*imagev1.ImageConfig, error) {
 	}
 
 	reader, err := hub.DownloadBlob(imageName, manifest.Config.Digest)
-	if reader != nil {
-		defer reader.Close()
-	}
 	if err != nil {
 		return nil, fmt.Errorf("cannot download blob: %s", err.Error())
 	}
+
+	defer reader.Close()
 
 	b, err := ioutil.ReadAll(reader)
 	if err != nil {
@@ -237,6 +253,8 @@ func (k *ContainerInfo) fixDockerHubImage(image string) string {
 		image = "index.docker.io/library/" + image
 	} else if !strings.Contains(image[:slash], ".") { // DockerHub organization names can't contain '.'
 		image = "index.docker.io/" + image
+	} else if strings.HasPrefix(image, "docker.io/") {
+		image = "index." + image
 	} else {
 		return image
 	}
