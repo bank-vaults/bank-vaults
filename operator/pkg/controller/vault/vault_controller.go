@@ -64,6 +64,8 @@ import (
 
 var log = logf.Log.WithName("controller_vault")
 
+var configFileNames = []string{"vault-config.yml", "vault-config.yaml"}
+
 // Add creates a new Vault Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -691,7 +693,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 
 	// On GKE we need to specifiy the backend protocol on the service if TLS is enabled
 	if ingress := v.GetIngress(); ingress != nil && !v.Spec.GetTLSDisable() {
-		annotations["cloud.google.com/app-protocols"] = "{\"api-port\":\"HTTPS\"}"
+		annotations["cloud.google.com/app-protocols"] = "{\"https-api-port\":\"HTTPS\"}"
 	}
 
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
@@ -740,7 +742,7 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 	if err == nil && !version.LessThan(vaultVersionWithPrometheus) {
 		serviceMonitor.Spec.Endpoints = []monitorv1.Endpoint{{
 			Interval: "30s",
-			Port:     "api-port",
+			Port:     "https-api-port",
 			Scheme:   strings.ToLower(string(getVaultURIScheme(v))),
 			Params:   map[string][]string{"format": []string{"prometheus"}},
 			Path:     "/v1/sys/metrics",
@@ -766,7 +768,7 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 	if len(v.Spec.ServicePorts) == 0 {
 		return []corev1.ServicePort{
 				{
-					Name: "api-port",
+					Name: "https-api-port",
 					Port: 8200,
 				},
 				{
@@ -775,7 +777,7 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 				},
 			}, []corev1.ContainerPort{
 				{
-					Name:          "api-port",
+					Name:          "https-api-port",
 					ContainerPort: 8200,
 				},
 				{
@@ -914,46 +916,54 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	sort.Slice(secrets.Items, func(i, j int) bool { return secrets.Items[i].Name < secrets.Items[j].Name })
 
 	for _, cm := range configmaps.Items {
-		if _, ok := cm.Data[vault.DefaultConfigFile]; ok {
-			volumes = append(volumes, corev1.Volume{
-				Name: cm.Name,
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{Name: cm.Name},
+		for _, fileName := range configFileNames {
+			if _, ok := cm.Data[fileName]; ok {
+				volumes = append(volumes, corev1.Volume{
+					Name: cm.Name,
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{Name: cm.Name},
+						},
 					},
-				},
-			})
+				})
 
-			volumes = withVaultVolumes(v, volumes)
+				volumes = withVaultVolumes(v, volumes)
 
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      cm.Name,
-				MountPath: "/config/" + cm.Name,
-			})
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{
+					Name:      cm.Name,
+					MountPath: "/config/" + cm.Name,
+				})
 
-			volumeMounts = withBanksVaultsVolumeMounts(v, volumeMounts)
+				volumeMounts = withBanksVaultsVolumeMounts(v, volumeMounts)
 
-			configArgs = append(configArgs, "--vault-config-file", "/config/"+cm.Name+"/"+vault.DefaultConfigFile)
+				configArgs = append(configArgs, "--vault-config-file", "/config/"+cm.Name+"/"+fileName)
+
+				break
+			}
 		}
 	}
 
 	for _, secret := range secrets.Items {
-		if _, ok := secret.Data[vault.DefaultConfigFile]; ok {
-			volumes = append(volumes, corev1.Volume{
-				Name: secret.Name,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: secret.Name,
+		for _, fileName := range configFileNames {
+			if _, ok := secret.Data[fileName]; ok {
+				volumes = append(volumes, corev1.Volume{
+					Name: secret.Name,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: secret.Name,
+						},
 					},
-				},
-			})
+				})
 
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      secret.Name,
-				MountPath: "/config/" + secret.Name,
-			})
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{
+					Name:      secret.Name,
+					MountPath: "/config/" + secret.Name,
+				})
 
-			configArgs = append(configArgs, "--vault-config-file", "/config/"+secret.Name+"/"+vault.DefaultConfigFile)
+				configArgs = append(configArgs, "--vault-config-file", "/config/"+secret.Name+"/"+fileName)
+
+				break
+			}
 		}
 	}
 
@@ -1213,7 +1223,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Scheme: getVaultURIScheme(v),
-							Port:   intstr.FromString("api-port"),
+							Port:   intstr.FromString("https-api-port"),
 							Path:   "/v1/sys/init",
 						}},
 				},
@@ -1223,7 +1233,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Scheme: getVaultURIScheme(v),
-							Port:   intstr.FromString("api-port"),
+							Port:   intstr.FromString("https-api-port"),
 							Path:   "/v1/sys/health?standbyok&perfstandbyok",
 						}},
 					PeriodSeconds:    5,
@@ -1269,7 +1279,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 
 	// merge provided VaultPodSpec into the PodSpec defined above
 	// the values in VaultPodSpec will never overwrite fields defined in the PodSpec above
-	if err := mergo.Merge(&podSpec, v.Spec.VaultPodSpec); err != nil {
+	if err := mergo.MergeWithOverwrite(&podSpec, v.Spec.VaultPodSpec); err != nil {
 		return nil, err
 	}
 
@@ -1711,7 +1721,10 @@ func withSecretEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar
 
 func withSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
 	if v.Spec.SecurityContext.Size() == 0 {
-		return nil
+		vaultGID := int64(1000)
+		return &corev1.PodSecurityContext{
+			FSGroup: &vaultGID,
+		}
 	}
 	return &v.Spec.SecurityContext
 }
