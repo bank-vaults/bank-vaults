@@ -101,8 +101,8 @@ github.com/coreos/etcd v3.3.10+incompatible h1:jFneRYjIvLMLhDLCzuTuU4rSJUjRplcJQ
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible h1:8F3hqu9fGYLBifCmRCJsicFqDx/D68Rt3q1JMazcgBQ=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
-github.com/coreos/etcd-operator v0.9.3 h1:RqdBvdKNHb89mu+x48aUXM92w8WEkpzZREHVoqFLq80=
-github.com/coreos/etcd-operator v0.9.3/go.mod h1:h6zWPsRcUpzmi9C3kEE5HZqy1oo+jK4VtjdemOxySbE=
+github.com/coreos/etcd-operator v0.9.4 h1:NkN7HxlYHl4vOY8+etHRA+zDedwYYLhKfIsxdEPM+Lc=
+github.com/coreos/etcd-operator v0.9.4/go.mod h1:h6zWPsRcUpzmi9C3kEE5HZqy1oo+jK4VtjdemOxySbE=
 github.com/coreos/go-etcd v2.0.0+incompatible/go.mod h1:Jez6KQU2B/sWsbdaef3ED8NzMklzPG4d5KIOhIy30Tk=
 github.com/coreos/go-oidc v0.0.0-20180117170138-065b426bd416/go.mod h1:CgnwVTmzoESiwO9qyAFEMiHoZ1nMCKZlZ9V6mm3/LKc=
 github.com/coreos/go-semver v0.2.0 h1:3Jm3tLmsgAYcjC+4Up7hJrFBPr+n7rAqYeSw/SZazuY=

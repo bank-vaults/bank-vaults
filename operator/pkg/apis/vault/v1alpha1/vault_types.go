@@ -214,7 +214,7 @@ type VaultSpec struct {
 	SecurityContext v1.PodSecurityContext `json:"securityContext,omitempty"`
 
 	// EtcdVersion is the ETCD version of the automatically provisioned ETCD cluster
-	// default: "3.1.15"
+	// default: "3.3.17"
 	EtcdVersion string `json:"etcdVersion"`
 
 	// EtcdSize is the size of the automatically provisioned ETCD cluster, -1 will disable automatic cluster provisioning.
@@ -372,9 +372,7 @@ func (spec *VaultSpec) GetVersion() (*semver.Version, error) {
 // GetEtcdVersion returns the etcd version to use
 func (spec *VaultSpec) GetEtcdVersion() string {
 	if spec.EtcdVersion == "" {
-		// See https://github.com/coreos/etcd-operator/issues/1962#issuecomment-390539621
-		// for more details why we have to pin to 3.1.15
-		return "3.1.15"
+		return "3.3.17"
 	}
 	return spec.EtcdVersion
 }
