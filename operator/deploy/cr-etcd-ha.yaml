@@ -12,7 +12,7 @@ spec:
 
   # Specify how many nodes you would like to have in your etcd cluster
   # NOTE: -1 disables automatic etcd provisioning
-  etcdSize: 3
+  etcdSize: 1
 
   # Specify the PersistentVolumeClaim Spec which will be used as a storage for etcd
   # if it is not specified emptydir will be used
