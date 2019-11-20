@@ -28,6 +28,8 @@ spec:
   # ETCD Operator, however it can be used to set any arbitrary annotations on the ETCD Cluster.
   etcdAnnotations:
     etcd.database.coreos.com/scope: clusterwide
+  
+  etcdVersion: "3.3.17"
 
   # Annotations to be applied to the POD Specs
   etcdPodAnnotations:
@@ -50,6 +52,10 @@ spec:
       etcd:
         address: https://etcd-cluster:2379
         ha_enabled: "true"
+        # NOTE: specifiying the etcd API version is strongly encouraged,
+        # since etcd version 3.4 doesn't offer v2 version by default anymore.
+        # https://github.com/etcd-io/etcd/blob/master/Documentation/upgrades/upgrade_3_4.md
+        etcd_api: "v3"
     listener:
       tcp:
         address: "0.0.0.0:8200"

@@ -16,7 +16,7 @@ require (
 	github.com/banzaicloud/bank-vaults/pkg/sdk v0.0.0-00010101000000-000000000000
 	github.com/banzaicloud/k8s-objectmatcher v1.0.1-0.20190813150246-386389f72468
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/coreos/etcd-operator v0.9.3
+	github.com/coreos/etcd-operator v0.9.4
 	github.com/coreos/prometheus-operator v0.29.0
 	github.com/dimchansky/utfbom v1.1.0 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
