@@ -26,6 +26,8 @@ operator/go.sum
 bin/*
 /build/
 
+# Helm
+**/*.tgz
 
 # IDE integration
 /.idea/*
