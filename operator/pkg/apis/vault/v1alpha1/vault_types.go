@@ -372,8 +372,6 @@ func (spec *VaultSpec) GetVersion() (*semver.Version, error) {
 // GetEtcdVersion returns the etcd version to use
 func (spec *VaultSpec) GetEtcdVersion() string {
 	if spec.EtcdVersion == "" {
-		// The latest version where Vault seems to be working fine.
-		// Note: there are certificate issues with the 3.4.x line.
 		return "3.3.17"
 	}
 	return spec.EtcdVersion
