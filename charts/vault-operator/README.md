@@ -76,6 +76,14 @@ $ export VAULT_SKIP_VERIFY=true
 $ vault status
 ```
 
+Using as a subchart in helm v2 requires that the CRD be installed first. You can accomplish this by setting crdAnnotations as follows.
+
+```yaml
+vault-operator:
+  crdAnnotations:
+      "helm.sh/hook": crd-install
+```
+
 ## Credits
 
 Thanks to Cosmin Cojocar for the original Vault Operator Helm chart!
