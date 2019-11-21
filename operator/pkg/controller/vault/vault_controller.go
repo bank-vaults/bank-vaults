@@ -1234,7 +1234,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						HTTPGet: &corev1.HTTPGetAction{
 							Scheme: getVaultURIScheme(v),
 							Port:   intstr.FromString("api-port"),
-							Path:   "/v1/sys/health?standbyok&perfstandbyok",
+							Path:   "/v1/sys/health?standbyok=true&perfstandbyok=true",
 						}},
 					PeriodSeconds:    5,
 					FailureThreshold: 2,
