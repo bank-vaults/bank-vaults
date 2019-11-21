@@ -16,6 +16,8 @@
 {{- $tlsKey = required "Required when certificate.generate is false" .Values.certificate.server.tls.key }}
 {{- $caCrt = required "Required when certificate.generate is false" .Values.certificate.ca.crt }}
 {{- end }}
+{{- $major := .Capabilities.KubeVersion.Major -}}
+{{- $minor := .Capabilities.KubeVersion.Minor -}}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -62,6 +64,17 @@ webhooks:
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
+{{- if and (eq (int $major) 1) (ge (int $minor) 15) }}
+  objectSelector:
+    matchExpressions:
+    {{- if .Values.objectSelector.matchExpressions }}
+{{ toYaml .Values.objectSelector.matchExpressions | indent 4 }}
+    {{- end }}
+    - key: security.banzaicloud.io/mutate
+      operator: NotIn
+      values:
+      - skip
+{{- end }}
 - name: secrets.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
   clientConfig:
     service:
