@@ -117,7 +117,7 @@ spec:
             {{ else }}
             scheme: HTTPS
             {{ end }}
-            path: /v1/sys/health?standbyok&perfstandbyok
+            path: /v1/sys/health?standbyok=true&perfstandbyok=true
             port: vault
         securityContext:
           readOnlyRootFilesystem: true
