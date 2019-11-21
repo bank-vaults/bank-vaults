@@ -92,6 +92,14 @@ namespaceSelector:
   # matchLabels:
   #   vault-injection: enabled
 
+# In case of the K8s cluster version is above 1.15 objectSelector is usable
+objectSelector: {}
+  # matchExpressions:
+  # - key: security.banzaicloud.io/mutate
+  #   operator: NotIn
+  #   values:
+  #   - skip
+
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
