@@ -860,7 +860,7 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        serviceName,
 			Namespace:   v.Namespace,
-			Annotations: withVaultConfigurerAnnotations(v, getCommonAnnotations(v, map[string]string{})),
+			Annotations: withVaultConfigurerAnnotations(v, map[string]string{}),
 			Labels:      withVaultConfigurerLabels(v, ls),
 		},
 		Spec: corev1.ServiceSpec{
@@ -927,8 +927,6 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 					},
 				})
 
-				volumes = withVaultVolumes(v, volumes)
-
 				volumeMounts = append(volumeMounts, corev1.VolumeMount{
 					Name:      cm.Name,
 					MountPath: "/config/" + cm.Name,
@@ -981,7 +979,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 					ContainerPort: 9091,
 					Protocol:      "TCP",
 				}},
-				Env:          withSecretEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{})))),
+				Env:          withCommonEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{}))),
 				VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
 				WorkingDir:   "/config",
 				Resources:    *getBankVaultsResource(v),
@@ -1007,7 +1005,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        v.Name + "-configurer",
 			Namespace:   v.Namespace,
-			Annotations: withVaultConfigurerAnnotations(v, getCommonAnnotations(v, map[string]string{})),
+			Annotations: withVaultConfigurerAnnotations(v, map[string]string{}),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -1016,7 +1014,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      withVaultConfigurerLabels(v, ls),
-					Annotations: withVaultConfigurerAnnotations(v, withPrometheusAnnotations("9091", getCommonAnnotations(v, map[string]string{}))),
+					Annotations: withVaultConfigurerAnnotations(v, withPrometheusAnnotations("9091", map[string]string{})),
 				},
 				Spec: podSpec,
 			},
@@ -1248,7 +1246,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Name:            "bank-vaults",
 				Command:         unsealCommand,
 				Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
-				Env: withSecretEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
+				Env: withCommonEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, withCommonEnv(v, []corev1.EnvVar{
 					{
 						Name:  k8s.EnvK8SOwnerReference,
 						Value: string(ownerJSON),
@@ -1605,7 +1603,7 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, owner string, containers []co
 			Image:           v.Spec.GetFluentDImage(),
 			ImagePullPolicy: corev1.PullAlways,
 			Name:            "auditlog-exporter",
-			Env: withSecretEnv(v, withCredentialsEnv(v, []corev1.EnvVar{
+			Env: withCommonEnv(v, withCredentialsEnv(v, []corev1.EnvVar{
 				{
 					Name:  k8s.EnvK8SOwnerReference,
 					Value: owner,
@@ -1711,7 +1709,7 @@ func withVaultEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar 
 	return envs
 }
 
-func withSecretEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
+func withCommonEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
 	for _, env := range v.Spec.EnvsConfig {
 		envs = append(envs, env)
 	}
