@@ -73,16 +73,16 @@ spec:
                }
 
     # Instead of creating a token by hand we allow the tenant Vault to request
-    # one with the Kubernetes auth method, via vault-env and webhook
+    # one with the Kubernetes auth method, via vault-env and vault-secrets-webhook
     auth:
       - type: kubernetes
         path: tenant/kubernetes
         roles:
           # Allow every the tenant Vault Pod in the tenant namespace to use
-          # its transit engine
+          # this transit engine
           - name: tenant
-            bound_service_account_names: ["vault", "vault-secrets-webhook"]
-            bound_service_account_namespaces: ["tenant", "vswh"]
+            bound_service_account_names: "vault"
+            bound_service_account_namespaces: "tenant"
             policies: allow_tenant_transit
             ttl: 1m
 
