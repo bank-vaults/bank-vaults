@@ -281,7 +281,11 @@ spec:
         {{- end }}
         - name: vault-tls
           secret:
+            {{- if .Values.tls.secretName }}
+            secretName: "{{ .Values.tls.secretName }}"
+            {{- else }}
             secretName: "{{ template "vault.fullname" . }}-tls"
+            {{- end }}
         - name: statsd-mapping
           configMap:
             name: "{{ template "vault.fullname" . }}-statsd-mapping"
