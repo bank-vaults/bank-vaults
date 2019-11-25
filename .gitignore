@@ -29,6 +29,10 @@ bin/*
 # Helm
 **/*.tgz
 
+# Certificates
+*.csr
+*.pem
+
 # IDE integration
 /.idea/*
 !/.idea/copyright/

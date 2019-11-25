@@ -138,6 +138,7 @@ The following tables lists the configurable parameters of the vault chart and th
 | `nodeSelector`          | Node labels for pod assignment. https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector                                                           | `{}`        
 | `tolerations`           | List of node tolerations for the pods. https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                                           | `[]`        
 | `labels`                | Additonal labels to be applied to the Vault StatefulSet and Pods | `{}`
+| `tls.secretName`        | Custom TLS certifcate secret name    | `""`                                               |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
