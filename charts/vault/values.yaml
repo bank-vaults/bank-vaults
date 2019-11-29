@@ -58,7 +58,11 @@ podAnnotations:
 labels: {}
   #  team: banzai
 
-resources: {}
+resources:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -236,3 +240,24 @@ rbac:
   enabled: true
   psp:
     enabled: false
+
+vault_config:
+  resources: {}
+
+vault_unsealer:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+vault_configurer:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+prometheus_statsd_exporter:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
