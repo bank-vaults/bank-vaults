@@ -162,7 +162,7 @@ spec:
       value: "/vault/file"
 
   # Marks presence of Istio, which influences things like port namings
-  istioEnabled: true
+  istioEnabled: false
 
 ---
 apiVersion: v1
