@@ -312,6 +312,10 @@ type VaultSpec struct {
 	// use ["*"] for all namespaces.
 	// default:
 	CANamespaces []string `json:"caNamespaces,omitempty"`
+
+	// IstioEnabled describes if the cluster has a Istio running and enabled.
+	// default: false
+	IstioEnabled bool `json:"istioEnabled,omitempty"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
@@ -481,6 +485,18 @@ func (spec *VaultSpec) GetAnnotations() map[string]string {
 	}
 
 	return spec.Annotations
+}
+
+// GetAnnotations returns the Common Annotations
+func (spec *VaultSpec) GetAPIPortName() string {
+	portName := "api-port"
+	if spec.IstioEnabled {
+		if spec.GetTLSDisable() {
+			return "http-" + portName
+		}
+		return "https-" + portName
+	}
+	return portName
 }
 
 // GetVaultLAbels returns the Vault Pod , Secret and ConfigMap Labels

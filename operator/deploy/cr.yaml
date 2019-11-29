@@ -161,6 +161,9 @@ spec:
     - name: VAULT_STORAGE_FILE
       value: "/vault/file"
 
+  # Marks presence of Istio, which influences things like port namings
+  istioEnabled: true
+
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
