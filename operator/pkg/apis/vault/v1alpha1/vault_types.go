@@ -460,6 +460,16 @@ func (spec *VaultSpec) GetStatsDImage() string {
 	return spec.StatsDImage
 }
 
+// GetVolumeClaimTemplates fixes the "status diff" in PVC templates
+func (spec *VaultSpec) GetVolumeClaimTemplates() []v1.PersistentVolumeClaim {
+	var pvcs []v1.PersistentVolumeClaim
+	for _, pvc := range spec.VolumeClaimTemplates {
+		pvc.Status.Phase = v1.ClaimPending
+		pvcs = append(pvcs, pvc)
+	}
+	return pvcs
+}
+
 // GetWatchedSecretsLabels returns the set of labels for secrets to watch in the vault namespace
 func (spec *VaultSpec) GetWatchedSecretsLabels() []map[string]string {
 	if spec.WatchedSecretsLabels == nil {
