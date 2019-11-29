@@ -248,6 +248,10 @@ type VaultSpec struct {
 	// default: ClusterIP
 	ServiceType string `json:"serviceType"`
 
+	// RaftLeaderAddress ...
+	// default: ""
+	RaftLeaderAddress string `json:"raftLeaderAddress"`
+
 	// ServicePorts is an extra map of ports that should be exposed by the Vault Service.
 	// default:
 	ServicePorts map[string]int32 `json:"servicePorts"`

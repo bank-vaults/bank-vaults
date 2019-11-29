@@ -1,0 +1,134 @@
+apiVersion: "vault.banzaicloud.com/v1alpha1"
+kind: "Vault"
+metadata:
+  name: "vault-primary"
+spec:
+  size: 1
+  image: vault:1.3.0
+  bankVaultsImage: banzaicloud/bank-vaults:raft
+
+  # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
+  serviceAccount: vault
+
+  # Specify the Service's type where the Vault Service is exposed
+  # Please note that some Ingress controllers like https://github.com/kubernetes/ingress-gce
+  # forces you to expose your Service on a NodePort
+  serviceType: LoadBalancer
+
+  vaultAnnotations:
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+
+  # Use local disk to store Vault raft data, see config section.
+  volumeClaimTemplates:
+    - metadata:
+        name: vault-raft
+      spec:
+        # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class-1
+        # storageClassName: ""
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+
+  volumeMounts:
+    - name: vault-raft
+      mountPath: /vault/raft
+
+  # Describe where you would like to store the Vault unseal keys and root token.
+  unsealConfig:
+    options:
+      # The preFlightChecks flag enables unseal and root token storage tests
+      # This is true by default
+      preFlightChecks: true
+    aws:
+      kmsKeyId: "9f054126-2a98-470c-9f10-9b3b0cad94a1"
+      kmsRegion: "eu-west-1"
+      s3Bucket: "bank-vaults"
+      s3Prefix: "raft-"
+      s3Region: "eu-west-1"
+
+  # A YAML representation of a final vault config file.
+  # See https://www.vaultproject.io/docs/configuration/ for more information.
+  config:
+    storage:
+      raft:
+        path: "/vault/raft"
+    listener:
+      tcp:
+        address: "0.0.0.0:8200"
+        tls_cert_file: /vault/tls/server.crt
+        tls_key_file: /vault/tls/server.key
+    api_addr: https://vault-primary.default:8200
+    # cluster_addr: "https://${.Env.POD_NAME}:8201"
+    telemetry:
+      statsd_address: localhost:9125
+    ui: true
+
+  # See: https://github.com/banzaicloud/bank-vaults#example-external-vault-configuration for more details.
+  externalConfig:
+    policies:
+      - name: allow_secrets
+        rules: path "secret/*" {
+          capabilities = ["create", "read", "update", "delete", "list"]
+          }
+      - name: allow_pki
+        rules: path "pki/*" {
+          capabilities = ["create", "read", "update", "delete", "list"]
+          }
+    auth:
+      - type: kubernetes
+        roles:
+          # Allow every pod in the default namespace to use the secret kv store
+          - name: default
+            bound_service_account_names: ["default", "vault-secrets-webhook"]
+            bound_service_account_namespaces: ["default", "vswh"]
+            policies: ["allow_secrets", "allow_pki"]
+            ttl: 1h
+
+    secrets:
+      - path: secret
+        type: kv
+        description: General secrets.
+        options:
+          version: 2
+
+      - type: pki
+        description: Vault PKI Backend
+        config:
+          default_lease_ttl: 168h
+          max_lease_ttl: 720h
+        configuration:
+          config:
+          - name: urls
+            issuing_certificates: https://vault-primary.default:8200/v1/pki/ca
+            crl_distribution_points: https://vault-primary.default:8200/v1/pki/crl
+          root/generate:
+          - name: internal
+            common_name: vault-primary.default
+          roles:
+          - name: default
+            allowed_domains: localhost,pod,svc,default
+            allow_subdomains: true
+            generate_lease: true
+            ttl: 1m
+
+
+  vaultEnvsConfig:
+    - name: VAULT_LOG_LEVEL
+      value: info
+    - name: VAULT_STORAGE_FILE
+      value: "/vault/file"
+
+  # k create secret generic aws --from-literal=AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --from-literal=AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+  envsConfig:
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+          secretKeyRef:
+            name: aws
+            key: AWS_ACCESS_KEY_ID
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+          secretKeyRef:
+            name: aws
+            key: AWS_SECRET_ACCESS_KEY

@@ -156,6 +156,8 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 					svc.Spec.Ports[i].NodePort = currentSvc.Spec.Ports[i].NodePort
 				}
 			}
+
+			svc.Status = currentSvc.Status
 		}
 
 		result, err := patch.DefaultPatchMaker.Calculate(current, o)
@@ -301,6 +303,32 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
+	// Create the service if it doesn't exist
+	ser := serviceForVault(v)
+	// Set Vault instance as the owner and controller
+	if err := controllerutil.SetControllerReference(v, ser, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
+	err = r.createOrUpdateObject(ser)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to create/update service: %v", err)
+	}
+
+	// Create the service if it doesn't exist
+	// NOTE: currently this is not used, but should be here once we implement support for Client Forwarding as well.
+	// Currently request forwarding works only.
+	services := perInstanceServicesForVault(v)
+	for _, ser := range services {
+		// Set Vault instance as the owner and controller
+		if err := controllerutil.SetControllerReference(v, ser, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
+		err = r.createOrUpdateObject(ser)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to create/update per instance service: %v", err)
+		}
+	}
+
 	tlsExpiration := time.Time{}
 	if !v.Spec.GetTLSDisable() {
 		// Check if we have an existing TLS Secret for Vault
@@ -313,20 +341,25 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}, &existingSec)
 		if apierrors.IsNotFound(err) {
 			// If tls secret doesn't exist generate tls
-			sec, tlsExpiration, err = secretForVault(v)
+			sec, tlsExpiration, err = secretForVault(v, ser)
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
 			}
 		} else if len(existingSec.Data) > 0 {
 			// If tls secret exists check expiration date
-			tlsExpiration, err = getCertExpirationDate(string(existingSec.Data["server.crt"]))
+			certPEM := string(existingSec.Data["server.crt"])
+			tlsExpiration, err = getCertExpirationDate(certPEM)
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to get certificate expiration: %v", err)
 			}
+			tlsHostsChanged, err := certHostsAndIPsChanged(certPEM, v, ser)
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to get certificate hosts: %v", err)
+			}
 			// Generate new tls if expiration date is too close
-			if tlsExpiration.Sub(time.Now()) < v.Spec.GetTLSExpiryThreshold() {
+			if tlsExpiration.Sub(time.Now()) < v.Spec.GetTLSExpiryThreshold() || tlsHostsChanged {
 				log.V(2).Info("cert expiration date too close", "date", tlsExpiration.UTC().Format(time.RFC3339))
-				sec, tlsExpiration, err = secretForVault(v)
+				sec, tlsExpiration, err = secretForVault(v, ser)
 				if err != nil {
 					return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
 				}
@@ -413,7 +446,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	// Create the StatefulSet if it doesn't exist
 	tlsAnnotations := map[string]string{}
 	tlsAnnotations["vault.banzaicloud.io/tls-expiration-date"] = tlsExpiration.UTC().Format(time.RFC3339)
-	statefulSet, err := statefulSetForVault(v, externalSecretsToWatchItems, tlsAnnotations)
+	statefulSet, err := statefulSetForVault(v, externalSecretsToWatchItems, tlsAnnotations, ser)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to fabricate StatefulSet: %v", err)
 	}
@@ -438,32 +471,6 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		err = r.createOrUpdateObject(serviceMonitor)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create/update serviceMonitor: %v", err)
-		}
-	}
-
-	// Create the service if it doesn't exist
-	ser := serviceForVault(v)
-	// Set Vault instance as the owner and controller
-	if err := controllerutil.SetControllerReference(v, ser, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-	err = r.createOrUpdateObject(ser)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to create/update service: %v", err)
-	}
-
-	// Create the service if it doesn't exist
-	// NOTE: currently this is not used, but should be here once we implement support for Client Forwarding as well.
-	// Currently request forwarding works only.
-	services := perInstanceServicesForVault(v)
-	for _, ser := range services {
-		// Set Vault instance as the owner and controller
-		if err := controllerutil.SetControllerReference(v, ser, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
-		err = r.createOrUpdateObject(ser)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to create/update per instance service: %v", err)
 		}
 	}
 
@@ -710,9 +717,10 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 			Labels:      withVaultLabels(v, ls),
 		},
 		Spec: corev1.ServiceSpec{
-			Type:     serviceType(v),
-			Selector: selectorLs,
-			Ports:    servicePorts,
+			Type:                     serviceType(v),
+			Selector:                 selectorLs,
+			Ports:                    servicePorts,
+			PublishNotReadyAddresses: true,
 		},
 	}
 	return service
@@ -932,7 +940,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 					MountPath: "/config/" + cm.Name,
 				})
 
-				volumeMounts = withBanksVaultsVolumeMounts(v, volumeMounts)
+				// volumeMounts = withBanksVaultsVolumeMounts(v, volumeMounts)
 
 				configArgs = append(configArgs, "--vault-config-file", "/config/"+cm.Name+"/"+fileName)
 
@@ -1040,13 +1048,29 @@ func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	return cm
 }
 
-func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, time.Time, error) {
+func hostsAndIPsForVault(om *vaultv1alpha1.Vault, service *corev1.Service) []string {
 	hostsAndIPs := []string{
 		om.Name,
 		om.Name + "." + om.Namespace,
 		om.Name + "." + om.Namespace + ".svc.cluster.local",
 		"127.0.0.1",
 	}
+
+	for _, ingress := range service.Status.LoadBalancer.Ingress {
+		if ingress.IP != "" {
+			hostsAndIPs = append(hostsAndIPs, ingress.IP)
+		}
+		if ingress.Hostname != "" {
+			hostsAndIPs = append(hostsAndIPs, ingress.Hostname)
+		}
+	}
+
+	return hostsAndIPs
+}
+
+func secretForVault(om *vaultv1alpha1.Vault, service *corev1.Service) (*corev1.Secret, time.Time, error) {
+	hostsAndIPs := hostsAndIPsForVault(om, service)
+
 	chain, err := bvtls.GenerateTLS(strings.Join(hostsAndIPs, ","), "8760h")
 	if err != nil {
 		return nil, time.Time{}, err
@@ -1075,7 +1099,7 @@ func secretForVault(om *vaultv1alpha1.Vault) (*corev1.Secret, time.Time, error) 
 }
 
 // statefulSetForVault returns a Vault StatefulSet object
-func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []corev1.Secret, tlsAnnotations map[string]string) (*appsv1.StatefulSet, error) {
+func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []corev1.Secret, tlsAnnotations map[string]string, service *corev1.Service) (*appsv1.StatefulSet, error) {
 	ls := labelsForVault(v.Name)
 	replicas := v.Spec.Size
 
@@ -1167,7 +1191,16 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		unsealCommand = append(unsealCommand, "--auto")
 	}
 	if v.Spec.IsRaftStorage() {
-		unsealCommand = append(unsealCommand, "--raft", "--raft-leader-address", "https://"+v.Name+":8200")
+		raftLeaderAddress := v.Name
+		if v.Spec.RaftLeaderAddress != "" {
+			raftLeaderAddress = v.Spec.RaftLeaderAddress
+		}
+
+		unsealCommand = append(unsealCommand, "--raft", "--raft-leader-address", "https://"+raftLeaderAddress+":8200")
+
+		if v.Spec.RaftLeaderAddress != "" {
+			unsealCommand = append(unsealCommand, "--raft-secondary")
+		}
 	}
 
 	_, containerPorts := getServicePorts(v)
@@ -1211,7 +1244,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Name:            "vault",
 				Args:            []string{"server"},
 				Ports:           containerPorts,
-				Env:             withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{}))),
+				Env:             withClusterAddr(v, service, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{}))),
 				SecurityContext: &corev1.SecurityContext{
 					Capabilities: &corev1.Capabilities{
 						Add: []corev1.Capability{"IPC_LOCK"},
@@ -1248,7 +1281,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Name:            "bank-vaults",
 				Command:         unsealCommand,
 				Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
-				Env: withCommonEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, withCommonEnv(v, []corev1.EnvVar{
+				Env: withTLSEnv(v, true, withCredentialsEnv(v, withCommonEnv(v, []corev1.EnvVar{
 					{
 						Name:  k8s.EnvK8SOwnerReference,
 						Value: string(ownerJSON),
@@ -1261,7 +1294,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 							},
 						},
 					},
-				})))),
+				}))),
 				Ports: []corev1.ContainerPort{{
 					Name:          "metrics",
 					ContainerPort: 9091,
@@ -1488,6 +1521,31 @@ func withCredentialsEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.E
 	return envs
 }
 
+func withClusterAddr(v *vaultv1alpha1.Vault, service *corev1.Service, envs []corev1.EnvVar) []corev1.EnvVar {
+	value := ""
+
+	for _, ingress := range service.Status.LoadBalancer.Ingress {
+		if ingress.IP != "" {
+			value = ingress.IP
+		}
+		if ingress.Hostname != "" {
+			value = ingress.Hostname
+		}
+	}
+
+	envs = append(envs, corev1.EnvVar{
+		Name:  "VAULT_CLUSTER_ADDR",
+		Value: "https://" + value + ":8201",
+	})
+
+	// envs = append(envs, corev1.EnvVar{
+	// 	Name:  "VAULT_API_ADDR",
+	// 	Value: "https://" + value + ":8200",
+	// })
+
+	return envs
+}
+
 func withCredentialsVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
 	secretName := v.Spec.CredentialsConfig.SecretName
 	if secretName != "" {
@@ -1607,7 +1665,7 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, owner string, containers []co
 	if v.Spec.IsFluentDEnabled() {
 		containers = append(containers, corev1.Container{
 			Image:           v.Spec.GetFluentDImage(),
-			ImagePullPolicy: corev1.PullAlways,
+			ImagePullPolicy: corev1.PullIfNotPresent,
 			Name:            "auditlog-exporter",
 			Env: withCommonEnv(v, withCredentialsEnv(v, []corev1.EnvVar{
 				{
@@ -1944,4 +2002,18 @@ func getCertExpirationDate(certPEM string) (time.Time, error) {
 	}
 
 	return cert.NotAfter, nil
+}
+
+func certHostsAndIPsChanged(certPEM string, v *vaultv1alpha1.Vault, service *corev1.Service) (bool, error) {
+	block, _ := pem.Decode([]byte(certPEM))
+	if block == nil {
+		return false, fmt.Errorf("failed to parse certificate PEM")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse certificate: %v", err)
+	}
+
+	// TODO very weak check for now
+	return len(cert.DNSNames)+len(cert.IPAddresses) != len(hostsAndIPsForVault(v, service)), nil
 }
