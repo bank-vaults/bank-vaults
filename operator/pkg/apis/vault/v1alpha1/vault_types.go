@@ -214,7 +214,7 @@ type VaultSpec struct {
 	SecurityContext v1.PodSecurityContext `json:"securityContext,omitempty"`
 
 	// EtcdVersion is the ETCD version of the automatically provisioned ETCD cluster
-	// default: "3.1.15"
+	// default: "3.3.17"
 	EtcdVersion string `json:"etcdVersion"`
 
 	// EtcdSize is the size of the automatically provisioned ETCD cluster, -1 will disable automatic cluster provisioning.
@@ -312,6 +312,10 @@ type VaultSpec struct {
 	// use ["*"] for all namespaces.
 	// default:
 	CANamespaces []string `json:"caNamespaces,omitempty"`
+
+	// IstioEnabled describes if the cluster has a Istio running and enabled.
+	// default: false
+	IstioEnabled bool `json:"istioEnabled,omitempty"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
@@ -372,9 +376,7 @@ func (spec *VaultSpec) GetVersion() (*semver.Version, error) {
 // GetEtcdVersion returns the etcd version to use
 func (spec *VaultSpec) GetEtcdVersion() string {
 	if spec.EtcdVersion == "" {
-		// See https://github.com/coreos/etcd-operator/issues/1962#issuecomment-390539621
-		// for more details why we have to pin to 3.1.15
-		return "3.1.15"
+		return "3.3.17"
 	}
 	return spec.EtcdVersion
 }
@@ -458,6 +460,16 @@ func (spec *VaultSpec) GetStatsDImage() string {
 	return spec.StatsDImage
 }
 
+// GetVolumeClaimTemplates fixes the "status diff" in PVC templates
+func (spec *VaultSpec) GetVolumeClaimTemplates() []v1.PersistentVolumeClaim {
+	var pvcs []v1.PersistentVolumeClaim
+	for _, pvc := range spec.VolumeClaimTemplates {
+		pvc.Status.Phase = v1.ClaimPending
+		pvcs = append(pvcs, pvc)
+	}
+	return pvcs
+}
+
 // GetWatchedSecretsLabels returns the set of labels for secrets to watch in the vault namespace
 func (spec *VaultSpec) GetWatchedSecretsLabels() []map[string]string {
 	if spec.WatchedSecretsLabels == nil {
@@ -483,6 +495,18 @@ func (spec *VaultSpec) GetAnnotations() map[string]string {
 	}
 
 	return spec.Annotations
+}
+
+// GetAPIPortName returns the main Vault port name based on Istio and TLS settings
+func (spec *VaultSpec) GetAPIPortName() string {
+	portName := "api-port"
+	if spec.IstioEnabled {
+		if spec.GetTLSDisable() {
+			return "http-" + portName
+		}
+		return "https-" + portName
+	}
+	return portName
 }
 
 // GetVaultLAbels returns the Vault Pod , Secret and ConfigMap Labels

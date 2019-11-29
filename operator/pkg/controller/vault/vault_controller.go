@@ -169,11 +169,11 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 		}
 
 		if !result.IsEmpty() {
-			log.V(1).Info("resource diffs",
+			log.V(1).Info(fmt.Sprintf("Resource update for object %s:%s", o.GetObjectKind(), o.(metav1.ObjectMetaAccessor).GetObjectMeta().GetName()),
 				"patch", string(result.Patch),
-				"original", string(result.Original),
-				"modified", string(result.Modified),
-				"current", string(result.Current),
+				// "original", string(result.Original),
+				// "modified", string(result.Modified),
+				// "current", string(result.Current),
 			)
 
 			err := patch.DefaultAnnotator.SetLastAppliedAnnotation(o)
@@ -393,7 +393,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	if len(externalSecretsToWatchLabelsSelector) != 0 || len(externalSecretsToWatchAnnotationsSelector) != 0 {
 
 		externalSecretsInNamespace := corev1.SecretList{}
-		// Get all Secrets for the Vault CRD NAmespace
+		// Get all Secrets for the Vault CRD Namespace
 		externalSecretsInNamespaceFilter := client.ListOptions{
 			Namespace: v.Namespace,
 		}
@@ -693,7 +693,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 
 	// On GKE we need to specifiy the backend protocol on the service if TLS is enabled
 	if ingress := v.GetIngress(); ingress != nil && !v.Spec.GetTLSDisable() {
-		annotations["cloud.google.com/app-protocols"] = "{\"https-api-port\":\"HTTPS\"}"
+		annotations["cloud.google.com/app-protocols"] = fmt.Sprintf("{\"%s\":\"HTTPS\"}", v.Spec.GetAPIPortName())
 	}
 
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
@@ -742,7 +742,7 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 	if err == nil && !version.LessThan(vaultVersionWithPrometheus) {
 		serviceMonitor.Spec.Endpoints = []monitorv1.Endpoint{{
 			Interval: "30s",
-			Port:     "https-api-port",
+			Port:     v.Spec.GetAPIPortName(),
 			Scheme:   strings.ToLower(string(getVaultURIScheme(v))),
 			Params:   map[string][]string{"format": []string{"prometheus"}},
 			Path:     "/v1/sys/metrics",
@@ -768,7 +768,7 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 	if len(v.Spec.ServicePorts) == 0 {
 		return []corev1.ServicePort{
 				{
-					Name: "https-api-port",
+					Name: v.Spec.GetAPIPortName(),
 					Port: 8200,
 				},
 				{
@@ -777,7 +777,7 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 				},
 			}, []corev1.ContainerPort{
 				{
-					Name:          "https-api-port",
+					Name:          v.Spec.GetAPIPortName(),
 					ContainerPort: 8200,
 				},
 				{
@@ -860,7 +860,7 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        serviceName,
 			Namespace:   v.Namespace,
-			Annotations: withVaultConfigurerAnnotations(v, getCommonAnnotations(v, map[string]string{})),
+			Annotations: withVaultConfigurerAnnotations(v, map[string]string{}),
 			Labels:      withVaultConfigurerLabels(v, ls),
 		},
 		Spec: corev1.ServiceSpec{
@@ -927,8 +927,6 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 					},
 				})
 
-				volumes = withVaultVolumes(v, volumes)
-
 				volumeMounts = append(volumeMounts, corev1.VolumeMount{
 					Name:      cm.Name,
 					MountPath: "/config/" + cm.Name,
@@ -981,7 +979,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 					ContainerPort: 9091,
 					Protocol:      "TCP",
 				}},
-				Env:          withSecretEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{})))),
+				Env:          withCommonEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{}))),
 				VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
 				WorkingDir:   "/config",
 				Resources:    *getBankVaultsResource(v),
@@ -1007,7 +1005,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        v.Name + "-configurer",
 			Namespace:   v.Namespace,
-			Annotations: withVaultConfigurerAnnotations(v, getCommonAnnotations(v, map[string]string{})),
+			Annotations: withVaultConfigurerAnnotations(v, map[string]string{}),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -1016,7 +1014,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      withVaultConfigurerLabels(v, ls),
-					Annotations: withVaultConfigurerAnnotations(v, withPrometheusAnnotations("9091", getCommonAnnotations(v, map[string]string{}))),
+					Annotations: withVaultConfigurerAnnotations(v, withPrometheusAnnotations("9091", map[string]string{})),
 				},
 				Spec: podSpec,
 			},
@@ -1223,7 +1221,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Scheme: getVaultURIScheme(v),
-							Port:   intstr.FromString("https-api-port"),
+							Port:   intstr.FromString(v.Spec.GetAPIPortName()),
 							Path:   "/v1/sys/init",
 						}},
 				},
@@ -1233,8 +1231,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Scheme: getVaultURIScheme(v),
-							Port:   intstr.FromString("https-api-port"),
-							Path:   "/v1/sys/health?standbyok&perfstandbyok",
+							Port:   intstr.FromString(v.Spec.GetAPIPortName()),
+							Path:   "/v1/sys/health?standbyok=true&perfstandbyok=true",
 						}},
 					PeriodSeconds:    5,
 					FailureThreshold: 2,
@@ -1248,7 +1246,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Name:            "bank-vaults",
 				Command:         unsealCommand,
 				Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
-				Env: withSecretEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
+				Env: withCommonEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, withCommonEnv(v, []corev1.EnvVar{
 					{
 						Name:  k8s.EnvK8SOwnerReference,
 						Value: string(ownerJSON),
@@ -1314,7 +1312,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				},
 				Spec: podSpec,
 			},
-			VolumeClaimTemplates: v.Spec.VolumeClaimTemplates,
+			VolumeClaimTemplates: v.Spec.GetVolumeClaimTemplates(),
 		},
 	}, nil
 }
@@ -1605,7 +1603,7 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, owner string, containers []co
 			Image:           v.Spec.GetFluentDImage(),
 			ImagePullPolicy: corev1.PullAlways,
 			Name:            "auditlog-exporter",
-			Env: withSecretEnv(v, withCredentialsEnv(v, []corev1.EnvVar{
+			Env: withCommonEnv(v, withCredentialsEnv(v, []corev1.EnvVar{
 				{
 					Name:  k8s.EnvK8SOwnerReference,
 					Value: owner,
@@ -1711,7 +1709,7 @@ func withVaultEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar 
 	return envs
 }
 
-func withSecretEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
+func withCommonEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
 	for _, env := range v.Spec.EnvsConfig {
 		envs = append(envs, env)
 	}

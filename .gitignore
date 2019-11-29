@@ -26,6 +26,12 @@ operator/go.sum
 bin/*
 /build/
 
+# Helm
+**/*.tgz
+
+# Certificates
+*.csr
+*.pem
 
 # IDE integration
 /.idea/*

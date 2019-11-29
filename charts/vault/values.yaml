@@ -81,6 +81,12 @@ tolerations: []
 #   operator: Equal
 #   value: "value"
 
+# Specify a secret which holds your custom TLS certificate.
+# If not specified Helm will generate one for you.
+# See templates/secret.yaml for the exact format.
+tls:
+  secretName: ""
+
 vault:
   # Allows the mounting of various custom secrets to enable production vault
   # configurations. The comments show an example usage for mounting a TLS

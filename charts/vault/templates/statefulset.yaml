@@ -117,7 +117,7 @@ spec:
             {{ else }}
             scheme: HTTPS
             {{ end }}
-            path: /v1/sys/health?standbyok&perfstandbyok
+            path: /v1/sys/health?standbyok=true&perfstandbyok=true
             port: vault
         securityContext:
           readOnlyRootFilesystem: true
@@ -281,7 +281,11 @@ spec:
         {{- end }}
         - name: vault-tls
           secret:
+            {{- if .Values.tls.secretName }}
+            secretName: "{{ .Values.tls.secretName }}"
+            {{- else }}
             secretName: "{{ template "vault.fullname" . }}-tls"
+            {{- end }}
         - name: statsd-mapping
           configMap:
             name: "{{ template "vault.fullname" . }}-statsd-mapping"

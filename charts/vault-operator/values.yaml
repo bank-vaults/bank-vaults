@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   repository: banzaicloud/vault-operator
-  tag: 0.6.1
+  tag: 0.6.2
   pullPolicy: IfNotPresent
 
 service:
@@ -68,10 +68,10 @@ etcd-operator:
   enabled: false
   etcdOperator:
     image:
-      tag: v0.9.1
+      tag: v0.9.4
   backupOperator:
     image:
-      tag: v0.9.1
+      tag: v0.9.4
   restoreOperator:
     image:
-      tag: v0.9.1
+      tag: v0.9.4

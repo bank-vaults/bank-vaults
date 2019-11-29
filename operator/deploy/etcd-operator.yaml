@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: etcd-operator
-          image: quay.io/coreos/etcd-operator:v0.9.3
+          image: quay.io/coreos/etcd-operator:v0.9.4
           command:
             - etcd-operator
             - --create-crd=false
