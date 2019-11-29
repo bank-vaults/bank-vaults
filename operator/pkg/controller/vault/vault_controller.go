@@ -393,7 +393,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	if len(externalSecretsToWatchLabelsSelector) != 0 || len(externalSecretsToWatchAnnotationsSelector) != 0 {
 
 		externalSecretsInNamespace := corev1.SecretList{}
-		// Get all Secrets for the Vault CRD NAmespace
+		// Get all Secrets for the Vault CRD Namespace
 		externalSecretsInNamespaceFilter := client.ListOptions{
 			Namespace: v.Namespace,
 		}
@@ -693,7 +693,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 
 	// On GKE we need to specifiy the backend protocol on the service if TLS is enabled
 	if ingress := v.GetIngress(); ingress != nil && !v.Spec.GetTLSDisable() {
-		annotations["cloud.google.com/app-protocols"] = "{\"api-port\":\"HTTPS\"}"
+		annotations["cloud.google.com/app-protocols"] = fmt.Sprintf("{\"%s\":\"HTTPS\"}", v.Spec.GetAPIPortName())
 	}
 
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
@@ -742,7 +742,7 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 	if err == nil && !version.LessThan(vaultVersionWithPrometheus) {
 		serviceMonitor.Spec.Endpoints = []monitorv1.Endpoint{{
 			Interval: "30s",
-			Port:     "api-port",
+			Port:     v.Spec.GetAPIPortName(),
 			Scheme:   strings.ToLower(string(getVaultURIScheme(v))),
 			Params:   map[string][]string{"format": []string{"prometheus"}},
 			Path:     "/v1/sys/metrics",
@@ -768,7 +768,7 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 	if len(v.Spec.ServicePorts) == 0 {
 		return []corev1.ServicePort{
 				{
-					Name: "api-port",
+					Name: v.Spec.GetAPIPortName(),
 					Port: 8200,
 				},
 				{
@@ -777,7 +777,7 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 				},
 			}, []corev1.ContainerPort{
 				{
-					Name:          "api-port",
+					Name:          v.Spec.GetAPIPortName(),
 					ContainerPort: 8200,
 				},
 				{
@@ -1221,7 +1221,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Scheme: getVaultURIScheme(v),
-							Port:   intstr.FromString("api-port"),
+							Port:   intstr.FromString(v.Spec.GetAPIPortName()),
 							Path:   "/v1/sys/init",
 						}},
 				},
@@ -1231,7 +1231,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Scheme: getVaultURIScheme(v),
-							Port:   intstr.FromString("api-port"),
+							Port:   intstr.FromString(v.Spec.GetAPIPortName()),
 							Path:   "/v1/sys/health?standbyok=true&perfstandbyok=true",
 						}},
 					PeriodSeconds:    5,
