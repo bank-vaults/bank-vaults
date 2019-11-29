@@ -169,11 +169,11 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 		}
 
 		if !result.IsEmpty() {
-			log.V(1).Info("resource diffs",
+			log.V(1).Info(fmt.Sprintf("Resource update for object %s:%s", o.GetObjectKind(), o.(metav1.ObjectMetaAccessor).GetObjectMeta().GetName()),
 				"patch", string(result.Patch),
-				"original", string(result.Original),
-				"modified", string(result.Modified),
-				"current", string(result.Current),
+				// "original", string(result.Original),
+				// "modified", string(result.Modified),
+				// "current", string(result.Current),
 			)
 
 			err := patch.DefaultAnnotator.SetLastAppliedAnnotation(o)
