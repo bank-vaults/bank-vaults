@@ -1312,7 +1312,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				},
 				Spec: podSpec,
 			},
-			VolumeClaimTemplates: v.Spec.VolumeClaimTemplates,
+			VolumeClaimTemplates: v.Spec.GetVolumeClaimTemplates(),
 		},
 	}, nil
 }
