@@ -487,7 +487,7 @@ func (spec *VaultSpec) GetAnnotations() map[string]string {
 	return spec.Annotations
 }
 
-// GetAnnotations returns the Common Annotations
+// GetAPIPortName returns the main Vault port name based on Istio and TLS settings
 func (spec *VaultSpec) GetAPIPortName() string {
 	portName := "api-port"
 	if spec.IstioEnabled {
