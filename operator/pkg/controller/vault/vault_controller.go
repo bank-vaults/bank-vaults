@@ -499,7 +499,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Create the deployment if it doesn't exist
-	configurerDep, err := deploymentForConfigurer(v, externalConfigMaps, externalSecrets)
+	configurerDep, err := deploymentForConfigurer(v, externalConfigMaps, externalSecrets, tlsAnnotations)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to fabricate deployment: %v", err)
 	}
@@ -905,7 +905,7 @@ func serviceType(v *vaultv1alpha1.Vault) corev1.ServiceType {
 	}
 }
 
-func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMapList, secrets corev1.SecretList) (*appsv1.Deployment, error) {
+func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMapList, secrets corev1.SecretList, tlsAnnotations map[string]string) (*appsv1.Deployment, error) {
 	ls := labelsForVaultConfigurer(v.Name)
 
 	volumes := []corev1.Volume{}
@@ -1014,7 +1014,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      withVaultConfigurerLabels(v, ls),
-					Annotations: withVaultConfigurerAnnotations(v, withPrometheusAnnotations("9091", map[string]string{})),
+					Annotations: withVaultConfigurerAnnotations(v, withPrometheusAnnotations("9091", tlsAnnotations)),
 				},
 				Spec: podSpec,
 			},
