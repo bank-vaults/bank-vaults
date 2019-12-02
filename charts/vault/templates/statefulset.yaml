@@ -65,8 +65,8 @@ spec:
         - name: vault-config
           mountPath: /vault/config/
         resources:
-{{ toYaml .Values.resources | indent 10 }}
-        
+{{ toYaml .Values.vaultConfig.resources | indent 10 }}
+
       containers:
       - name: vault
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -180,7 +180,7 @@ spec:
           mountPath: {{ .mountPath }}
         {{- end }}
         resources:
-{{ toYaml .Values.resources | indent 10 }}
+{{ toYaml .Values.vaultUnsealer.resources | indent 10 }}
       - name: vault-configurer
         image: "{{ .Values.unsealer.image.repository }}:{{ .Values.unsealer.image.tag }}"
         imagePullPolicy: {{ .Values.unsealer.image.pullPolicy }}
@@ -222,7 +222,7 @@ spec:
           mountPath: {{ .mountPath }}
         {{- end }}
         resources:
-{{ toYaml .Values.resources | indent 10 }}
+{{ toYaml .Values.vaultConfigurer.resources | indent 10 }}
       - name: prometheus-statsd-exporter
         image: "{{ .Values.statsd.image.repository }}:{{ .Values.statsd.image.tag }}"
         imagePullPolicy: {{ .Values.statsd.image.pullPolicy }}
@@ -234,15 +234,15 @@ spec:
         - name: statsd-mapping
           mountPath: /tmp/
         resources:
-{{ toYaml .Values.resources | indent 10 }}
+{{ toYaml .Values.prometheusStatsdExporter.resources | indent 10 }}
 {{- if .Values.nodeSelector }}
       nodeSelector:
 {{ toYaml .Values.nodeSelector | indent 8 }}
-{{- end }}      
+{{- end }}
 {{- if .Values.tolerations }}
       tolerations:
 {{ toYaml .Values.tolerations | indent 8 }}
-{{- end }}      
+{{- end }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
