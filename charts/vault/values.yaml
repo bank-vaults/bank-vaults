@@ -241,22 +241,22 @@ rbac:
   psp:
     enabled: false
 
-vault_config:
+vaultConfig:
   resources: {}
 
-vault_unsealer:
+vaultUnsealer:
   resources:
     requests:
       cpu: 50m
       memory: 64Mi
 
-vault_configurer:
+vaultConfigurer:
   resources:
     requests:
       cpu: 50m
       memory: 64Mi
 
-prometheus_statsd_exporter:
+prometheusStatsdExporter:
   resources:
     requests:
       cpu: 50m
