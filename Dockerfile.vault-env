@@ -23,3 +23,6 @@ FROM alpine:3.10
 
 RUN apk add --update --no-cache ca-certificates
 COPY --from=builder /build/vault-env /usr/local/bin/vault-env
+
+# Avoid running as root or named user, to satisfy PSPs
+USER 65534
