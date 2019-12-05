@@ -139,4 +139,6 @@ webhooks:
       values:
       - {{ .Release.Namespace }}
 {{- end }}
-  sideEffects: NoneOnDryRun
+{{- if .Values.apiSideEffect }}
+  sideEffects: {{ .Values.apiSideEffectValue }}
+{{- end }}
