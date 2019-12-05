@@ -399,6 +399,8 @@ func parseVaultConfig(obj metav1.Object) internal.VaultConfig {
 	}
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-configfile-path"]; ok {
 		vaultConfig.ConfigfilePath = val
+	} else if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-secrets-mount-path"]; ok {
+		vaultConfig.ConfigfilePath = val
 	} else {
 		vaultConfig.ConfigfilePath = "/vault/secrets"
 	}
