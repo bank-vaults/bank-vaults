@@ -198,6 +198,14 @@ func (k *ContainerInfo) parseDockerConfig(dockerCreds DockerCreds) (bool, error)
 			registryName = strings.TrimPrefix(registryName, "https://")
 		}
 
+		// kubectl create secret docker-registry for DockerHub creates
+		// registry credentials with API version suffixes, trim it!
+		if strings.HasSuffix(registryName, "/v1/") {
+			registryName = strings.TrimSuffix(registryName, "/v1/")
+		} else if strings.HasSuffix(registryName, "/v2/") {
+			registryName = strings.TrimSuffix(registryName, "/v2/")
+		}
+
 		registryName = strings.TrimSuffix(registryName, "/")
 
 		if strings.HasPrefix(k.Image, registryName) {
