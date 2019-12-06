@@ -83,8 +83,6 @@ podsFailurePolicy: Ignore
 
 secretsFailurePolicy: Ignore
 
-# sideEffect is not compatible with Kubernetes < 1.12.x, set false in this case
-apiSideEffect: true
 apiSideEffectValue: NoneOnDryRun
 
 namespaceSelector:

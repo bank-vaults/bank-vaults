@@ -139,6 +139,6 @@ webhooks:
       values:
       - {{ .Release.Namespace }}
 {{- end }}
-{{- if .Values.apiSideEffect }}
+{{- if and (eq (int $major) 1) (ge (int $minor) 12) }}
   sideEffects: {{ .Values.apiSideEffectValue }}
 {{- end }}
