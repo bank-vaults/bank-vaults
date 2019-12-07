@@ -60,8 +60,10 @@ jobs:
         make docker-vault-env
         make docker-webhook
 
-    - name: Install kubectl, helm and kurun
+    - name: Install socat kubectl, helm and kurun
       run: |
+        # socat
+        sudo apt install socat
         # kubectl
         curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
         mkdir -p ${HOME}/.kube
@@ -75,5 +77,4 @@ jobs:
 
     - name: Operator and webhook acceptance test
       run: |
-        sudo apt install socat
         hack/acceptance-test.sh
