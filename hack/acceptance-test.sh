@@ -34,13 +34,13 @@ function check_webhook_seccontext {
 
 trap finish EXIT
 
-# Create a resource quota in the default namespace
-kubectl create quota bank-vaults --hard=cpu=2,memory=4G,pods=10,services=10,replicationcontrollers=10,secrets=10,persistentvolumeclaims=10
-
 # Smoke test the pure Vault Helm chart first
 helm install --name vault --wait ./charts/vault
 helm delete --purge vault
 kubectl delete secret bank-vaults
+
+# Create a resource quota in the default namespace
+kubectl create quota bank-vaults --hard=cpu=2,memory=4G,pods=10,services=10,replicationcontrollers=10,secrets=10,persistentvolumeclaims=10
 
 # Install the operators and companion
 kubectl apply -f operator/deploy/etcd-rbac.yaml
