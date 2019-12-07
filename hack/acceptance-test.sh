@@ -35,7 +35,7 @@ function check_webhook_seccontext {
 trap finish EXIT
 
 # Smoke test the pure Vault Helm chart first
-helm install --name vault --wait ./charts/vault
+helm install --name vault --wait ./charts/vault --set unsealer.image.tag=latest
 helm delete --purge vault
 kubectl delete secret bank-vaults
 
