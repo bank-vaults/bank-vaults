@@ -43,19 +43,3 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "100m"
-      - name: mysql
-        image: mysql:5.7 # see that containers without explicit command can work
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          value: vault:secret/data/mysql#MYSQL_ROOT_PASSWORD
-        ports:
-        - name: mysql
-          containerPort: 3306
-        resources:
-          limits:
-            memory: "128Mi"
-            cpu: "100m"
-        securityContext:
-          runAsUser: 0
-      # imagePullSecrets:
-      # - sample-secret
