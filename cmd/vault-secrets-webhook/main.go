@@ -20,6 +20,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 
 	internal "github.com/banzaicloud/bank-vaults/internal/configuration"
 
@@ -34,6 +36,7 @@ import (
 	whcontext "github.com/slok/kubewebhook/pkg/webhook/context"
 	"github.com/slok/kubewebhook/pkg/webhook/mutating"
 	"github.com/spf13/viper"
+	"golang.org/x/sys/unix"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -470,6 +473,27 @@ func parseVaultConfig(obj metav1.Object) internal.VaultConfig {
 		vaultConfig.TransitPath = val
 	}
 
+	if val, ok := annotations["vault.security.banzaicloud.io/ttl-terminate"]; ok {
+		vaultConfig.TTLTerminate, _ = strconv.ParseBool(val)
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/ttl-terminate-before"]; ok {
+		vaultConfig.TTLTerminateBefore, _ = time.ParseDuration(val)
+	}
+
+	vaultConfig.TTLTerminateSignal = int(syscall.SIGTERM)
+	if val, ok := annotations["vault.security.banzaicloud.io/ttl-terminate-signal"]; ok {
+		if i, err := strconv.Atoi(val); err == nil {
+			vaultConfig.TTLTerminateSignal = i
+		} else if i := unix.SignalNum(strings.ToUpper(val)); i > 0 {
+			vaultConfig.TTLTerminateSignal = int(i)
+		}
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/ttl-terminate-grace-period"]; ok {
+		vaultConfig.TTLTerminateGracePeriod, _ = time.ParseDuration(val)
+	}
+
 	return vaultConfig
 }
 
@@ -688,6 +712,23 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 				Name:  "VAULT_JSON_LOG",
 				Value: vaultConfig.EnableJSONLog,
 			},
+			{
+				Name:  "VAULT_TTL_TERMINATE",
+				Value: strconv.FormatBool(vaultConfig.TTLTerminate),
+			},
+			{
+				Name:  "VAULT_TTL_TERMINATE_SIGNAL",
+				Value: strconv.Itoa(vaultConfig.TTLTerminateSignal),
+			},
+			{
+				Name:  "VAULT_TTL_TERMINATE_GRACE_PERIOD",
+				Value: vaultConfig.TTLTerminateGracePeriod.String(),
+			},
+			{
+				Name:  "VAULT_TTL_TERMINATE_BEFORE",
+				Value: vaultConfig.TTLTerminateBefore.String(),
+			},
+
 		}...)
 
 		if len(vaultConfig.TransitKeyID) > 0 {

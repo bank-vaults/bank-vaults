@@ -15,6 +15,8 @@
 package configuration
 
 import (
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -43,4 +45,8 @@ type VaultConfig struct {
 	ConfigfilePath              string
 	MutateConfigMap             bool
 	EnableJSONLog               string
+	TTLTerminate				bool
+	TTLTerminateSignal			int
+	TTLTerminateGracePeriod		time.Duration
+	TTLTerminateBefore			time.Duration
 }
