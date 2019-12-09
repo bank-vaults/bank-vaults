@@ -237,7 +237,7 @@ kubectl config view -o yaml --minify=true --raw=true
 ```
 you need to decode the cert before passing it in your `externalConfig`:
 ```
-grep 'certificate-authority-data' $HOME/.kube/config | awk '{print $2}' | base64 -d
+grep 'certificate-authority-data' $HOME/.kube/config | awk '{print $2}' | base64 --decode
 ```
 
 2. on your (`cluster2`), create `vault` serviceaccount and `vault-auth-delegator` clusterrolebinding:
@@ -247,7 +247,7 @@ kubectl apply -f operator/deployment/rbac.yaml
 
 You can use vault serviceaccount token as `token_reviewer_jwt`:
 ```bash
-kubectl get secret $(kubectl get sa vault -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 -d
+kubectl get secret $(kubectl get sa vault -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 --decode
 ```
 
 3. Now you can use proper `kubernetes_ca_cert`, `kubernetes_host` and `token_reviewer_jwt` in your (`cluster1`) CR yaml file:
