@@ -22,9 +22,6 @@ jobs:
     name: Acceptance test
     runs-on: ubuntu-latest
     env:
-      K8S_VERSION: v1.15.3
-      VAULT_VERSION: "1.2.3"
-      KUBECONFIG: /home/circleci/.kube/config
       KURUN_VERSION: "0.2.3"
       GIN_MODE: release
       DOCKER_LATEST: 1
@@ -61,11 +58,8 @@ jobs:
       run: |
         # socat
         sudo apt install socat
-        # kubectl
-        curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-        mkdir -p ${HOME}/.kube
-        touch ${HOME}/.kube/config
         # helm
+        export KUBECONFIG="$(kind get kubeconfig-path --name="kind")"
         curl -L https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
         helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com/
         # kurun

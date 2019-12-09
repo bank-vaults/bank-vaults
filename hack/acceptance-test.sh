@@ -35,8 +35,8 @@ function check_webhook_seccontext {
 trap finish EXIT
 
 # Smoke test the pure Vault Helm chart first
-helm install --name vault --wait ./charts/vault --set unsealer.image.tag=latest
-helm delete --purge vault
+helm upgrade --install --wait vault ./charts/vault --set unsealer.image.tag=latest
+helm delete vault
 kubectl delete secret bank-vaults
 
 # Create a resource quota in the default namespace
