@@ -35,8 +35,8 @@ function check_webhook_seccontext {
 trap finish EXIT
 
 # Smoke test the pure Vault Helm chart first
-helm install --name vault --wait ./charts/vault --set unsealer.image.tag=latest
-helm delete --purge vault
+helm upgrade --install --wait vault ./charts/vault --set unsealer.image.tag=latest
+helm delete vault
 kubectl delete secret bank-vaults
 
 # Create a resource quota in the default namespace
@@ -99,8 +99,8 @@ kurun run cmd/examples/main.go
 
 
 # Run the webhook test, the hello-secrets deployment should be successfully mutated
-helm install ./charts/vault-secrets-webhook \
-    --name vault-secrets-webhook \
+kubectl create namespace vswh
+helm upgrade --install vault-secrets-webhook ./charts/vault-secrets-webhook \
     --set image.tag=latest \
     --set image.pullPolicy=IfNotPresent \
     --set configMapMutation=true \
