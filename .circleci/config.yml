@@ -60,7 +60,7 @@ jobs:
       K8S_VERSION: v1.15.3
       VAULT_VERSION: "1.2.3"
       KUBECONFIG: /home/circleci/.kube/config
-      KURUN_VERSION: "0.2.3"
+      KURUN_VERSION: "0.2.5"
       MINIKUBE_VERSION: v1.4.0
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
