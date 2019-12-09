@@ -226,26 +226,31 @@ You have two differnt K8S clusters.
 - `cluster1` contains `vault-operator`
 - `cluster2` contains `vault-secrets-webhook`
 
-You have a cluster with running `vault-operator`, and you have to grant access to the `Vault` from other K8S cluster which contains `vault-secrets-webhook`.
+You have a cluster with running `vault-operator` (`cluster1`), and you have to grant access to the `Vault` from other K8S cluster which contains `vault-secrets-webhook` (`cluster2`).
 
-1. In your `vaults.vault.banzaicloud.com` custom resource you have to define proper `externalConfig` containing the `cluster2` config.
+1. In your `vaults.vault.banzaicloud.com` under `operator/deploy/cr.yaml` custom resource you have to define proper `externalConfig` containing the `cluster2` config.
 
+from your (`cluster2`) kubeconfig file:
 You can get K8S cert and host:
 ```bash
 kubectl config view -o yaml --minify=true --raw=true
 ```
+you need to decode the cert before passing it in your `externalConfig`:
+```
+grep 'certificate-authority-data' $HOME/.kube/config | awk '{print $2}' | base64 -d
+```
 
-2. Create `vault` serviceaccount and `vault-auth-delegator` clusterrolebinding in `cluster2`:
+2. on your (`cluster2`), create `vault` serviceaccount and `vault-auth-delegator` clusterrolebinding:
 ```bash
 kubectl apply -f operator/deployment/rbac.yaml
 ```
 
 You can use vault serviceaccount token as `token_reviewer_jwt`:
 ```bash
-kubectl get secret $(kubectl get sa vault -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 -D
+kubectl get secret $(kubectl get sa vault -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 -d
 ```
 
-3. Now you can use proper `kubernetes_ca_cert`, `kubernetes_host` and `token_reviewer_jwt` in your CR:
+3. Now you can use proper `kubernetes_ca_cert`, `kubernetes_host` and `token_reviewer_jwt` in your (`cluster1`) CR yaml file:
 ```yaml
   externalConfig:
     policies:
