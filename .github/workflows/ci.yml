@@ -22,7 +22,7 @@ jobs:
     name: Acceptance test
     runs-on: ubuntu-latest
     env:
-      KURUN_VERSION: "0.2.3"
+      KURUN_VERSION: "0.2.5"
       GIN_MODE: release
       DOCKER_LATEST: 1
       VERSION: latest

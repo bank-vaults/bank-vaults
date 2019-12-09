@@ -99,8 +99,8 @@ kurun run cmd/examples/main.go
 
 
 # Run the webhook test, the hello-secrets deployment should be successfully mutated
-helm install ./charts/vault-secrets-webhook \
-    --name vault-secrets-webhook \
+kubectl create namespace vswh
+helm upgrade --install vault-secrets-webhook ./charts/vault-secrets-webhook \
     --set image.tag=latest \
     --set image.pullPolicy=IfNotPresent \
     --set configMapMutation=true \
