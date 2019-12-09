@@ -140,3 +140,5 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | certificate.ca.crt               | Base64 encoded CA certificate                                                | ``                                  |
 | certificate.server.tls.crt       | Base64 encoded TLS certificate signed by the CA                              | ``                                  |
 | certificate.server.tls.key       | Base64 encoded  private key of TLS certificate signed by the CA              | ``                                  |
+| apiSideEffectValue               | Webhook sideEffect value                                                     | `NoneOnDryRun`                      |
+

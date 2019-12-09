@@ -83,6 +83,8 @@ podsFailurePolicy: Ignore
 
 secretsFailurePolicy: Ignore
 
+apiSideEffectValue: NoneOnDryRun
+
 namespaceSelector:
   matchExpressions:
   - key: name
