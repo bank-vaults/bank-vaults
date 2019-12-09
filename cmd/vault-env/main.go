@@ -18,8 +18,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/banzaicloud/bank-vaults/internal/configuration"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
@@ -27,6 +30,7 @@ import (
 	vaultapi "github.com/hashicorp/vault/api"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
+	"golang.org/x/sys/unix"
 )
 
 // The special value for VAULT_ENV which marks that the login token needs to be passed through to the application
@@ -37,30 +41,34 @@ type sanitizedEnviron []string
 
 var (
 	sanitizeEnvmap = map[string]bool{
-		"VAULT_TOKEN":                  true,
-		"VAULT_ADDR":                   true,
-		"VAULT_CACERT":                 true,
-		"VAULT_CAPATH":                 true,
-		"VAULT_CLIENT_CERT":            true,
-		"VAULT_CLIENT_KEY":             true,
-		"VAULT_CLIENT_TIMEOUT":         true,
-		"VAULT_CLUSTER_ADDR":           true,
-		"VAULT_MAX_RETRIES":            true,
-		"VAULT_REDIRECT_ADDR":          true,
-		"VAULT_SKIP_VERIFY":            true,
-		"VAULT_TLS_SERVER_NAME":        true,
-		"VAULT_CLI_NO_COLOR":           true,
-		"VAULT_RATE_LIMIT":             true,
-		"VAULT_NAMESPACE":              true,
-		"VAULT_MFA":                    true,
-		"VAULT_ROLE":                   true,
-		"VAULT_PATH":                   true,
-		"VAULT_TRANSIT_KEY_ID":         true,
-		"VAULT_TRANSIT_PATH":           true,
-		"VAULT_IGNORE_MISSING_SECRETS": true,
-		"VAULT_ENV_PASSTHROUGH":        true,
-		"VAULT_JSON_LOG":               true,
-		"VAULT_REVOKE_TOKEN":           true,
+		"VAULT_TOKEN":                      true,
+		"VAULT_ADDR":                       true,
+		"VAULT_CACERT":                     true,
+		"VAULT_CAPATH":                     true,
+		"VAULT_CLIENT_CERT":                true,
+		"VAULT_CLIENT_KEY":                 true,
+		"VAULT_CLIENT_TIMEOUT":             true,
+		"VAULT_CLUSTER_ADDR":               true,
+		"VAULT_MAX_RETRIES":                true,
+		"VAULT_REDIRECT_ADDR":              true,
+		"VAULT_SKIP_VERIFY":                true,
+		"VAULT_TLS_SERVER_NAME":            true,
+		"VAULT_CLI_NO_COLOR":               true,
+		"VAULT_RATE_LIMIT":                 true,
+		"VAULT_NAMESPACE":                  true,
+		"VAULT_MFA":                        true,
+		"VAULT_ROLE":                       true,
+		"VAULT_PATH":                       true,
+		"VAULT_TRANSIT_KEY_ID":             true,
+		"VAULT_TRANSIT_PATH":               true,
+		"VAULT_IGNORE_MISSING_SECRETS":     true,
+		"VAULT_ENV_PASSTHROUGH":            true,
+		"VAULT_JSON_LOG":                   true,
+		"VAULT_REVOKE_TOKEN":               true,
+		"VAULT_TTL_TERMINATE":              true,
+		"VAULT_TTL_TERMINATE_SIGNAL":       true,
+		"VAULT_TTL_TERMINATE_GRACE_PERIOD": true,
+		"VAULT_TTL_TERMINATE_BEFORE":       true,
 	}
 
 	logger *log.Logger
@@ -149,6 +157,7 @@ func main() {
 	transitCache := map[string][]byte{}
 
 	secretCache := map[string]*vaultapi.Secret{}
+	secretLeaseDuration := 0
 
 	// initial and sanitized environs
 	environ := syscall.Environ()
@@ -247,6 +256,10 @@ func main() {
 			continue
 		}
 
+		if secret.LeaseDuration > 0 && (secretLeaseDuration == 0 || secret.LeaseDuration < secretLeaseDuration) {
+			secretLeaseDuration = secret.LeaseDuration
+		}
+
 		var data map[string]interface{}
 		v2Data, ok := secret.Data["data"]
 		if ok {
@@ -296,8 +309,121 @@ func main() {
 		}
 	}
 
+	if os.Getenv("VAULT_TTL_TERMINATE") == "true" && secretLeaseDuration > 0 {
+		var terminateBefore time.Duration
+		if terminateBeforeStr, ok := os.LookupEnv("VAULT_TTL_TERMINATE_BEFORE"); ok {
+			terminateBefore, err = time.ParseDuration(terminateBeforeStr)
+			if err != nil {
+				logger.WithField("value", terminateBeforeStr).
+					Warnln("failed to parse VAULT_TTL_TERMINATE_BEFORE")
+			}
+		}
+
+		var terminateGracePeriod time.Duration
+		if terminateGracePeriodStr, ok := os.LookupEnv("VAULT_TTL_TERMINATE_GRACE_PERIOD"); ok {
+			terminateBefore, err = time.ParseDuration(terminateGracePeriodStr)
+			if err != nil {
+				logger.WithField("value", terminateGracePeriodStr).
+					Warnln("failed to parse VAULT_TTL_TERMINATE_GRACE_PERIOD")
+			}
+		}
+
+		terminateSignal := syscall.SIGTERM
+		if terminateSignalStr, ok := os.LookupEnv("VAULT_TTL_TERMINATE_SIGNAL"); ok {
+			if i, err := strconv.Atoi(terminateSignalStr); err == nil {
+				terminateSignal = syscall.Signal(i)
+			} else if i := unix.SignalNum(strings.ToUpper(terminateSignalStr)); i > 0 {
+				terminateSignal = i
+			} else {
+				logger.WithField("value", terminateSignalStr).
+					Warnln("failed to parse VAULT_TTL_TERMINATE_SIGNAL")
+			}
+		}
+
+		leaseDuration := time.Duration(secretLeaseDuration) * time.Second
+		processTTL := leaseDuration - terminateBefore
+		if processTTL < 0 {
+			logger.Warnln("terminate before results in direct termination, ignoring")
+			processTTL = leaseDuration
+		}
+
+		execWithLease(binary, entrypointCmd, sanitized, processTTL, terminateSignal, terminateGracePeriod)
+		return
+	}
+
 	err = syscall.Exec(binary, entrypointCmd, sanitized)
 	if err != nil {
 		logger.Fatalln("failed to exec process", binary, entrypointCmd, err.Error())
+	}
+}
+
+func execWithLease(
+	argv0 string,
+	argv []string,
+	envv []string,
+	ttl time.Duration,
+	terminateSignal os.Signal,
+	terminateGracePeriod time.Duration,
+) {
+	timer := time.NewTimer(ttl)
+	defer timer.Stop()
+
+	attr := &os.ProcAttr{
+		Files: []*os.File{
+			os.Stdin,
+			os.Stdout,
+			os.Stderr,
+		},
+		Env: envv,
+	}
+
+	proc, err := os.StartProcess(argv0, argv, attr)
+	if err != nil {
+		logger.WithError(err).Fatalln("failed to start process", argv0, argv)
+	}
+
+	procDone := make(chan interface{}, 1)
+	defer func() {
+		close(procDone)
+	}()
+
+	signalChan := make(chan os.Signal, 2)
+	signal.Notify(signalChan)
+	go func() {
+		for {
+			select {
+			case <-procDone:
+				return
+			case <-signalChan:
+				// Trap all signals and ignore them so the forked process can handle them
+			case <-timer.C:
+				// The lease time expired terminate the process using the provided signal
+				err = proc.Signal(terminateSignal)
+				if err != nil {
+					logger.WithError(err).Warnln("failed to signal process due to expired secret lease")
+				}
+
+				// Wait for the grace period to expire of the process to exit
+				select {
+				case <-procDone:
+					return
+				case <-time.After(terminateGracePeriod):
+					logger.Warnln("expired lease signal failed to stop the process using SIGKILL")
+					err = proc.Signal(syscall.SIGKILL)
+					if err != nil {
+						log.WithError(err).Fatalln("failed to signal SIGKILL")
+					}
+					return
+				}
+			}
+		}
+	}()
+
+	s, err := proc.Wait();
+	if err != nil {
+		logger.WithError(err).Fatalln("failed to wait for process", argv0, argv)
+	}
+	if s != nil {
+		os.Exit(s.ExitCode())
 	}
 }
