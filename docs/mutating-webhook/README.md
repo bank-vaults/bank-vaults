@@ -242,7 +242,7 @@ kubectl apply -f operator/deployment/rbac.yaml
 
 You can use vault serviceaccount token as `token_reviewer_jwt`:
 ```bash
-kubectl get secret $(kubectl get sa vault -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 -D
+kubectl get secret $(kubectl get sa vault -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 -d
 ```
 
 3. Now you can use proper `kubernetes_ca_cert`, `kubernetes_host` and `token_reviewer_jwt` in your CR:
