@@ -19,8 +19,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"regexp"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/heroku/docker-registry-client/registry"
 	imagev1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -32,12 +36,16 @@ import (
 )
 
 var logger *log.Logger
+var ecrHostPattern *regexp.Regexp
 
 func init() {
 	logger = log.New()
 	if viper.GetBool("enable_json_log") {
 		logger.SetFormatter(&log.JSONFormatter{})
 	}
+
+	// Taken from https://github.com/awslabs/amazon-ecr-credential-helper/blob/master/ecr-login/api/client.go#L34
+	ecrHostPattern = regexp.MustCompile(`(^[a-zA-Z0-9][a-zA-Z0-9-_]*)\.dkr\.ecr(\-fips)?\.([a-zA-Z0-9][a-zA-Z0-9-_]*)\.amazonaws\.com(\.cn)?`)
 }
 
 // ImageRegistry is a docker registry
@@ -333,7 +341,36 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 	}
 
 	if !found {
-		logger.Infof("found no credentials for registry %s, assuming it is public", k.RegistryName)
+		// if still no credentials and it is an ECR image, try to get credentials through an EC2 instance role
+		if ecrRegistryID, region := getECRRegistryIDAndRegion(k.RegistryAddress); ecrRegistryID != "" {
+			logger.Infof("trying to request aws credentials for ecr registry %s", k.RegistryAddress)
+
+			sess := session.New()
+			svc := ecr.New(sess, aws.NewConfig().WithRegion(region))
+
+			req := ecr.GetAuthorizationTokenInput{
+				RegistryIds: []*string{aws.String(ecrRegistryID)},
+			}
+
+			resp, err := svc.GetAuthorizationToken(&req)
+			if err != nil {
+				return err
+			}
+
+			data, err := base64.StdEncoding.DecodeString(*resp.AuthorizationData[0].AuthorizationToken)
+			if err != nil {
+				return err
+			}
+
+			token := strings.SplitN(string(data), ":", 2)
+			k.RegistryUsername = token[0]
+			k.RegistryPassword = token[1]
+
+			logger.Infof("got aws credentials for ecr registry %s", k.RegistryAddress)
+		} else {
+
+			logger.Infof("found no credentials for registry %s, assuming it is public", k.RegistryAddress)
+		}
 	}
 
 	// In case of other public docker registry
@@ -352,4 +389,12 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 	k.Image = strings.TrimPrefix(k.Image, fmt.Sprintf("%s/", k.RegistryName))
 
 	return nil
+}
+
+func getECRRegistryIDAndRegion(registryAddr string) (string, string) {
+	matches := ecrHostPattern.FindStringSubmatch(registryAddr)
+	if len(matches) < 3 {
+		return "", ""
+	}
+	return matches[1], matches[3]
 }
