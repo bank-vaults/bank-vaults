@@ -8,6 +8,7 @@ require (
 	github.com/Azure/go-autorest v11.7.0+incompatible
 	github.com/Masterminds/semver v1.4.2
 	github.com/Masterminds/sprig v2.15.0+incompatible
+	github.com/NYTimes/gziphandler v1.0.1 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190308093441-53f19b3c6bee
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20171213061034-52de7239022c
 	github.com/aokoli/goutils v1.0.1 // indirect
@@ -39,6 +40,7 @@ require (
 	github.com/mattn/go-isatty v0.0.8 // indirect
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/operator-framework/operator-sdk v0.9.0
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pierrec/lz4 v2.2.5+incompatible // indirect
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/common v0.6.0 // indirect

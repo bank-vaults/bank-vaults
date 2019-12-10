@@ -34,7 +34,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"github.com/patrickmn/go-cache"
 )
+
+const ecrCredentialsKey = "AWS_ECR_CREDENTIALS"
 
 var logger *log.Logger
 var ecrHostPattern *regexp.Regexp
@@ -61,11 +64,15 @@ type ImageRegistry interface {
 // Registry impl
 type Registry struct {
 	imageCache ImageCache
+	credentialsCache *cache.Cache
 }
 
 // NewRegistry creates and initializes registry
 func NewRegistry() ImageRegistry {
-	return &Registry{imageCache: NewInMemoryImageCache()}
+	return &Registry{
+		imageCache: NewInMemoryImageCache(),
+		credentialsCache: cache.New(12*time.Hour, 12*time.Hour),
+	}
 }
 
 type DockerCreds struct {
@@ -102,7 +109,7 @@ func (r *Registry) GetImageConfig(
 
 	containerInfo := ContainerInfo{Namespace: namespace, clientset: clientset}
 
-	err := containerInfo.Collect(container, podSpec)
+	err := containerInfo.Collect(container, podSpec, r.credentialsCache)
 	if err != nil {
 		return nil, err
 	}
@@ -302,7 +309,7 @@ func (k *ContainerInfo) checkImagePullSecret(namespace string, secret string) (b
 }
 
 // Collect reads information from k8s and load them into the structure
-func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.PodSpec) error {
+func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.PodSpec, credentialsCache *cache.Cache) error {
 
 	k.Image = k.fixDockerHubImage(container.Image)
 
@@ -310,7 +317,7 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 	found := false
 	// Check for registry credentials in imagePullSecrets attached to the pod
 	// ImagePullSecrets attached to ServiceAccounts do not have to be considered
-	// explicitely as ServiceAccount ImagePullSecrets are automatically attached
+	// explicitly as ServiceAccount ImagePullSecrets are automatically attached
 	// to a pod.
 	for _, imagePullSecret := range podSpec.ImagePullSecrets {
 		found, err = k.checkImagePullSecret(k.Namespace, imagePullSecret.Name)
@@ -361,25 +368,37 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 		if ecrRegistryID, region := getECRRegistryIDAndRegion(k.RegistryAddress); ecrRegistryID != "" {
 			logger.Infof("trying to request aws credentials for ecr registry %s", k.RegistryAddress)
 
-			sess := session.New()
-			svc := ecr.New(sess, aws.NewConfig().WithRegion(region))
+			var data string
+			cachedToken, usingCache := credentialsCache.Get(ecrCredentialsKey)
+			if usingCache {
+				data = cachedToken.(string)
+				logger.Infof("Using cached AWS ECR Token")
+			} else {
+				sess := session.New()
+				svc := ecr.New(sess, aws.NewConfig().WithRegion(region))
 
-			req := ecr.GetAuthorizationTokenInput{
-				RegistryIds: []*string{aws.String(ecrRegistryID)},
+				req := ecr.GetAuthorizationTokenInput{
+					RegistryIds: []*string{aws.String(ecrRegistryID)},
+				}
+
+				resp, err := svc.GetAuthorizationToken(&req)
+				if err != nil {
+					return err
+				}
+
+				decodedData, err := base64.StdEncoding.DecodeString(*resp.AuthorizationData[0].AuthorizationToken)
+				data = string(decodedData)
+				if err != nil {
+					return err
+				}
 			}
+			token := strings.SplitN(data, ":", 2)
 
-			resp, err := svc.GetAuthorizationToken(&req)
-			if err != nil {
-				return err
+			if !usingCache {
+				expiration := getECRTokenExpiration(string(token[1]))
+				credentialsCache.Set(ecrCredentialsKey, data, expiration)
+				logger.Infof("Caching token with expiration in %+v", expiration)
 			}
-
-			data, err := base64.StdEncoding.DecodeString(*resp.AuthorizationData[0].AuthorizationToken)
-			if err != nil {
-				return err
-			}
-
-			token := strings.SplitN(string(data), ":", 2)
-			expiration := getECRTokenExpiration(string(token[1]))
 
 			k.RegistryUsername = token[0]
 			k.RegistryPassword = token[1]
@@ -402,24 +421,24 @@ func getECRRegistryIDAndRegion(registryAddr string) (string, string) {
 	return matches[1], matches[3]
 }
 
-func getECRTokenExpiration(token string) (time.Time) {
+func getECRTokenExpiration(token string) time.Duration {
 	jsonToken, err := base64.StdEncoding.DecodeString(token)
 	if err != nil {
-		return time.Now()
+		return 0
 	}
 
 	var decodedToken map[string]interface{}
 	err = json.Unmarshal(jsonToken, &decodedToken)
 	if err != nil {
-		return time.Now()
+		return 0
 	}
 
 	switch dt := decodedToken["expiration"].(type) {
 	case float64:
-		return time.Unix(int64(dt), 0)
+		return time.Until(time.Unix(int64(dt), 0))
 	case int64:
-		return time.Unix(dt, 0)
+		return time.Until(time.Unix(dt, 0))
 	default:
-		return time.Now()
+		return 0
 	}
 }
