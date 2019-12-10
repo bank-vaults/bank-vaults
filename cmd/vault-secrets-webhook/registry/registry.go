@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -44,8 +45,8 @@ func init() {
 		logger.SetFormatter(&log.JSONFormatter{})
 	}
 
-	// Taken from https://github.com/awslabs/amazon-ecr-credential-helper/blob/master/ecr-login/api/client.go#L34
-	ecrHostPattern = regexp.MustCompile(`(^[a-zA-Z0-9][a-zA-Z0-9-_]*)\.dkr\.ecr(\-fips)?\.([a-zA-Z0-9][a-zA-Z0-9-_]*)\.amazonaws\.com(\.cn)?`)
+	// Adapted from https://github.com/awslabs/amazon-ecr-credential-helper/blob/master/ecr-login/api/client.go#L34
+	ecrHostPattern = regexp.MustCompile(`([a-zA-Z0-9][a-zA-Z0-9-_]*)\.dkr\.ecr(\-fips)?\.([a-zA-Z0-9][a-zA-Z0-9-_]*)\.amazonaws\.com(\.cn)?`)
 }
 
 // ImageRegistry is a docker registry
@@ -340,6 +341,21 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 		}
 	}
 
+	// In case of other docker registry
+	if k.RegistryName == "" && k.RegistryAddress == "" {
+		registryName := container.Image
+		if strings.HasPrefix(registryName, "https://") {
+			registryName = strings.TrimPrefix(registryName, "https://")
+		}
+
+		registryName = strings.Split(registryName, "/")[0]
+		k.RegistryName = registryName
+		k.RegistryAddress = fmt.Sprintf("https://%s", registryName)
+	}
+
+	// Clean registry from image
+	k.Image = strings.TrimPrefix(k.Image, fmt.Sprintf("%s/", k.RegistryName))
+
 	if !found {
 		// if still no credentials and it is an ECR image, try to get credentials through an EC2 instance role
 		if ecrRegistryID, region := getECRRegistryIDAndRegion(k.RegistryAddress); ecrRegistryID != "" {
@@ -363,6 +379,8 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 			}
 
 			token := strings.SplitN(string(data), ":", 2)
+			expiration := getECRTokenExpiration(string(token[1]))
+
 			k.RegistryUsername = token[0]
 			k.RegistryPassword = token[1]
 
@@ -373,21 +391,6 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 		}
 	}
 
-	// In case of other public docker registry
-	if k.RegistryName == "" && k.RegistryAddress == "" {
-		registryName := container.Image
-		if strings.HasPrefix(registryName, "https://") {
-			registryName = strings.TrimPrefix(registryName, "https://")
-		}
-
-		registryName = strings.Split(registryName, "/")[0]
-		k.RegistryName = registryName
-		k.RegistryAddress = fmt.Sprintf("https://%s", registryName)
-	}
-
-	// Clean registry from image
-	k.Image = strings.TrimPrefix(k.Image, fmt.Sprintf("%s/", k.RegistryName))
-
 	return nil
 }
 
@@ -397,4 +400,26 @@ func getECRRegistryIDAndRegion(registryAddr string) (string, string) {
 		return "", ""
 	}
 	return matches[1], matches[3]
+}
+
+func getECRTokenExpiration(token string) (time.Time) {
+	jsonToken, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		return time.Now()
+	}
+
+	var decodedToken map[string]interface{}
+	err = json.Unmarshal(jsonToken, &decodedToken)
+	if err != nil {
+		return time.Now()
+	}
+
+	switch dt := decodedToken["expiration"].(type) {
+	case float64:
+		return time.Unix(int64(dt), 0)
+	case int64:
+		return time.Unix(dt, 0)
+	default:
+		return time.Now()
+	}
 }
