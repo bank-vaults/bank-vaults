@@ -14,13 +14,11 @@ If you wish to build the operator Docker image:
 make docker-operator
 ```
 
-Regenerate the k8s code by the *operator-sdk*:
+If you change the Vault Go type definitions please regenerate the k8s deepcopy stubs with the [operator-sdk](https://github.com/operator-framework/operator-sdk/releases/tag/v0.12.0):
 
 ```bash
 cd operator
-ln -s ../go.mod go.mod
 operator-sdk generate k8s
-rm go.mod go.sum
 ```
 
 ## Deploying the operator
