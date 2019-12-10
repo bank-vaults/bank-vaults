@@ -63,14 +63,14 @@ type ImageRegistry interface {
 
 // Registry impl
 type Registry struct {
-	imageCache ImageCache
+	imageCache *cache.Cache
 	credentialsCache *cache.Cache
 }
 
 // NewRegistry creates and initializes registry
 func NewRegistry() ImageRegistry {
 	return &Registry{
-		imageCache: NewInMemoryImageCache(),
+		imageCache: cache.New(cache.NoExpiration, cache.NoExpiration),
 		credentialsCache: cache.New(12*time.Hour, 12*time.Hour),
 	}
 }
@@ -101,9 +101,9 @@ func (r *Registry) GetImageConfig(
 
 	allowToCache := IsAllowedToCache(container)
 	if allowToCache {
-		if imageConfig := r.imageCache.Get(container.Image); imageConfig != nil {
+		if imageConfig, cacheHit := r.imageCache.Get(container.Image); cacheHit {
 			logger.Infof("found image %s in cache", container.Image)
-			return imageConfig, nil
+			return imageConfig.(*imagev1.ImageConfig), nil
 		}
 	}
 
@@ -118,7 +118,7 @@ func (r *Registry) GetImageConfig(
 
 	imageConfig, err := getImageBlob(containerInfo)
 	if imageConfig != nil && allowToCache {
-		r.imageCache.Put(container.Image, imageConfig)
+		r.imageCache.Set(container.Image, imageConfig, cache.DefaultExpiration)
 	}
 
 	return imageConfig, err
