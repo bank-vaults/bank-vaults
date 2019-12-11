@@ -101,7 +101,10 @@ vault.security.banzaicloud.io/vault-ct-memory|"128Mi"|Specify the consul-templat
 vault.security.banzaicloud.io/vault-ignore-missing-secrets|"false"|When enabled will only log warnings when Vault secrets are missing|
 vault.security.banzaicloud.io/vault-env-passthrough|""|Comma seprated list of `VAULT_*` related environment variables to pass through to main process. E.g.`VAULT_ADDR,VAULT_ROLE`.|
 vault.security.banzaicloud.io/vault-ct-secrets-mount-path|"/vault/secret"|Mount path of Consul template rendered files|
+vault.security.banzaicloud.io/ttl-terminate|false|Enable vault-env to terminate the process before the lease of a secret expires|
+vault.security.banzaicloud.io/ttl-terminate-before|0s|Time to start termination before the lease expires|
+vault.security.banzaicloud.io/ttl-terminate-signal|SIGTERM|The termination signal to send the the application|
+vault.security.banzaicloud.io/ttl-terminate-grace-period|1m|Time to wait after the terminate-signal was send before a SIGQUIT is send|
 
 ### How to enable consul template in the webhook?
 For the webhook to detect that it will need to mutate or change a PodSpec, it must have the annotation `vault.security.banzaicloud.io/vault-ct-configmap` otherwise the PodSpec will be ignored for configuration with Consul Template.
-
