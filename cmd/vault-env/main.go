@@ -319,7 +319,7 @@ func main() {
 			}
 		}
 
-		var terminateGracePeriod time.Duration
+		terminateGracePeriod := time.Minute
 		if terminateGracePeriodStr, ok := os.LookupEnv("VAULT_TTL_TERMINATE_GRACE_PERIOD"); ok {
 			terminateBefore, err = time.ParseDuration(terminateGracePeriodStr)
 			if err != nil {
@@ -403,7 +403,7 @@ func execWithLease(
 					logger.WithError(err).Warnln("failed to signal process due to expired secret lease")
 				}
 
-				// Wait for the grace period to expire of the process to exit
+				// Wait for the grace period to expire or the process to exit
 				select {
 				case <-procDone:
 					return

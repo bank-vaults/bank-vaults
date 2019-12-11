@@ -492,6 +492,8 @@ func parseVaultConfig(obj metav1.Object) internal.VaultConfig {
 
 	if val, ok := annotations["vault.security.banzaicloud.io/ttl-terminate-grace-period"]; ok {
 		vaultConfig.TTLTerminateGracePeriod, _ = time.ParseDuration(val)
+	} else {
+		vaultConfig.TTLTerminateGracePeriod = time.Minute
 	}
 
 	return vaultConfig
