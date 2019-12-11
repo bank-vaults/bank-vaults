@@ -33,6 +33,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
+	corev1 "k8s.io/api/core/v1"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	crconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 // DefaultConfigFile is the name of the default config file
@@ -1265,6 +1268,14 @@ func (v *vault) configureStartupSecrets(config *viper.Viper) error {
 				return fmt.Errorf("error getting data for startup secret '%s': %s", path, err.Error())
 			}
 
+			if _, ok := data["secretKeyRef"]; ok {
+				secData, err := getOrDefaultSecretData(data["secretKeyRef"])
+				if err != nil {
+					return fmt.Errorf("error getting data from k8s secret %s", err.Error())
+				}
+				data = secData
+			}
+
 			_, err = v.cl.Logical().Write(path, data)
 			if err != nil {
 				return fmt.Errorf("error writing data for startup secret '%s': %s", path, err.Error())
@@ -1554,4 +1565,41 @@ func isConfigNoNeedName(secretEngineType string, configOption string) bool {
 	}
 
 	return false
+}
+
+func getOrDefaultSecretData(m interface{}) (map[string]interface{}, error) {
+	values, err := cast.ToSliceE(m)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	k8sCfg := crconfig.GetConfigOrDie()
+	c, err := crclient.New(k8sCfg, crclient.Options{})
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	vaultNamespace := strings.Split(strings.Split(os.Getenv("VAULT_ADDR"), ".")[1], ":")[0]
+
+	secData := map[string]string{}
+	for _, value := range values {
+		keyRef, err := cast.ToStringMapStringE(value)
+		if err != nil {
+			return map[string]interface{}{}, err
+		}
+
+		secret := &corev1.Secret{}
+		err = c.Get(context.Background(), crclient.ObjectKey{
+			Namespace: vaultNamespace,
+			Name:      keyRef["name"],
+		}, secret)
+		if err != nil {
+			return map[string]interface{}{}, err
+		}
+		secData[keyRef["key"]] = cast.ToString(secret.Data[keyRef["key"]])
+	}
+	data := map[string]interface{}{}
+	data["data"] = secData
+
+	return data, nil
 }
