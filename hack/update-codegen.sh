@@ -22,27 +22,20 @@ function finish {
   rm -rf ${CODEGEN_DIR}
 }
 
- trap finish EXIT
+trap finish EXIT
 
- CODEGEN_DIR=$(mktemp -d)
+CODEGEN_DIR=$(mktemp -d)
+
+VERSION=$1
 
 git clone git@github.com:kubernetes/code-generator.git ${CODEGEN_DIR}
-cd ${CODEGEN_DIR} && git checkout kubernetes-1.13.1 && cd -
+cd ${CODEGEN_DIR} && git checkout $VERSION && cd -
 
-SCRIPT_ROOT=$(dirname ${BASH_SOURCE})/..
-CODEGEN_PKG=${CODEGEN_PKG:-$(cd ${SCRIPT_ROOT}; ls -d -1 ./vendor/k8s.io/code-generator 2>/dev/null || echo ../code-generator)}
-
-OUTDIR=$(dirname ${BASH_SOURCE})/../../../..
-
-echo "Generating code to ${OUTDIR}"
-
-# gene
-# rate the code with:
+# generate the code with:
 # --output-base    because this script should also be able to run inside the vendor dir of
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 ${CODEGEN_DIR}/generate-groups.sh all \
   github.com/banzaicloud/bank-vaults/operator/pkg/client github.com/banzaicloud/bank-vaults/operator/pkg/apis \
   vault:v1alpha1 \
-  --output-base "${OUTDIR}" \
-  --go-header-file ${SCRIPT_ROOT}/hack/custom-boilerplate.go.txt
+  --go-header-file ./hack/custom-boilerplate.go.txt
