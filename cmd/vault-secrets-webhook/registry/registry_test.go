@@ -121,13 +121,6 @@ func TestParsingRegistryAddress(t *testing.T) {
 			podSpec:         &corev1.PodSpec{},
 			registryAddress: "https://docker.pkg.github.com",
 		},
-		{
-			container: &corev1.Container{
-				Image: "999999999999.dkr.ecr.us-east-1.amazonaws.com/foo:bar",
-			},
-			podSpec:         &corev1.PodSpec{},
-			registryAddress: "999999999999.dkr.ecr.us-east-1.amazonaws.com",
-		},
 	}
 
 	for _, test := range tests {
