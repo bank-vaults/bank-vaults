@@ -57,6 +57,7 @@ spec:
               value: debug
           ports:
           - containerPort: {{ .Values.service.internalPort }}
+          - containerPort: 8383
           livenessProbe:
             httpGet:
               path: {{ .Values.probePath }}

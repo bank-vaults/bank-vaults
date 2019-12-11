@@ -398,7 +398,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			Namespace: v.Namespace,
 		}
 
-		if err = r.client.List(context.TODO(), &externalSecretsInNamespaceFilter, &externalSecretsInNamespace); err != nil {
+		if err = r.client.List(context.TODO(), &externalSecretsInNamespace, &externalSecretsInNamespaceFilter); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to list secrets in the CRD namespace: %v", err)
 		}
 
@@ -485,7 +485,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		LabelSelector: labels.SelectorFromSet(labelsForVaultConfigurer(v.Name)),
 		Namespace:     v.Namespace,
 	}
-	if err = r.client.List(context.TODO(), &externalConfigMapsFilter, &externalConfigMaps); err != nil {
+	if err = r.client.List(context.TODO(), &externalConfigMaps, &externalConfigMapsFilter); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to list configmaps: %v", err)
 	}
 
@@ -494,7 +494,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		LabelSelector: labels.SelectorFromSet(labelsForVaultConfigurer(v.Name)),
 		Namespace:     v.Namespace,
 	}
-	if err = r.client.List(context.TODO(), &externalSecretsFilter, &externalSecrets); err != nil {
+	if err = r.client.List(context.TODO(), &externalSecrets, &externalSecretsFilter); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to list secrets: %v", err)
 	}
 
@@ -545,7 +545,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		LabelSelector: labelSelector,
 		Namespace:     v.Namespace,
 	}
-	err = r.client.List(context.TODO(), listOps, podList)
+	err = r.client.List(context.TODO(), podList, listOps)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to list pods: %v", err)
 	}
@@ -1889,7 +1889,7 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 
 	if v.Spec.CANamespaces[0] == "*" {
 		var namespaceList corev1.NamespaceList
-		if err := r.client.List(context.TODO(), &client.ListOptions{}, &namespaceList); err != nil {
+		if err := r.client.List(context.TODO(), &namespaceList, &client.ListOptions{}); err != nil {
 			return fmt.Errorf("failed to list namespaces: %v", err)
 		}
 
