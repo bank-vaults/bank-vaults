@@ -29,12 +29,12 @@ import (
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/heroku/docker-registry-client/registry"
 	imagev1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/patrickmn/go-cache"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"github.com/patrickmn/go-cache"
 )
 
 const ecrCredentialsKey = "AWS_ECR_CREDENTIALS"
@@ -63,14 +63,14 @@ type ImageRegistry interface {
 
 // Registry impl
 type Registry struct {
-	imageCache *cache.Cache
+	imageCache       *cache.Cache
 	credentialsCache *cache.Cache
 }
 
 // NewRegistry creates and initializes registry
 func NewRegistry() ImageRegistry {
 	return &Registry{
-		imageCache: cache.New(cache.NoExpiration, cache.NoExpiration),
+		imageCache:       cache.New(cache.NoExpiration, cache.NoExpiration),
 		credentialsCache: cache.New(12*time.Hour, 12*time.Hour),
 	}
 }
@@ -374,7 +374,11 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 				data = cachedToken.(string)
 				logger.Infof("Using cached AWS ECR Token")
 			} else {
-				sess := session.New()
+				sess, err := session.NewSession()
+				if err != nil {
+					logger.Info("Failed to create AWS session, trying with no credentials")
+					return nil
+				}
 				svc := ecr.New(sess, aws.NewConfig().WithRegion(region))
 
 				req := ecr.GetAuthorizationTokenInput{
@@ -383,7 +387,8 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 
 				resp, err := svc.GetAuthorizationToken(&req)
 				if err != nil {
-					return err
+					logger.Infof("Failed to get AWS ECR Token, trying with no credentials")
+					return nil
 				}
 
 				decodedData, err := base64.StdEncoding.DecodeString(*resp.AuthorizationData[0].AuthorizationToken)
@@ -405,7 +410,6 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 
 			logger.Infof("got aws credentials for ecr registry %s", k.RegistryAddress)
 		} else {
-
 			logger.Infof("found no credentials for registry %s, assuming it is public", k.RegistryAddress)
 		}
 	}
