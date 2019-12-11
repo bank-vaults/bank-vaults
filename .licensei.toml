@@ -9,19 +9,14 @@ approved = [
 
 ignored = [
   "github.com/aliyun/aliyun-oss-go-sdk", # Apache License 2.0.
-  "github.com/gogo/protobuf", # 3-Clause BSD
   "github.com/ghodss/yaml", # MIT
+  "sigs.k8s.io/yaml", # Forked from above
+  "github.com/gogo/protobuf", # 3-Clause BSD
 
-  # Vanity URLS :\
+  # Unsupported VCS
+  "gopkg.in/fsnotify.v1",
   "google.golang.org/grpc",
   "google.golang.org/genproto",
-  "go.opencensus.io",
   "google.golang.org/api",
-  "contrib.go.opencensus.io/exporter/ocagent",
   "cloud.google.com/go",
-  "contrib.go.opencensus.io/exporter/stackdriver",
-  "go.uber.org/atomic",
-  "go.uber.org/multierr",
-  "sigs.k8s.io/yaml",
-  "go.uber.org/zap",
 ]
