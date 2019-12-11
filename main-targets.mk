@@ -128,3 +128,8 @@ help:
 # Variable outputting/exporting rules
 var-%: ; @echo $($*)
 varexport-%: ; @echo $*=$($*)
+
+# Regenerate clientset, deepcopy funcs, listers and informers
+.PHONY: generate-code
+generate-code:
+	./hack/update-codegen.sh v${CODE_GENERATOR_VERSION}

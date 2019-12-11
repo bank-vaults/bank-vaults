@@ -4,8 +4,16 @@ This directory holds the code of the Banzai Cloud Vault Operator.
 
 ## Build
 
+To compile the operator:
+
 ```bash
 go build ./operator/cmd/manager
+```
+
+To start the operator locally and manage the cluster in the current-context:
+
+```bash
+make operator-up
 ```
 
 If you wish to build the operator Docker image:
@@ -14,11 +22,10 @@ If you wish to build the operator Docker image:
 make docker-operator
 ```
 
-If you change the Vault Go type definitions please regenerate the k8s deepcopy stubs with the [operator-sdk](https://github.com/operator-framework/operator-sdk/releases/tag/v0.12.0):
+If you change the Vault Go type definitions please regenerate the k8s deepcopy stubs, clientset listers and informers with the [kubernetes/code-generator](https://github.com/kubernetes/code-generator):
 
 ```bash
-cd operator
-operator-sdk generate k8s
+make generate-code
 ```
 
 ## Deploying the operator
