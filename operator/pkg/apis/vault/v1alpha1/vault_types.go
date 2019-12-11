@@ -98,7 +98,7 @@ func (c VaultExternalConfig) DeepCopy() VaultExternalConfig {
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // VaultSpec defines the desired state of Vault
-// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
+// Important: Run "make generate-code" to regenerate code after modifying this file
 type VaultSpec struct {
 
 	// Size defines the number of Vault instances in the cluster (>= 1 means HA)
@@ -624,7 +624,7 @@ func (vault *Vault) GetIngress() *Ingress {
 
 // VaultStatus defines the observed state of Vault
 type VaultStatus struct {
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
+	// Important: Run "make generate-code" to regenerate code after modifying this file
 	Nodes  []string `json:"nodes"`
 	Leader string   `json:"leader"`
 }

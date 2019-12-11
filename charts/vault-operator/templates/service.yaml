@@ -22,5 +22,8 @@ spec:
     targetPort: {{ .Values.service.internalPort }}
     protocol: TCP
     name: http
+  - port: 8383
+    protocol: TCP
+    name: http-metrics
   selector:
     app.kubernetes.io/name: {{ include "vault-operator.name" . }}
