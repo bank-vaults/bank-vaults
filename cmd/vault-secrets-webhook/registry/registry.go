@@ -366,13 +366,13 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 	if !found {
 		// if still no credentials and it is an ECR image, try to get credentials through an EC2 instance role
 		if ecrRegistryID, region := getECRRegistryIDAndRegion(k.RegistryAddress); ecrRegistryID != "" {
-			logger.Infof("trying to request aws credentials for ecr registry %s", k.RegistryAddress)
+			logger.Infof("trying to request AWS credentials for ECR registry %s", k.RegistryAddress)
 
 			var data string
 			cachedToken, usingCache := credentialsCache.Get(ecrCredentialsKey)
 			if usingCache {
 				data = cachedToken.(string)
-				logger.Infof("Using cached AWS ECR Token")
+				logger.Infof("Using cached AWS ECR Token for registry %s", k.RegistryAddress)
 			} else {
 				sess, err := session.NewSession()
 				if err != nil {
@@ -391,24 +391,26 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 					return nil
 				}
 
-				decodedData, err := base64.StdEncoding.DecodeString(*resp.AuthorizationData[0].AuthorizationToken)
+				// We requested only one entry
+				authData := resp.AuthorizationData[0]
+
+				decodedData, err := base64.StdEncoding.DecodeString(aws.StringValue(authData.AuthorizationToken))
 				data = string(decodedData)
 				if err != nil {
 					return err
 				}
-			}
-			token := strings.SplitN(data, ":", 2)
 
-			if !usingCache {
-				expiration := getECRTokenExpiration(string(token[1]))
+				expiration := authData.ExpiresAt.Sub(time.Now().Add(5 * time.Minute))
 				credentialsCache.Set(ecrCredentialsKey, data, expiration)
-				logger.Infof("Caching token with expiration in %+v", expiration)
+				logger.Infof("Caching ECR token with expiration in %+v", expiration)
 			}
+
+			token := strings.SplitN(data, ":", 2)
 
 			k.RegistryUsername = token[0]
 			k.RegistryPassword = token[1]
 
-			logger.Infof("got aws credentials for ecr registry %s", k.RegistryAddress)
+			logger.Infof("got AWS credentials for ecr registry %s", k.RegistryAddress)
 		} else {
 			logger.Infof("found no credentials for registry %s, assuming it is public", k.RegistryAddress)
 		}
@@ -423,26 +425,4 @@ func getECRRegistryIDAndRegion(registryAddr string) (string, string) {
 		return "", ""
 	}
 	return matches[1], matches[3]
-}
-
-func getECRTokenExpiration(token string) time.Duration {
-	jsonToken, err := base64.StdEncoding.DecodeString(token)
-	if err != nil {
-		return 0
-	}
-
-	var decodedToken map[string]interface{}
-	err = json.Unmarshal(jsonToken, &decodedToken)
-	if err != nil {
-		return 0
-	}
-
-	switch dt := decodedToken["expiration"].(type) {
-	case float64:
-		return time.Until(time.Unix(int64(dt), 0))
-	case int64:
-		return time.Until(time.Unix(dt, 0))
-	default:
-		return 0
-	}
 }
