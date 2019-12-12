@@ -1178,7 +1178,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			NodeAffinity:    getNodeAffinity(v),
 		},
 		ServiceAccountName: v.Spec.GetServiceAccount(),
-		InitContainers: []corev1.Container{
+
+		InitContainers: withInitContainers(v, []corev1.Container{
 			{
 				Image:           v.Spec.GetBankVaultsImage(),
 				ImagePullPolicy: corev1.PullIfNotPresent,
@@ -1201,7 +1202,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
 				Resources:    *getVaultResource(v),
 			},
-		},
+		}),
+
 		Containers: withStatsDContainer(v, string(ownerJSON), withAuditLogContainer(v, string(ownerJSON), []corev1.Container{
 			{
 				Image:           v.Spec.GetVaultImage(),
@@ -1529,6 +1531,10 @@ func withStatsdVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.
 		}...)
 	}
 	return volumes
+}
+
+func withInitContainers(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
+	return append(containers, v.Spec.InitContainers...)
 }
 
 func withStatsDContainer(v *vaultv1alpha1.Vault, owner string, containers []corev1.Container) []corev1.Container {
