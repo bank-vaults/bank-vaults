@@ -68,7 +68,7 @@ spec:
     # See: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.13/#ingressspec-v1beta1-extensions
     spec: {}
 
-  initContainers:
+  vaultInitContainers:
     - name: tls-setup
       image: busybox
       command:
