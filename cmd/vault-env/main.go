@@ -216,16 +216,18 @@ func main() {
 			version = split[2]
 		}
 
+		secretCacheKey := valuePath + "#" + version
+
 		var secret *vaultapi.Secret
 		var err error
 
-		if secret = secretCache[valuePath]; secret == nil {
+		if secret = secretCache[secretCacheKey]; secret == nil {
 			if update {
 				secret, err = client.RawClient().Logical().Write(valuePath, map[string]interface{}{})
 				if err != nil {
 					logger.Fatalln("failed to write secret to path:", valuePath, err.Error())
 				}
-				secretCache[valuePath] = secret
+				secretCache[secretCacheKey] = secret
 			} else {
 				secret, err = client.RawClient().Logical().ReadWithData(valuePath, map[string][]string{"version": {version}})
 				if err != nil {
@@ -234,7 +236,7 @@ func main() {
 					}
 					logger.Errorln("failed to read secret from path:", valuePath, err.Error())
 				} else {
-					secretCache[valuePath] = secret
+					secretCache[secretCacheKey] = secret
 				}
 			}
 		}
