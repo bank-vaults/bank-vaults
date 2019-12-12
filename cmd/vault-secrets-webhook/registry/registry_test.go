@@ -16,9 +16,10 @@ package registry
 
 import (
 	"testing"
+	"time"
 
+	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
-
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -124,8 +125,9 @@ func TestParsingRegistryAddress(t *testing.T) {
 
 	for _, test := range tests {
 		containerInfo := ContainerInfo{}
+		mockCache := cache.New(time.Minute, time.Minute)
 
-		err := containerInfo.Collect(test.container, test.podSpec)
+		err := containerInfo.Collect(test.container, test.podSpec, mockCache)
 		if err != nil {
 			t.Fatal(err)
 		}

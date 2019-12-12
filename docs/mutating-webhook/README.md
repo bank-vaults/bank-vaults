@@ -187,8 +187,10 @@ helm upgrade --install mysql stable/mysql \
 You can also specify a default secret to be used by the webhook for cases where a pod has no `imagePullSecrets` specified. For this to work you have to set the environment variables `DEFAULT_IMAGE_PULL_SECRET` and `DEFAULT_IMAGE_PULL_SECRET_NAMESPACE` when deploying the vault-secrets-webhook. Have a look at the values.yaml of the
 [vault-secrets-webhook](https://github.com/banzaicloud/bank-vaults/blob/master/charts/vault-secrets-webhook/values.yaml) helm chart to see how this is done.
 
+**NOTE**: _If you EC2 nodes are having ECR instance role added the webhook can request an ECR access token through that role automatically, instead of an explicit `imagePullSecret`_
+
 Future improvements:
-- on AWS and GKE get a credential dynamically with the specific SDK
+- on Azure/Alibaba and GKE get a credential dynamically with the specific SDK (for AWS ECR this is already done)
 
 When using a private image repository:
 
