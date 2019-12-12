@@ -318,7 +318,7 @@ type VaultSpec struct {
 	IstioEnabled bool `json:"istioEnabled,omitempty"`
 
 	// InitContainers add extra initContainers
-	InitContainers []v1.Container `json:"initContainers,omitempty"`
+	VaultInitContainers []v1.Container `json:"vaultInitContainers,omitempty"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
