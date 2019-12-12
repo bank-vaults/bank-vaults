@@ -19,11 +19,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"regexp"
 	"strings"
+	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/heroku/docker-registry-client/registry"
 	imagev1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/patrickmn/go-cache"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
@@ -31,13 +37,19 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+const ecrCredentialsKey = "AWS_ECR_CREDENTIALS"
+
 var logger *log.Logger
+var ecrHostPattern *regexp.Regexp
 
 func init() {
 	logger = log.New()
 	if viper.GetBool("enable_json_log") {
 		logger.SetFormatter(&log.JSONFormatter{})
 	}
+
+	// Adapted from https://github.com/awslabs/amazon-ecr-credential-helper/blob/master/ecr-login/api/client.go#L34
+	ecrHostPattern = regexp.MustCompile(`([a-zA-Z0-9][a-zA-Z0-9-_]*)\.dkr\.ecr(\-fips)?\.([a-zA-Z0-9][a-zA-Z0-9-_]*)\.amazonaws\.com(\.cn)?`)
 }
 
 // ImageRegistry is a docker registry
@@ -51,12 +63,16 @@ type ImageRegistry interface {
 
 // Registry impl
 type Registry struct {
-	imageCache ImageCache
+	imageCache       *cache.Cache
+	credentialsCache *cache.Cache
 }
 
 // NewRegistry creates and initializes registry
 func NewRegistry() ImageRegistry {
-	return &Registry{imageCache: NewInMemoryImageCache()}
+	return &Registry{
+		imageCache:       cache.New(cache.NoExpiration, cache.NoExpiration),
+		credentialsCache: cache.New(12*time.Hour, 12*time.Hour),
+	}
 }
 
 type DockerCreds struct {
@@ -85,15 +101,15 @@ func (r *Registry) GetImageConfig(
 
 	allowToCache := IsAllowedToCache(container)
 	if allowToCache {
-		if imageConfig := r.imageCache.Get(container.Image); imageConfig != nil {
+		if imageConfig, cacheHit := r.imageCache.Get(container.Image); cacheHit {
 			logger.Infof("found image %s in cache", container.Image)
-			return imageConfig, nil
+			return imageConfig.(*imagev1.ImageConfig), nil
 		}
 	}
 
 	containerInfo := ContainerInfo{Namespace: namespace, clientset: clientset}
 
-	err := containerInfo.Collect(container, podSpec)
+	err := containerInfo.Collect(container, podSpec, r.credentialsCache)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +118,7 @@ func (r *Registry) GetImageConfig(
 
 	imageConfig, err := getImageBlob(containerInfo)
 	if imageConfig != nil && allowToCache {
-		r.imageCache.Put(container.Image, imageConfig)
+		r.imageCache.Set(container.Image, imageConfig, cache.DefaultExpiration)
 	}
 
 	return imageConfig, err
@@ -293,7 +309,7 @@ func (k *ContainerInfo) checkImagePullSecret(namespace string, secret string) (b
 }
 
 // Collect reads information from k8s and load them into the structure
-func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.PodSpec) error {
+func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.PodSpec, credentialsCache *cache.Cache) error {
 
 	k.Image = k.fixDockerHubImage(container.Image)
 
@@ -301,7 +317,7 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 	found := false
 	// Check for registry credentials in imagePullSecrets attached to the pod
 	// ImagePullSecrets attached to ServiceAccounts do not have to be considered
-	// explicitely as ServiceAccount ImagePullSecrets are automatically attached
+	// explicitly as ServiceAccount ImagePullSecrets are automatically attached
 	// to a pod.
 	for _, imagePullSecret := range podSpec.ImagePullSecrets {
 		found, err = k.checkImagePullSecret(k.Namespace, imagePullSecret.Name)
@@ -332,11 +348,7 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 		}
 	}
 
-	if !found {
-		logger.Infof("found no credentials for registry %s, assuming it is public", k.RegistryName)
-	}
-
-	// In case of other public docker registry
+	// In case of other docker registry
 	if k.RegistryName == "" && k.RegistryAddress == "" {
 		registryName := container.Image
 		if strings.HasPrefix(registryName, "https://") {
@@ -351,5 +363,66 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 	// Clean registry from image
 	k.Image = strings.TrimPrefix(k.Image, fmt.Sprintf("%s/", k.RegistryName))
 
+	if !found {
+		// if still no credentials and it is an ECR image, try to get credentials through an EC2 instance role
+		if ecrRegistryID, region := getECRRegistryIDAndRegion(k.RegistryAddress); ecrRegistryID != "" {
+			logger.Infof("trying to request AWS credentials for ECR registry %s", k.RegistryAddress)
+
+			var data string
+			cachedToken, usingCache := credentialsCache.Get(ecrCredentialsKey)
+			if usingCache {
+				data = cachedToken.(string)
+				logger.Infof("Using cached AWS ECR Token for registry %s", k.RegistryAddress)
+			} else {
+				sess, err := session.NewSession()
+				if err != nil {
+					logger.Info("Failed to create AWS session, trying with no credentials")
+					return nil
+				}
+				svc := ecr.New(sess, aws.NewConfig().WithRegion(region))
+
+				req := ecr.GetAuthorizationTokenInput{
+					RegistryIds: []*string{aws.String(ecrRegistryID)},
+				}
+
+				resp, err := svc.GetAuthorizationToken(&req)
+				if err != nil {
+					logger.Infof("Failed to get AWS ECR Token, trying with no credentials")
+					return nil
+				}
+
+				// We requested only one entry
+				authData := resp.AuthorizationData[0]
+
+				decodedData, err := base64.StdEncoding.DecodeString(aws.StringValue(authData.AuthorizationToken))
+				data = string(decodedData)
+				if err != nil {
+					return err
+				}
+
+				expiration := authData.ExpiresAt.Sub(time.Now().Add(5 * time.Minute))
+				credentialsCache.Set(ecrCredentialsKey, data, expiration)
+				logger.Infof("Caching ECR token with expiration in %+v", expiration)
+			}
+
+			token := strings.SplitN(data, ":", 2)
+
+			k.RegistryUsername = token[0]
+			k.RegistryPassword = token[1]
+
+			logger.Infof("got AWS credentials for ecr registry %s", k.RegistryAddress)
+		} else {
+			logger.Infof("found no credentials for registry %s, assuming it is public", k.RegistryAddress)
+		}
+	}
+
 	return nil
+}
+
+func getECRRegistryIDAndRegion(registryAddr string) (string, string) {
+	matches := ecrHostPattern.FindStringSubmatch(registryAddr)
+	if len(matches) < 3 {
+		return "", ""
+	}
+	return matches[1], matches[3]
 }
