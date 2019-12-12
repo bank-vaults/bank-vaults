@@ -1579,7 +1579,7 @@ func getOrDefaultSecretData(m interface{}) (map[string]interface{}, error) {
 		return map[string]interface{}{}, err
 	}
 
-	vaultNamespace := strings.Split(strings.Split(os.Getenv("VAULT_ADDR"), ".")[1], ":")[0]
+	vaultNamespace := os.Getenv("NAMESPACE")
 
 	secData := map[string]string{}
 	for _, value := range values {
