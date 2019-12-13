@@ -28,6 +28,7 @@ bin/*
 
 # Helm
 **/*.tgz
+**/*.lock
 
 # Certificates
 *.csr
