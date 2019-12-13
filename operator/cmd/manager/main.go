@@ -17,6 +17,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"runtime"
@@ -25,6 +26,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/operator/pkg/apis"
 	"github.com/banzaicloud/bank-vaults/operator/pkg/controller"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -92,6 +94,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	leaderElectionNamespace := ""
+	if !isInClusterConfig(k8sConfig) {
+		leaderElectionNamespace = "default"
+	}
+
 	// Start the liveness probe handler
 	go handleLiveness()
 
@@ -101,9 +108,12 @@ func main() {
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(k8sConfig, manager.Options{
-		Namespace:          namespace,
-		SyncPeriod:         syncPeriod,
-		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
+		Namespace:               namespace,
+		LeaderElection:          true,
+		LeaderElectionNamespace: leaderElectionNamespace,
+		LeaderElectionID:        "vault-operator-lock",
+		SyncPeriod:              syncPeriod,
+		MetricsBindAddress:      fmt.Sprintf("%s:%d", metricsHost, metricsPort),
 	})
 	if err != nil {
 		log.Error(err, "")
@@ -131,4 +141,9 @@ func main() {
 		log.Error(err, "manager exited non-zero")
 		os.Exit(1)
 	}
+}
+
+func isInClusterConfig(k8sConfig *rest.Config) bool {
+	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
+	return k8sConfig.Host == "https://"+net.JoinHostPort(host, port)
 }
