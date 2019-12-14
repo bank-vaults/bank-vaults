@@ -48,6 +48,8 @@ helm upgrade --install vault-operator ./charts/vault-operator \
     --set image.tag=latest \
     --set image.pullPolicy=IfNotPresent \
     --set etcd-operator.enabled=true \
+    --set etcd-operator.deployments.backupOperator=false \
+    --set etcd-operator.deployments.restoreOperator=false \
     --wait
 
 # Install common RBAC setup for CRs
