@@ -67,11 +67,6 @@ readinessProbe:
 etcd-operator:
   enabled: false
   etcdOperator:
-    image:
-      tag: v0.9.4
-  backupOperator:
-    image:
-      tag: v0.9.4
-  restoreOperator:
-    image:
-      tag: v0.9.4
+    commandArgs:
+      cluster-wide: true
+      create-crd: false

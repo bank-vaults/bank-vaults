@@ -1,5 +1,5 @@
 dependencies:
 - name: etcd-operator
-  version: 0.10.0
+  version: 0.10.2
   repository: https://kubernetes-charts.storage.googleapis.com/
   condition: etcd-operator.enabled
