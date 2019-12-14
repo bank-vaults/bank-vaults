@@ -53,7 +53,6 @@ priorityClassName: ""
 
 terminationGracePeriodSeconds: 10
 
-probePath: /
 livenessProbe:
   initialDelaySeconds: 60
   periodSeconds: 10

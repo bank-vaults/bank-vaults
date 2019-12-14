@@ -35,6 +35,8 @@ spec:
       - name: check-etcd-crd
         image: lachlanevenson/k8s-kubectl
         command: ['kubectl', 'get', 'customresourcedefinitions', 'etcdclusters.etcd.database.coreos.com']
+        resources:
+{{ toYaml .Values.resources | indent 12 }}
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
@@ -60,7 +62,7 @@ spec:
           - containerPort: 8383
           livenessProbe:
             httpGet:
-              path: {{ .Values.probePath }}
+              path: "/"
               port: {{ .Values.service.internalPort }}
             initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
@@ -68,7 +70,7 @@ spec:
             timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
           readinessProbe:
             httpGet:
-              path: {{ .Values.probePath }}/ready
+              path: "/ready"
               port: {{ .Values.service.internalPort }}
             periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
             successThreshold: {{ .Values.readinessProbe.successThreshold }}
