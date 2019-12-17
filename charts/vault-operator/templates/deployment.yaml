@@ -36,7 +36,7 @@ spec:
         image: lachlanevenson/k8s-kubectl
         command: ['kubectl', 'get', 'customresourcedefinitions', 'etcdclusters.etcd.database.coreos.com']
         resources:
-{{ toYaml .Values.resources | indent 12 }}
+{{ toYaml .Values.resources | indent 10 }}
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
