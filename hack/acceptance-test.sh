@@ -38,7 +38,7 @@ helm delete vault
 kubectl delete secret bank-vaults
 
 # Create a resource quota in the default namespace
-kubectl create quota bank-vaults --hard=cpu=2,memory=4G,pods=10,services=10,replicationcontrollers=10,secrets=10,persistentvolumeclaims=10
+kubectl create quota bank-vaults --hard=cpu=2,memory=4G,pods=10,services=10,replicationcontrollers=10,secrets=15,persistentvolumeclaims=10
 
 # Install the operators and companion
 helm dependency build ./charts/vault-operator
