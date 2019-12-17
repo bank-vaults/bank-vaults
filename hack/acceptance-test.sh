@@ -14,9 +14,7 @@ function finish {
     kubectl get pods
     kubectl describe pods
     kubectl logs deployment/vault-operator
-    kubectl get services --show-labels -l vault_cr=vault
-    kubectl get ep --show-labels -l vault_cr=vault
-    kubectl logs deployment/vault-configurer
+    kubectl logs --all-containers statefulset/vault
     kubectl logs -n vswh deployment/vault-secrets-webhook
     kubectl describe deployment/hello-secrets
     kubectl describe rs hello-secrets
