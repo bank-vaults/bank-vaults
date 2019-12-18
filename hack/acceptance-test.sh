@@ -14,9 +14,7 @@ function finish {
     kubectl get pods
     kubectl describe pods
     kubectl logs deployment/vault-operator
-    kubectl get services --show-labels -l vault_cr=vault
-    kubectl get ep --show-labels -l vault_cr=vault
-    kubectl logs deployment/vault-configurer
+    kubectl logs --all-containers statefulset/vault
     kubectl logs -n vswh deployment/vault-secrets-webhook
     kubectl describe deployment/hello-secrets
     kubectl describe rs hello-secrets
@@ -40,16 +38,17 @@ helm delete vault
 kubectl delete secret bank-vaults
 
 # Create a resource quota in the default namespace
-kubectl create quota bank-vaults --hard=cpu=2,memory=4G,pods=10,services=10,replicationcontrollers=10,secrets=10,persistentvolumeclaims=10
+kubectl create quota bank-vaults --hard=cpu=2,memory=4G,pods=10,services=10,replicationcontrollers=10,secrets=15,persistentvolumeclaims=10
 
 # Install the operators and companion
-kubectl apply -f operator/deploy/etcd-rbac.yaml
-kubectl apply -f operator/deploy/etcd-operator.yaml
-kubectl wait --for=condition=available deployment/etcd-operator --timeout=120s
-
-kubectl apply -f operator/deploy/operator-rbac.yaml
-kubectl apply -f operator/deploy/operator.yaml
-kubectl wait --for=condition=available deployment/vault-operator --timeout=120s
+helm dependency build ./charts/vault-operator
+helm upgrade --install vault-operator ./charts/vault-operator \
+    --set image.tag=latest \
+    --set image.pullPolicy=IfNotPresent \
+    --set etcd-operator.enabled=true \
+    --set etcd-operator.deployments.backupOperator=false \
+    --set etcd-operator.deployments.restoreOperator=false \
+    --wait
 
 # Install common RBAC setup for CRs
 kubectl apply -f operator/deploy/rbac.yaml
