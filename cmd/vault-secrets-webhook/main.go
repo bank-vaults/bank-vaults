@@ -521,7 +521,7 @@ func (mw *mutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns str
 		if ef.ConfigMapRef != nil {
 			data, err := mw.getDataFromConfigmap(ef.ConfigMapRef.Name, ns)
 			if err != nil {
-				if apierrors.IsNotFound(err) && ef.ConfigMapRef.Optional != nil && *ef.ConfigMapRef.Optional {
+				if apierrors.IsNotFound(err) || (ef.ConfigMapRef.Optional != nil && *ef.ConfigMapRef.Optional) {
 					continue
 				} else {
 					return envVars, err
@@ -540,7 +540,7 @@ func (mw *mutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns str
 		if ef.SecretRef != nil {
 			data, err := mw.getDataFromSecret(ef.SecretRef.Name, ns)
 			if err != nil {
-				if apierrors.IsNotFound(err) && ef.SecretRef.Optional != nil && *ef.SecretRef.Optional {
+				if apierrors.IsNotFound(err) || (ef.SecretRef.Optional != nil && *ef.SecretRef.Optional) {
 					continue
 				} else {
 					return envVars, err
@@ -568,6 +568,9 @@ func (mw *mutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*core
 	if env.ValueFrom.ConfigMapKeyRef != nil {
 		data, err := mw.getDataFromConfigmap(env.ValueFrom.ConfigMapKeyRef.Name, ns)
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, nil
+			}
 			return nil, err
 		}
 		if hasVaultPrefix(data[env.ValueFrom.ConfigMapKeyRef.Key]) {
@@ -581,6 +584,9 @@ func (mw *mutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*core
 	if env.ValueFrom.SecretKeyRef != nil {
 		data, err := mw.getDataFromSecret(env.ValueFrom.SecretKeyRef.Name, ns)
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, nil
+			}
 			return nil, err
 		}
 		if hasVaultPrefix(string(data[env.ValueFrom.SecretKeyRef.Key])) {
