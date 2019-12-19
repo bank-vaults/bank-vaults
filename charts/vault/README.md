@@ -179,9 +179,7 @@ kind: SecurityContextConstraints
 metadata:
   name: vault-restricted
   annotations:
-    kubernetes.io/description: restricted denies access to all host features and requires
-      pods to be run with a UID, and SELinux context that are allocated to the namespace.  This
-      is the most restrictive SCC and it is used by default for authenticated users.
+    kubernetes.io/description: This is the least privileged SCC and it is used by vault users.
 allowHostIPC: true
 allowHostDirVolumePlugin: false
 allowHostNetwork: false
