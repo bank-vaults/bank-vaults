@@ -26,7 +26,7 @@ Please also note that scaling to more than 1 replicas can be made successfully o
 To install the chart, use the following, this backs Vault with a Consul cluster:
 
 ```bash
-helm init -c; 
+helm init -c;
 helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch/master
 helm install banzaicloud-stable/vault
 ```
@@ -62,7 +62,7 @@ helm install banzaicloud-stable/vault --set "vault.customSecrets[0].secretName=a
 
 ## Google Storage and KMS example
 
-You can set up Vault to use Google KMS for sealing and Google Storage for storing your encrypted secrets. See the usage example below: 
+You can set up Vault to use Google KMS for sealing and Google Storage for storing your encrypted secrets. See the usage example below:
 
 ```
 # Create a google secret with your Secret Account Key file in json fromat.
@@ -135,8 +135,8 @@ The following tables lists the configurable parameters of the vault chart and th
 | `unsealer.args`         | Bank Vaults args | `["--mode", "k8s", "--k8s-secret-namespace", "default", "--k8s-secret-name", "bank-vaults"]` |
 | `rbac.enabled`          | Use rbac                            | `true`                                              |
 | `rbac.psp.enabled`      | Use pod security policy             | `false`                                             |
-| `nodeSelector`          | Node labels for pod assignment. https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector                                                           | `{}`        
-| `tolerations`           | List of node tolerations for the pods. https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                                           | `[]`        
+| `nodeSelector`          | Node labels for pod assignment. https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector                                                           | `{}`
+| `tolerations`           | List of node tolerations for the pods. https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                                           | `[]`
 | `labels`                | Additonal labels to be applied to the Vault StatefulSet and Pods | `{}`
 | `tls.secretName`        | Custom TLS certifcate secret name    | `""`                                               |
 
@@ -162,13 +162,64 @@ First create a new project named "vault"
 ```
 oc new-app vault
 ```
-Then create a new scc based on the scc restricted and add the capability "IPC_LOCK". Now add the new scc to the Serviceaccount vault of the new vault project:
+Then create a new `scc` based on the `scc` restricted and add the capability "IPC_LOCK". Now add the new scc to the Serviceaccount vault of the new vault project:
 ```
 oc adm policy add-scc-to-user <new_scc> system:serviceaccount:vault:vault
 ```
+
+Or you can define users in `scc` directly and in this case, you only have to create the `scc`.
+```
+oc create -f <scc_file.yaml>
+```
+
+Example vault-restricted `scc` with defined user:
+```yaml
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: vault-restricted
+  annotations:
+    kubernetes.io/description: restricted denies access to all host features and requires
+      pods to be run with a UID, and SELinux context that are allocated to the namespace.  This
+      is the most restrictive SCC and it is used by default for authenticated users.
+allowHostIPC: true
+allowHostDirVolumePlugin: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegeEscalation: true
+allowPrivilegedContainer: false
+defaultAddCapabilities: null
+allowedCapabilities:
+- IPC_LOCK
+allowedUnsafeSysctls: null
+fsGroup:
+  type: RunAsAny
+priority: null
+readOnlyRootFilesystem: false
+requiredDropCapabilities:
+- KILL
+- MKNOD
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: MustRunAs
+supplementalGroups:
+  type: RunAsAny
+volumes:
+- configMap
+- downwardAPI
+- emptyDir
+- persistentVolumeClaim
+- projected
+- secret
+users:
+- system:serviceaccount:default:vault
+```
+
 You will get the message, that the user system:serviceaccount:vault:vault doesn't exist, but that's ok.
 In the next step you install the helm chart vault in the namespace "vault" with following command:
 ```
 helm install vault banzaicloud-stable/vault --set "unsealer.args[0]=--mode" --set "unsealer.args[1]=k8s" --set "unsealer.args[2]=--k8s-secret-namespace" --set "unsealer.args[3]=vault" --set "unsealer.args[4]=--k8s-secret-name" --set "unsealer.args[5]=bank-vaults"
 ```
-Changing the vaulues of the arguments of the unsealer is necessary because in the values.yaml the default namespace is used to store the secret. Creating the secret in the same namespace like vault is the easiest solution. In alternative you can create a role which allows creating and read secrets in the default namespace. 
+Changing the vaulues of the arguments of the unsealer is necessary because in the values.yaml the default namespace is used to store the secret. Creating the secret in the same namespace like vault is the easiest solution. In alternative you can create a role which allows creating and read secrets in the default namespace.
