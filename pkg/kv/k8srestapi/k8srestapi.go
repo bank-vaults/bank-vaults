@@ -136,6 +136,9 @@ func (k *k8srestapiStore) decrypt(cipherText []byte) ([]byte) {
                 }    
         }
 	decoded, err := base64.StdEncoding.DecodeString(pp.PlaintextB64)
+	if err != nil {
+                panic(err)
+        }
         return decoded
 }
 
