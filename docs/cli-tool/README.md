@@ -9,6 +9,7 @@ Features:
   - Azure Key Vault
   - Google Cloud KMS keyring (backed by GCS)
   - Alibaba Cloud KMS (backed by OSS)
+  - Kubernetes Secrets With Encryption and Decryption using REST API Call 
   - Kubernetes Secrets (should be used only for development purposes)
   - Dev Mode (useful for `vault server -dev` dev mode Vault servers)
   - Files (backed by files, should be used only for development purposes)

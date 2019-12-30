@@ -38,6 +38,7 @@ const cfgModeValueVault = "vault"
 const cfgModeValueK8S = "k8s"
 const cfgModeValueDev = "dev"
 const cfgModeValueFile = "file"
+const cfgModeValueK8SWithRestAPI = "k8s-with-restapi"
 
 const cfgGoogleCloudKMSProject = "google-cloud-kms-project"
 const cfgGoogleCloudKMSLocation = "google-cloud-kms-location"
@@ -75,6 +76,12 @@ const cfgK8SNamespace = "k8s-secret-namespace"
 const cfgK8SSecret = "k8s-secret-name"
 
 const cfgFilePath = "file-path"
+
+const cfgK8SWithRestAPINamespace = "k8s-with-restapi-secret-namespace"
+const cfgK8SWithRestAPISecret = "k8s-with-restapi-secret-name"
+const cfgK8SWithRestAPIKeyIdentifier = "k8s-with-restapi-keyidname"
+const cfgK8SWithRestAPIEncryptionUrl = "k8s-with-restapi-encryption-url"
+const cfgK8SWithRestAPIDecryptionUrl = "k8s-with-restapi-decryption-url"
 
 var rootCmd = &cobra.Command{
 	Use:   "bank-vaults",
@@ -120,7 +127,8 @@ func init() {
 						'%s' => Remote Vault;
 						'%s' => Kubernetes Secrets;
 						'%s' => Dev (vault server -dev) mode
-						'%s' => File mode`,
+						'%s' => File mode
+						'%s' => K8s Secret with REST API Call for Encryption/Decryption`,
 			cfgModeValueGoogleCloudKMSGCS,
 			cfgModeValueAWSKMS3,
 			cfgModeValueAzureKeyVault,
@@ -129,6 +137,7 @@ func init() {
 			cfgModeValueK8S,
 			cfgModeValueDev,
 			cfgModeValueFile,
+			cfgModeValueK8SWithRestAPI,
 		),
 	)
 
@@ -185,6 +194,13 @@ func init() {
 
 	// File flags
 	configStringVar(cfgFilePath, "", "The path prefix of the files where to store values in")
+
+        // K8S With REST API flags
+        configStringVar(cfgK8SWithRestAPINamespace, "", "The namespace of the K8S Secret to store values in")
+        configStringVar(cfgK8SWithRestAPISecret, "", "The name of the K8S Secret to store values in")
+        configStringVar(cfgK8SWithRestAPIKeyIdentifier, "", "The keyid name of encryption and decrytion service to pass")
+	configStringVar(cfgK8SWithRestAPIEncryptionUrl, "", "The URL of Encrypt API")
+        configStringVar(cfgK8SWithRestAPIDecryptionUrl, "", "The URL of Derypt API")
 }
 
 func main() {
