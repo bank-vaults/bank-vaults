@@ -473,11 +473,12 @@ func parseVaultConfig(obj metav1.Object) internal.VaultConfig {
 	return vaultConfig
 }
 
-func getConfigMapForVaultAgent(obj metav1.Object, vaultConfig internal.VaultConfig) *corev1.ConfigMap {
-	var ownerReferences []metav1.OwnerReference
-	name := obj.GetName()
+func getConfigMapForVaultAgent(pod *corev1.Pod, vaultConfig internal.VaultConfig) *corev1.ConfigMap {
+	ownerReferences := pod.GetOwnerReferences()
+	name := pod.GetName()
+	// If we have no name we are probably part of some controller,
+	// try to get the name of the owner controller.
 	if name == "" {
-		ownerReferences = obj.GetOwnerReferences()
 		if len(ownerReferences) > 0 {
 			if strings.Contains(ownerReferences[0].Name, "-") {
 				generateNameSlice := strings.Split(ownerReferences[0].Name, "-")
