@@ -16,11 +16,8 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net"
-	"net/http"
 	"os"
-	"runtime"
 	"time"
 
 	"github.com/banzaicloud/bank-vaults/operator/pkg/apis"
@@ -28,6 +25,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
@@ -36,28 +34,11 @@ import (
 var log = logf.Log.WithName("cmd")
 
 const (
-	operatorNamespace    = "OPERATOR_NAMESPACE"
-	watchNamespaceEnvVar = "WATCH_NAMESPACE"
-	livenessPort         = "8080"
-	metricsHost          = "0.0.0.0"
-	metricsPort          = 8383
+	operatorNamespace      = "OPERATOR_NAMESPACE"
+	watchNamespaceEnvVar   = "WATCH_NAMESPACE"
+	healthProbeBindAddress = ":8080"
+	metricsBindAddress     = ":8383"
 )
-
-func printVersion() {
-	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
-	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
-}
-
-func handleLiveness() {
-	log.Info(fmt.Sprintf("Liveness probe listening on: %s", livenessPort))
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.V(2).Info("ping")
-	})
-	err := http.ListenAndServe(":"+livenessPort, nil)
-	if err != nil {
-		log.Error(err, "failed to start health probe: %v\n")
-	}
-}
 
 func main() {
 
@@ -72,8 +53,6 @@ func main() {
 	// uniform and structured logs.
 	logf.SetLogger(logf.ZapLogger(*verbose))
 
-	printVersion()
-
 	var namespace string
 	var err error
 	namespace, isSet := os.LookupEnv(operatorNamespace)
@@ -85,7 +64,7 @@ func main() {
 			namespace = ""
 		}
 	}
-	log.Info(fmt.Sprintf("Watched namespace: %s", namespace))
+	log.Info("Watched namespace: " + namespace)
 
 	// Get a config to talk to the apiserver
 	k8sConfig, err := config.GetConfig()
@@ -99,13 +78,6 @@ func main() {
 		leaderElectionNamespace = "default"
 	}
 
-	// Start the liveness probe handler
-	go handleLiveness()
-
-	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
-		log.V(2).Info("ready")
-	})
-
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(k8sConfig, manager.Options{
 		Namespace:               namespace,
@@ -113,12 +85,18 @@ func main() {
 		LeaderElectionNamespace: leaderElectionNamespace,
 		LeaderElectionID:        "vault-operator-lock",
 		SyncPeriod:              syncPeriod,
-		MetricsBindAddress:      fmt.Sprintf("%s:%d", metricsHost, metricsPort),
+		HealthProbeBindAddress:  healthProbeBindAddress,
+		LivenessEndpointName:    "/",      // For Chart backwards compatibility
+		ReadinessEndpointName:   "/ready", // For Chart backwards compatibility
+		MetricsBindAddress:      metricsBindAddress,
 	})
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
+
+	mgr.AddReadyzCheck("ping", healthz.Ping)
+	mgr.AddHealthzCheck("ping", healthz.Ping)
 
 	log.Info("Registering Components.")
 
