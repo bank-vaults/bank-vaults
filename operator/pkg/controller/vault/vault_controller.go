@@ -1316,7 +1316,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		return nil, err
 	}
 
-	podManagementPolicy := appsv1.PodManagementPolicyType(appsv1.ParallelPodManagement) // TODO this unncessary cast can be removed after k8s.io/api 1.14.0
+	podManagementPolicy := appsv1.ParallelPodManagement
 	if v.Spec.IsRaftStorage() {
 		podManagementPolicy = appsv1.OrderedReadyPodManagement
 	}
