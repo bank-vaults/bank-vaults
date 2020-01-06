@@ -163,21 +163,21 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		}
 
 		return k8s, nil
-	
+
 	case cfgModeValueK8SWithRestAPI:
-                k8srest, err := k8srestapi.New(
-                        cfg.GetString(cfgK8SWithRestAPINamespace),
-                        cfg.GetString(cfgK8SWithRestAPISecret),
-                        cfg.GetString(cfgK8SWithRestAPIKeyIdentifier),
-                        cfg.GetString(cfgK8SWithRestAPIEncryptionUrl),
-                        cfg.GetString(cfgK8SWithRestAPIDecryptionUrl),
-                )       
-                
-                if err != nil {
-                        return nil, fmt.Errorf("error creating K8SIBMDP Secret kv store: %s", err.Error())
-                }       
-                
-                return k8srest, nil
+		k8srest, err := k8srestapi.New(
+			cfg.GetString(cfgK8SWithRestAPINamespace),
+			cfg.GetString(cfgK8SWithRestAPISecret),
+			cfg.GetString(cfgK8SWithRestAPIKeyIdentifier),
+			cfg.GetString(cfgK8SWithRestAPIEncryptionUrl),
+			cfg.GetString(cfgK8SWithRestAPIDecryptionUrl),
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("error creating K8SIBMDP Secret kv store: %s", err.Error())
+		}
+
+		return k8srest, nil
 
 	case cfgModeValueDev:
 		dev, err := dev.New()

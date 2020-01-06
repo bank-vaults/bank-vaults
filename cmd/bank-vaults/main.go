@@ -195,12 +195,12 @@ func init() {
 	// File flags
 	configStringVar(cfgFilePath, "", "The path prefix of the files where to store values in")
 
-        // K8S With REST API flags
-        configStringVar(cfgK8SWithRestAPINamespace, "", "The namespace of the K8S Secret to store values in")
-        configStringVar(cfgK8SWithRestAPISecret, "", "The name of the K8S Secret to store values in")
-        configStringVar(cfgK8SWithRestAPIKeyIdentifier, "", "The keyid name of encryption and decrytion service to pass")
+	// K8S With REST API flags
+	configStringVar(cfgK8SWithRestAPINamespace, "", "The namespace of the K8S Secret to store values in")
+	configStringVar(cfgK8SWithRestAPISecret, "", "The name of the K8S Secret to store values in")
+	configStringVar(cfgK8SWithRestAPIKeyIdentifier, "", "The keyid name of encryption and decrytion service to pass")
 	configStringVar(cfgK8SWithRestAPIEncryptionUrl, "", "The URL of Encrypt API")
-        configStringVar(cfgK8SWithRestAPIDecryptionUrl, "", "The URL of Derypt API")
+	configStringVar(cfgK8SWithRestAPIDecryptionUrl, "", "The URL of Derypt API")
 }
 
 func main() {
