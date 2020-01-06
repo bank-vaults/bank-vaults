@@ -3,6 +3,7 @@
 This is a list of production adopters of Bank-Vaults (in alphabetical order):
 - [Aspect](https://www.aspect.com) is using Bank-Vaults to provision and configure Vault for the Aspect Via® Cloud Contact Centre Platform.
 - [Banzai Cloud](https://banzaicloud.com) is using Bank-Vaults to provision and configure Vault for the Pipeline control plane and also the mutating webhook to injects Secrets in the provisioned user clusters. Bank-Vaults is heavily used in the supporting infrastructure of Banzai Cloud as well.
+- [Mintel](https://www.mintel.com) is using Bank-Vaults to provision and configure Vault to provide secrets to applications.
 - [Tinkoff](https://www.tinkoff.ru) is using Vault Secrets Webhook to provide sensitive data to applications that don't have native integration with Vault.
 - [Vase.ai](https://vase.ai) is using Bank-vaults with the Vault Secrets Webhook to pull secrets from vault in to be used in their CI/CD pipelines.
 - [Vonage](https://www.vonage.com/business/) is using Bank-Vaults to provision and configure Vault to provide secrets to application that are on cloud(k8s) and on premise(approle) and also as a transit engine. Uses aws kms, s3 and dynmodb and will be migrated to use raft backend.
