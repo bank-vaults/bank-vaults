@@ -90,7 +90,7 @@ func New(namespace, secret, keyidName, encryptionUrl, decryptionUrl string) (ser
 	return
 }
 
-func (k *k8srestapiStore) encrypt(plainText []byte) []byte {
+func (k *k8srestapiStore) encrypt(plainText []byte) ([]byte, error) {
 
 	var ep encrypted_payload
 	jsonData := &plaintext_payload{
@@ -108,10 +108,10 @@ func (k *k8srestapiStore) encrypt(plainText []byte) []byte {
 		cipherTextTemp, _ := ioutil.ReadAll(response.Body)
 		err := json.Unmarshal(cipherTextTemp, &ep)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
-	return ([]byte(ep.EncryptedB64))
+	return ([]byte(ep.EncryptedB64)), nil
 }
 
 func (k *k8srestapiStore) decrypt(cipherText []byte) []byte {
@@ -132,11 +132,14 @@ func (k *k8srestapiStore) decrypt(cipherText []byte) []byte {
 		plainTextTemp, _ := ioutil.ReadAll(response.Body)
 		err := json.Unmarshal(plainTextTemp, &pp)
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
 		}
 	}
 	decoded, err := base64.StdEncoding.DecodeString(pp.PlaintextB64)
 	if err != nil {
+		if _, ok := err.(base64.CorruptInputError); ok {
+			panic("\nbase64 input is corrupt, check input encoded value")
+		}
 		panic(err)
 	}
 	return decoded
@@ -144,9 +147,12 @@ func (k *k8srestapiStore) decrypt(cipherText []byte) []byte {
 
 func (k *k8srestapiStore) Set(key string, val []byte) error {
 
+	cipherText, err := k.encrypt(val)
+	if err != nil {
+		return fmt.Errorf("Encrytion Method returned error: '%s'", err.Error())
+	}
 	secret, err := k.cl.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
 
-	cipherText := k.encrypt(val)
 	if errors.IsNotFound(err) {
 		secret := &v1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -164,6 +170,9 @@ func (k *k8srestapiStore) Set(key string, val []byte) error {
 		secret.Data[key] = cipherText
 		secret, err = k.cl.CoreV1().Secrets(k.namespace).Update(secret)
 		//reflect.DeepEqual()
+		if err != nil {
+			return fmt.Errorf("error updating secret key '%s' into secret '%s': '%s'", key, k.secret, err.Error())
+		}
 	} else {
 		return fmt.Errorf("error checking if '%s' secret exists: '%s'", k.secret, err.Error())
 	}
