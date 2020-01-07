@@ -13,7 +13,8 @@ set -euo pipefail
 # Check the Raft leader:
 # curl -H "X-Vault-Token: $VAULT_TOKEN" -v -k https://a81d3cae9150211ea9ca606a2178004f-612493827.eu-west-3.elb.amazonaws.com:8200/v1/sys/storage/raft/configuration | jq
 
-# COMMON
+# Usage:
+# hack/mult-dc-raft.sh install $HOME/Downloads/bv-paris.yaml $HOME/Downloads/bv-stockholm.yaml $HOME/Downloads/bv-ireland.yaml
 
 if [ $# = 0 ]; then
     echo "The Bank-Vaults Multi DC CLI"

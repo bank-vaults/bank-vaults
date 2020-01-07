@@ -1,7 +1,7 @@
 apiVersion: "vault.banzaicloud.com/v1alpha1"
 kind: "Vault"
 metadata:
-  name: "vault-teritiary"
+  name: "vault-secondary"
 spec:
   size: 1
   image: vault:1.3.0
@@ -37,18 +37,12 @@ spec:
 
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
-    options:
-      # The preFlightChecks flag enables unseal and root token storage tests
-      # This is true by default
-      preFlightChecks: true
-    # kubernetes:
-    #   secretNamespace: default
     aws:
-      kmsKeyId: "9f054126-2a98-470c-9f10-9b3b0cad94a1"
-      kmsRegion: "eu-west-1"
-      s3Bucket: "bank-vaults"
-      s3Prefix: "raft-"
-      s3Region: "eu-west-1"
+      kmsRegion: "eu-central-1,eu-west-1"
+      kmsKeyId: "02a2ba49-42ce-487f-b006-34c64f4b760e,9f054126-2a98-470c-9f10-9b3b0cad94a"
+      s3Region: "eu-central-1,eu-west-1"
+      s3Bucket: "bank-vaults-0,bank-vaults-1"
+      s3Prefix: "raft-" 
   
   raftLeaderAddress: {{.RAFT_LEADER_ADDRESS}}
 
@@ -63,7 +57,7 @@ spec:
         address: "0.0.0.0:8200"
         tls_cert_file: /vault/tls/server.crt
         tls_key_file: /vault/tls/server.key
-    api_addr: https://vault-teritiary.default:8200
+    api_addr: https://vault-secondary.default:8200
     # cluster_addr: "https://${.Env.POD_NAME}:8201"
     telemetry:
       statsd_address: localhost:9125

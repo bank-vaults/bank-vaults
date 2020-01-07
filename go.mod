@@ -2,6 +2,7 @@ module github.com/banzaicloud/bank-vaults
 
 require (
 	cloud.google.com/go v0.43.0
+	emperror.dev/errors v0.4.3
 	github.com/Azure/azure-sdk-for-go v23.2.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.9.2
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.1
