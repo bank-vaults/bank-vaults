@@ -43,4 +43,12 @@ type VaultConfig struct {
 	ConfigfilePath              string
 	MutateConfigMap             bool
 	EnableJSONLog               string
+	VaConfigMap                 string
+	VaImage                     string
+	VaOnce                      bool
+	VaImagePullPolicy           corev1.PullPolicy
+	VaShareProcess              bool
+	VaShareProcessDefault       string
+	VaCPU                       resource.Quantity
+	VaMemory                    resource.Quantity
 }
