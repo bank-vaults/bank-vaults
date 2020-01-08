@@ -30,6 +30,7 @@ func New(services []kv.Service) kv.Service {
 }
 
 func (f *multi) Set(key string, val []byte) error {
+	logrus.Infof("setting key %q in all %d key/value Services", key, len(f.services))
 	for _, service := range f.services {
 		err := service.Set(key, val)
 		if err != nil {
