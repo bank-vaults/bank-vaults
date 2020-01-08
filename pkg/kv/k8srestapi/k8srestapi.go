@@ -114,7 +114,7 @@ func (k *k8srestapiStore) encrypt(plainText []byte) ([]byte, error) {
 	return ([]byte(ep.EncryptedB64)), nil
 }
 
-func (k *k8srestapiStore) decrypt(cipherText []byte) []byte {
+func (k *k8srestapiStore) decrypt(cipherText []byte) ([]byte, error) {
 
 	var pp plaintext_payload
 	jsonData := &encrypted_payload{
@@ -132,17 +132,14 @@ func (k *k8srestapiStore) decrypt(cipherText []byte) []byte {
 		plainTextTemp, _ := ioutil.ReadAll(response.Body)
 		err := json.Unmarshal(plainTextTemp, &pp)
 		if err != nil {
-			fmt.Println(err)
+			return nil, err
 		}
 	}
 	decoded, err := base64.StdEncoding.DecodeString(pp.PlaintextB64)
 	if err != nil {
-		if _, ok := err.(base64.CorruptInputError); ok {
-			panic("\nbase64 input is corrupt, check input encoded value")
-		}
-		panic(err)
+		return nil, err
 	}
-	return decoded
+	return decoded, nil
 }
 
 func (k *k8srestapiStore) Set(key string, val []byte) error {
@@ -197,6 +194,9 @@ func (k *k8srestapiStore) Get(key string) ([]byte, error) {
 		return nil, kv.NewNotFoundError("key '%s' is not present in secret: %s", key, secret.GetName())
 	}
 
-	plainText := k.decrypt(val)
+	plainText, err := k.decrypt(val)
+	if err != nil {
+		return nil, fmt.Errorf("Decrytion Method returned error: '%s'", err.Error())
+	}
 	return plainText, nil
 }
