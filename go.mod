@@ -1,7 +1,5 @@
 module github.com/banzaicloud/bank-vaults
 
-go 1.12
-
 require (
 	cloud.google.com/go v0.43.0
 	github.com/Azure/azure-sdk-for-go v23.2.0+incompatible
@@ -14,7 +12,7 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190308093441-53f19b3c6bee
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20171213061034-52de7239022c
 	github.com/aokoli/goutils v1.0.1 // indirect
-	github.com/aws/aws-sdk-go v1.15.31
+	github.com/aws/aws-sdk-go v1.27.2
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/banzaicloud/bank-vaults/pkg/sdk v0.0.0-00010101000000-000000000000
 	github.com/banzaicloud/k8s-objectmatcher v1.0.1-0.20190813150246-386389f72468
@@ -36,7 +34,6 @@ require (
 	github.com/heroku/docker-registry-client v0.0.0-20181004091502-47ecf50fd8d4
 	github.com/huandu/xstrings v1.2.1 // indirect
 	github.com/imdario/mergo v0.3.7
-	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/jpillora/backoff v0.0.0-20180909062703-3050d21c67d7
 	github.com/mattn/go-isatty v0.0.8 // indirect
 	github.com/opencontainers/image-spec v1.0.1
@@ -76,3 +73,5 @@ replace (
 	golang.org/x/oauth2 => golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
 	k8s.io/client-go => k8s.io/client-go v0.0.0-20190918160344-1fbdaa4c8d90
 )
+
+go 1.13
