@@ -4,7 +4,7 @@ metadata:
   name: "vault-primary"
 spec:
   size: 1
-  image: vault:1.3.0
+  image: vault:1.3.1
   bankVaultsImage: banzaicloud/bank-vaults:multi-dc
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
@@ -116,15 +116,14 @@ spec:
     - name: VAULT_STORAGE_FILE
       value: "/vault/file"
 
-  # # k create secret generic aws --from-literal=AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --from-literal=AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-  # envsConfig:
-  #   - name: AWS_ACCESS_KEY_ID
-  #     valueFrom:
-  #         secretKeyRef:
-  #           name: aws
-  #           key: AWS_ACCESS_KEY_ID
-  #   - name: AWS_SECRET_ACCESS_KEY
-  #     valueFrom:
-  #         secretKeyRef:
-  #           name: aws
-  #           key: AWS_SECRET_ACCESS_KEY
+  envsConfig:
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+          secretKeyRef:
+            name: aws
+            key: AWS_ACCESS_KEY_ID
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+          secretKeyRef:
+            name: aws
+            key: AWS_SECRET_ACCESS_KEY
