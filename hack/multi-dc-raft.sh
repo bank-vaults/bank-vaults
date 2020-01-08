@@ -2,9 +2,13 @@
 
 set -euo pipefail
 
-# kubectl
-# https://github.com/arschles/envtpl
-# jq
+# REQUIREMENTS:
+# - kubectl
+# - helm3
+# - https://github.com/arschles/envtpl
+# - jq
+#
+# - 3 Kubernetes clusters
 
 # GET the root token:
 # aws s3api get-object --bucket bank-vaults --key raft-vault-root raft-vault-root
@@ -14,7 +18,7 @@ set -euo pipefail
 # curl -H "X-Vault-Token: $VAULT_TOKEN" -v -k https://a81d3cae9150211ea9ca606a2178004f-612493827.eu-west-3.elb.amazonaws.com:8200/v1/sys/storage/raft/configuration | jq
 
 # Usage:
-# hack/mult-dc-raft.sh install $HOME/Downloads/bv-paris.yaml $HOME/Downloads/bv-stockholm.yaml $HOME/Downloads/bv-ireland.yaml
+# hack/mult-dc-raft.sh install primary-kubeconfig.yaml secondary-kubeconfig.yaml teritiary-kubeconfig.yaml
 
 if [ $# = 0 ]; then
     echo "The Bank-Vaults Multi DC CLI"
@@ -30,10 +34,6 @@ if [ $# = 0 ]; then
 fi
 
 COMMAND=$1
-
-PRIMARY_REGION=eu-west-3
-SECONDARY_REGION=eu-north-1
-TERITIARY_REGION=eu-west-1
 
 function waitfor {
     WAIT_MAX=0
@@ -60,6 +60,10 @@ if [ $COMMAND = "install" ]; then
             --from-literal=AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
     }
 
+    function get_region {
+        kubectl get nodes -o json | jq -r '.items[0].metadata.labels["failure-domain.beta.kubernetes.io/region"]'
+    }
+
     function fix_elb_healthcheck {
         local INSTANCE=$1
         local REGION=$2
@@ -75,13 +79,17 @@ if [ $COMMAND = "install" ]; then
     function install_instance {
         local INSTANCE=$1
         local KUBECONFIG=$2
-        local REGION=$3
 
         export KUBECONFIG=$KUBECONFIG
 
+        local REGION=$(get_region)
+
+        helm upgrade --install vault-operator banzaicloud-stable/vault-operator --set image.tag=multi-dc --wait
+
         create_aws_secret
 
-        cat operator/deploy/cr-${INSTANCE}.yaml | envtpl | kubectl apply -f -
+        kubectl apply -f operator/deploy/rbac.yaml
+        cat operator/deploy/multi-dc/cr-${INSTANCE}.yaml | envtpl | kubectl apply -f -
 
         echo "Waiting for for ${INSTANCE} vault instance..."
         waitfor waitfor kubectl get pod/vault-${INSTANCE}-0
@@ -93,7 +101,7 @@ if [ $COMMAND = "install" ]; then
 
     ## Primary
 
-    install_instance primary $PRIMARY_KUBECONFIG $PRIMARY_REGION
+    install_instance primary $PRIMARY_KUBECONFIG
 
     export RAFT_LEADER_ADDRESS=$ELB_DNS
 
@@ -101,11 +109,11 @@ if [ $COMMAND = "install" ]; then
 
     ## Secondary
 
-    install_instance secondary $SECONDARY_KUBECONFIG $SECONDARY_REGION
+    install_instance secondary $SECONDARY_KUBECONFIG
 
     ## Teritiary
 
-    install_instance teritiary $TERITIARY_KUBECONFIG $TERITIARY_REGION
+    install_instance teritiary $TERITIARY_KUBECONFIG
 
     ## Cleanup
 
@@ -116,7 +124,7 @@ elif [ $COMMAND = "status" ]; then
     PRIMARY_KUBECONFIG=$2
     KUBECONFIG=$PRIMARY_KUBECONFIG
 
-    aws s3api get-object --bucket bank-vaults --key raft-vault-root raft-vault-root > /dev/null
+    aws s3api get-object --bucket bank-vaults-0 --key raft-vault-root raft-vault-root > /dev/null
     export VAULT_TOKEN=$(aws kms decrypt --ciphertext-blob fileb://raft-vault-root --query Plaintext --output text --encryption-context Tool=bank-vaults | base64 -D)
     rm raft-vault-root
 
@@ -135,7 +143,7 @@ elif [ $COMMAND = "remove" ]; then
     function delete_instance {
         local KUBECONFIG=$1
         export KUBECONFIG=$KUBECONFIG
-        kubectl delete vault --all
+        helm delete vault-operator
         kubectl delete pvc --all
         kubectl delete secret aws
     }
@@ -144,7 +152,8 @@ elif [ $COMMAND = "remove" ]; then
     delete_instance $SECONDARY_KUBECONFIG
     delete_instance $TERITIARY_KUBECONFIG
 
-    aws s3 rm s3://bank-vaults --recursive
+    aws s3 rm s3://bank-vaults-0 --recursive
+    aws s3 rm s3://bank-vaults-1 --recursive
 
 else
 
