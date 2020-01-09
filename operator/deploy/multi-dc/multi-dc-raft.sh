@@ -105,7 +105,7 @@ if [ $COMMAND = "install" ]; then
 
     export RAFT_LEADER_ADDRESS=$ELB_DNS
 
-    kubectl get secrets vault-primary-tls -o json | jq 'del(.metadata.ownerReferences)' | jq 'del(.metadata.resourceVersion)' | jq 'del(.metadata.uid)' > vault-primary-tls.json
+    KUBECONFIG=$PRIMARY_KUBECONFIG kubectl get secrets vault-primary-tls -o json | jq 'del(.metadata.ownerReferences)' | jq 'del(.metadata.resourceVersion)' | jq 'del(.metadata.uid)' > vault-primary-tls.json
 
     ## Secondary
 
