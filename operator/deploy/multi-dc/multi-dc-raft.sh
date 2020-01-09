@@ -21,7 +21,7 @@ set -euo pipefail
 # ./mult-dc-raft.sh install primary-kubeconfig.yaml secondary-kubeconfig.yaml teritiary-kubeconfig.yaml
 
 if [ $# = 0 ]; then
-    echo "The Bank-Vaults Multi DC CLI"
+    echo "The Bank-Vaults Multi-DC CLI"
     echo
     echo "Usage:"
     echo "  $0 [command]"
@@ -109,15 +109,21 @@ if [ $COMMAND = "install" ]; then
 
     ## Secondary
 
+    KUBECONFIG=$SECONDARY_KUBECONFIG kubectl apply -f vault-primary-tls.json
+
     install_instance secondary $SECONDARY_KUBECONFIG
 
     ## Teritiary
+
+    KUBECONFIG=$TERITIARY_KUBECONFIG kubectl apply -f vault-primary-tls.json
 
     install_instance teritiary $TERITIARY_KUBECONFIG
 
     ## Cleanup
 
     rm vault-primary-tls.json
+
+    echo -e "\nMulti-DC Vault cluster setup completed."
 
 elif [ $COMMAND = "status" ]; then
 
