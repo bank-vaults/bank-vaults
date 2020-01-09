@@ -18,7 +18,7 @@ set -euo pipefail
 # curl -H "X-Vault-Token: $VAULT_TOKEN" -v -k https://a81d3cae9150211ea9ca606a2178004f-612493827.eu-west-3.elb.amazonaws.com:8200/v1/sys/storage/raft/configuration | jq
 
 # Usage:
-# ./mult-dc-raft.sh install primary-kubeconfig.yaml secondary-kubeconfig.yaml teritiary-kubeconfig.yaml
+# ./mult-dc-raft.sh install primary-kubeconfig.yaml secondary-kubeconfig.yaml tertiary-kubeconfig.yaml
 
 if [ $# = 0 ]; then
     echo "The Bank-Vaults Multi-DC CLI"
@@ -56,7 +56,7 @@ if [ $COMMAND = "install" ]; then
 
     PRIMARY_KUBECONFIG=$2
     SECONDARY_KUBECONFIG=$3
-    TERITIARY_KUBECONFIG=$4
+    TERTIARY_KUBECONFIG=$4
 
     function create_aws_secret {
         kubectl get secret aws 2> /dev/null || kubectl create secret generic aws \
@@ -113,11 +113,11 @@ if [ $COMMAND = "install" ]; then
 
     install_instance secondary $SECONDARY_KUBECONFIG
 
-    ## Teritiary
+    ## Tertiary
 
-    KUBECONFIG=$TERITIARY_KUBECONFIG kubectl apply -f vault-primary-tls.json
+    KUBECONFIG=$TERTIARY_KUBECONFIG kubectl apply -f vault-primary-tls.json
 
-    install_instance teritiary $TERITIARY_KUBECONFIG
+    install_instance tertiary $TERTIARY_KUBECONFIG
 
     ## Cleanup
 
@@ -147,7 +147,7 @@ elif [ $COMMAND = "remove" ]; then
 
     PRIMARY_KUBECONFIG=$2
     SECONDARY_KUBECONFIG=$3
-    TERITIARY_KUBECONFIG=$4
+    TERTIARY_KUBECONFIG=$4
 
     function delete_instance {
         local KUBECONFIG=$1
@@ -159,7 +159,7 @@ elif [ $COMMAND = "remove" ]; then
 
     delete_instance $PRIMARY_KUBECONFIG
     delete_instance $SECONDARY_KUBECONFIG
-    delete_instance $TERITIARY_KUBECONFIG
+    delete_instance $TERTIARY_KUBECONFIG
 
     aws s3 rm s3://bank-vaults-0 --recursive
     aws s3 rm s3://bank-vaults-1 --recursive
