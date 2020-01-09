@@ -18,7 +18,7 @@ set -euo pipefail
 # curl -H "X-Vault-Token: $VAULT_TOKEN" -v -k https://a81d3cae9150211ea9ca606a2178004f-612493827.eu-west-3.elb.amazonaws.com:8200/v1/sys/storage/raft/configuration | jq
 
 # Usage:
-# hack/mult-dc-raft.sh install primary-kubeconfig.yaml secondary-kubeconfig.yaml teritiary-kubeconfig.yaml
+# ./mult-dc-raft.sh install primary-kubeconfig.yaml secondary-kubeconfig.yaml teritiary-kubeconfig.yaml
 
 if [ $# = 0 ]; then
     echo "The Bank-Vaults Multi DC CLI"
