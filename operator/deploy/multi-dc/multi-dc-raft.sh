@@ -48,6 +48,10 @@ function get_elb_dns {
     kubectl get service $INSTANCE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
 }
 
+function get_region {
+    kubectl get nodes -o json | jq -r '.items[0].metadata.labels["failure-domain.beta.kubernetes.io/region"]'
+}
+
 if [ $COMMAND = "install" ]; then
 
     PRIMARY_KUBECONFIG=$2
@@ -58,10 +62,6 @@ if [ $COMMAND = "install" ]; then
         kubectl get secret aws 2> /dev/null || kubectl create secret generic aws \
             --from-literal=AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
             --from-literal=AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-    }
-
-    function get_region {
-        kubectl get nodes -o json | jq -r '.items[0].metadata.labels["failure-domain.beta.kubernetes.io/region"]'
     }
 
     function fix_elb_healthcheck {
@@ -128,10 +128,13 @@ if [ $COMMAND = "install" ]; then
 elif [ $COMMAND = "status" ]; then
 
     PRIMARY_KUBECONFIG=$2
-    KUBECONFIG=$PRIMARY_KUBECONFIG
+    export KUBECONFIG=$PRIMARY_KUBECONFIG
+
+    REGION=$(get_region)
 
     aws s3api get-object --bucket bank-vaults-0 --key raft-vault-root raft-vault-root > /dev/null
-    export VAULT_TOKEN=$(aws kms decrypt --ciphertext-blob fileb://raft-vault-root --query Plaintext --output text --encryption-context Tool=bank-vaults | base64 -D)
+    export VAULT_TOKEN=$(aws --region $REGION kms decrypt --ciphertext-blob fileb://raft-vault-root --query Plaintext --output text --encryption-context Tool=bank-vaults | base64 -D)
+    
     rm raft-vault-root
 
     export VAULT_SKIP_VERIFY="true"
