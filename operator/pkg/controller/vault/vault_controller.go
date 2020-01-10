@@ -706,10 +706,6 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "statsd", Port: 9102})
 	service := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        v.Name,
 			Namespace:   v.Namespace,
@@ -717,10 +713,13 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 			Labels:      withVaultLabels(v, ls),
 		},
 		Spec: corev1.ServiceSpec{
-			Type:                     serviceType(v),
-			Selector:                 selectorLs,
-			Ports:                    servicePorts,
-			PublishNotReadyAddresses: true,
+			Type:     serviceType(v),
+			Selector: selectorLs,
+			Ports:    servicePorts,
+			// In case of multi-cluster deployments we need to publish the port
+			// before being considered ready, otherwise the LoadBalancer won't
+			// be able to direct traffic from the leader to the joining instance.
+			PublishNotReadyAddresses: v.Spec.RaftLeaderAddress != "",
 		},
 	}
 	return service
