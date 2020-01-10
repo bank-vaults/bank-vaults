@@ -1520,6 +1520,7 @@ func withCredentialsEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.E
 	return envs
 }
 
+// withClusterAddr overrides cluster_addr with the env var in multi-cluster deployments
 func withClusterAddr(v *vaultv1alpha1.Vault, service *corev1.Service, envs []corev1.EnvVar) []corev1.EnvVar {
 	value := ""
 
@@ -1532,15 +1533,16 @@ func withClusterAddr(v *vaultv1alpha1.Vault, service *corev1.Service, envs []cor
 		}
 	}
 
-	envs = append(envs, corev1.EnvVar{
-		Name:  "VAULT_CLUSTER_ADDR",
-		Value: "https://" + value + ":8201",
-	})
-
-	// envs = append(envs, corev1.EnvVar{
-	// 	Name:  "VAULT_API_ADDR",
-	// 	Value: "https://" + value + ":8200",
-	// })
+	if value != "" {
+		envs = append(envs, corev1.EnvVar{
+			Name:  "VAULT_CLUSTER_ADDR",
+			Value: "https://" + value + ":8201",
+		})
+		// envs = append(envs, corev1.EnvVar{
+		// 	Name:  "VAULT_API_ADDR",
+		// 	Value: "https://" + value + ":8200",
+		// })
+	}
 
 	return envs
 }
