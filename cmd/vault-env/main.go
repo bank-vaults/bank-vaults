@@ -160,7 +160,7 @@ func main() {
 		value := split[1]
 
 		var update bool
-		if strings.HasPrefix(value, ">>") {
+		if strings.HasPrefix(value, ">>vault:") {
 			value = strings.TrimPrefix(value, ">>")
 			update = true
 		} else {
