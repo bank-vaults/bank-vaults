@@ -369,7 +369,8 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 			logger.Infof("trying to request AWS credentials for ECR registry %s", k.RegistryAddress)
 
 			var data string
-			cachedToken, usingCache := credentialsCache.Get(ecrCredentialsKey + k.RegistryAddress)
+			cacheKey := ecrCredentialsKey + k.RegistryAddress
+			cachedToken, usingCache := credentialsCache.Get(cacheKey)
 			if usingCache {
 				data = cachedToken.(string)
 				logger.Infof("Using cached AWS ECR Token for registry %s", k.RegistryAddress)
@@ -401,7 +402,7 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 				}
 
 				expiration := authData.ExpiresAt.Sub(time.Now().Add(5 * time.Minute))
-				credentialsCache.Set(ecrCredentialsKey + k.RegistryAddress, data, expiration)
+				credentialsCache.Set(cacheKey, data, expiration)
 				logger.Infof("Caching ECR token with expiration in %+v", expiration)
 			}
 
