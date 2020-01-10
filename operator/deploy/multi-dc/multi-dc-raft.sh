@@ -7,6 +7,7 @@ set -euo pipefail
 # - helm3
 # - https://github.com/arschles/envtpl
 # - jq
+# - aws
 #
 # - 3 Kubernetes clusters
 
@@ -14,11 +15,14 @@ set -euo pipefail
 # aws s3api get-object --bucket bank-vaults --key raft-vault-root raft-vault-root
 # aws kms decrypt --ciphertext-blob fileb://raft-vault-root --query Plaintext --output text --encryption-context Tool=bank-vaults | base64 -D
 
-# Check the Raft leader:
-# curl -H "X-Vault-Token: $VAULT_TOKEN" -v -k https://a81d3cae9150211ea9ca606a2178004f-612493827.eu-west-3.elb.amazonaws.com:8200/v1/sys/storage/raft/configuration | jq
-
-# Usage:
+# Install:
 # ./mult-dc-raft.sh install primary-kubeconfig.yaml secondary-kubeconfig.yaml tertiary-kubeconfig.yaml
+
+# Check the Raft leader:
+# ./mult-dc-raft.sh status primary-kubeconfig.yaml
+
+# Remove
+# ./mult-dc-raft.sh remove primary-kubeconfig.yaml secondary-kubeconfig.yaml tertiary-kubeconfig.yaml
 
 if [ $# = 0 ]; then
     echo "The Bank-Vaults Multi-DC CLI"
@@ -28,7 +32,7 @@ if [ $# = 0 ]; then
     echo
     echo "Available Commands:"
     echo "  install    Installs a Vault cluster to one or more Kubernetes clusters"
-    echo "  delete     Removes a Vault cluster from one or more Kubernetes clusters"
+    echo "  remove     Removes a Vault cluster from one or more Kubernetes clusters"
     echo "  status     Displays the status a cluster to one or more Kubernetes clusters"
     exit 0
 fi
