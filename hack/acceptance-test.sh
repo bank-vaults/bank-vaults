@@ -64,6 +64,7 @@ kubectl delete -f operator/deploy/cr-etcd-ha.yaml
 kubectl delete secret vault-unseal-keys
 kubectl wait --for=delete pod/vault-0 --timeout=120s || true
 kubectl wait --for=delete pod/vault-1 --timeout=120s || true
+kubectl delete pvc --all # persitentVolumeClaims has to be cleared
 
 # Second test: test the external secrets watcher work and match as expected
 kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
@@ -90,6 +91,15 @@ kubectl apply -f operator/deploy/priorityclass.yaml
 kubectl apply -f operator/deploy/cr-priority.yaml
 waitfor kubectl get pod/vault-0
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
+
+# Fourth test: Raft HA setup
+kubectl apply -f operator/deploy/cr-raft.yaml
+waitfor kubectl get pod/vault-2
+kubectl wait --for=condition=ready pod/vault-2 --timeout=120s
+kubectl delete -f operator/deploy/cr-raft.yaml
+kubectl wait --for=delete pod/vault-0 --timeout=120s || true
+kubectl wait --for=delete pod/vault-1 --timeout=120s || true
+kubectl wait --for=delete pod/vault-2 --timeout=120s || true
 
 # Run a client test
 
