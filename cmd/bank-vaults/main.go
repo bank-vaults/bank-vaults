@@ -1,4 +1,4 @@
-// Copyright © 2018 Banzai Cloud
+// Copyright © 2020 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -101,6 +101,11 @@ func configStringVar(key, defaultValue, description string) {
 	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key))
 }
 
+func configStringSliceVar(key string, defaultValue []string, description string) {
+	rootCmd.PersistentFlags().StringSlice(key, defaultValue, description)
+	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key))
+}
+
 func init() {
 	appConfig = viper.New()
 	appConfig.SetEnvPrefix("bank_vaults")
@@ -147,13 +152,13 @@ func init() {
 	configStringVar(cfgGoogleCloudStoragePrefix, "", "The prefix to use for values store in Google Cloud Storage")
 
 	// AWS KMS flags
-	configStringVar(cfgAWSKMSRegion, "", "The region of the AWS KMS key to encrypt values")
-	configStringVar(cfgAWSKMSKeyID, "", "The ID or ARN of the AWS KMS key to encrypt values")
+	configStringSliceVar(cfgAWSKMSRegion, nil, "The region of the AWS KMS key to encrypt values")
+	configStringSliceVar(cfgAWSKMSKeyID, nil, "The ID or ARN of the AWS KMS key to encrypt values")
 
 	// AWS S3 Object Storage flags
-	configStringVar(cfgAWSS3Bucket, "", "The name of the AWS S3 bucket to store values in")
+	configStringSliceVar(cfgAWSS3Region, []string{"us-east-1"}, "The region to use for storing values in AWS S3")
+	configStringSliceVar(cfgAWSS3Bucket, nil, "The name of the AWS S3 bucket to store values in")
 	configStringVar(cfgAWSS3Prefix, "", "The prefix to use for storing values in AWS S3")
-	configStringVar(cfgAWSS3Region, "us-east-1", "The region to use for storing values in AWS S3")
 
 	// Azure Key Vault flags
 	configStringVar(cfgAzureKeyVaultName, "", "The name of the Azure Key Vault to encrypt and store values in")
