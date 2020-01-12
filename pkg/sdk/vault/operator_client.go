@@ -367,9 +367,14 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 		return nil
 	}
 
-	leaderCACert, err := ioutil.ReadFile(os.Getenv(api.EnvVaultCACert))
+	raftCacertFile := os.Getenv("VAULT_RAFT_CACERT")
+	if raftCacertFile == "" {
+		raftCacertFile = os.Getenv(api.EnvVaultCACert)
+	}
+
+	leaderCACert, err := ioutil.ReadFile(raftCacertFile)
 	if err != nil {
-		return fmt.Errorf("error reading vault CA certificate: %s", err.Error())
+		return fmt.Errorf("error reading vault raft CA certificate: %s", err.Error())
 	}
 
 	request := api.RaftJoinRequest{
