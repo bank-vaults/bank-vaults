@@ -87,21 +87,24 @@ func hasPodSecurityContextRunAsUser(p *corev1.PodSecurityContext) bool {
 	return true
 }
 
+func getServiceAccountMount(containers []corev1.Container) (serviceAccountMount corev1.VolumeMount) {
+mountSearch:
+	for _, container := range containers {
+		for _, mount := range container.VolumeMounts {
+			if mount.MountPath == "/var/run/secrets/kubernetes.io/serviceaccount" {
+				serviceAccountMount = mount
+				break mountSearch
+			}
+		}
+	}
+	return serviceAccountMount
+}
+
 func getInitContainers(originalContainers []corev1.Container, podSecurityContext *corev1.PodSecurityContext, vaultConfig internal.VaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	var containers = []corev1.Container{}
 
 	if vaultConfig.UseAgent || vaultConfig.CtConfigMap != "" {
-		var serviceAccountMount corev1.VolumeMount
-
-	mountSearch:
-		for _, container := range originalContainers {
-			for _, mount := range container.VolumeMounts {
-				if mount.MountPath == "/var/run/secrets/kubernetes.io/serviceaccount" {
-					serviceAccountMount = mount
-					break mountSearch
-				}
-			}
-		}
+		serviceAccountMount := getServiceAccountMount(originalContainers)
 
 		containerVolMounts = append(containerVolMounts, serviceAccountMount, corev1.VolumeMount{
 			Name:      "vault-agent-config",
@@ -237,16 +240,7 @@ func getVaContainers(originalContainers []corev1.Container, vaultConfig internal
 		}
 	}
 
-	var serviceAccountMount corev1.VolumeMount
-mountSearch:
-	for _, container := range originalContainers {
-		for _, mount := range container.VolumeMounts {
-			if mount.MountPath == "/var/run/secrets/kubernetes.io/serviceaccount" {
-				serviceAccountMount = mount
-				break mountSearch
-			}
-		}
-	}
+	serviceAccountMount := getServiceAccountMount(originalContainers)
 
 	containerVolMounts = append(containerVolMounts, serviceAccountMount, corev1.VolumeMount{
 		Name:      "va-secrets",

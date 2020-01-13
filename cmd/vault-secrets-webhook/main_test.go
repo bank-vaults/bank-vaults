@@ -345,6 +345,11 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								Image:   "myimage",
 								Command: []string{"/bin/bash"},
 								Args:    nil,
+								VolumeMounts: []corev1.VolumeMount{
+									corev1.VolumeMount{
+										MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+									},
+								},
 							},
 						},
 					},
@@ -388,7 +393,9 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									Name:      "vault-env",
 									MountPath: "/vault/",
 								},
-								corev1.VolumeMount{},
+								corev1.VolumeMount{
+									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+								},
 								corev1.VolumeMount{
 									Name:      "vault-agent-config",
 									MountPath: "/vault/agent/",
@@ -446,6 +453,9 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 							Command: []string{"/bin/bash"},
 							Args:    nil,
 							VolumeMounts: []corev1.VolumeMount{
+								corev1.VolumeMount{
+									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+								},
 								corev1.VolumeMount{
 									Name:      "ct-secrets",
 									MountPath: "/vault/secrets",
@@ -518,6 +528,11 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								Image:   "myimage",
 								Command: []string{"/bin/bash"},
 								Args:    nil,
+								VolumeMounts: []corev1.VolumeMount{
+									corev1.VolumeMount{
+										MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+									},
+								},
 							},
 						},
 					},
@@ -567,7 +582,9 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									Name:      "vault-env",
 									MountPath: "/vault/",
 								},
-								corev1.VolumeMount{}, // ServiceAccountMount
+								corev1.VolumeMount{
+									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+								},
 								corev1.VolumeMount{
 									Name:      "va-secrets",
 									MountPath: "/vault/secrets",
@@ -586,6 +603,9 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 							Command: []string{"/bin/bash"},
 							Args:    nil,
 							VolumeMounts: []corev1.VolumeMount{
+								corev1.VolumeMount{
+									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+								},
 								corev1.VolumeMount{
 									Name:      "va-secrets",
 									MountPath: "/vault/secrets",
