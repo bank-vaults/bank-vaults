@@ -424,13 +424,13 @@ func parseVaultConfig(obj metav1.Object) internal.VaultConfig {
 		vaultConfig.CtOnce = false
 	}
 
-	if val, err := resource.ParseQuantity(annotations["vault.security.banzaicloud.io/vault-ct-cpu"]); err != nil {
+	if val, err := resource.ParseQuantity(annotations["vault.security.banzaicloud.io/vault-ct-cpu"]); err == nil {
 		vaultConfig.CtCPU = val
 	} else {
 		vaultConfig.CtCPU = resource.MustParse("100m")
 	}
 
-	if val, err := resource.ParseQuantity(annotations["vault.security.banzaicloud.io/vault-ct-memory"]); err != nil {
+	if val, err := resource.ParseQuantity(annotations["vault.security.banzaicloud.io/vault-ct-memory"]); err == nil {
 		vaultConfig.CtMemory = val
 	} else {
 		vaultConfig.CtMemory = resource.MustParse("128Mi")
