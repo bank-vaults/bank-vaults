@@ -36,6 +36,7 @@ const cfgModeValueAzureKeyVault = "azure-key-vault"
 const cfgModeValueAlibabaKMSOSS = "alibaba-kms-oss"
 const cfgModeValueVault = "vault"
 const cfgModeValueK8S = "k8s"
+const cfgModeValueHSMK8S = "hsm-k8s"
 const cfgModeValueDev = "dev"
 const cfgModeValueFile = "file"
 
@@ -74,6 +75,10 @@ const cfgVaultToken = "vault-token"
 const cfgK8SNamespace = "k8s-secret-namespace"
 const cfgK8SSecret = "k8s-secret-name"
 const cfgK8SLabels = "k8s-secret-labels"
+
+const cfgHSMSlotID = "hsm-slot-id"
+const cfgHSMPin = "hsm-pin"
+const cfgHSMKeyLabel = "hsm-key-label"
 
 const cfgFilePath = "file-path"
 
@@ -134,6 +139,7 @@ func init() {
 						'%s' => Alibaba OSS with KMS encryption;
 						'%s' => Remote Vault;
 						'%s' => Kubernetes Secrets;
+						'%s' => Kubernetes Secrets encrypted with HSM;
 						'%s' => Dev (vault server -dev) mode
 						'%s' => File mode`,
 			cfgModeValueGoogleCloudKMSGCS,
@@ -142,6 +148,7 @@ func init() {
 			cfgModeValueAlibabaKMSOSS,
 			cfgModeValueVault,
 			cfgModeValueK8S,
+			cfgModeValueHSMK8S,
 			cfgModeValueDev,
 			cfgModeValueFile,
 		),
@@ -198,6 +205,11 @@ func init() {
 	configStringVar(cfgK8SNamespace, "", "The namespace of the K8S Secret to store values in")
 	configStringVar(cfgK8SSecret, "", "The name of the K8S Secret to store values in")
 	configStringMapVar(cfgK8SLabels, &k8sSecretLabels, "The labels of the K8S Secret to store values in")
+
+	// HSM flags
+	configIntVar(cfgHSMSlotID, 0, "The ID of the HSM slot")
+	configStringVar(cfgHSMPin, "", "The pin of the HSM token to login with")
+	configStringVar(cfgHSMKeyLabel, "bank-vaults", "The label of the HSM private key")
 
 	// File flags
 	configStringVar(cfgFilePath, "", "The path prefix of the files where to store values in")

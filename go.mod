@@ -36,9 +36,11 @@ require (
 	github.com/imdario/mergo v0.3.7
 	github.com/jpillora/backoff v0.0.0-20180909062703-3050d21c67d7
 	github.com/mattn/go-isatty v0.0.8 // indirect
+	github.com/miekg/pkcs11 v1.0.3
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pierrec/lz4 v2.2.5+incompatible // indirect
+	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/common v0.6.0 // indirect
 	github.com/prometheus/procfs v0.0.3 // indirect

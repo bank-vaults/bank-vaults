@@ -28,6 +28,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv/file"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/gckms"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/gcs"
+	"github.com/banzaicloud/bank-vaults/pkg/kv/hsm"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/multi"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/s3"
@@ -194,6 +195,29 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		}
 
 		return k8s, nil
+
+	// BANK_VAULTS_HSM_PIN=secret bank-vaults unseal --init --mode hsm-k8s --k8s-secret-name hsm --k8s-secret-namespace default --hsm-slot-id 1234541666
+	case cfgModeValueHSMK8S:
+		k8s, err := k8s.New(
+			cfg.GetString(cfgK8SNamespace),
+			cfg.GetString(cfgK8SSecret),
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("error creating K8S Secret with with kv store: %s", err.Error())
+		}
+
+		slotID := cfg.GetUint(cfgHSMSlotID)
+		pin := cfg.GetString(cfgHSMPin)
+		keyLabel := cfg.GetString(cfgHSMKeyLabel)
+
+		hsm, err := hsm.NewHSM(hsm.HSMConfig{SlotID: slotID, Pin: pin, KeyLabel: keyLabel}, k8s)
+
+		if err != nil {
+			return nil, fmt.Errorf("error creating HSM kv store: %s", err.Error())
+		}
+
+		return hsm, nil
 
 	case cfgModeValueDev:
 		dev, err := dev.New()
