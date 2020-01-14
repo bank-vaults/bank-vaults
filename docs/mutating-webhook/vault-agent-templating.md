@@ -18,7 +18,7 @@ This document assumes you have a working Kuberentes cluster which has a:
 
 ## Pre Configuration
 ### ShareProcessNamespace
-As of Kubernetes 1.10 you can [share](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) the process list of all containers in a pod, please check your Kuberentes API server FeatureGates configuration to find if it is on or not, it is default on in 1.12. The webhook will disable it by default in any version less than 1.12 and enable it by default for version 1.12 and above. You can override this confirguration using the `vault.security.banzaicloud.io/vault-va-share-process-namespace` annotation or webhook `vault_va_share_process_namespace` environment variable.
+As of Kubernetes 1.10 you can [share](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) the process list of all containers in a pod, please check your Kuberentes API server FeatureGates configuration to find if it is on or not, it is default on in 1.12. The webhook will disable it by default in any version less than 1.12 and enable it by default for version 1.12 and above. You can override this confirguration using the `vault.security.banzaicloud.io/vault-agent-share-process-namespace` annotation or webhook `vault_agent_share_process_namespace` environment variable.
 
 If you wish to use Vault TTLs you need a way that you can HUP your application on configuration file change, Vault Agent can be [configured](https://www.vaultproject.io/docs/agent/template/index.html) with a `command` attribute which it will run when it writes a new configuration file. You can find a basic example below which uses/requires the ShareProcessNamespace feature and the Kubernetes Auth:
 
@@ -70,23 +70,22 @@ There are two places to configure the Webhook, you can set some sane defaults in
 ### Defaults via environment variables:
 |Variable      |default     |Explanation|
 |--------------|------------|------------|
-|VAULT_VA_IMAGE|vault:latest| the vault image to use for the sidecar container|
+|VAULT_IMAGE|vault:latest| the vault image to use for the sidecar container|
+|VAULT_IMAGE_PULL_POLICY|IfNotPresent| The pull policy for the vault agent container|
 |VAULT_ADDR    |https://127.0.0.1:8200|Kubernetes service Vault endpoint URL|
 |VAULT_TLS_SECRET|""|supply a secret with the vault TLS CA so TLS can be verified|
-|VAULT_VA_SHARE_PROCESS_NAMESPACE|Kubernetes version <1.12 default off, 1.12 or higher default on|ShareProcessNamespace override|as above|
+|VAULT_AGENT_SHARE_PROCESS_NAMESPACE|Kubernetes version <1.12 default off, 1.12 or higher default on|ShareProcessNamespace override|as above|
 
 ### PodSpec annotations:
 |Annotation    |default     |Explanation|
 |--------------|------------|------------|
 vault.security.banzaicloud.io/vault-addr|Same as VAULT_ADDR above||
 vault.security.banzaicloud.io/vault-tls-secret|Same as VAULT_TLS_SECRET above||
-vault.security.banzaicloud.io/vault-va-configmap|""|A configmap name which holds the vault agent configuration|
-vault.security.banzaicloud.io/vault-va-image|""|Specify a custom image for vault agent|
-vault.security.banzaicloud.io/vault-va-once|false|do not run vault-agent in daemon mode, useful for kubernetes jobs|
-vault.security.banzaicloud.io/vault-va-pull-policy|IfNotPresent|the Pull policy for the vault agent container|
-vault.security.banzaicloud.io/vault-va-share-process-namespace|Same as VAULT_VA_SHARE_PROCESS_NAMESPACE above|
-vault.security.banzaicloud.io/vault-va-cpu|"100m"|Specify the vault-agent container CPU resource limit|
-vault.security.banzaicloud.io/vault-va-memory|"128Mi"|Specify the vault-agent container memory resource limit|
+vault.security.banzaicloud.io/vault-agent-configmap|""|A configmap name which holds the vault agent configuration|
+vault.security.banzaicloud.io/vault-agent-once|false|do not run vault-agent in daemon mode, useful for kubernetes jobs|
+vault.security.banzaicloud.io/vault-agent-share-process-namespace|Same as VAULT_AGENT_SHARE_PROCESS_NAMESPACE above|
+vault.security.banzaicloud.io/vault-agent-cpu|"100m"|Specify the vault-agent container CPU resource limit|
+vault.security.banzaicloud.io/vault-agent-memory|"128Mi"|Specify the vault-agent container memory resource limit|
 vault.security.banzaicloud.io/vault-configfile-path|"/vault/secrets"|Mount path of Vault Agent rendered files|
 
 ### How to enable vault agent in the webhook?

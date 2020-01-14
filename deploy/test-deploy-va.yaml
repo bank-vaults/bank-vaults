@@ -14,7 +14,7 @@ spec:
       annotations:
         vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
         vault.security.banzaicloud.io/vault-tls-secret: vault-tls
-        vault.security.banzaicloud.io/vault-va-configmap: vault-agent-pki
+        vault.security.banzaicloud.io/vault-agent-configmap: vault-agent-pki
     spec:
       containers:
       - name: alpine

@@ -119,8 +119,8 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 
 		containers = append(containers, corev1.Container{
 			Name:            "vault-agent",
-			Image:           viper.GetString("vault_image"),
-			ImagePullPolicy: corev1.PullPolicy(viper.GetString("vault_image_pull_policy")),
+			Image:           vaultConfig.AgentImage,
+			ImagePullPolicy: vaultConfig.AgentImagePullPolicy,
 			SecurityContext: securityContext,
 			Command:         []string{"vault", "agent", "-config=/vault/agent/config.hcl"},
 			Env:             containerEnvVars,
@@ -217,7 +217,7 @@ func getContainers(vaultConfig internal.VaultConfig, containerEnvVars []corev1.E
 	return containers
 }
 
-func getVaContainers(originalContainers []corev1.Container, vaultConfig internal.VaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
+func getAgentContainers(originalContainers []corev1.Container, vaultConfig internal.VaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	var containers = []corev1.Container{}
 	securityContext := &corev1.SecurityContext{
 		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
@@ -228,7 +228,7 @@ func getVaContainers(originalContainers []corev1.Container, vaultConfig internal
 		},
 	}
 
-	if vaultConfig.VaShareProcess {
+	if vaultConfig.AgentShareProcess {
 		securityContext = &corev1.SecurityContext{
 			AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 			Capabilities: &corev1.Capabilities{
@@ -243,35 +243,35 @@ func getVaContainers(originalContainers []corev1.Container, vaultConfig internal
 	serviceAccountMount := getServiceAccountMount(originalContainers)
 
 	containerVolMounts = append(containerVolMounts, serviceAccountMount, corev1.VolumeMount{
-		Name:      "va-secrets",
+		Name:      "agent-secrets",
 		MountPath: "/vault/secrets",
 	}, corev1.VolumeMount{
-		Name:      "va-configmap",
-		MountPath: "/vault/va-config/config.hcl",
+		Name:      "agent-configmap",
+		MountPath: "/vault/config/config.hcl",
 		ReadOnly:  true,
 		SubPath:   "config.hcl",
 	},
 	)
 
-	var vaCommandString []string
-	if vaultConfig.VaOnce {
-		vaCommandString = []string{"agent", "-config", "/vault/va-config/config.hcl", "-once"}
+	var agentCommandString []string
+	if vaultConfig.AgentOnce {
+		agentCommandString = []string{"agent", "-config", "/vault/config/config.hcl", "-once"}
 	} else {
-		vaCommandString = []string{"agent", "-config", "/vault/va-config/config.hcl"}
+		agentCommandString = []string{"agent", "-config", "/vault/config/config.hcl"}
 	}
 
 	containers = append(containers, corev1.Container{
 		Name:            "vault-agent",
-		Image:           vaultConfig.VaImage,
-		Args:            vaCommandString,
-		ImagePullPolicy: vaultConfig.VaImagePullPolicy,
+		Image:           vaultConfig.AgentImage,
+		Args:            agentCommandString,
+		ImagePullPolicy: vaultConfig.AgentImagePullPolicy,
 		SecurityContext: securityContext,
 		Env:             containerEnvVars,
 		VolumeMounts:    containerVolMounts,
 		Resources: corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    vaultConfig.VaCPU,
-				corev1.ResourceMemory: vaultConfig.VaMemory,
+				corev1.ResourceCPU:    vaultConfig.AgentCPU,
+				corev1.ResourceMemory: vaultConfig.AgentMemory,
 			},
 		},
 	})
@@ -369,13 +369,13 @@ func getVolumes(existingVolumes []corev1.Volume, agentConfigMapName string, vaul
 			})
 	}
 
-	if vaultConfig.VaConfigMap != "" {
+	if vaultConfig.AgentConfigMap != "" {
 		logger.Debugf("Add vault-agent volumes to podspec")
 
 		defaultMode := int32(420)
 		volumes = append(volumes,
 			corev1.Volume{
-				Name: "va-secrets",
+				Name: "agent-secrets",
 				VolumeSource: corev1.VolumeSource{
 					EmptyDir: &corev1.EmptyDirVolumeSource{
 						Medium: corev1.StorageMediumMemory,
@@ -383,11 +383,11 @@ func getVolumes(existingVolumes []corev1.Volume, agentConfigMapName string, vaul
 				},
 			},
 			corev1.Volume{
-				Name: "va-configmap",
+				Name: "agent-configmap",
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: vaultConfig.VaConfigMap,
+							Name: vaultConfig.AgentConfigMap,
 						},
 						DefaultMode: &defaultMode,
 						Items: []corev1.KeyToPath{
@@ -567,56 +567,40 @@ func parseVaultConfig(obj metav1.Object) internal.VaultConfig {
 		vaultConfig.TransitPath = val
 	}
 
-	if val, ok := annotations["vault.security.banzaicloud.io/vault-va-configmap"]; ok {
-		vaultConfig.VaConfigMap = val
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-agent-configmap"]; ok {
+		vaultConfig.AgentConfigMap = val
 	} else {
-		vaultConfig.VaConfigMap = ""
+		vaultConfig.AgentConfigMap = ""
 	}
 
-	if val, ok := annotations["vault.security.banzaicloud.io/vault-va-image"]; ok {
-		vaultConfig.VaImage = val
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-agent-once"]; ok {
+		vaultConfig.AgentOnce, _ = strconv.ParseBool(val)
 	} else {
-		vaultConfig.VaImage = viper.GetString("vault_va_image")
+		vaultConfig.AgentOnce = false
 	}
 
-	if val, ok := annotations["vault.security.banzaicloud.io/vault-va-pull-policy"]; ok {
-		switch val {
-		case "Never", "never":
-			vaultConfig.VaImagePullPolicy = corev1.PullNever
-		case "Always", "always":
-			vaultConfig.VaImagePullPolicy = corev1.PullAlways
-		case "IfNotPresent", "ifnotpresent":
-			vaultConfig.VaImagePullPolicy = corev1.PullIfNotPresent
-		}
+	if val, err := resource.ParseQuantity(annotations["vault.security.banzaicloud.io/vault-agent-cpu"]); err == nil {
+		vaultConfig.AgentCPU = val
 	} else {
-		vaultConfig.VaImagePullPolicy = corev1.PullIfNotPresent
+		vaultConfig.AgentCPU = resource.MustParse("100m")
 	}
 
-	if val, ok := annotations["vault.security.banzaicloud.io/vault-va-once"]; ok {
-		vaultConfig.VaOnce, _ = strconv.ParseBool(val)
+	if val, err := resource.ParseQuantity(annotations["vault.security.banzaicloud.io/vault-agent-memory"]); err == nil {
+		vaultConfig.AgentMemory = val
 	} else {
-		vaultConfig.VaOnce = false
+		vaultConfig.AgentMemory = resource.MustParse("128Mi")
 	}
 
-	if val, err := resource.ParseQuantity(annotations["vault.security.banzaicloud.io/vault-va-cpu"]); err == nil {
-		vaultConfig.VaCPU = val
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-agent-share-process-namespace"]; ok {
+		vaultConfig.AgentShareProcessDefault = "found"
+		vaultConfig.AgentShareProcess, _ = strconv.ParseBool(val)
 	} else {
-		vaultConfig.VaCPU = resource.MustParse("100m")
+		vaultConfig.AgentShareProcessDefault = "empty"
+		vaultConfig.AgentShareProcess = false
 	}
 
-	if val, err := resource.ParseQuantity(annotations["vault.security.banzaicloud.io/vault-va-memory"]); err == nil {
-		vaultConfig.VaMemory = val
-	} else {
-		vaultConfig.VaMemory = resource.MustParse("128Mi")
-	}
-
-	if val, ok := annotations["vault.security.banzaicloud.io/vault-va-share-process-namespace"]; ok {
-		vaultConfig.VaShareProcessDefault = "found"
-		vaultConfig.VaShareProcess, _ = strconv.ParseBool(val)
-	} else {
-		vaultConfig.VaShareProcessDefault = "empty"
-		vaultConfig.VaShareProcess = false
-	}
+	vaultConfig.AgentImage = viper.GetString("vault_image")
+	vaultConfig.AgentImagePullPolicy = corev1.PullPolicy(viper.GetString("vault_image_pull_policy"))
 
 	return vaultConfig
 }
@@ -912,7 +896,7 @@ func addSecretsVolToContainers(vaultConfig internal.VaultConfig, containers []co
 	}
 }
 
-func addVaSecretsVolToContainers(vaultConfig internal.VaultConfig, containers []corev1.Container, logger *log.Logger) {
+func addAgentSecretsVolToContainers(vaultConfig internal.VaultConfig, containers []corev1.Container, logger *log.Logger) {
 
 	for i, container := range containers {
 
@@ -920,7 +904,7 @@ func addVaSecretsVolToContainers(vaultConfig internal.VaultConfig, containers []
 
 		container.VolumeMounts = append(container.VolumeMounts, []corev1.VolumeMount{
 			{
-				Name:      "va-secrets",
+				Name:      "agent-secrets",
 				MountPath: vaultConfig.ConfigfilePath,
 			},
 		}...)
@@ -1020,7 +1004,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig internal.Vault
 		})
 	}
 
-	if initContainersMutated || containersMutated || vaultConfig.CtConfigMap != "" || vaultConfig.VaConfigMap != "" {
+	if initContainersMutated || containersMutated || vaultConfig.CtConfigMap != "" || vaultConfig.AgentConfigMap != "" {
 		var agentConfigMapName string
 
 		if vaultConfig.UseAgent || vaultConfig.CtConfigMap != "" {
@@ -1077,30 +1061,30 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig internal.Vault
 		logger.Debugf("Successfully appended pod containers to spec")
 	}
 
-	if vaultConfig.VaConfigMap != "" {
+	if vaultConfig.AgentConfigMap != "" {
 		logger.Debugf("Vault Agent config found")
 
-		addVaSecretsVolToContainers(vaultConfig, pod.Spec.Containers, logger)
+		addAgentSecretsVolToContainers(vaultConfig, pod.Spec.Containers, logger)
 
-		if vaultConfig.VaShareProcessDefault == "empty" {
+		if vaultConfig.AgentShareProcessDefault == "empty" {
 			logger.Debugf("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
 			apiVersion, _ := mw.k8sClient.Discovery().ServerVersion()
 			versionCompared := kubeVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
 			logger.Debugf("Kubernetes API version detected: %s", apiVersion.String())
 
 			if versionCompared >= 0 {
-				vaultConfig.VaShareProcess = true
+				vaultConfig.AgentShareProcess = true
 			} else {
-				vaultConfig.VaShareProcess = false
+				vaultConfig.AgentShareProcess = false
 			}
 		}
 
-		if vaultConfig.VaShareProcess {
+		if vaultConfig.AgentShareProcess {
 			logger.Debugf("Detected shared process namespace")
 			shareProcessNamespace := true
 			pod.Spec.ShareProcessNamespace = &shareProcessNamespace
 		}
-		pod.Spec.Containers = append(getVaContainers(pod.Spec.Containers, vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
+		pod.Spec.Containers = append(getAgentContainers(pod.Spec.Containers, vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
 
 		logger.Debugf("Successfully appended pod containers to spec")
 	}
@@ -1134,8 +1118,7 @@ func init() {
 	viper.SetDefault("registry_skip_verify", "false")
 	viper.SetDefault("debug", "false")
 	viper.SetDefault("enable_json_log", "false")
-	viper.SetDefault("vault_va_image", "hashicorp/vault:latest")
-	viper.SetDefault("vault_va_share_process_namespace", "")
+	viper.SetDefault("vault_agent_share_process_namespace", "")
 	viper.AutomaticEnv()
 
 	logger = log.New()

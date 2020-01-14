@@ -43,12 +43,12 @@ type VaultConfig struct {
 	ConfigfilePath              string
 	MutateConfigMap             bool
 	EnableJSONLog               string
-	VaConfigMap                 string
-	VaImage                     string
-	VaOnce                      bool
-	VaImagePullPolicy           corev1.PullPolicy
-	VaShareProcess              bool
-	VaShareProcessDefault       string
-	VaCPU                       resource.Quantity
-	VaMemory                    resource.Quantity
+	AgentConfigMap              string
+	AgentOnce                   bool
+	AgentShareProcess           bool
+	AgentShareProcessDefault    string
+	AgentCPU                    resource.Quantity
+	AgentMemory                 resource.Quantity
+	AgentImage                  string
+	AgentImagePullPolicy        corev1.PullPolicy
 }

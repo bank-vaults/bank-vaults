@@ -355,12 +355,14 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					},
 				},
 				vaultConfig: internal.VaultConfig{
-					CtConfigMap:    "config-map-test",
-					ConfigfilePath: "/vault/secrets",
-					Addr:           "test",
-					SkipVerify:     "false",
-					CtCPU:          resource.MustParse("50m"),
-					CtMemory:       resource.MustParse("128Mi"),
+					CtConfigMap:          "config-map-test",
+					ConfigfilePath:       "/vault/secrets",
+					Addr:                 "test",
+					SkipVerify:           "false",
+					CtCPU:                resource.MustParse("50m"),
+					CtMemory:             resource.MustParse("128Mi"),
+					AgentImage:           "vault:latest",
+					AgentImagePullPolicy: "IfNotPresent",
 				},
 			},
 			wantedPod: &corev1.Pod{
@@ -512,7 +514,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		{name: "Will mutate pod with va-configmap annotations",
+		{name: "Will mutate pod with agent-configmap annotations",
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
@@ -538,12 +540,14 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					},
 				},
 				vaultConfig: internal.VaultConfig{
-					VaConfigMap:    "config-map-test",
-					ConfigfilePath: "/vault/secrets",
-					Addr:           "test",
-					SkipVerify:     "false",
-					VaCPU:          resource.MustParse("50m"),
-					VaMemory:       resource.MustParse("128Mi"),
+					AgentConfigMap:       "config-map-test",
+					ConfigfilePath:       "/vault/secrets",
+					Addr:                 "test",
+					SkipVerify:           "false",
+					AgentCPU:             resource.MustParse("50m"),
+					AgentMemory:          resource.MustParse("128Mi"),
+					AgentImage:           "vault:latest",
+					AgentImagePullPolicy: "IfNotPresent",
 				},
 			},
 			wantedPod: &corev1.Pod{
@@ -551,8 +555,10 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					InitContainers: []corev1.Container{},
 					Containers: []corev1.Container{
 						corev1.Container{
-							Name: "vault-agent",
-							Args: []string{"agent", "-config", "/vault/va-config/config.hcl"},
+							Name:            "vault-agent",
+							Image:           "vault:latest",
+							ImagePullPolicy: "IfNotPresent",
+							Args:            []string{"agent", "-config", "/vault/config/config.hcl"},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -586,13 +592,13 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 								},
 								corev1.VolumeMount{
-									Name:      "va-secrets",
+									Name:      "agent-secrets",
 									MountPath: "/vault/secrets",
 								},
 								corev1.VolumeMount{
-									Name:      "va-configmap",
+									Name:      "agent-configmap",
 									ReadOnly:  true,
-									MountPath: "/vault/va-config/config.hcl",
+									MountPath: "/vault/config/config.hcl",
 									SubPath:   "config.hcl",
 								},
 							},
@@ -607,7 +613,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 								},
 								corev1.VolumeMount{
-									Name:      "va-secrets",
+									Name:      "agent-secrets",
 									MountPath: "/vault/secrets",
 								},
 							},
@@ -623,7 +629,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 							},
 						},
 						corev1.Volume{
-							Name: "va-secrets",
+							Name: "agent-secrets",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{
 									Medium: corev1.StorageMediumMemory,
@@ -631,7 +637,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 							},
 						},
 						corev1.Volume{
-							Name: "va-configmap",
+							Name: "agent-configmap",
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
