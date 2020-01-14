@@ -89,5 +89,5 @@ vault.security.banzaicloud.io/vault-agent-memory|"128Mi"|Specify the vault-agent
 vault.security.banzaicloud.io/vault-configfile-path|"/vault/secrets"|Mount path of Vault Agent rendered files|
 
 ### How to enable vault agent in the webhook?
-For the webhook to detect that it will need to mutate or change a PodSpec, it must have the annotation `vault.security.banzaicloud.io/vault-va-configmap` otherwise the PodSpec will be ignored for configuration with Vault Agent.
+For the webhook to detect that it will need to mutate or change a PodSpec, it must have the annotation `vault.security.banzaicloud.io/vault-agent-configmap` otherwise the PodSpec will be ignored for configuration with Vault Agent.
 
