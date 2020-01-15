@@ -43,4 +43,12 @@ type VaultConfig struct {
 	ConfigfilePath              string
 	MutateConfigMap             bool
 	EnableJSONLog               string
+	AgentConfigMap              string
+	AgentOnce                   bool
+	AgentShareProcess           bool
+	AgentShareProcessDefault    string
+	AgentCPU                    resource.Quantity
+	AgentMemory                 resource.Quantity
+	AgentImage                  string
+	AgentImagePullPolicy        corev1.PullPolicy
 }
