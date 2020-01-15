@@ -81,13 +81,20 @@ If you want to hack with bank-vaults please follow the [development documentatio
 
 If you have any questions about Bank-Vaults, and would like to talk to us and the other members of the Banzai Cloud community, please join our **#bank-vaults** channel on [Slack](https://slack.banzaicloud.io/).
 
+If you find this project useful, help us:
+
+- Support the development of this project and star this repo! :star:
+- If you use Bank-Vaults in a production environment, add yourself to the list of production [adopters](https://github.com/banzaicloud/bank-vaults/blob/master/ADOPTERS.md).:metal: <br> 
+- Help new users with issues they may encounter :muscle:
+- Send a pull request with your new features and bug fixes :rocket: 
+
 ## Credits
 
 Kudos to HashiCorp for open sourcing Vault and making secret management easier and more secure.
 
 ## License
 
-Copyright (c) 2017-2019 [Banzai Cloud, Inc.](https://banzaicloud.com)
+Copyright (c) 2017-2020 [Banzai Cloud, Inc.](https://banzaicloud.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
