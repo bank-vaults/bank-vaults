@@ -1,4 +1,4 @@
-// Copyright © 2018 Banzai Cloud
+// Copyright © 2020 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv/gckms"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/gcs"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
+	"github.com/banzaicloud/bank-vaults/pkg/kv/multi"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/s3"
 	kvvault "github.com/banzaicloud/bank-vaults/pkg/kv/vault"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
@@ -74,23 +75,53 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		return kms, nil
 
 	case cfgModeValueAWSKMS3:
-		s3, err := s3.New(
-			cfg.GetString(cfgAWSS3Region),
-			cfg.GetString(cfgAWSS3Bucket),
-			cfg.GetString(cfgAWSS3Prefix),
-		)
 
-		if err != nil {
-			return nil, fmt.Errorf("error creating AWS S3 kv store: %s", err.Error())
+		s3Regions := cfg.GetStringSlice(cfgAWSS3Region)
+		s3Buckets := cfg.GetStringSlice(cfgAWSS3Bucket)
+		s3Prefix := cfg.GetString(cfgAWSS3Prefix)
+
+		if len(s3Regions) != len(s3Buckets) {
+			return nil, fmt.Errorf("specify the same number of regions and buckets for AWS S3 kv store")
 		}
 
-		kms, err := awskms.New(s3, cfg.GetString(cfgAWSKMSRegion), cfg.GetString(cfgAWSKMSKeyID))
+		var s3Services []kv.Service
 
-		if err != nil {
-			return nil, fmt.Errorf("error creating AWS KMS kv store: %s", err.Error())
+		for i := range s3Regions {
+			s3Service, err := s3.New(
+				s3Regions[i],
+				s3Buckets[i],
+				s3Prefix,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("error creating AWS S3 kv store: %s", err.Error())
+			}
+
+			s3Services = append(s3Services, s3Service)
 		}
 
-		return kms, nil
+		kmsRegions := cfg.GetStringSlice(cfgAWSKMSRegion)
+		kmsKeyIDs := cfg.GetStringSlice(cfgAWSKMSKeyID)
+
+		if len(kmsRegions) != len(kmsKeyIDs) {
+			return nil, fmt.Errorf("specify the same number of regions and key IDs for AWS KMS kv store")
+		}
+
+		if len(kmsRegions) != len(s3Regions) {
+			return nil, fmt.Errorf("specify the same number of S3 buckets and KMS keys for AWS kv store")
+		}
+
+		var kmsServices []kv.Service
+
+		for i := range kmsRegions {
+			kmsService, err := awskms.New(s3Services[i], kmsRegions[i], kmsKeyIDs[i])
+			if err != nil {
+				return nil, fmt.Errorf("error creating AWS KMS kv store: %s", err.Error())
+			}
+
+			kmsServices = append(kmsServices, kmsService)
+		}
+
+		return multi.New(kmsServices), nil
 
 	case cfgModeValueAzureKeyVault:
 		akv, err := azurekv.New(cfg.GetString(cfgAzureKeyVaultName))

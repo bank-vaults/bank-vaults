@@ -10,11 +10,11 @@ spec:
   # Common annotations for all created resources
   annotations:
     common/annotation: "true"
-  
+
   # Vault Pods , Services and TLS Secret annotations
   vaultAnnotations:
     type/instance: "vault"
-  
+
   # Vault Configurer Pods and Services annotations
   vaultConfigurerAnnotations:
     type/instance: "vaultconfigurer"
@@ -67,6 +67,20 @@ spec:
     # This follows the same format as the standard Kubernetes Ingress
     # See: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.13/#ingressspec-v1beta1-extensions
     spec: {}
+
+  # In some cases, you have to set permissions for the raft directory.
+  # For example in the case of using a local kind cluster, uncomment the lines below.
+  # vaultInitContainers:
+  #   - name: raft-permission
+  #     image: busybox
+  #     command:
+  #       - /bin/sh
+  #       - -c
+  #       - |
+  #         chown -R 100:1000 /vault/raft
+  #     volumeMounts:
+  #       - name: vault-raft
+  #         mountPath: /vault/raft
 
   # Use local disk to store Vault raft data, see config section.
   volumeClaimTemplates:
