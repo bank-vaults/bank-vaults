@@ -2,7 +2,7 @@ ARG GO_VERSION=1.13
 
 FROM golang:${GO_VERSION}-alpine AS builder
 
-RUN apk add --update --no-cache ca-certificates make git curl mercurial
+RUN apk add --update --no-cache ca-certificates make git build-base curl mercurial
 
 ARG GOPROXY
 
@@ -18,9 +18,10 @@ RUN go install ./cmd/template
 RUN go install ./cmd/bank-vaults
 
 
-FROM alpine:3.10
+FROM alpine:3.11
 
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates \
+                       ccid opensc pcsc-lite-libs softhsm
 
 COPY --from=builder /go/bin/template /usr/local/bin/template
 COPY --from=builder /go/bin/bank-vaults /usr/local/bin/bank-vaults
