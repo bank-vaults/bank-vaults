@@ -667,22 +667,22 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 			if err != nil {
 				return fmt.Errorf("error configuring aws auth roles for vault: %s", err.Error())
 			}
-		case "gcp":
+		case "gcp","oci":
 			config, err := cast.ToStringMapE(authMethod["config"])
 			if err != nil {
-				return fmt.Errorf("error finding config block for gcp: %s", err.Error())
+				return fmt.Errorf("error finding config block for %s: %s", authMethodType, err.Error())
 			}
 			err = v.configureGenericAuthConfig(authMethodType, path, config)
 			if err != nil {
-				return fmt.Errorf("error configuring gcp auth for vault: %s", err.Error())
+				return fmt.Errorf("error configuring %s auth for vault: %s", authMethodType, err.Error())
 			}
 			roles, err := cast.ToSliceE(authMethod["roles"])
 			if err != nil {
-				return fmt.Errorf("error finding roles block for gcp: %s", err.Error())
+				return fmt.Errorf("error finding roles block for %s: %s", authMethodType, err.Error())
 			}
 			err = v.configureGenericAuthRoles(authMethodType, path, "role", roles)
 			if err != nil {
-				return fmt.Errorf("error configuring gcp auth roles for vault: %s", err.Error())
+				return fmt.Errorf("error configuring %s auth roles for vault: %s", authMethodType, err.Error())
 			}
 		case "approle":
 			roles, err := cast.ToSliceE(authMethod["roles"])
