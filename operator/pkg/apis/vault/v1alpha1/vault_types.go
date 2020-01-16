@@ -19,6 +19,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -701,6 +702,7 @@ type UnsealConfig struct {
 	Azure      *AzureUnsealConfig     `json:"azure,omitempty"`
 	AWS        *AWSUnsealConfig       `json:"aws,omitempty"`
 	Vault      *VaultUnsealConfig     `json:"vault,omitempty"`
+	HSM        *HSMUnsealConfig       `json:"hsm,omitempty"`
 }
 
 // UnsealOptions represents the common options to all unsealing backends
@@ -810,6 +812,32 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			)
 		}
 
+	} else if usc.HSM != nil {
+
+		secretNamespace := vault.Namespace
+		if usc.Kubernetes.SecretNamespace != "" {
+			secretNamespace = usc.HSM.SecretNamespace
+		}
+		secretName := vault.Name + "-unseal-keys"
+		if usc.Kubernetes.SecretName != "" {
+			secretName = usc.HSM.SecretName
+		}
+
+		args = append(args,
+			"--mode",
+			"hsm-k8s",
+			"--k8s-secret-namespace",
+			secretNamespace,
+			"--k8s-secret-name",
+			secretName,
+			"--hsm-module-path",
+			usc.HSM.ModulePath,
+			"--hsm-slot-id",
+			fmt.Sprint(usc.HSM.SlotID),
+			"--hsm-pin",
+			usc.HSM.Pin,
+		)
+
 	} else {
 
 		secretNamespace := vault.Namespace
@@ -892,6 +920,15 @@ type VaultUnsealConfig struct {
 	AuthPath       string `json:"authPath"`
 	TokenPath      string `json:"tokenPath"`
 	Token          string `json:"token"`
+}
+
+// HSMUnsealConfig holds the parameters for remote HSM based unsealing
+type HSMUnsealConfig struct {
+	KubernetesUnsealConfig
+	ModulePath string `json:"modulePath"`
+	SlotID     uint   `json:"slotId"`
+	Pin        string `json:"pin"`
+	KeyLabel   string `json:"keyLabel"`
 }
 
 // CredentialsConfig configuration for a credentials file provided as a secret
