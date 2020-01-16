@@ -76,6 +76,7 @@ const cfgK8SNamespace = "k8s-secret-namespace"
 const cfgK8SSecret = "k8s-secret-name"
 const cfgK8SLabels = "k8s-secret-labels"
 
+const cfgHSMModulePath = "hsm-module-path"
 const cfgHSMSlotID = "hsm-slot-id"
 const cfgHSMPin = "hsm-pin"
 const cfgHSMKeyLabel = "hsm-key-label"
@@ -207,6 +208,7 @@ func init() {
 	configStringMapVar(cfgK8SLabels, &k8sSecretLabels, "The labels of the K8S Secret to store values in")
 
 	// HSM flags
+	configStringVar(cfgHSMModulePath, "", "The library path of the HSM device")
 	configIntVar(cfgHSMSlotID, 0, "The ID of the HSM slot")
 	configStringVar(cfgHSMPin, "", "The pin of the HSM token to login with")
 	configStringVar(cfgHSMKeyLabel, "bank-vaults", "The label of the HSM private key")

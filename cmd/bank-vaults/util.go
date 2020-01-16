@@ -207,11 +207,17 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			return nil, fmt.Errorf("error creating K8S Secret with with kv store: %s", err.Error())
 		}
 
+		modulePath := cfg.GetString(cfgHSMModulePath)
 		slotID := cfg.GetUint(cfgHSMSlotID)
 		pin := cfg.GetString(cfgHSMPin)
 		keyLabel := cfg.GetString(cfgHSMKeyLabel)
 
-		hsm, err := hsm.NewHSM(hsm.HSMConfig{SlotID: slotID, Pin: pin, KeyLabel: keyLabel}, k8s)
+		hsm, err := hsm.NewHSM(hsm.HSMConfig{
+			ModulePath: modulePath,
+			SlotID:     slotID,
+			Pin:        pin,
+			KeyLabel:   keyLabel,
+		}, k8s)
 
 		if err != nil {
 			return nil, fmt.Errorf("error creating HSM kv store: %s", err.Error())

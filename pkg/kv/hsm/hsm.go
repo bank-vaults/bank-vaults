@@ -15,10 +15,10 @@
 package hsm
 
 import (
+	"emperror.dev/errors"
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/miekg/pkcs11"
 	"github.com/miekg/pkcs11/p11"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,9 +31,10 @@ type hsmKV struct {
 }
 
 type HSMConfig struct {
-	SlotID   uint
-	Pin      string
-	KeyLabel string
+	ModulePath string
+	SlotID     uint
+	Pin        string
+	KeyLabel   string
 }
 
 // NewHSM: currently RSA keys are supported only
@@ -41,7 +42,7 @@ func NewHSM(config HSMConfig, storage kv.Service) (kv.Service, error) {
 
 	log := logrus.New()
 
-	module, err := p11.OpenModule("/usr/local/lib/softhsm/libsofthsm2.so")
+	module, err := p11.OpenModule(config.ModulePath)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +59,7 @@ func NewHSM(config HSMConfig, storage kv.Service) (kv.Service, error) {
 		return nil, err
 	}
 
-	log.Infof("HSM Searching for slot %d in HSM", config.SlotID)
+	log.Infof("HSM Searching for slot %d in HSM slots %+v", config.SlotID, slots)
 	var slot p11.Slot
 	for _, s := range slots {
 		if s.ID() == config.SlotID {
@@ -67,12 +68,14 @@ func NewHSM(config HSMConfig, storage kv.Service) (kv.Service, error) {
 		}
 	}
 
-	if slot.ID() == 0 {
-		return nil, errors.New("Can't find slot in HSM")
+	tokenInfo, err := slot.TokenInfo()
+	if err != nil {
+		return nil, errors.WrapIf(err, "can't find HSM slot")
 	}
 
-	var bestMechanism *pkcs11.Mechanism
-	bestMechanism = pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)
+	log.Infof("HSM TokenInfo for slot %d: %+v", config.SlotID, tokenInfo)
+
+	bestMechanism := pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)
 
 	// TODO find the best mechanism the HSM supports
 	// mechanisms, err := slot.Mechanisms()
@@ -89,13 +92,6 @@ func NewHSM(config HSMConfig, storage kv.Service) (kv.Service, error) {
 
 	// 	fmt.Printf("mechanism info: %+v\n", info)
 	// }
-
-	tokenInfo, err := slot.TokenInfo()
-	if err != nil {
-		return nil, err
-	}
-
-	log.Infof("HSM TokenInfo for slot %+v", tokenInfo)
 
 	session, err := slot.OpenWriteSession()
 	if err != nil {
