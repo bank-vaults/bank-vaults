@@ -23,8 +23,14 @@ FROM alpine:3.11
 RUN apk add --no-cache ca-certificates \
                        ccid opensc pcsc-lite-libs softhsm
 
+USER 65534
+
+# Initializing SoftHSM to be able to create a working example (only for dev),
+# sharing the HSM device is emulated with a pre-created keypair in the image.
+RUN softhsm2-util --init-token --free --label bank-vaults --so-pin banzai --pin banzai
+RUN pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin banzai --token-label bank-vaults --label bank-vaults
+
 COPY --from=builder /go/bin/template /usr/local/bin/template
 COPY --from=builder /go/bin/bank-vaults /usr/local/bin/bank-vaults
-USER 65534
 
 ENTRYPOINT ["/usr/local/bin/bank-vaults"]

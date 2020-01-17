@@ -69,12 +69,12 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	}
 
 	log.Infof("HSM Searching for slot in HSM slots %+v", slots)
-	var slot p11.Slot
+	var slot *p11.Slot
 	for _, s := range slots {
 		if config.TokenLabel == "" {
 			if s.ID() == config.SlotID {
-				slot = s
-				log.Infof("found HSM slot slot %d in HSM by slot ID", slot.ID())
+				slot = &s
+				log.Infof("found HSM slot %d in HSM by slot ID", slot.ID())
 				break
 			}
 		} else {
@@ -83,19 +83,23 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 				return nil, errors.WrapIf(err, "can't query token info from slot")
 			}
 			if tokenInfo.Label == config.TokenLabel {
-				slot = s
-				log.Infof("found HSM slot slot %d in HSM by token label", slot.ID())
+				slot = &s
+				log.Infof("found HSM slot %d in HSM by token label", slot.ID())
 				break
 			}
 		}
 	}
 
-	tokenInfo, err := slot.TokenInfo()
-	if err != nil {
+	if slot == nil {
 		return nil, errors.WrapIf(err, "can't find HSM slot")
 	}
 
-	log.Infof("HSM TokenInfo for slot %d: %+v", config.SlotID, tokenInfo)
+	tokenInfo, err := slot.TokenInfo()
+	if err != nil {
+		return nil, errors.WrapIf(err, "can't query token info from slot")
+	}
+
+	log.Infof("HSM TokenInfo %+v", tokenInfo)
 
 	bestMechanism := pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)
 
@@ -124,6 +128,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 
 	session, err := slot.OpenWriteSession()
 	if err != nil {
+
 		return nil, err
 	}
 
@@ -155,7 +160,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 
 	} else {
 
-		log.Infof("found existing objects in HSM: %+v", allObjects)
+		log.Infof("found objects with label %q in HSM: %+v", config.KeyLabel, allObjects)
 
 		privateKey = p11.PrivateKey(allObjects[0])
 		publicKey = p11.PublicKey(allObjects[1])

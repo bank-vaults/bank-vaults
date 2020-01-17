@@ -834,9 +834,18 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			usc.HSM.ModulePath,
 			"--hsm-slot-id",
 			fmt.Sprint(usc.HSM.SlotID),
+			"--hsm-key-label",
+			usc.HSM.KeyLabel,
 			"--hsm-pin",
 			usc.HSM.Pin,
 		)
+
+		if usc.HSM.TokenLabel != "" {
+			args = append(args,
+				"--hsm-token-label",
+				usc.HSM.TokenLabel,
+			)
+		}
 
 	} else {
 
@@ -927,6 +936,7 @@ type HSMUnsealConfig struct {
 	KubernetesUnsealConfig
 	ModulePath string `json:"modulePath"`
 	SlotID     uint   `json:"slotId"`
+	TokenLabel string `json:"tokenLabel"`
 	Pin        string `json:"pin"`
 	KeyLabel   string `json:"keyLabel"`
 }
