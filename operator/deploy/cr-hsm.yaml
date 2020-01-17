@@ -78,7 +78,7 @@ spec:
     hsm:
       modulePath: /usr/lib/opensc-pkcs11.so
       slotId: 0
-      ping: nundi01
+      pin: banzai
 
   # A YAML representation of a final vault config file.
   # See https://www.vaultproject.io/docs/configuration/ for more information.
