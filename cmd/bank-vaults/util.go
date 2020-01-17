@@ -209,12 +209,14 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 
 		modulePath := cfg.GetString(cfgHSMModulePath)
 		slotID := cfg.GetUint(cfgHSMSlotID)
+		tokenLabel := cfg.GetString(cfgHSMTokenLabel)
 		pin := cfg.GetString(cfgHSMPin)
 		keyLabel := cfg.GetString(cfgHSMKeyLabel)
 
-		hsm, err := hsm.NewHSM(hsm.HSMConfig{
+		hsm, err := hsm.New(hsm.Config{
 			ModulePath: modulePath,
 			SlotID:     slotID,
+			TokenLabel: tokenLabel,
 			Pin:        pin,
 			KeyLabel:   keyLabel,
 		}, k8s)

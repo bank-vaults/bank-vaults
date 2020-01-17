@@ -38,15 +38,16 @@ type hsmKV struct {
 	decrypt    cryptoFunc
 }
 
-type HSMConfig struct {
+type Config struct {
 	ModulePath string
 	SlotID     uint
+	TokenLabel string
 	Pin        string
 	KeyLabel   string
 }
 
 // NewHSM: currently RSA keys are supported only
-func NewHSM(config HSMConfig, storage kv.Service) (kv.Service, error) {
+func New(config Config, storage kv.Service) (kv.Service, error) {
 
 	log := logrus.New()
 
@@ -67,12 +68,25 @@ func NewHSM(config HSMConfig, storage kv.Service) (kv.Service, error) {
 		return nil, err
 	}
 
-	log.Infof("HSM Searching for slot %d in HSM slots %+v", config.SlotID, slots)
+	log.Infof("HSM Searching for slot in HSM slots %+v", slots)
 	var slot p11.Slot
 	for _, s := range slots {
-		if s.ID() == config.SlotID {
-			slot = s
-			break
+		if config.TokenLabel == "" {
+			if s.ID() == config.SlotID {
+				slot = s
+				log.Infof("found HSM slot slot %d in HSM by slot ID", slot.ID())
+				break
+			}
+		} else {
+			tokenInfo, err := s.TokenInfo()
+			if err != nil {
+				return nil, errors.WrapIf(err, "can't query token info from slot")
+			}
+			if tokenInfo.Label == config.TokenLabel {
+				slot = s
+				log.Infof("found HSM slot slot %d in HSM by token label", slot.ID())
+				break
+			}
 		}
 	}
 

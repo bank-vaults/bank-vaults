@@ -78,6 +78,7 @@ const cfgK8SLabels = "k8s-secret-labels"
 
 const cfgHSMModulePath = "hsm-module-path"
 const cfgHSMSlotID = "hsm-slot-id"
+const cfgHSMTokenLabel = "hsm-token-label"
 const cfgHSMPin = "hsm-pin"
 const cfgHSMKeyLabel = "hsm-key-label"
 
@@ -210,6 +211,7 @@ func init() {
 	// HSM flags
 	configStringVar(cfgHSMModulePath, "", "The library path of the HSM device")
 	configIntVar(cfgHSMSlotID, 0, "The ID of the HSM slot")
+	configStringVar(cfgHSMTokenLabel, "", "The label of the token in a HSM slot")
 	configStringVar(cfgHSMPin, "", "The pin of the HSM token to login with")
 	configStringVar(cfgHSMKeyLabel, "bank-vaults", "The label of the HSM private key")
 

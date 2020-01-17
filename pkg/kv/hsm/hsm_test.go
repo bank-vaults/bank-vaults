@@ -33,7 +33,7 @@ func main() {
 
 	store := &TestService{db: map[string][]byte{}}
 
-	service, err := NewHSM(HSMConfig{}, store)
+	service, err := New(Config{}, store)
 	if err != nil {
 		panic(err)
 	}
