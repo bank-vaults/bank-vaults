@@ -12,43 +12,55 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build integration
+
 package hsm
 
-import "fmt"
+import "testing"
+import "github.com/stretchr/testify/assert"
 
-type TestService struct {
-	db map[string][]byte
+import "github.com/banzaicloud/bank-vaults/pkg/kv"
+
+type inMemoryStorage struct {
+	data map[string][]byte
 }
 
-func (h *TestService) Set(key string, value []byte) error {
-	h.db[key] = value
+func (s *inMemoryStorage) Get(key string) ([]byte, error) {
+	if data, ok := s.data[key]; !ok {
+		return nil, kv.NewNotFoundError("key not found")
+	} else {
+		return data, nil
+	}
+}
+
+func (s *inMemoryStorage) Set(key string, data []byte) error {
+	s.data[key] = data
 	return nil
 }
 
-func (h *TestService) Get(key string) ([]byte, error) {
-	return h.db[key], nil
-}
+func TestNew(t *testing.T) {
+	storage := inMemoryStorage{map[string][]byte{}}
 
-func main() {
+	hsmService, err := New(Config{
+		ModulePath: "/usr/local/lib/softhsm/libsofthsm2.so",
+		Pin:        "banzai",
+		TokenLabel: "bank-vaults",
+		KeyLabel:   "bank-vaults",
+	}, &storage)
 
-	store := &TestService{db: map[string][]byte{}}
-
-	service, err := New(Config{}, store)
 	if err != nil {
-		panic(err)
+		t.Fatal("new failed", err)
 	}
 
-	err = service.Set("path1", []byte("test data"))
+	err = hsmService.Set("my-secret-data", []byte("hello world"))
 	if err != nil {
-		panic(err)
+		t.Fatal("set failed", err)
 	}
 
-	fmt.Printf("store: %+v\n", store.db)
-
-	data, err := service.Get("path1")
+	data, err := hsmService.Get("my-secret-data")
 	if err != nil {
-		panic(err)
+		t.Fatal("get failed", err)
 	}
 
-	println("data:", string(data))
+	assert.Equal(t, []byte("hello world"), data)
 }

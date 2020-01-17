@@ -51,6 +51,10 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 
 	log := logrus.New()
 
+	if config.KeyLabel == "" {
+		return nil, errors.New("key label is required")
+	}
+
 	module, err := p11.OpenModule(config.ModulePath)
 	if err != nil {
 		return nil, err
@@ -91,7 +95,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	}
 
 	if slot == nil {
-		return nil, errors.WrapIf(err, "can't find HSM slot")
+		return nil, errors.New("can't find HSM slot")
 	}
 
 	tokenInfo, err := slot.TokenInfo()
@@ -134,7 +138,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 
 	err = session.Login(config.Pin)
 	if err != nil {
-		return nil, err
+		return nil, errors.WrapIf(err, "logint to HSM failed")
 	}
 
 	privateKeyAttributes := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_LABEL, config.KeyLabel)}
@@ -152,7 +156,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 		request := generateRSAKeyPairRequest(config.KeyLabel)
 		keyPair, err := session.GenerateKeyPair(request)
 		if err != nil {
-			return nil, err
+			return nil, errors.WrapIf(err, "GenerateKeyPair in HSM failed")
 		}
 
 		privateKey = keyPair.Private
