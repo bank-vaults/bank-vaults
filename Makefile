@@ -18,7 +18,7 @@ VERSION ?= $(shell echo `git symbolic-ref -q --short HEAD || git describe --tags
 COMMIT_HASH ?= $(shell git rev-parse --short HEAD 2>/dev/null)
 BUILD_DATE ?= $(shell date +%FT%T%z)
 LDFLAGS += -X main.version=${VERSION} -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${BUILD_DATE}
-export CGO_ENABLED ?= 0
+export CGO_ENABLED ?= 1
 export GOOS = $(shell go env GOOS)
 ifeq (${VERBOSE}, 1)
 	GOARGS += -v

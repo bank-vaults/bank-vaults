@@ -81,7 +81,7 @@ TEST_REPORT_NAME ?= results.xml
 .PHONY: test
 test: TEST_REPORT ?= main
 test: TEST_FORMAT ?= short
-test: SHELL = /bin/bash
+# test: SHELL = /bin/bash
 test: bin/gotestsum ## Run tests
 	@mkdir -p ${BUILD_DIR}/test_results/${TEST_REPORT}
 	bin/gotestsum --no-summary=skipped --junitfile ${BUILD_DIR}/test_results/${TEST_REPORT}/${TEST_REPORT_NAME} --format ${TEST_FORMAT} -- $(filter-out -v,${GOARGS}) $(if ${TEST_PKGS},${TEST_PKGS},./...)
