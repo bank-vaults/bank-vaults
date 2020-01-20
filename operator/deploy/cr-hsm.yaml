@@ -63,21 +63,26 @@ spec:
       mountPath: /vault/file
   
   resources:
-    bank-vaults:
+    bankVaults:
       requests:
         cpu: 100m
         memory: 64Mi
-        nitrokey.com/hsm: 500m
+        nitrokey.com/hsm: 1
       limits:
         cpu: 200m
         memory: 128Mi
-        nitrokey.com/hsm: 500m
+        nitrokey.com/hsm: 1
 
+  # This needs to be enabled to be able to communicate with smart card devices.
+  bankVaultsSecurityContext:
+    privileged: true
+    
   # This example relies on the SoftHSM device initialized in the Docker image.
   unsealConfig:
     hsm:
-      # /usr/lib/opensc-pkcs11.so
+      # modulePath: /usr/lib/opensc-pkcs11.so
       modulePath: /usr/lib/softhsm/libsofthsm2.so 
+      # For opensc slotId is the preferred way instead of tokenLabel
       # slotId: 0
       tokenLabel: bank-vaults
       pin: banzai

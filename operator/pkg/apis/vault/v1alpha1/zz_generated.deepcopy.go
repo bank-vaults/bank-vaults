@@ -431,6 +431,7 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 		}
 	}
 	in.SecurityContext.DeepCopyInto(&out.SecurityContext)
+	in.BankVaultsSecurityContext.DeepCopyInto(&out.BankVaultsSecurityContext)
 	if in.EtcdAnnotations != nil {
 		in, out := &in.EtcdAnnotations, &out.EtcdAnnotations
 		*out = make(map[string]string, len(*in))

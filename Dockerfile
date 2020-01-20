@@ -32,5 +32,6 @@ RUN pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type
 
 COPY --from=builder /go/bin/template /usr/local/bin/template
 COPY --from=builder /go/bin/bank-vaults /usr/local/bin/bank-vaults
+COPY --from=builder /build/scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/bank-vaults"]

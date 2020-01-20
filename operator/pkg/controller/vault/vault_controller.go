@@ -967,17 +967,18 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 				Image:           v.Spec.GetBankVaultsImage(),
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Name:            "bank-vaults",
-				Command:         []string{"bank-vaults", "configure"},
+				Command:         []string{"entrypoint.sh", "bank-vaults", "configure"},
 				Args:            append(v.Spec.UnsealConfig.ToArgs(v), configArgs...),
 				Ports: []corev1.ContainerPort{{
 					Name:          "metrics",
 					ContainerPort: 9091,
 					Protocol:      "TCP",
 				}},
-				Env:          withNamespaceEnv(v, withCommonEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{})))),
-				VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
-				WorkingDir:   "/config",
-				Resources:    *getBankVaultsResource(v),
+				Env:             withNamespaceEnv(v, withCommonEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{})))),
+				VolumeMounts:    withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
+				WorkingDir:      "/config",
+				Resources:       *getBankVaultsResource(v),
+				SecurityContext: &v.Spec.BankVaultsSecurityContext,
 			},
 		},
 		Volumes:         withTLSVolume(v, withCredentialsVolume(v, volumes)),
@@ -1153,10 +1154,12 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		volumeMounts = append(volumeMounts, etcdVolumeMount)
 	}
 
-	unsealCommand := []string{"bank-vaults", "unseal", "--init"}
+	unsealCommand := []string{"entrypoint.sh", "bank-vaults", "unseal", "--init"}
+
 	if v.Spec.IsAutoUnseal() {
 		unsealCommand = append(unsealCommand, "--auto")
 	}
+
 	if v.Spec.IsRaftStorage() {
 		raftLeaderAddress := v.Name
 		if v.Spec.RaftLeaderAddress != "" {
@@ -1261,8 +1264,9 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					ContainerPort: 9091,
 					Protocol:      "TCP",
 				}},
-				VolumeMounts: withBanksVaultsVolumeMounts(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{}))),
-				Resources:    *getBankVaultsResource(v),
+				VolumeMounts:    withBanksVaultsVolumeMounts(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{}))),
+				Resources:       *getBankVaultsResource(v),
+				SecurityContext: &v.Spec.BankVaultsSecurityContext,
 			},
 		}))),
 		Volumes:         withVaultVolumes(v, volumes),

@@ -216,6 +216,10 @@ type VaultSpec struct {
 	// default:
 	SecurityContext v1.PodSecurityContext `json:"securityContext,omitempty"`
 
+	// BankVaultsSecurityContext is a Kubernetes SecurityContext that will be applied to all bank-vaults containers created by the operator.
+	// default:
+	BankVaultsSecurityContext v1.SecurityContext `json:"bankVaultsSecurityContext,omitempty"`
+
 	// EtcdVersion is the ETCD version of the automatically provisioned ETCD cluster
 	// default: "3.3.17"
 	EtcdVersion string `json:"etcdVersion"`
