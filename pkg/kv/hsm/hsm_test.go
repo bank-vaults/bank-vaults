@@ -38,7 +38,7 @@ func (s *inMemoryStorage) Set(key string, data []byte) error {
 	return nil
 }
 
-func TestNew(t *testing.T) {
+func TestIntegrationHSM(t *testing.T) {
 	storage := inMemoryStorage{map[string][]byte{}}
 
 	hsmService, err := New(Config{
