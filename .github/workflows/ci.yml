@@ -30,7 +30,15 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: make license-check
 
-    - name: Build
+    - name: Setup test dependencies
+      run: |
+        sudo apt install opensc softhsm
+        sudo mkdir -p /var/lib/softhsm/tokens/
+        sudo softhsm2-util --init-token --free --label bank-vaults --so-pin banzai --pin banzai
+        sudo pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin banzai --token-label bank-vaults --label bank-vaults
+        sudo chown -R runner:docker /etc/softhsm /var/lib/softhsm
+
+    - name: Run verification
       run: make check
       env:
         VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf

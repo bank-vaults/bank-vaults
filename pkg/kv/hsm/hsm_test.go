@@ -16,10 +16,13 @@
 
 package hsm
 
-import "testing"
-import "github.com/stretchr/testify/assert"
+import (
+	"runtime"
+	"testing"
 
-import "github.com/banzaicloud/bank-vaults/pkg/kv"
+	"github.com/banzaicloud/bank-vaults/pkg/kv"
+	"github.com/stretchr/testify/assert"
+)
 
 type inMemoryStorage struct {
 	data map[string][]byte
@@ -41,8 +44,13 @@ func (s *inMemoryStorage) Set(key string, data []byte) error {
 func TestIntegrationHSM(t *testing.T) {
 	storage := inMemoryStorage{map[string][]byte{}}
 
+	modulePath := "/usr/lib/softhsm/libsofthsm2.so"
+	if runtime.GOOS == "darwin" {
+		modulePath = "/usr/local/lib/softhsm/libsofthsm2.so"
+	}
+
 	hsmService, err := New(Config{
-		ModulePath: "/usr/local/lib/softhsm/libsofthsm2.so",
+		ModulePath: modulePath,
 		Pin:        "banzai",
 		TokenLabel: "bank-vaults",
 		KeyLabel:   "bank-vaults",

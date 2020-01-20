@@ -47,6 +47,14 @@ jobs:
       #     command: make license-check
 
       - run:
+          name: Setup test dependencies
+          command: |
+            sudo apt install opensc softhsm
+            sudo softhsm2-util --init-token --free --label bank-vaults --so-pin banzai --pin banzai
+            sudo pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin banzai --token-label bank-vaults --label bank-vaults
+            sudo chown -R circleci:circleci /etc/softhsm /var/lib/softhsm
+
+      - run:
           name: Run verification
           environment:
             VAULT_ADDR: http://localhost:8200
