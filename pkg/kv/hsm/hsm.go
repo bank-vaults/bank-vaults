@@ -141,15 +141,23 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 		return nil, errors.WrapIf(err, "logint to HSM failed")
 	}
 
-	privateKeyAttributes := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_LABEL, config.KeyLabel)}
-
-	// ignore "no objects found" error, and check the size insted
-	allObjects, _ := session.FindObjects(privateKeyAttributes)
+	publicKeyAttributes := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_LABEL, config.KeyLabel),
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
+	}
+	privateKeyAttributes := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_LABEL, config.KeyLabel),
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
+	}
 
 	var publicKey p11.PublicKey
 	var privateKey p11.PrivateKey
 
-	if len(allObjects) == 0 {
+	publicKeyObj, publicKeyErr := session.FindObject(publicKeyAttributes)
+	privateKeyObj, privateKeyErr := session.FindObject(privateKeyAttributes)
+
+	// ignore "no objects found" errors and generate a key
+	if publicKeyErr != nil && privateKeyErr != nil {
 
 		log.Info("generating key pair in HSM...")
 
@@ -159,15 +167,19 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 			return nil, errors.WrapIf(err, "GenerateKeyPair in HSM failed")
 		}
 
-		privateKey = keyPair.Private
 		publicKey = keyPair.Public
+		privateKey = keyPair.Private
+
+	} else if publicKeyErr == nil && privateKeyErr == nil {
+
+		log.Infof("found objects with label %q in HSM", config.KeyLabel)
+
+		publicKey = p11.PublicKey(publicKeyObj)
+		privateKey = p11.PrivateKey(privateKeyObj)
 
 	} else {
 
-		log.Infof("found objects with label %q in HSM: %+v", config.KeyLabel, allObjects)
-
-		privateKey = p11.PrivateKey(allObjects[0])
-		publicKey = p11.PublicKey(allObjects[1])
+		return nil, errors.WrapIf(errors.Combine(publicKeyErr, privateKeyErr), "only one of the keys found with the specified label")
 	}
 
 	// Some devices doesn't support encryption, just storing public keys, in this case we have to extract the key
@@ -178,7 +190,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 
 		log.Info("this HSM device doesn't support encryption, extracting public key and doing encrytion on the computer")
 
-		publicKeyValue, err := allObjects[1].Value()
+		publicKeyValue, err := p11.Object(publicKey).Value()
 		if err != nil {
 			return nil, err
 		}
