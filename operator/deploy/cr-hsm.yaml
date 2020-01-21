@@ -76,14 +76,21 @@ spec:
   # This example relies on the SoftHSM device initialized in the Docker image.
   unsealConfig:
     hsm:
-      # daemon: true
-      # modulePath: /usr/lib/opensc-pkcs11.so
       modulePath: /usr/lib/softhsm/libsofthsm2.so 
-      # For opensc slotId is the preferred way instead of tokenLabel
-      # slotId: 0
       tokenLabel: bank-vaults
       pin: banzai
       keyLabel: bank-vaults
+
+  # # This example relies on an OpenSC HSM (NitroKey HSM) device initialized and plugged in to the Kubernetes Node.
+  # unsealConfig:
+  #   hsm:
+  #     daemon: true
+  #     modulePath: /usr/lib/opensc-pkcs11.so
+  #     # For OpenSC slotId is the preferred way instead of tokenLabel
+  #     # (OpenSC appends/prepends some extra stuff to labels)
+  #     slotId: 0
+  #     pin: banzai
+  #     keyLabel: bank-vaults
 
   # A YAML representation of a final vault config file.
   # See https://www.vaultproject.io/docs/configuration/ for more information.

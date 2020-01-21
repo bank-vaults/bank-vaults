@@ -2,7 +2,7 @@
 
 set -e
 
-# The SmartCard daemon has to started to communicate with plugged in HSM devices
+# The SmartCard daemon has to be started to communicate with plugged in HSM devices
 # https://pcsclite.apdu.fr/
 
 rm -f /var/run/pcscd/*
