@@ -216,10 +216,6 @@ type VaultSpec struct {
 	// default:
 	SecurityContext v1.PodSecurityContext `json:"securityContext,omitempty"`
 
-	// BankVaultsSecurityContext is a Kubernetes SecurityContext that will be applied to all bank-vaults containers created by the operator.
-	// default:
-	BankVaultsSecurityContext v1.SecurityContext `json:"bankVaultsSecurityContext,omitempty"`
-
 	// EtcdVersion is the ETCD version of the automatically provisioned ETCD cluster
 	// default: "3.3.17"
 	EtcdVersion string `json:"etcdVersion"`
@@ -886,6 +882,11 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 	return args
 }
 
+// HSMDaemonNeeded returns if the unsealing mechanims needs a HSM Daemon present
+func (usc *UnsealConfig) HSMDaemonNeeded() bool {
+	return usc.HSM != nil && usc.HSM.Daemon
+}
+
 // KubernetesUnsealConfig holds the parameters for Kubernetes based unsealing
 type KubernetesUnsealConfig struct {
 	SecretNamespace string `json:"secretNamespace"`
@@ -938,6 +939,7 @@ type VaultUnsealConfig struct {
 // HSMUnsealConfig holds the parameters for remote HSM based unsealing
 type HSMUnsealConfig struct {
 	KubernetesUnsealConfig
+	Daemon     bool   `json:"daemon"`
 	ModulePath string `json:"modulePath"`
 	SlotID     uint   `json:"slotId"`
 	TokenLabel string `json:"tokenLabel"`
@@ -956,6 +958,7 @@ type CredentialsConfig struct {
 type Resources struct {
 	Vault              *v1.ResourceRequirements `json:"vault,omitempty"`
 	BankVaults         *v1.ResourceRequirements `json:"bankVaults,omitempty"`
+	HSMDaemon          *v1.ResourceRequirements `json:"hsmDaemon,omitempty"`
 	Etcd               *v1.ResourceRequirements `json:"etcd,omitempty"`
 	PrometheusExporter *v1.ResourceRequirements `json:"prometheusExporter,omitempty"`
 }

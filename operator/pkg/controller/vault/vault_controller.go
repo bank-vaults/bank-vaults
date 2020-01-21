@@ -960,31 +960,48 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 		}
 	}
 
+	containers := []corev1.Container{
+		{
+			Image:           v.Spec.GetBankVaultsImage(),
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Name:            "bank-vaults",
+			Command:         []string{"entrypoint.sh", "bank-vaults", "configure"},
+			Args:            append(v.Spec.UnsealConfig.ToArgs(v), configArgs...),
+			Ports: []corev1.ContainerPort{{
+				Name:          "metrics",
+				ContainerPort: 9091,
+				Protocol:      "TCP",
+			}},
+			Env:             withNamespaceEnv(v, withCommonEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{})))),
+			VolumeMounts:    withHSMVolumeMount(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts))),
+			WorkingDir:      "/config",
+			Resources:       *getBankVaultsResource(v),
+			SecurityContext: &v.Spec.BankVaultsSecurityContext,
+		},
+	}
+
+	if v.Spec.UnsealConfig.HSMDaemonNeeded() {
+		containers = append(containers, corev1.Container{
+			Image:           v.Spec.GetBankVaultsImage(),
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Name:            "bank-vaults-hsm",
+			Command:         []string{"pcscd-entrypoint.sh"},
+			VolumeMounts:    withHSMVolumeMount(v, nil),
+			Resources:       *getHSMDaemonResource(v),
+			SecurityContext: &corev1.SecurityContext{
+				Privileged: pointer.BoolPtr(true),
+				RunAsUser:  pointer.Int64Ptr(0),
+			},
+		})
+	}
+
 	podSpec := corev1.PodSpec{
 		ServiceAccountName: v.Spec.GetServiceAccount(),
-		Containers: []corev1.Container{
-			{
-				Image:           v.Spec.GetBankVaultsImage(),
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Name:            "bank-vaults",
-				Command:         []string{"entrypoint.sh", "bank-vaults", "configure"},
-				Args:            append(v.Spec.UnsealConfig.ToArgs(v), configArgs...),
-				Ports: []corev1.ContainerPort{{
-					Name:          "metrics",
-					ContainerPort: 9091,
-					Protocol:      "TCP",
-				}},
-				Env:             withNamespaceEnv(v, withCommonEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{})))),
-				VolumeMounts:    withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
-				WorkingDir:      "/config",
-				Resources:       *getBankVaultsResource(v),
-				SecurityContext: &v.Spec.BankVaultsSecurityContext,
-			},
-		},
-		Volumes:         withTLSVolume(v, withCredentialsVolume(v, volumes)),
-		SecurityContext: withPodSecurityContext(v),
-		NodeSelector:    v.Spec.NodeSelector,
-		Tolerations:     v.Spec.Tolerations,
+		Containers:         containers,
+		Volumes:            withHSMVolume(v, withTLSVolume(v, withCredentialsVolume(v, volumes))),
+		SecurityContext:    withPodSecurityContext(v),
+		NodeSelector:       v.Spec.NodeSelector,
+		Tolerations:        v.Spec.Tolerations,
 	}
 
 	// merge provided VaultConfigurerPodSpec into the PodSpec defined above
@@ -1106,7 +1123,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		},
 	}))
 
-	volumes = withStatsdVolume(v, withAuditLogVolume(v, volumes))
+	volumes = withHSMVolume(v, withStatsdVolume(v, withAuditLogVolume(v, volumes)))
 
 	volumeMounts := withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{
 		{
@@ -1264,9 +1281,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					ContainerPort: 9091,
 					Protocol:      "TCP",
 				}},
-				VolumeMounts:    withBanksVaultsVolumeMounts(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{}))),
-				Resources:       *getBankVaultsResource(v),
-				SecurityContext: &v.Spec.BankVaultsSecurityContext,
+				VolumeMounts: withHSMVolumeMount(v, withBanksVaultsVolumeMounts(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{})))),
+				Resources:    *getBankVaultsResource(v),
 			},
 		}))),
 		Volumes:         withVaultVolumes(v, volumes),
@@ -1707,6 +1723,32 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, containers []corev1.Container
 	return containers
 }
 
+// Share the PCSLite Unix Socket across the host:
+// https://salsa.debian.org/rousseau/PCSC/blob/master/src/pcscd.h.in#L50
+func withHSMVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
+	if v.Spec.UnsealConfig.HSMDaemonNeeded() {
+		volumes = append(volumes, corev1.Volume{
+			Name: "hsm-pcscd",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: "/var/run/pcscd/",
+				},
+			},
+		})
+	}
+	return volumes
+}
+
+func withHSMVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
+	if v.Spec.UnsealConfig.HSMDaemonNeeded() {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "hsm-pcscd",
+			MountPath: "/var/run/pcscd/",
+		})
+	}
+	return volumeMounts
+}
+
 func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
 	if v.Spec.PodAntiAffinity == "" {
 		return nil
@@ -1939,6 +1981,24 @@ func getBankVaultsResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements 
 func getEtcdResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
 	if v.Spec.Resources != nil && v.Spec.Resources.Etcd != nil {
 		return v.Spec.Resources.Etcd
+	}
+
+	return &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("200m"),
+			corev1.ResourceMemory: resource.MustParse("128Mi"),
+		},
+	}
+}
+
+// getHSMDaemonResource return resource in spec or return pre-defined resource if not configurated
+func getHSMDaemonResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
+	if v.Spec.Resources != nil && v.Spec.Resources.HSMDaemon != nil {
+		return v.Spec.Resources.HSMDaemon
 	}
 
 	return &corev1.ResourceRequirements{

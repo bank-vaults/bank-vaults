@@ -175,6 +175,11 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 		*out = new(v1.ResourceRequirements)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.HSMDaemon != nil {
+		in, out := &in.HSMDaemon, &out.HSMDaemon
+		*out = new(v1.ResourceRequirements)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Etcd != nil {
 		in, out := &in.Etcd, &out.Etcd
 		*out = new(v1.ResourceRequirements)
@@ -431,7 +436,6 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 		}
 	}
 	in.SecurityContext.DeepCopyInto(&out.SecurityContext)
-	in.BankVaultsSecurityContext.DeepCopyInto(&out.BankVaultsSecurityContext)
 	if in.EtcdAnnotations != nil {
 		in, out := &in.EtcdAnnotations, &out.EtcdAnnotations
 		*out = make(map[string]string, len(*in))
