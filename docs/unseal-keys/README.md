@@ -12,10 +12,37 @@ To unseal Vault the `vault-root` token is not needed and can be removed from the
 
 ### AWS
 
-To use KMS-encrypted root token with vault CLI
+To use the KMS-encrypted root token with Vault CLI:
+
+Required CLI tools:
+- aws
 
 1. Download root token file to your local file system
 1. Decrypt the token and save it as an environment variable
     ```bash
     export VAULT_TOKEN="$(aws kms decrypt --ciphertext-blob fileb://<encrypted token file> --encryption-context Tool=bank-vaults --query Plaintext --output text | base64 --decode)"
     ```
+
+### Google Cloud
+
+To use the KMS-encrypted root token with vault CLI:
+
+Required CLI tools:
+- `gcloud`
+- `gsutil`
+
+```bash
+GOOGLE_PROJECT="my-project"
+GOOGLE_REGION="us-central1"
+BUCKET="bank-vaults-bucket"
+KEYRING="beta"
+KEY="beta"
+
+export VAULT_TOKEN=$(gsutil cat gs://${BUCKET}/vault-root | gcloud kms decrypt \
+                     --project ${GOOGLE_PROJECT} \
+                     --location ${GOOGLE_REGION} \
+                     --keyring ${KEYRING} \
+                     --key ${KEY} \
+                     --ciphertext-file - \
+                     --plaintext-file -)
+```
