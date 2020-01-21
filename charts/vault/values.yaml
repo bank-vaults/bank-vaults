@@ -6,7 +6,7 @@ strategy:
   type: RollingUpdate
 image:
   repository: vault
-  tag: 1.2.3
+  tag: 1.3.1
   pullPolicy: IfNotPresent
 dockerizeImage:
   repository: jwilder/dockerize
@@ -192,7 +192,7 @@ vault:
 unsealer:
   image:
     repository: banzaicloud/bank-vaults
-    tag: 0.7.0
+    tag: 0.8.0
     pullPolicy: IfNotPresent
   args: [
       "--mode",
