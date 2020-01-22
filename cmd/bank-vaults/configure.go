@@ -216,7 +216,9 @@ func parseConfiguration(vaultConfigFile string) *viper.Viper {
 		logrus.Fatalf("error reading vault config template: %s", err.Error())
 	}
 
-	buffer, err := configuration.EnvTemplate(string(vaultConfig))
+	templater := configuration.NewTemplater(configuration.DefaultLeftDelimiter, configuration.DefaultRightDelimiter)
+
+	buffer, err := templater.EnvTemplate(string(vaultConfig))
 	if err != nil {
 		logrus.Fatalf("error executing vault config template: %s", err.Error())
 	}

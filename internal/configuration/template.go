@@ -24,10 +24,25 @@ import (
 	"github.com/goph/emperror"
 )
 
+const DefaultLeftDelimiter = "${"
+const DefaultRightDelimiter = "}"
+
 const templateName = "config"
 
+type Templater struct {
+	leftDelimiter  string
+	rightDelimiter string
+}
+
+func NewTemplater(leftDelimiter, rightDelimiter string) Templater {
+	return Templater{
+		leftDelimiter:  leftDelimiter,
+		rightDelimiter: rightDelimiter,
+	}
+}
+
 // EnvTemplate interpolates environment variables in a configuration text
-func EnvTemplate(t string) (*bytes.Buffer, error) {
+func (t Templater) EnvTemplate(templateText string) (*bytes.Buffer, error) {
 
 	var env struct {
 		Env map[string]string
@@ -39,16 +54,16 @@ func EnvTemplate(t string) (*bytes.Buffer, error) {
 		env.Env[split[0]] = split[1]
 	}
 
-	return Template(t, env)
+	return t.Template(templateText, env)
 }
 
 // Template interpolates a data structure in a template
-func Template(t string, data interface{}) (*bytes.Buffer, error) {
+func (t Templater) Template(templateText string, data interface{}) (*bytes.Buffer, error) {
 
 	configTemplate, err := template.New(templateName).
 		Funcs(sprig.TxtFuncMap()).
-		Delims("${", "}").
-		Parse(t)
+		Delims(t.leftDelimiter, t.rightDelimiter).
+		Parse(templateText)
 
 	if err != nil {
 		return nil, emperror.Wrapf(err, "error parsing template")
@@ -65,6 +80,6 @@ func Template(t string, data interface{}) (*bytes.Buffer, error) {
 }
 
 // IsGoTemplate returns true if s is probably a Go Template
-func IsGoTemplate(s string) bool {
-	return strings.Contains(s, "${") && strings.Contains(s, "}")
+func (t Templater) IsGoTemplate(templateText string) bool {
+	return strings.Contains(templateText, t.leftDelimiter) && strings.Contains(templateText, t.rightDelimiter)
 }

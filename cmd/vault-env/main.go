@@ -99,6 +99,8 @@ func main() {
 		logger.SetFormatter(&log.JSONFormatter{})
 	}
 
+	templater := configuration.NewTemplater(configuration.DefaultLeftDelimiter, configuration.DefaultRightDelimiter)
+
 	var entrypointCmd []string
 	if len(os.Args) == 1 {
 		logger.Fatalln("no command is given, vault-env can't determine the entrypoint (command), please specify it explicitly or let the webhook query it (see documentation)")
@@ -270,8 +272,8 @@ func main() {
 			data = cast.ToStringMap(secret.Data)
 		}
 
-		if configuration.IsGoTemplate(key) {
-			if value, err := configuration.Template(key, data); err != nil {
+		if templater.IsGoTemplate(key) {
+			if value, err := templater.Template(key, data); err != nil {
 				logger.Fatalln("failed to interpolate template key with vault data:", key, err.Error())
 			} else {
 				sanitized.append(name, value.String())

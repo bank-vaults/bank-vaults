@@ -33,8 +33,9 @@ spec:
     spec:
       initContainers:
       - name: vault-config
-        image: "{{ .Values.dockerizeImage.repository }}:{{ .Values.dockerizeImage.tag }}"
-        imagePullPolicy: {{ .Values.dockerizeImage.pullPolicy }}
+        image: "{{ .Values.unsealer.image.repository }}:{{ .Values.unsealer.image.tag }}"
+        imagePullPolicy: {{ .Values.unsealer.image.pullPolicy }}
+        command: ["template"]
         args:
           - "-delims"
           - "[[:]]"

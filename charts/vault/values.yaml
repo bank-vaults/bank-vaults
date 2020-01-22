@@ -8,10 +8,7 @@ image:
   repository: vault
   tag: 1.3.1
   pullPolicy: IfNotPresent
-dockerizeImage:
-  repository: jwilder/dockerize
-  tag: latest
-  pullPolicy: IfNotPresent
+
 service:
   name: vault
   type: ClusterIP
@@ -192,7 +189,7 @@ vault:
 unsealer:
   image:
     repository: banzaicloud/bank-vaults
-    tag: 0.8.0
+    tag: 0.8.1
     pullPolicy: IfNotPresent
   args: [
       "--mode",
