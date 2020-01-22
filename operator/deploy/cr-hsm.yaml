@@ -61,18 +61,7 @@ spec:
   volumeMounts:
     - name: vault-file
       mountPath: /vault/file
-  
-  resources:
-    hsmDaemon:
-      requests:
-        cpu: 100m
-        memory: 64Mi
-        nitrokey.com/hsm: 1
-      limits:
-        cpu: 200m
-        memory: 128Mi
-        nitrokey.com/hsm: 1
-    
+
   # This example relies on the SoftHSM device initialized in the Docker image.
   unsealConfig:
     hsm:
@@ -91,6 +80,18 @@ spec:
   #     slotId: 0
   #     pin: banzai
   #     keyLabel: bank-vaults
+
+  # # If using the NitroKey HSM example, that resource has to be part of the resource scheduling request.
+  # resources:
+  #   hsmDaemon:
+  #     requests:
+  #       cpu: 100m
+  #       memory: 64Mi
+  #       nitrokey.com/hsm: 1
+  #     limits:
+  #       cpu: 200m
+  #       memory: 128Mi
+  #       nitrokey.com/hsm: 1
 
   # A YAML representation of a final vault config file.
   # See https://www.vaultproject.io/docs/configuration/ for more information.
