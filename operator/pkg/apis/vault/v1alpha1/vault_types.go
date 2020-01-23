@@ -313,6 +313,10 @@ type VaultSpec struct {
 	// default: 168h
 	TLSExpiryThreshold *time.Duration `json:"tlsExpiryThreshold,omitempty"`
 
+	// TLSAdditionalHosts is a list of additional hostnames or IP addresses to add to the SAN on the automatically generated TLS certificate.
+	// default:
+	TLSAdditionalHosts []string `json:"tlsAdditionalHosts,omitempty"`
+
 	// CANamespaces define a list of namespaces where the generated CA certificate for Vault should be distributed,
 	// use ["*"] for all namespaces.
 	// default:

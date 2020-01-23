@@ -1064,6 +1064,13 @@ func hostsAndIPsForVault(om *vaultv1alpha1.Vault, service *corev1.Service) []str
 		}
 	}
 
+	// Add additional TLS hosts from the Vault Spec
+	for _, additionalHost := range om.Spec.TLSAdditionalHosts {
+		if additionalHost != "" {
+			hostsAndIPs = append(hostsAndIPs, additionalHost)
+		}
+	}
+
 	return hostsAndIPs
 }
 
