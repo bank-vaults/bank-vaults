@@ -35,20 +35,20 @@ metadata:
 data:
   config.hcl: |
     vault {
-      retry {
-        backoff = "1s"
-      }
-      auto_auth {
-        method "kubernetes" {
-          mount_path = "auth/kubernetes"
-          config = {
-            role = "my-role"
-          }
+      // This is needed until https://github.com/hashicorp/vault/issues/7889
+      // gets fixed, otherwise it is automated by the webhook.
+      ca_cert = "/vault/tls/ca.crt"
+    }
+    auto_auth {
+      method "kubernetes" {
+        mount_path = "auth/kubernetes"
+        config = {
+          role = "my-role"
         }
-        sink "file" {
-          config = {
-            path = "/vault/.vault-token"
-          }
+      }
+      sink "file" {
+        config = {
+          path = "/vault/.vault-token"
         }
       }
     }
