@@ -1211,6 +1211,9 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 
 	_, containerPorts := getServicePorts(v)
 
+	if v.Spec.VeleroEnabled {
+	}
+
 	podSpec := corev1.PodSpec{
 		Affinity: &corev1.Affinity{
 			PodAntiAffinity: getPodAntiAffinity(v),
