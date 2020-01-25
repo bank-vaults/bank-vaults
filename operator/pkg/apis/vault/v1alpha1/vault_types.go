@@ -326,6 +326,10 @@ type VaultSpec struct {
 	// default: false
 	IstioEnabled bool `json:"istioEnabled,omitempty"`
 
+	// VeleroEnabled describes if the cluster has a Velero running and enabled.
+	// default: false
+	VeleroEnabled bool `json:"veleroEnabled,omitempty"`
+
 	// InitContainers add extra initContainers
 	VaultInitContainers []v1.Container `json:"vaultInitContainers,omitempty"`
 }
