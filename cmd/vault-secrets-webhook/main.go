@@ -81,11 +81,7 @@ func hasTLSVolume(volumes []corev1.Volume) bool {
 }
 
 func hasPodSecurityContextRunAsUser(p *corev1.PodSecurityContext) bool {
-	if p.RunAsUser == nil {
-		return false
-	}
-
-	return true
+	return p.RunAsUser != nil
 }
 
 func getServiceAccountMount(containers []corev1.Container) (serviceAccountMount corev1.VolumeMount) {
@@ -281,7 +277,7 @@ func getAgentContainers(originalContainers []corev1.Container, vaultConfig inter
 }
 
 func getSecurityContext(podSecurityContext *corev1.PodSecurityContext, vaultConfig internal.VaultConfig) *corev1.SecurityContext {
-	if hasPodSecurityContextRunAsUser(podSecurityContext) == true {
+	if hasPodSecurityContextRunAsUser(podSecurityContext) {
 		return &corev1.SecurityContext{
 			RunAsUser:                podSecurityContext.RunAsUser,
 			AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
