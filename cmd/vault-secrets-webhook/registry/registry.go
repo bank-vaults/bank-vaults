@@ -86,10 +86,8 @@ func IsAllowedToCache(container *corev1.Container) bool {
 		return false
 	}
 	_, reference := parseContainerImage(container.Image)
-	if reference == "latest" {
-		return false
-	}
-	return true
+
+	return reference != "latest"
 }
 
 // GetImageConfig returns entrypoint and command of container
