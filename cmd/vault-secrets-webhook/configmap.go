@@ -19,9 +19,10 @@ import (
 	"fmt"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+
 	internal "github.com/banzaicloud/bank-vaults/internal/configuration"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func configMapNeedsMutation(configMap *corev1.ConfigMap) bool {

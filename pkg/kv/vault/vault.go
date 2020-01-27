@@ -18,9 +18,10 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/spf13/cast"
+
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
-	"github.com/spf13/cast"
 )
 
 type VaultStorage struct {

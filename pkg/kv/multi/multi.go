@@ -16,8 +16,9 @@ package multi
 
 import (
 	"emperror.dev/errors"
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/sirupsen/logrus"
+
+	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 
 type multi struct {

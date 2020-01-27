@@ -20,8 +20,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/banzaicloud/bank-vaults/internal/configuration"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/banzaicloud/bank-vaults/internal/configuration"
 )
 
 type arrayFlags []string

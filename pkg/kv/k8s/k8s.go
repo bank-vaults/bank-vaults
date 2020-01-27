@@ -19,13 +19,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 
 // EnvK8SOwnerReference holds the environment variable name for passing in K8S owner refs
