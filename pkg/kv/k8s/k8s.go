@@ -96,11 +96,10 @@ func (k *k8sStorage) Set(key string, val []byte) error {
 		if k.ownerReference != nil {
 			secret.ObjectMeta.SetOwnerReferences([]metav1.OwnerReference{*k.ownerReference})
 		}
-		secret, err = k.client.CoreV1().Secrets(k.namespace).Create(secret)
+		_, err = k.client.CoreV1().Secrets(k.namespace).Create(secret)
 	} else if err == nil {
 		secret.Data[key] = val
-		secret, err = k.client.CoreV1().Secrets(k.namespace).Update(secret)
-		//reflect.DeepEqual()
+		_, err = k.client.CoreV1().Secrets(k.namespace).Update(secret)
 	} else {
 		return fmt.Errorf("error checking if '%s' secret exists: '%s'", k.secret, err.Error())
 	}
