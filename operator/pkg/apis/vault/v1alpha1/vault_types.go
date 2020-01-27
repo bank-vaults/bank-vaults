@@ -634,6 +634,18 @@ func (vault *Vault) GetIngress() *Ingress {
 	return nil
 }
 
+// LabelsForVault returns the labels for selecting the resources
+// belonging to the given vault CR name.
+func (vault *Vault) LabelsForVault() map[string]string {
+	return map[string]string{"app.kubernetes.io/name": "vault", "vault_cr": vault.Name}
+}
+
+// LabelsForVaultConfigurer returns the labels for selecting the resources
+// belonging to the given vault CR name.
+func (vault *Vault) LabelsForVaultConfigurer() map[string]string {
+	return map[string]string{"app.kubernetes.io/name": "vault-configurator", "vault_cr": vault.Name}
+}
+
 // VaultStatus defines the observed state of Vault
 type VaultStatus struct {
 	// Important: Run "make generate-code" to regenerate code after modifying this file
@@ -765,10 +777,17 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 		if usc.Kubernetes.SecretNamespace != "" {
 			secretNamespace = usc.Kubernetes.SecretNamespace
 		}
+
 		secretName := vault.Name + "-unseal-keys"
 		if usc.Kubernetes.SecretName != "" {
 			secretName = usc.Kubernetes.SecretName
 		}
+
+		var secretLabels []string
+		for k, v := range vault.LabelsForVault() {
+			secretLabels = append(secretLabels, k+"="+v)
+		}
+
 		args = append(args,
 			"--mode",
 			"k8s",
@@ -776,6 +795,8 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			secretNamespace,
 			"--k8s-secret-name",
 			secretName,
+			"--k8s-secret-labels",
+			strings.Join(secretLabels, ","),
 		)
 
 	}

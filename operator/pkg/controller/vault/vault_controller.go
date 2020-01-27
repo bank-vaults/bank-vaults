@@ -277,7 +277,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 
 		// Create the secret if it doesn't exist
-		sec, err := secretForEtcd(etcdCluster)
+		sec, err := secretForEtcd(v, etcdCluster)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for etcd: %v", err)
 		}
@@ -489,7 +489,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	externalConfigMaps := corev1.ConfigMapList{}
 	externalConfigMapsFilter := client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(labelsForVaultConfigurer(v.Name)),
+		LabelSelector: labels.SelectorFromSet(v.LabelsForVaultConfigurer()),
 		Namespace:     v.Namespace,
 	}
 	if err = r.client.List(context.TODO(), &externalConfigMaps, &externalConfigMapsFilter); err != nil {
@@ -498,7 +498,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	externalSecrets := corev1.SecretList{}
 	externalSecretsFilter := client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(labelsForVaultConfigurer(v.Name)),
+		LabelSelector: labels.SelectorFromSet(v.LabelsForVaultConfigurer()),
 		Namespace:     v.Namespace,
 	}
 	if err = r.client.List(context.TODO(), &externalSecrets, &externalSecretsFilter); err != nil {
@@ -547,7 +547,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	// Update the Vault status with the pod names
 	podList := podList()
-	labelSelector := labels.SelectorFromSet(labelsForVault(v.Name))
+	labelSelector := labels.SelectorFromSet(v.LabelsForVault())
 	listOps := &client.ListOptions{
 		LabelSelector: labelSelector,
 		Namespace:     v.Namespace,
@@ -611,7 +611,7 @@ func newHTTPClient() *http.Client {
 	}
 }
 
-func secretForEtcd(e *etcdv1beta2.EtcdCluster) (*corev1.Secret, error) {
+func secretForEtcd(v *vaultv1alpha1.Vault, e *etcdv1beta2.EtcdCluster) (*corev1.Secret, error) {
 	hosts := []string{
 		e.Name,
 		e.Name + "." + e.Namespace,
@@ -635,7 +635,7 @@ func secretForEtcd(e *etcdv1beta2.EtcdCluster) (*corev1.Secret, error) {
 	}
 	secret.Name = e.Name + "-tls"
 	secret.Namespace = e.Namespace
-	secret.Labels = labelsForVault(e.Name)
+	secret.Labels = v.LabelsForVault()
 	secret.StringData = map[string]string{}
 
 	secret.StringData[etcdutil.CliCAFile] = chain.CACert
@@ -667,7 +667,7 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
 	etcdCluster.Annotations = v.Spec.EtcdAnnotations
 	etcdCluster.Name = etcdName
 	etcdCluster.Namespace = v.Namespace
-	etcdCluster.Labels = labelsForVault(v.Name)
+	etcdCluster.Labels = v.LabelsForVault()
 	etcdCluster.Spec.Size = v.Spec.GetEtcdSize()
 	etcdCluster.Spec.Repository = v.Spec.EtcdRepository
 	etcdCluster.Spec.Pod = &etcdv1beta2.PodPolicy{
@@ -690,8 +690,8 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
 }
 
 func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
-	ls := labelsForVault(v.Name)
-	selectorLs := labelsForVault(v.Name)
+	ls := v.LabelsForVault()
+	selectorLs := v.LabelsForVault()
 	// Label to differentiate per-instance service and global service via label selection
 	ls["global_service"] = "true"
 	servicePorts, _ := getServicePorts(v)
@@ -726,7 +726,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 }
 
 func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
-	ls := labelsForVault(v.Name)
+	ls := v.LabelsForVault()
 	serviceMonitor := &monitorv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name,
@@ -823,7 +823,7 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 
 		podName := fmt.Sprintf("%s-%d", v.Name, i)
 
-		ls := labelsForVault(v.Name)
+		ls := v.LabelsForVault()
 		ls[appsv1.StatefulSetPodNameLabel] = podName
 
 		service := &corev1.Service{
@@ -854,7 +854,7 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 	var servicePorts []corev1.ServicePort
 
-	ls := labelsForVaultConfigurer(v.Name)
+	ls := v.LabelsForVaultConfigurer()
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
 
 	serviceName := fmt.Sprintf("%s-configurer", v.Name)
@@ -913,7 +913,7 @@ func serviceType(v *vaultv1alpha1.Vault) corev1.ServiceType {
 }
 
 func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMapList, secrets corev1.SecretList, tlsAnnotations map[string]string) (*appsv1.Deployment, error) {
-	ls := labelsForVaultConfigurer(v.Name)
+	ls := v.LabelsForVaultConfigurer()
 
 	volumes := []corev1.Volume{}
 	volumeMounts := []corev1.VolumeMount{}
@@ -1031,7 +1031,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 }
 
 func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
-	ls := labelsForVaultConfigurer(v.Name)
+	ls := v.LabelsForVaultConfigurer()
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -1074,8 +1074,8 @@ func hostsAndIPsForVault(om *vaultv1alpha1.Vault, service *corev1.Service) []str
 	return hostsAndIPs
 }
 
-func secretForVault(om *vaultv1alpha1.Vault, service *corev1.Service) (*corev1.Secret, time.Time, error) {
-	hostsAndIPs := hostsAndIPsForVault(om, service)
+func secretForVault(v *vaultv1alpha1.Vault, service *corev1.Service) (*corev1.Secret, time.Time, error) {
+	hostsAndIPs := hostsAndIPsForVault(v, service)
 
 	chain, err := bvtls.GenerateTLS(strings.Join(hostsAndIPs, ","), "8760h")
 	if err != nil {
@@ -1088,10 +1088,10 @@ func secretForVault(om *vaultv1alpha1.Vault, service *corev1.Service) (*corev1.S
 			Kind:       "Secret",
 		},
 	}
-	secret.Name = om.Name + "-tls"
-	secret.Namespace = om.Namespace
-	secret.Labels = withVaultLabels(om, labelsForVault(om.Name))
-	secret.Annotations = withVaultAnnotations(om, getCommonAnnotations(om, map[string]string{}))
+	secret.Name = v.Name + "-tls"
+	secret.Namespace = v.Namespace
+	secret.Labels = withVaultLabels(v, v.LabelsForVault())
+	secret.Annotations = withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{}))
 	secret.StringData = map[string]string{}
 	secret.StringData["ca.crt"] = chain.CACert
 	secret.StringData["server.crt"] = chain.ServerCert
@@ -1106,7 +1106,7 @@ func secretForVault(om *vaultv1alpha1.Vault, service *corev1.Service) (*corev1.S
 
 // statefulSetForVault returns a Vault StatefulSet object
 func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []corev1.Secret, tlsAnnotations map[string]string, service *corev1.Service) (*appsv1.StatefulSet, error) {
-	ls := labelsForVault(v.Name)
+	ls := v.LabelsForVault()
 	replicas := v.Spec.Size
 
 	// validate configuration
@@ -1481,7 +1481,7 @@ func withTLSVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMoun
 }
 
 func configMapForStatsD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
-	ls := labelsForVault(v.Name)
+	ls := v.LabelsForVault()
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -1503,7 +1503,7 @@ func configMapForStatsD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 }
 
 func configMapForFluentD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
-	ls := labelsForVault(v.Name)
+	ls := v.LabelsForVault()
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name + "-fluentd-config",
@@ -1701,7 +1701,7 @@ func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
 		return nil
 	}
 
-	ls := labelsForVault(v.Name)
+	ls := v.LabelsForVault()
 	return &corev1.PodAntiAffinity{
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
 			{
@@ -1806,18 +1806,6 @@ func withSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
 		}
 	}
 	return &v.Spec.SecurityContext
-}
-
-// labelsForVault returns the labels for selecting the resources
-// belonging to the given vault CR name.
-func labelsForVault(name string) map[string]string {
-	return map[string]string{"app.kubernetes.io/name": "vault", "vault_cr": name}
-}
-
-// labelsForVaultConfigurer returns the labels for selecting the resources
-// belonging to the given vault CR name.
-func labelsForVaultConfigurer(name string) map[string]string {
-	return map[string]string{"app.kubernetes.io/name": "vault-configurator", "vault_cr": name}
 }
 
 // Extend Labels with Vault User defined ones

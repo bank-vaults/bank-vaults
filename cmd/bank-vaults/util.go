@@ -186,6 +186,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		k8s, err := k8s.New(
 			cfg.GetString(cfgK8SNamespace),
 			cfg.GetString(cfgK8SSecret),
+			k8sSecretLabels,
 		)
 
 		if err != nil {
