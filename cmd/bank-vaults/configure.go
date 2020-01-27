@@ -208,7 +208,6 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.V
 }
 
 func parseConfiguration(vaultConfigFile string) *viper.Viper {
-
 	config := viper.New()
 
 	vaultConfig, err := ioutil.ReadFile(vaultConfigFile)

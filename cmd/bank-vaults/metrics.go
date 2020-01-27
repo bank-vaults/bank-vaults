@@ -79,7 +79,6 @@ func bToF(b bool) float64 {
 }
 
 func (e *prometheusExporter) Collect(ch chan<- prometheus.Metric) {
-
 	if e.Mode == "unseal" {
 		sealed, err := e.Vault.Sealed()
 		if err != nil {

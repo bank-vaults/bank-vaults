@@ -96,7 +96,6 @@ func (r *Registry) GetImageConfig(
 	namespace string,
 	container *corev1.Container,
 	podSpec *corev1.PodSpec) (*imagev1.ImageConfig, error) {
-
 	allowToCache := IsAllowedToCache(container)
 	if allowToCache {
 		if imageConfig, cacheHit := r.imageCache.Get(container.Image); cacheHit {
@@ -308,7 +307,6 @@ func (k *ContainerInfo) checkImagePullSecret(namespace string, secret string) (b
 
 // Collect reads information from k8s and load them into the structure
 func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.PodSpec, credentialsCache *cache.Cache) error {
-
 	k.Image = k.fixDockerHubImage(container.Image)
 
 	var err error

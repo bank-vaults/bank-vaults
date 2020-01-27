@@ -28,7 +28,6 @@ type file struct {
 
 // New creates a new kv.Service backed by files, without any encryption
 func New(path string) (service kv.Service, err error) {
-
 	service = &file{path: path}
 
 	return
