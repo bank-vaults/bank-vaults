@@ -31,6 +31,5 @@ linters:
         - golint
         - scopelint
         - gocritic
-        - staticcheck
         - stylecheck
         - gocyclo
