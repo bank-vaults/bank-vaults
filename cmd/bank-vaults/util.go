@@ -35,8 +35,9 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
-func vaultConfigForConfig(cfg *viper.Viper) (vault.Config, error) {
-
+// TODO review this function's returned error
+// nolint: unparam
+func vaultConfigForConfig(_ *viper.Viper) (vault.Config, error) {
 	return vault.Config{
 		SecretShares:    appConfig.GetInt(cfgSecretShares),
 		SecretThreshold: appConfig.GetInt(cfgSecretThreshold),

@@ -39,8 +39,7 @@ func secretNeedsMutation(secret *corev1.Secret) bool {
 	return false
 }
 
-func mutateSecret(secret *corev1.Secret, vaultConfig internal.VaultConfig, ns string) error {
-
+func mutateSecret(secret *corev1.Secret, vaultConfig internal.VaultConfig, _ string) error {
 	// do an early exit and don't construct the Vault client if not needed
 	if !secretNeedsMutation(secret) {
 		return nil
@@ -139,6 +138,8 @@ func mutateSecretData(secret *corev1.Secret, sc map[string]string, vaultClient *
 	return nil
 }
 
+// TODO review this function's returned error
+// nolint: unparam
 func getDataFromVault(data map[string]string, vaultClient *vault.Client) (map[string]string, error) {
 	var vaultData = make(map[string]string)
 
@@ -170,6 +171,7 @@ func getDataFromVault(data map[string]string, vaultClient *vault.Client) (map[st
 				secret, err := vaultClient.RawClient().Logical().ReadWithData(path, map[string][]string{"version": {version}})
 				if err != nil {
 					logger.Errorf("Failed to read secret path: %s error: %s", path, err.Error())
+					// TODO return error?
 				}
 				if secret == nil {
 					logger.Errorf("Path not found path: %s", path)

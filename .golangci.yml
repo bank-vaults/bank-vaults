@@ -18,9 +18,9 @@ linters:
         - lll
 
         # TODO: fixme
+        - godox
         - gochecknoglobals
         - gochecknoinits
-        - unparam
         - goconst
         - gocognit
         - errcheck
