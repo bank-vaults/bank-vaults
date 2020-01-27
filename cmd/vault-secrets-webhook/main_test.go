@@ -76,7 +76,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			},
 			args: args{
 				containers: []corev1.Container{
-					corev1.Container{
+					{
 						Name:    "MyContainer",
 						Image:   "myimage",
 						Command: []string{"/bin/bash"},
@@ -92,7 +92,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 				vaultConfig: vaultConfig,
 			},
 			wantedContainers: []corev1.Container{
-				corev1.Container{
+				{
 					Name:         "MyContainer",
 					Image:        "myimage",
 					Command:      []string{"/vault/vault-env"},
@@ -122,7 +122,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			},
 			args: args{
 				containers: []corev1.Container{
-					corev1.Container{
+					{
 						Name:    "MyContainer",
 						Image:   "myimage",
 						Command: []string{"/bin/bash"},
@@ -138,7 +138,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 				vaultConfig: vaultConfig,
 			},
 			wantedContainers: []corev1.Container{
-				corev1.Container{
+				{
 					Name:         "MyContainer",
 					Image:        "myimage",
 					Command:      []string{"/vault/vault-env"},
@@ -170,7 +170,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			},
 			args: args{
 				containers: []corev1.Container{
-					corev1.Container{
+					{
 						Name:    "MyContainer",
 						Image:   "myimage",
 						Command: []string{},
@@ -186,7 +186,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 				vaultConfig: vaultConfig,
 			},
 			wantedContainers: []corev1.Container{
-				corev1.Container{
+				{
 					Name:         "MyContainer",
 					Image:        "myimage",
 					Command:      []string{"/vault/vault-env"},
@@ -218,7 +218,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			},
 			args: args{
 				containers: []corev1.Container{
-					corev1.Container{
+					{
 						Name:    "MyContainer",
 						Image:   "myimage",
 						Command: []string{},
@@ -234,7 +234,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 				vaultConfig: vaultConfig,
 			},
 			wantedContainers: []corev1.Container{
-				corev1.Container{
+				{
 					Name:         "MyContainer",
 					Image:        "myimage",
 					Command:      []string{"/vault/vault-env"},
@@ -264,7 +264,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			},
 			args: args{
 				containers: []corev1.Container{
-					corev1.Container{
+					{
 						Name:    "MyContainer",
 						Image:   "myimage",
 						Command: []string{"/bin/bash"},
@@ -273,7 +273,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 				vaultConfig: vaultConfig,
 			},
 			wantedContainers: []corev1.Container{
-				corev1.Container{
+				{
 					Name:    "MyContainer",
 					Image:   "myimage",
 					Command: []string{"/bin/bash"},
@@ -341,13 +341,13 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 				pod: &corev1.Pod{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
-							corev1.Container{
+							{
 								Name:    "MyContainer",
 								Image:   "myimage",
 								Command: []string{"/bin/bash"},
 								Args:    nil,
 								VolumeMounts: []corev1.VolumeMount{
-									corev1.VolumeMount{
+									{
 										MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 									},
 								},
@@ -369,17 +369,17 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 			wantedPod: &corev1.Pod{
 				Spec: corev1.PodSpec{
 					InitContainers: []corev1.Container{
-						corev1.Container{
+						{
 							Name:            "vault-agent",
 							Image:           "vault:latest",
 							Command:         []string{"vault", "agent", "-config=/vault/agent/config.hcl"},
 							ImagePullPolicy: "IfNotPresent",
 							Env: []corev1.EnvVar{
-								corev1.EnvVar{
+								{
 									Name:  "VAULT_ADDR",
 									Value: "test",
 								},
-								corev1.EnvVar{
+								{
 									Name:  "VAULT_SKIP_VERIFY",
 									Value: "false",
 								},
@@ -392,14 +392,14 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 							},
 							SecurityContext: initContainerSecurityContext,
 							VolumeMounts: []corev1.VolumeMount{
-								corev1.VolumeMount{
+								{
 									Name:      "vault-env",
 									MountPath: "/vault/",
 								},
-								corev1.VolumeMount{
+								{
 									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 								},
-								corev1.VolumeMount{
+								{
 									Name:      "vault-agent-config",
 									MountPath: "/vault/agent/",
 								},
@@ -407,7 +407,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 						},
 					},
 					Containers: []corev1.Container{
-						corev1.Container{
+						{
 							Name: "consul-template",
 							Args: []string{"-config", "/vault/ct-config/config.hcl"},
 							Resources: corev1.ResourceRequirements{
@@ -417,11 +417,11 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								},
 							},
 							Env: []corev1.EnvVar{
-								corev1.EnvVar{
+								{
 									Name:  "VAULT_ADDR",
 									Value: "test",
 								},
-								corev1.EnvVar{
+								{
 									Name:  "VAULT_SKIP_VERIFY",
 									Value: "false",
 								},
@@ -430,19 +430,19 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 							},
 							VolumeMounts: []corev1.VolumeMount{
-								corev1.VolumeMount{
+								{
 									Name:      "vault-env",
 									MountPath: "/vault/",
 								},
-								corev1.VolumeMount{
+								{
 									Name:      "ct-secrets",
 									MountPath: "/vault/secrets",
 								},
-								corev1.VolumeMount{
+								{
 									Name:      "vault-env",
 									MountPath: "/home/consul-template",
 								},
-								corev1.VolumeMount{
+								{
 									Name:      "ct-configmap",
 									ReadOnly:  true,
 									MountPath: "/vault/ct-config/config.hcl",
@@ -450,16 +450,16 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								},
 							},
 						},
-						corev1.Container{
+						{
 							Name:    "MyContainer",
 							Image:   "myimage",
 							Command: []string{"/bin/bash"},
 							Args:    nil,
 							VolumeMounts: []corev1.VolumeMount{
-								corev1.VolumeMount{
+								{
 									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 								},
-								corev1.VolumeMount{
+								{
 									Name:      "ct-secrets",
 									MountPath: "/vault/secrets",
 								},
@@ -467,7 +467,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 						},
 					},
 					Volumes: []corev1.Volume{
-						corev1.Volume{
+						{
 							Name: "vault-env",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{
@@ -475,7 +475,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								},
 							},
 						},
-						corev1.Volume{
+						{
 							Name: "vault-agent-config",
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
@@ -485,7 +485,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								},
 							},
 						},
-						corev1.Volume{
+						{
 							Name: "ct-secrets",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{
@@ -493,7 +493,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								},
 							},
 						},
-						corev1.Volume{
+						{
 							Name: "ct-configmap",
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
@@ -501,7 +501,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 										Name: "config-map-test",
 									},
 									Items: []corev1.KeyToPath{
-										corev1.KeyToPath{
+										{
 											Key:  "config.hcl",
 											Path: "config.hcl",
 										},
@@ -526,13 +526,13 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 				pod: &corev1.Pod{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
-							corev1.Container{
+							{
 								Name:    "MyContainer",
 								Image:   "myimage",
 								Command: []string{"/bin/bash"},
 								Args:    nil,
 								VolumeMounts: []corev1.VolumeMount{
-									corev1.VolumeMount{
+									{
 										MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 									},
 								},
@@ -555,7 +555,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 				Spec: corev1.PodSpec{
 					InitContainers: []corev1.Container{},
 					Containers: []corev1.Container{
-						corev1.Container{
+						{
 							Name:            "vault-agent",
 							Image:           "vault:latest",
 							ImagePullPolicy: "IfNotPresent",
@@ -567,11 +567,11 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								},
 							},
 							Env: []corev1.EnvVar{
-								corev1.EnvVar{
+								{
 									Name:  "VAULT_ADDR",
 									Value: "test",
 								},
-								corev1.EnvVar{
+								{
 									Name:  "VAULT_SKIP_VERIFY",
 									Value: "false",
 								},
@@ -585,18 +585,18 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
-								corev1.VolumeMount{
+								{
 									Name:      "vault-env",
 									MountPath: "/vault/",
 								},
-								corev1.VolumeMount{
+								{
 									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 								},
-								corev1.VolumeMount{
+								{
 									Name:      "agent-secrets",
 									MountPath: "/vault/secrets",
 								},
-								corev1.VolumeMount{
+								{
 									Name:      "agent-configmap",
 									ReadOnly:  true,
 									MountPath: "/vault/config/config.hcl",
@@ -604,16 +604,16 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								},
 							},
 						},
-						corev1.Container{
+						{
 							Name:    "MyContainer",
 							Image:   "myimage",
 							Command: []string{"/bin/bash"},
 							Args:    nil,
 							VolumeMounts: []corev1.VolumeMount{
-								corev1.VolumeMount{
+								{
 									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 								},
-								corev1.VolumeMount{
+								{
 									Name:      "agent-secrets",
 									MountPath: "/vault/secrets",
 								},
@@ -621,7 +621,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 						},
 					},
 					Volumes: []corev1.Volume{
-						corev1.Volume{
+						{
 							Name: "vault-env",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{
@@ -629,7 +629,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								},
 							},
 						},
-						corev1.Volume{
+						{
 							Name: "agent-secrets",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{
@@ -637,7 +637,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								},
 							},
 						},
-						corev1.Volume{
+						{
 							Name: "agent-configmap",
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
@@ -645,7 +645,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 										Name: "config-map-test",
 									},
 									Items: []corev1.KeyToPath{
-										corev1.KeyToPath{
+										{
 											Key:  "config.hcl",
 											Path: "config.hcl",
 										},

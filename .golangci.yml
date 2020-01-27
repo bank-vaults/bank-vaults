@@ -28,7 +28,6 @@ linters:
         - whitespace
         - misspell
         - nakedret
-        - gofmt
         - golint
         - scopelint
         - gocritic
