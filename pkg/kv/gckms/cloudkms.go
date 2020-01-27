@@ -21,6 +21,7 @@ import (
 
 	"golang.org/x/oauth2/google"
 	cloudkms "google.golang.org/api/cloudkms/v1"
+	"google.golang.org/api/option"
 
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
@@ -45,7 +46,7 @@ func New(store kv.Service, project, location, keyring, cryptoKey string) (kv.Ser
 		return nil, fmt.Errorf("error creating google client: %s", err.Error())
 	}
 
-	kmsService, err := cloudkms.New(client)
+	kmsService, err := cloudkms.NewService(context.Background(), option.WithHTTPClient(client))
 
 	if err != nil {
 		return nil, fmt.Errorf("error creating google kms service client: %s", err.Error())
