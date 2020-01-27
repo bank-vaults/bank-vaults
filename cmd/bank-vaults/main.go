@@ -73,8 +73,13 @@ const cfgVaultToken = "vault-token"
 
 const cfgK8SNamespace = "k8s-secret-namespace"
 const cfgK8SSecret = "k8s-secret-name"
+const cfgK8SLabels = "k8s-secret-labels"
 
 const cfgFilePath = "file-path"
+
+// We need to pre-create a value and bind the the flag to this until
+// https://github.com/spf13/viper/issues/608 gets fixed.
+var k8sSecretLabels map[string]string
 
 var rootCmd = &cobra.Command{
 	Use:   "bank-vaults",
@@ -103,6 +108,11 @@ func configStringVar(key, defaultValue, description string) {
 
 func configStringSliceVar(key string, defaultValue []string, description string) {
 	rootCmd.PersistentFlags().StringSlice(key, defaultValue, description)
+	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key))
+}
+
+func configStringMapVar(key string, value *map[string]string, description string) {
+	rootCmd.PersistentFlags().StringToStringVar(value, key, nil, description)
 	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key))
 }
 
@@ -187,6 +197,7 @@ func init() {
 	// K8S Secret Storage flags
 	configStringVar(cfgK8SNamespace, "", "The namespace of the K8S Secret to store values in")
 	configStringVar(cfgK8SSecret, "", "The name of the K8S Secret to store values in")
+	configStringMapVar(cfgK8SLabels, &k8sSecretLabels, "The labels of the K8S Secret to store values in")
 
 	// File flags
 	configStringVar(cfgFilePath, "", "The path prefix of the files where to store values in")

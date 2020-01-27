@@ -32,14 +32,15 @@ import (
 const EnvK8SOwnerReference = "K8S_OWNER_REFERENCE"
 
 type k8sStorage struct {
-	cl             *kubernetes.Clientset
+	client         *kubernetes.Clientset
 	namespace      string
 	secret         string
+	labels         map[string]string
 	ownerReference *metav1.OwnerReference
 }
 
 // New creates a new kv.Service backed by K8S Secrets
-func New(namespace, secret string) (service kv.Service, err error) {
+func New(namespace, secret string, labels map[string]string) (service kv.Service, err error) {
 	kubeconfig := os.Getenv(clientcmd.RecommendedConfigPathEnvVar)
 	var config *rest.Config
 
@@ -68,29 +69,36 @@ func New(namespace, secret string) (service kv.Service, err error) {
 		}
 	}
 
-	service = &k8sStorage{client, namespace, secret, ownerReference}
+	service = &k8sStorage{
+		client:         client,
+		namespace:      namespace,
+		secret:         secret,
+		labels:         labels,
+		ownerReference: ownerReference,
+	}
 
 	return
 }
 
 func (k *k8sStorage) Set(key string, val []byte) error {
-	secret, err := k.cl.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
+	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
 
 	if errors.IsNotFound(err) {
 		secret := &v1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: k.namespace,
 				Name:      k.secret,
+				Labels:    k.labels,
 			},
 			Data: map[string][]byte{key: val},
 		}
 		if k.ownerReference != nil {
 			secret.ObjectMeta.SetOwnerReferences([]metav1.OwnerReference{*k.ownerReference})
 		}
-		secret, err = k.cl.CoreV1().Secrets(k.namespace).Create(secret)
+		secret, err = k.client.CoreV1().Secrets(k.namespace).Create(secret)
 	} else if err == nil {
 		secret.Data[key] = val
-		secret, err = k.cl.CoreV1().Secrets(k.namespace).Update(secret)
+		secret, err = k.client.CoreV1().Secrets(k.namespace).Update(secret)
 		//reflect.DeepEqual()
 	} else {
 		return fmt.Errorf("error checking if '%s' secret exists: '%s'", k.secret, err.Error())
@@ -103,7 +111,7 @@ func (k *k8sStorage) Set(key string, val []byte) error {
 }
 
 func (k *k8sStorage) Get(key string) ([]byte, error) {
-	secret, err := k.cl.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
+	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
 
 	if err != nil {
 		if errors.IsNotFound(err) {
