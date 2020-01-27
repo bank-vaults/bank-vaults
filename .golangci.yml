@@ -26,7 +26,6 @@ linters:
         - errcheck
         - unconvert
         - whitespace
-        - misspell
         - nakedret
         - golint
         - scopelint
