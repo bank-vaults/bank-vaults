@@ -17,6 +17,8 @@ package main
 import (
 	"fmt"
 
+	"github.com/spf13/viper"
+
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/alibabakms"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/alibabaoss"
@@ -31,7 +33,6 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv/s3"
 	kvvault "github.com/banzaicloud/bank-vaults/pkg/kv/vault"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
-	"github.com/spf13/viper"
 )
 
 func vaultConfigForConfig(cfg *viper.Viper) (vault.Config, error) {

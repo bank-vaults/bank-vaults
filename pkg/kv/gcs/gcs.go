@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 
 	"cloud.google.com/go/storage"
+
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 

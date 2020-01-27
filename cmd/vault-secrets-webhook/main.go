@@ -23,8 +23,6 @@ import (
 
 	internal "github.com/banzaicloud/bank-vaults/internal/configuration"
 
-	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -42,6 +40,9 @@ import (
 	kubeVer "k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	kubernetesConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
+
+	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 var vaultAgentConfig = `

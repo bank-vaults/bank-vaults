@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 

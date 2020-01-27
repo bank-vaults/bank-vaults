@@ -19,9 +19,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 const cfgUnsealPeriod = "unseal-period"

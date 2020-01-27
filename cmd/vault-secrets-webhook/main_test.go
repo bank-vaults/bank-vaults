@@ -23,9 +23,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	fake "k8s.io/client-go/kubernetes/fake"
 
+	imagev1 "github.com/opencontainers/image-spec/specs-go/v1"
+
 	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
 	internal "github.com/banzaicloud/bank-vaults/internal/configuration"
-	imagev1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var vaultConfig = internal.VaultConfig{

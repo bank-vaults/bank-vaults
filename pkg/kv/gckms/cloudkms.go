@@ -19,9 +19,10 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"golang.org/x/oauth2/google"
 	cloudkms "google.golang.org/api/cloudkms/v1"
+
+	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 
 // googleKms is an implementation of the kv.Service interface, that encrypts
