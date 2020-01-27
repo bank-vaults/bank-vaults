@@ -38,7 +38,6 @@ func (i *arrayFlags) Set(value string) error {
 
 // template is an internal CLI command and not supported for direct consumption.
 func main() {
-
 	var filename string
 	var delimiters string
 	var templates arrayFlags

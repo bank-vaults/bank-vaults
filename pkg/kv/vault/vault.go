@@ -31,7 +31,6 @@ type VaultStorage struct {
 
 // New creates a new kv.Service backed by Vault KV Version 2
 func New(addr, unsealKeysPath, role, authPath, tokenPath, token string) (kv.Service, error) {
-
 	client, err := vault.NewClientWithOptions(
 		vault.ClientURL(addr),
 		vault.ClientRole(role),

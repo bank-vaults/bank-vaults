@@ -877,9 +877,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 }
 
 func addSecretsVolToContainers(vaultConfig internal.VaultConfig, containers []corev1.Container, logger *log.Logger) {
-
 	for i, container := range containers {
-
 		logger.Debugf("Add secrets VolumeMount to container %s", container.Name)
 
 		container.VolumeMounts = append(container.VolumeMounts, []corev1.VolumeMount{
@@ -894,9 +892,7 @@ func addSecretsVolToContainers(vaultConfig internal.VaultConfig, containers []co
 }
 
 func addAgentSecretsVolToContainers(vaultConfig internal.VaultConfig, containers []corev1.Container, logger *log.Logger) {
-
 	for i, container := range containers {
-
 		logger.Debugf("Add secrets VolumeMount to container %s", container.Name)
 
 		container.VolumeMounts = append(container.VolumeMounts, []corev1.VolumeMount{
@@ -940,7 +936,6 @@ func newK8SClient() (kubernetes.Interface, error) {
 }
 
 func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig internal.VaultConfig, ns string, dryRun bool) error {
-
 	logger.Debugf("Successfully connected to the API")
 
 	initContainersMutated, err := mw.mutateContainers(pod.Spec.InitContainers, &pod.Spec, vaultConfig, ns)
@@ -982,7 +977,6 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig internal.Vault
 		},
 	}
 	if vaultConfig.TLSSecret != "" {
-
 		mountPath := "/vault/tls/ca.crt"
 		volumeName := "vault-tls"
 		if hasTLSVolume(pod.Spec.Volumes) {

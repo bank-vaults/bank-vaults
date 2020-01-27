@@ -48,7 +48,6 @@ func (r *MockRegistry) GetImageConfig(_ kubernetes.Interface, _ string, _ *corev
 }
 
 func Test_mutatingWebhook_mutateContainers(t *testing.T) {
-
 	type fields struct {
 		k8sClient kubernetes.Interface
 		registry  registry.ImageRegistry
@@ -306,7 +305,6 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 }
 
 func Test_mutatingWebhook_mutatePod(t *testing.T) {
-
 	type fields struct {
 		k8sClient kubernetes.Interface
 		registry  registry.ImageRegistry

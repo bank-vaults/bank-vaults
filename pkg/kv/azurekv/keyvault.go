@@ -50,7 +50,6 @@ func New(name string) (kv.Service, error) {
 }
 
 func (a *azureKeyVault) Get(key string) ([]byte, error) {
-
 	bundle, err := a.client.GetSecret(context.Background(), a.vaultBaseURL, key, "")
 
 	if err != nil {
@@ -65,7 +64,6 @@ func (a *azureKeyVault) Get(key string) ([]byte, error) {
 }
 
 func (a *azureKeyVault) Set(key string, val []byte) error {
-
 	value := string(val)
 	parameters := keyvault.SecretSetParameters{
 		Value: &value,

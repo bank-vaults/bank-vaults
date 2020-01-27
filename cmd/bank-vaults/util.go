@@ -50,9 +50,7 @@ func vaultConfigForConfig(_ *viper.Viper) (vault.Config, error) {
 }
 
 func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
-
 	switch mode := cfg.GetString(cfgMode); mode {
-
 	case cfgModeValueGoogleCloudKMSGCS:
 		gcs, err := gcs.New(
 			cfg.GetString(cfgGoogleCloudStorageBucket),

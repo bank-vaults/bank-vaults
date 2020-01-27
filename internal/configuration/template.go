@@ -43,7 +43,6 @@ func NewTemplater(leftDelimiter, rightDelimiter string) Templater {
 
 // EnvTemplate interpolates environment variables in a configuration text
 func (t Templater) EnvTemplate(templateText string) (*bytes.Buffer, error) {
-
 	var env struct {
 		Env map[string]string
 	}
@@ -59,7 +58,6 @@ func (t Templater) EnvTemplate(templateText string) (*bytes.Buffer, error) {
 
 // Template interpolates a data structure in a template
 func (t Templater) Template(templateText string, data interface{}) (*bytes.Buffer, error) {
-
 	configTemplate, err := template.New(templateName).
 		Funcs(sprig.TxtFuncMap()).
 		Delims(t.leftDelimiter, t.rightDelimiter).

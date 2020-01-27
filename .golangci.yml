@@ -24,7 +24,6 @@ linters:
         - goconst
         - gocognit
         - errcheck
-        - whitespace
         - nakedret
         - golint
         - scopelint

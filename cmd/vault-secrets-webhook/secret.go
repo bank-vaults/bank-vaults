@@ -78,7 +78,6 @@ func mutateSecret(secret *corev1.Secret, vaultConfig internal.VaultConfig, _ str
 }
 
 func mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultClient *vault.Client) error {
-
 	assembled := registry.DockerCreds{Auths: map[string]dockerTypes.AuthConfig{}}
 
 	for key, creds := range dc.Auths {
