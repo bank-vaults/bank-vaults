@@ -55,7 +55,7 @@ func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConf
 	for key, value := range configMap.Data {
 		if strings.HasPrefix(value, "vault:") {
 			data := map[string]string{
-				key: string(value),
+				key: value,
 			}
 			err := mutateConfigMapData(configMap, data, vaultClient)
 			if err != nil {
