@@ -1,6 +1,5 @@
 # A Self-Documenting Makefile: http://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 
-
 .PHONY: clean
 clean: ## Clean builds
 	rm -rf ${BUILD_DIR}/
@@ -16,7 +15,6 @@ ifneq (${IGNORE_GOLANG_VERSION_REQ}, 1)
 endif
 	go build ${GOARGS} -tags "${GOTAGS}" -ldflags "${LDFLAGS}" ${BUILD_PACKAGE}
 
-
 .PHONY: docker-build
 docker-build: ## Builds go binary in docker image
 	docker run -it -v $(PWD):/go/src/${PACKAGE} -w /go/src/${PACKAGE} golang:${GOLANG_VERSION}-alpine go build -o ${BINARY_NAME}_linux ${BUILD_PACKAGE}
@@ -30,32 +28,20 @@ debug: build ## Builds binary package
 debug-docker: debug ## Builds binary package
 	docker build -t banzaicloud/${BINARY_NAME}:debug -f Dockerfile.dev .
 
-
 bin/golangci-lint: bin/golangci-lint-${GOLANGCI_VERSION}
 	@ln -sf golangci-lint-${GOLANGCI_VERSION} bin/golangci-lint
 bin/golangci-lint-${GOLANGCI_VERSION}:
 	@mkdir -p bin
-	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- -b ./bin v${GOLANGCI_VERSION}
+	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b ./bin/ v${GOLANGCI_VERSION}
 	@mv bin/golangci-lint $@
 
 .PHONY: lint
 lint: bin/golangci-lint ## Run linter
-	@bin/golangci-lint run -v
+	bin/golangci-lint run
 
-.PHONY: fmt
-fmt:
-	@gofmt -s -w ${GOFILES_NOVENDOR}
-
-bin/misspell: bin/misspell-${MISSPELL_VERSION}
-	@ln -sf misspell-${MISSPELL_VERSION} bin/misspell
-bin/misspell-${MISSPELL_VERSION}:
-	@mkdir -p bin
-	curl -sfL https://git.io/misspell | bash -s -- -b ./bin/ v${MISSPELL_VERSION}
-	@mv bin/misspell $@
-
-.PHONY: misspell
-misspell: bin/misspell ## Fix spelling mistakes
-	misspell -w ${GOFILES_NOVENDOR}
+.PHONY: fix
+fix: bin/golangci-lint ## Fix lint violations
+	bin/golangci-lint run --fix
 
 bin/licensei: bin/licensei-${LICENSEI_VERSION}
 	@ln -sf licensei-${LICENSEI_VERSION} bin/licensei
@@ -80,12 +66,7 @@ bin/gotestsum: bin/gotestsum-${GOTESTSUM_VERSION}
 	@ln -sf gotestsum-${GOTESTSUM_VERSION} bin/gotestsum
 bin/gotestsum-${GOTESTSUM_VERSION}:
 	@mkdir -p bin
-ifeq (${OS}, Darwin)
-	curl -L https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_darwin_amd64.tar.gz | tar -zOxf - gotestsum > ./bin/gotestsum-${GOTESTSUM_VERSION} && chmod +x ./bin/gotestsum-${GOTESTSUM_VERSION}
-endif
-ifeq (${OS}, Linux)
-	curl -L https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz | tar -zOxf - gotestsum > ./bin/gotestsum-${GOTESTSUM_VERSION} && chmod +x ./bin/gotestsum-${GOTESTSUM_VERSION}
-endif
+	curl -L https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_${OS}_amd64.tar.gz | tar -zOxf - gotestsum > ./bin/gotestsum-${GOTESTSUM_VERSION} && chmod +x ./bin/gotestsum-${GOTESTSUM_VERSION}
 
 TEST_PKGS ?= ./...
 TEST_REPORT_NAME ?= results.xml
