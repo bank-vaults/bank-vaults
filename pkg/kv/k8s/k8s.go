@@ -41,10 +41,11 @@ type k8sStorage struct {
 }
 
 // New creates a new kv.Service backed by K8S Secrets
-func New(namespace, secret string, labels map[string]string) (service kv.Service, err error) {
+func New(namespace, secret string, labels map[string]string) (kv.Service, error) {
 	kubeconfig := os.Getenv(clientcmd.RecommendedConfigPathEnvVar)
 	var config *rest.Config
 
+	var err error
 	if kubeconfig != "" {
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 	} else {
@@ -70,15 +71,13 @@ func New(namespace, secret string, labels map[string]string) (service kv.Service
 		}
 	}
 
-	service = &k8sStorage{
+	return &k8sStorage{
 		client:         client,
 		namespace:      namespace,
 		secret:         secret,
 		labels:         labels,
 		ownerReference: ownerReference,
-	}
-
-	return
+	}, nil
 }
 
 func (k *k8sStorage) Set(key string, val []byte) error {
