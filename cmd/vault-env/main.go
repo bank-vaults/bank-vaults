@@ -93,7 +93,7 @@ func main() {
 	enableJSONLog := os.Getenv("VAULT_JSON_LOG")
 
 	logger = log.New()
-	// Add additonal fields to all log messages
+	// Add additional fields to all log messages
 	logger.AddHook(&GlobalHook{})
 	if enableJSONLog == "true" {
 		logger.SetFormatter(&log.JSONFormatter{})

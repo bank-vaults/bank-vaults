@@ -1119,7 +1119,7 @@ func init() {
 	viper.AutomaticEnv()
 
 	logger = log.New()
-	// Add additonal fields to all log messages
+	// Add additional fields to all log messages
 	logger.AddHook(&GlobalHook{})
 
 	if viper.GetBool("enable_json_log") {
