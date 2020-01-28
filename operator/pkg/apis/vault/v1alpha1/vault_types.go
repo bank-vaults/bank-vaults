@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -791,6 +792,8 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 		for k, v := range vault.LabelsForVault() {
 			secretLabels = append(secretLabels, k+"="+v)
 		}
+
+		sort.Strings(secretLabels)
 
 		args = append(args,
 			"--mode",

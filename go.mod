@@ -61,6 +61,7 @@ require (
 	k8s.io/client-go v11.0.1-0.20190516230509-ae8359b20417+incompatible
 	k8s.io/code-generator v0.0.0-20190912054826-cd179ad6a269
 	k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf
+	k8s.io/utils v0.0.0-20190809000727-6c36bc71fc4a
 	sigs.k8s.io/controller-runtime v0.4.0
 )
 
