@@ -43,6 +43,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/imdario/mergo"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/utils/pointer"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -890,6 +891,7 @@ func ingressForVault(v *vaultv1alpha1.Vault) *v1beta1.Ingress {
 				Name:        v.Name,
 				Namespace:   v.Namespace,
 				Annotations: ingress.Annotations,
+				Labels:      v.LabelsForVault(),
 			},
 			Spec: ingress.Spec,
 		}
@@ -1018,6 +1020,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
+			RevisionHistoryLimit: pointer.Int32Ptr(0),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      withVaultConfigurerLabels(v, ls),
