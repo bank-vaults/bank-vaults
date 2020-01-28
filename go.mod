@@ -16,7 +16,7 @@ require (
 	github.com/aws/aws-sdk-go v1.27.2
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/banzaicloud/bank-vaults/pkg/sdk v0.2.1
-	github.com/banzaicloud/k8s-objectmatcher v1.0.1-0.20190813150246-386389f72468
+	github.com/banzaicloud/k8s-objectmatcher v1.1.1
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/coreos/etcd-operator v0.9.4
 	github.com/coreos/prometheus-operator v0.29.0
@@ -51,16 +51,15 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/ugorji/go v1.1.7 // indirect
 	golang.org/x/crypto v0.0.0-20190927123631-a832865fa7ad // indirect
-	golang.org/x/net v0.0.0-20190926025831-c00fd9afed17 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20190927073244-c990c680b611 // indirect
 	golang.org/x/tools v0.0.0-20190929041059-e7abfedfabcf // indirect
 	google.golang.org/api v0.7.0
-	k8s.io/api v0.0.0-20190918155943-95b840bb6a1f
-	k8s.io/apimachinery v0.0.0-20190913080033-27d36303b655
+	k8s.io/api v0.17.2
+	k8s.io/apimachinery v0.17.2
 	k8s.io/client-go v11.0.1-0.20190516230509-ae8359b20417+incompatible
-	k8s.io/code-generator v0.0.0-20190912054826-cd179ad6a269
-	k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf
+	k8s.io/code-generator v0.15.7
+	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
 	k8s.io/utils v0.0.0-20190809000727-6c36bc71fc4a
 	sigs.k8s.io/controller-runtime v0.4.0
 )

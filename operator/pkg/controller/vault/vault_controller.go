@@ -43,7 +43,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/imdario/mergo"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/utils/pointer"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -53,6 +52,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -628,12 +628,7 @@ func secretForEtcd(v *vaultv1alpha1.Vault, e *etcdv1beta2.EtcdCluster) (*corev1.
 		return nil, err
 	}
 
-	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
-	}
+	secret := corev1.Secret{}
 	secret.Name = e.Name + "-tls"
 	secret.Namespace = e.Namespace
 	secret.Labels = v.LabelsForVault()
@@ -651,7 +646,7 @@ func secretForEtcd(v *vaultv1alpha1.Vault, e *etcdv1beta2.EtcdCluster) (*corev1.
 	secret.StringData["server.crt"] = chain.ServerCert
 	secret.StringData["server.key"] = chain.ServerKey
 
-	return secret, nil
+	return &secret, nil
 }
 
 func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
@@ -828,10 +823,6 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 		ls[appsv1.StatefulSetPodNameLabel] = podName
 
 		service := &corev1.Service{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Service",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        podName,
 				Namespace:   v.Namespace,
@@ -861,10 +852,6 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 	serviceName := fmt.Sprintf("%s-configurer", v.Name)
 
 	service := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        serviceName,
 			Namespace:   v.Namespace,
@@ -883,10 +870,6 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 func ingressForVault(v *vaultv1alpha1.Vault) *v1beta1.Ingress {
 	if ingress := v.GetIngress(); ingress != nil {
 		return &v1beta1.Ingress{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "extensions/v1beta1",
-				Kind:       "Ingress",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        v.Name,
 				Namespace:   v.Namespace,
@@ -1007,10 +990,6 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	}
 
 	dep := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        v.Name + "-configurer",
 			Namespace:   v.Namespace,
@@ -1036,10 +1015,6 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	ls := v.LabelsForVaultConfigurer()
 	cm := &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name + "-configurer",
 			Namespace: v.Namespace,
@@ -1085,12 +1060,7 @@ func secretForVault(v *vaultv1alpha1.Vault, service *corev1.Service) (*corev1.Se
 		return nil, time.Time{}, err
 	}
 
-	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
-	}
+	secret := corev1.Secret{}
 	secret.Name = v.Name + "-tls"
 	secret.Namespace = v.Namespace
 	secret.Labels = withVaultLabels(v, v.LabelsForVault())
@@ -1104,7 +1074,8 @@ func secretForVault(v *vaultv1alpha1.Vault, service *corev1.Service) (*corev1.Se
 	if err != nil {
 		return nil, time.Time{}, fmt.Errorf("failed to get certificate expiration: %v", err)
 	}
-	return secret, tlsExpiration, nil
+
+	return &secret, tlsExpiration, nil
 }
 
 // statefulSetForVault returns a Vault StatefulSet object
@@ -1334,10 +1305,6 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	}
 
 	return &appsv1.StatefulSet{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "StatefulSet",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        v.Name,
 			Namespace:   v.Namespace,
@@ -1489,10 +1456,6 @@ func withTLSVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMoun
 func configMapForStatsD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	ls := v.LabelsForVault()
 	cm := &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name + "-statsd-mapping",
 			Namespace: v.Namespace,
