@@ -4,7 +4,7 @@ The vault-operator has support for backing up the cluster with Velero.
 
 ## Velero
 
-First in this example we will install [Velero](https://velero.io/) on the target cluster with Helm:
+First, in this example we will install [Velero](https://velero.io/) on the target cluster with Helm:
 
 Add the Velero Helm repository:
 
@@ -53,7 +53,7 @@ kubectl apply -f operator/deploy/cr-raft.yaml
 ```
 
 NOTE: The Vault CR in cr-raft.yaml has a special flag called `veleroEnabled`,
-this is useful for file based Vault storage backends (`file`, `raft`), please
+this is useful for file-based Vault storage backends (`file`, `raft`), please
 see https://velero.io/docs/v1.2.0/hooks/:
 
 ```yaml
@@ -163,7 +163,7 @@ Scale the operator back after the restore process:
 kubectl scale deployment vault-operator --replicas 1
 ```
 
-Delete the backup if you don't wish to keept it anymore:
+Delete the backup if you don't wish to keep it anymore:
 
 ```bash
 velero backup delete vault-1
