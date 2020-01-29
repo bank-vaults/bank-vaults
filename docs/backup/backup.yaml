@@ -5,7 +5,7 @@ kind: Backup
 # Standard Kubernetes metadata. Required.
 metadata:
   # Backup name. May be any valid Kubernetes object name. Required.
-  name: vault-raft-1
+  name: vault-1
   # Backup namespace. Must be the namespace of the Velero server. Required.
   namespace: velero
 # Parameters about the backup. Required.

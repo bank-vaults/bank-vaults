@@ -590,8 +590,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	if !reflect.DeepEqual(podNames, v.Status.Nodes) || !reflect.DeepEqual(leader, v.Status.Leader) {
 		v.Status.Nodes = podNames
 		v.Status.Leader = leader
-		log.V(1).Info("Updating vault status", "status", v.Status,
-			"resourceVersion", v.ResourceVersion)
+		log.V(1).Info("Updating vault status", "status", v.Status, "resourceVersion", v.ResourceVersion)
 		err := r.client.Update(context.TODO(), v)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to update vault status: %v", err)
@@ -1100,12 +1099,6 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				},
 			},
 		},
-		{
-			Name: "vault-file",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
-			},
-		},
 	}))
 
 	volumes = withStatsdVolume(v, withAuditLogVolume(v, volumes))
@@ -1114,9 +1107,6 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		{
 			Name:      "vault-config",
 			MountPath: "/vault/config",
-		}, {
-			Name:      "vault-file",
-			MountPath: "/vault/file",
 		},
 	}))
 
@@ -1367,9 +1357,9 @@ func withVeleroAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string
 	if v.Spec.VeleroEnabled {
 		veleroAnnotations := map[string]string{
 			"pre.hook.backup.velero.io/container":  "fsfreeze",
-			"pre.hook.backup.velero.io/command":    "[\"/sbin/fsfreeze\", \"--freeze\", \"/vault/\"]",
+			"pre.hook.backup.velero.io/command":    "[\"/sbin/fsfreeze\", \"--freeze\", \"/vault/file/\"]",
 			"post.hook.backup.velero.io/container": "fsfreeze",
-			"post.hook.backup.velero.io/command":   "[\"/sbin/fsfreeze\", \"--unfreeze\", \"/vault\"]",
+			"post.hook.backup.velero.io/command":   "[\"/sbin/fsfreeze\", \"--unfreeze\", \"/vault/file/\"]",
 		}
 
 		for key, value := range veleroAnnotations {

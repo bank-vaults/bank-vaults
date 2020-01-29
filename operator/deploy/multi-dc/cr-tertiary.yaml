@@ -33,7 +33,7 @@ spec:
 
   volumeMounts:
     - name: vault-raft
-      mountPath: /vault/raft
+      mountPath: /vault/file
 
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
@@ -51,7 +51,7 @@ spec:
   config:
     storage:
       raft:
-        path: "/vault/raft"
+        path: "/vault/file"
     listener:
       tcp:
         address: "0.0.0.0:8200"
@@ -90,8 +90,6 @@ spec:
   vaultEnvsConfig:
     - name: VAULT_LOG_LEVEL
       value: info
-    - name: VAULT_STORAGE_FILE
-      value: "/vault/file"
 
   envsConfig:
     - name: VAULT_RAFT_CACERT
