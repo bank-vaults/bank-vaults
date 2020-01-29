@@ -990,7 +990,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
 					{
 						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: labelsForVault(v.Name),
+							MatchLabels: v.LabelsForVault(),
 						},
 						TopologyKey: "kubernetes.io/hostname",
 					},
