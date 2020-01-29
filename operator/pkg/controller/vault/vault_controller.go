@@ -1185,9 +1185,6 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 
 	_, containerPorts := getServicePorts(v)
 
-	if v.Spec.VeleroEnabled {
-	}
-
 	podSpec := corev1.PodSpec{
 		Affinity: &corev1.Affinity{
 			PodAntiAffinity: getPodAntiAffinity(v),
@@ -1220,7 +1217,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			},
 		}),
 
-		Containers: withStatsDContainer(v, string(ownerJSON), withAuditLogContainer(v, string(ownerJSON), []corev1.Container{
+		Containers: withVeleroContainer(v, withStatsDContainer(v, string(ownerJSON), withAuditLogContainer(v, string(ownerJSON), []corev1.Container{
 			{
 				Image:           v.Spec.GetVaultImage(),
 				ImagePullPolicy: corev1.PullIfNotPresent,
@@ -1286,7 +1283,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				VolumeMounts: withBanksVaultsVolumeMounts(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{}))),
 				Resources:    *getBankVaultsResource(v),
 			},
-		})),
+		}))),
 		Volumes:         withVaultVolumes(v, volumes),
 		SecurityContext: withSecurityContext(v),
 		NodeSelector:    v.Spec.NodeSelector,
@@ -1321,8 +1318,13 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      withVaultLabels(v, ls),
-					Annotations: withTLSExpirationAnnotations(tlsAnnotations, withVaultAnnotations(v, withVaultWatchedExternalSecrets(v, externalSecretsToWatchItems, withPrometheusAnnotations("9102", getCommonAnnotations(v, map[string]string{}))))),
+					Labels: withVaultLabels(v, ls),
+					Annotations: withVeleroAnnotations(v,
+						withTLSExpirationAnnotations(tlsAnnotations,
+							withVaultAnnotations(v,
+								withVaultWatchedExternalSecrets(v, externalSecretsToWatchItems,
+									withPrometheusAnnotations("9102",
+										getCommonAnnotations(v, map[string]string{})))))),
 				},
 				Spec: podSpec,
 			},
@@ -1356,6 +1358,23 @@ func withPrometheusAnnotations(prometheusPort string, annotations map[string]str
 func withVaultAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
 	for key, value := range v.Spec.GetVaultAnnotations() {
 		annotations[key] = value
+	}
+
+	return annotations
+}
+
+func withVeleroAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
+	if v.Spec.VeleroEnabled {
+		veleroAnnotations := map[string]string{
+			"pre.hook.backup.velero.io/container":  "fsfreeze",
+			"pre.hook.backup.velero.io/command":    "[\"/sbin/fsfreeze\", \"--freeze\", \"/vault/\"]",
+			"post.hook.backup.velero.io/container": "fsfreeze",
+			"post.hook.backup.velero.io/command":   "[\"/sbin/fsfreeze\", \"--unfreeze\", \"/vault\"]",
+		}
+
+		for key, value := range veleroAnnotations {
+			annotations[key] = value
+		}
 	}
 
 	return annotations
@@ -1570,6 +1589,22 @@ func withStatsdVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.
 
 func withVaultInitContainers(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
 	return append(containers, v.Spec.VaultInitContainers...)
+}
+
+func withVeleroContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
+	if v.Spec.VeleroEnabled {
+		containers = append(containers, corev1.Container{
+			Image:           "velero/fsfreeze-pause:latest",
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Name:            "fsfreeze",
+			VolumeMounts:    withVaultVolumeMounts(v, nil),
+			SecurityContext: &corev1.SecurityContext{
+				Privileged: pointer.BoolPtr(true),
+			},
+			Resources: *getBankVaultsResource(v),
+		})
+	}
+	return containers
 }
 
 func withStatsDContainer(v *vaultv1alpha1.Vault, owner string, containers []corev1.Container) []corev1.Container {

@@ -103,6 +103,10 @@ spec:
     - name: vault-raft
       mountPath: /vault/raft
 
+  # Add Velero fsfreeze sidecar container and supporting hook annotations to Vault Pods:
+  # https://velero.io/docs/v1.2.0/hooks/
+  veleroEnabled: true
+
   # Support for distributing the generated CA certificate Secret to other namespaces.
   # Define a list of namespaces or use ["*"] for all namespaces.
   caNamespaces:
