@@ -493,6 +493,11 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 		*out = new(time.Duration)
 		**out = **in
 	}
+	if in.TLSAdditionalHosts != nil {
+		in, out := &in.TLSAdditionalHosts, &out.TLSAdditionalHosts
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.CANamespaces != nil {
 		in, out := &in.CANamespaces, &out.CANamespaces
 		*out = make([]string, len(*in))
