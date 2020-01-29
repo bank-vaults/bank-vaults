@@ -80,10 +80,10 @@ spec:
   #       - /bin/sh
   #       - -c
   #       - |
-  #         chown -R 100:1000 /vault/raft
+  #         chown -R 100:1000 /vault/file
   #     volumeMounts:
   #       - name: vault-raft
-  #         mountPath: /vault/raft
+  #         mountPath: /vault/file
 
   # Use local disk to store Vault raft data, see config section.
   volumeClaimTemplates:
@@ -101,7 +101,7 @@ spec:
 
   volumeMounts:
     - name: vault-raft
-      mountPath: /vault/raft
+      mountPath: /vault/file
 
   # Add Velero fsfreeze sidecar container and supporting hook annotations to Vault Pods:
   # https://velero.io/docs/v1.2.0/hooks/
@@ -126,7 +126,7 @@ spec:
   config:
     storage:
       raft:
-        path: "/vault/raft"
+        path: "/vault/file"
     listener:
       tcp:
         address: "0.0.0.0:8200"
@@ -186,5 +186,3 @@ spec:
   vaultEnvsConfig:
     - name: VAULT_LOG_LEVEL
       value: debug
-    - name: VAULT_STORAGE_FILE
-      value: "/vault/file"
