@@ -25,10 +25,8 @@ provided under this option will be converted to JSON for the final vault
 To install the chart, use the following, this backs Vault with a Consul cluster:
 
 ```bash
-helm init -c
-helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch/master
-helm repo update
-helm install banzaicloud-stable/vault-operator
+helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com
+helm upgrade --install vault-operator banzaicloud-stable/vault-operator
 ```
 
 To install the chart backed with a cluster-wide Etcd Operator, use the following:

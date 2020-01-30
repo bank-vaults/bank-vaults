@@ -14,27 +14,54 @@ The source code can be found inside the [operator](https://github.com/banzaiclou
 
 ## Deploying the operator
 
-There are two ways to deploy the operator:
+The proper way for deploying the operator is to use the [Helm chart](../../charts/vault-operator/README.md):
 
-### K8s deployment
+```bash
+helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com
+helm upgrade --install vault-operator banzaicloud-stable/vault-operator
+```
+
+### Create Vault instances
+
+Some Vault CustomResource __**samples**__ can be found at the projects `operator/deploy` directory (we use these for testing).
+
+This will create a Kubernetes `CustomResource` called `vault` and a PersistentVolumeClaim for it:
 
 ```bash
 kubectl apply -f operator/deploy/rbac.yaml
-kubectl apply -f operator/deploy/operator.yaml
+kubectl apply -f operator/deploy/cr.yaml
 ```
 
-This will create a Kubernetes [CustomResourceDefinition](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/) called `Vault`.
-
-A documented example of this CRD can be found in [operator/deploy/cr.yaml](https://github.com/banzaicloud/bank-vaults/blob/master/operator/deploy/cr.yaml).
-
-### Helm chart
-
-There is a Helm chart available to deploy the [Vault Operator](https://github.com/banzaicloud/bank-vaults/tree/master/charts/vault-operator). 
+Delete Vault and the PersistentVolume and RBAC:
 
 ```bash
-helm init -c
-helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch/master
-helm install banzaicloud-stable/vault-operator
+kubectl delete -f operator/deploy/rbac.yaml
+kubectl delete -f operator/deploy/cr.yaml
 ```
 
-For further details follow the operator's Helm chart [repository](https://github.com/banzaicloud/bank-vaults/tree/master/charts/vault-operator).
+### HA setup with etcd
+
+Additionally you have to deploy the [etcd-operator](https://github.com/coreos/etcd-operator) to the cluster as well:
+
+```bash
+helm upgrade --install vault-operator banzaicloud-stable/vault-operator --set etcd-operator.enabled=true
+```
+
+Now deploy a HA vault which connects to an etcd storage backend:
+
+```bash
+kubectl apply -f operator/deploy/rbac.yaml
+kubectl apply -f operator/deploy/cr-etcd-ha.yaml
+```
+
+From now on, if you deploy a Vault CustomResource into the cluster which has an [Etcd Storage Backend](https://www.vaultproject.io/docs/configuration/storage/etcd.html) defined in its configuration the Vault operator will create an EtcdCluster CustomResource for the Vault instance, and the etcd-operator will orchestrate the etcd cluster. After the etcd cluster is ready the Vault instance can connect to it and will start up. If the Vault CustomResource is deleted from the cluster the etcd cluster will be garbage-collected as well. You have to make sure you define backup and restore for the etcd cluster to prevent data loss, this part is not handled by the Vault operator, see [this](https://github.com/coreos/etcd-operator#backup-and-restore-an-etcd-cluster) document for more details, but in general we suggest you to use [Velero](../docs/backup/README.md) for backups.
+
+### Use existing etcd
+
+If you want to use an existing etcd. You can set `etcdSize` vault to `< 0` (e.g.: `-1`). Then it won't create a new etcd.
+And all config under etcd storage will not be override.
+
+### Pod anti-affinity
+
+If you want setup pod anti-affinity. You can set `podAntiAffinity` vault with a topologyKey value. 
+For example, you can use `failure-domain.beta.kubernetes.io/zone` to force K8S deploy vault on multi AZ.
