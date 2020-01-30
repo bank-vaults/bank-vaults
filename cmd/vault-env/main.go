@@ -21,12 +21,13 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/banzaicloud/bank-vaults/internal/configuration"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
-
+	"emperror.dev/errors"
 	vaultapi "github.com/hashicorp/vault/api"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
+
+	"github.com/banzaicloud/bank-vaults/internal/configuration"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 // The special value for VAULT_ENV which marks that the login token needs to be passed through to the application
@@ -61,6 +62,7 @@ var (
 		"VAULT_ENV_PASSTHROUGH":        true,
 		"VAULT_JSON_LOG":               true,
 		"VAULT_REVOKE_TOKEN":           true,
+		"VAULT_ENV_DAEMON":             true,
 	}
 
 	logger *log.Logger
@@ -89,8 +91,22 @@ func (environ *sanitizedEnviron) append(name string, value string) {
 	}
 }
 
+func startSecretRenewal(client *vault.Client, secret *vaultapi.Secret) error {
+	renewerInput := vaultapi.RenewerInput{Secret: secret}
+	secretRenewer, err := client.RawClient().NewRenewer(&renewerInput)
+	if err != nil {
+		return errors.Wrap(err, "failed to create secret renewer")
+	}
+
+	go secretRenewer.Renew()
+
+	return nil
+}
+
 func main() {
 	enableJSONLog := os.Getenv("VAULT_JSON_LOG")
+
+	daemonMode := cast.ToBool(os.Getenv("VAULT_ENV_DAEMON"))
 
 	logger = log.New()
 	// Add additional fields to all log messages
@@ -241,6 +257,14 @@ func main() {
 					secretCache[secretCacheKey] = secret
 				}
 			}
+
+			if daemonMode && secret.Renewable && secret.LeaseDuration > 0 {
+				log.Infof("secret %q has a lease duration of %ds, starting renewal", valuePath, secret.LeaseDuration)
+				err = startSecretRenewal(client, secret)
+				if err != nil {
+					logger.Fatalln("secret renewal can't be established", err)
+				}
+			}
 		}
 
 		if secret == nil {
@@ -298,10 +322,24 @@ func main() {
 			// Do not exit on error, token revoking can be denied by policy
 			logger.Warnln("failed to revoke token")
 		}
+		client.Close()
 	}
 
-	err = syscall.Exec(binary, entrypointCmd, sanitized)
+	logger.Infoln("spawning process:", entrypointCmd)
+
+	if daemonMode {
+		logger.Infoln("in daemon mode...")
+		cmd := exec.Command(binary, entrypointCmd[1:]...)
+		cmd.Env = append(os.Environ(), sanitized...)
+		cmd.Stdin = os.Stdin
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		err = cmd.Run()
+	} else {
+		err = syscall.Exec(binary, entrypointCmd, sanitized)
+	}
+
 	if err != nil {
-		logger.Fatalln("failed to exec process", binary, entrypointCmd, err.Error())
+		logger.Fatalln("failed to exec process", entrypointCmd, err.Error())
 	}
 }

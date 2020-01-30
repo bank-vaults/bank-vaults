@@ -5,7 +5,7 @@ metadata:
 spec:
   size: 2
   image: vault:1.3.1
-  bankVaultsImage: banzaicloud/bank-vaults:latest
+  bankVaultsImage: banzaicloud/bank-vaults:daemon
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault
@@ -13,7 +13,9 @@ spec:
   # Unsealing will be done via Kubernetes Secrets if not defined otherwise (not highly secure, but this is just an example)
 
   # NOTE: you will need a MySQL instance, grab one with:
-  # helm upgrade --install mysql stable/mysql --set mysqlRootPassword=your-root-password --set mysqlDatabase=vault --set mysqlUser=vault --set mysqlPassword=secret
+  # helm upgrade --install mysql stable/mysql --set mysqlRootPassword=your-root-password --set mysqlDatabase=vault --set mysqlUser=vault --set mysqlPassword=secret --set 'initializationFiles.app-db\.sql=CREATE DATABASE IF NOT EXISTS app;'
+
+  # This example is best used together with deploy/test-daemon-mode.yaml to demonstrate the usage of dynamic credential renewal in vault-env daemon mode.
 
   # A YAML representation of a final vault config file, this config represents
   # a HA config with MySQL.
@@ -38,19 +40,20 @@ spec:
   # See: https://github.com/banzaicloud/bank-vaults#example-external-vault-configuration for more details.
   externalConfig:
     policies:
-      - name: allow_secrets
-        rules: path "secret/*" {
-          capabilities = ["create", "read", "update", "delete", "list"]
+      - name: allow_database
+        rules: path "database/creds/*" {
+          capabilities = ["read"]
           }
     auth:
       - type: kubernetes
         roles:
-          # Allow every pod in the default namespace to use the secret kv store
+          # Allow pods in the default namespace to request dynamic database credentials
           - name: default
             bound_service_account_names: default
             bound_service_account_namespaces: default
-            policies: allow_secrets
-            ttl: 1h
+            policies: allow_database
+            ttl: 2m
+            max_ttl: 5m
     secrets:
       - type: database
         description: MySQL Database secret engine.
@@ -65,10 +68,10 @@ spec:
               rotate: true # Ask bank-vaults to ask Vault to rotate the root credentials of MySQL
           roles:
             - name: app
-              db_name: app-db
+              db_name: my-mysql
               creation_statements: "CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}'; GRANT ALL ON `app\_%`.* TO '{{name}}'@'%';"
-              default_ttl: "10m"
-              max_ttl: "24h"
+              default_ttl: "2m"
+              max_ttl: "5m"
 
   vaultEnvsConfig:
     - name: MYSQL_VAULT_PASSWORD

@@ -469,6 +469,12 @@ func parseVaultConfig(obj metav1.Object) internal.VaultConfig {
 		vaultConfig.UseAgent, _ = strconv.ParseBool(viper.GetString("vault_agent"))
 	}
 
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-env-daemon"]; ok {
+		vaultConfig.VaultEnvDaemon, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.VaultEnvDaemon, _ = strconv.ParseBool(viper.GetString("vault_env_daemon"))
+	}
+
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-configmap"]; ok {
 		vaultConfig.CtConfigMap = val
 	} else {
@@ -870,6 +876,13 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			})
 		}
 
+		if vaultConfig.VaultEnvDaemon {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  "VAULT_ENV_DAEMON",
+				Value: "true",
+			})
+		}
+
 		containers[i] = container
 	}
 
@@ -1085,7 +1098,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig internal.Vault
 func init() {
 	viper.SetDefault("vault_image", "vault:latest")
 	viper.SetDefault("vault_image_pull_policy", string(corev1.PullIfNotPresent))
-	viper.SetDefault("vault_env_image", "banzaicloud/vault-env:latest")
+	viper.SetDefault("vault_env_image", "banzaicloud/vault-env:daemon")
 	viper.SetDefault("vault_env_image_pull_policy", string(corev1.PullIfNotPresent))
 	viper.SetDefault("vault_ct_image", "hashicorp/consul-template:0.19.6-dev-alpine")
 	viper.SetDefault("vault_addr", "https://vault:8200")
@@ -1094,6 +1107,7 @@ func init() {
 	viper.SetDefault("vault_role", "")
 	viper.SetDefault("vault_tls_secret", "")
 	viper.SetDefault("vault_agent", "false")
+	viper.SetDefault("vault_env_daemon", "false")
 	viper.SetDefault("vault_ct_share_process_namespace", "")
 	viper.SetDefault("psp_allow_privilege_escalation", "false")
 	viper.SetDefault("vault_ignore_missing_secrets", "false")

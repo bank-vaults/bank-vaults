@@ -5,7 +5,7 @@ metadata:
 spec:
   size: 1
   image: vault:1.3.1
-  bankVaultsImage: banzaicloud/bank-vaults:latest
+  bankVaultsImage: banzaicloud/bank-vaults:master
 
   # Common annotations for all created resources
   annotations:

@@ -335,8 +335,9 @@ func runRenewChecker(tokenRenewer *vaultapi.Renewer) {
 				logger.Println("Vault token renewal error:", err.Error())
 			}
 			return
-		case <-tokenRenewer.RenewCh():
-			logger.Printf("Renewed Vault Token")
+		case o := <-tokenRenewer.RenewCh():
+			ttl, _ := o.Secret.TokenTTL()
+			logger.Println("Renewed Vault token ttl =", ttl)
 		}
 	}
 }
