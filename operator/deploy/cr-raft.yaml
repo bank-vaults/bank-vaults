@@ -8,7 +8,7 @@ metadata:
 spec:
   size: 3
   image: vault:1.3.1
-  bankVaultsImage: banzaicloud/bank-vaults:velero
+  bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Common annotations for all created resources
   annotations:

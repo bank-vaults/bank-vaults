@@ -1149,9 +1149,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		volumeMounts = append(volumeMounts, etcdVolumeMount)
 	}
 
-	configJSON := v.Spec.ConfigJSON()
-	owner := asOwner(v)
-	ownerJSON, err := json.Marshal(owner)
+	ownerJSON, err := json.Marshal(v.AsOwnerReference())
 	if err != nil {
 		return nil, err
 	}
@@ -1172,6 +1170,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			unsealCommand = append(unsealCommand, "--raft-secondary")
 		}
 	}
+
+	configJSON := v.Spec.ConfigJSON()
 
 	_, containerPorts := getServicePorts(v)
 
@@ -1356,9 +1356,9 @@ func withVaultAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string)
 func withVeleroAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
 	if v.Spec.VeleroEnabled {
 		veleroAnnotations := map[string]string{
-			"pre.hook.backup.velero.io/container":  "fsfreeze",
+			"pre.hook.backup.velero.io/container":  "velero-fsfreeze",
 			"pre.hook.backup.velero.io/command":    "[\"/sbin/fsfreeze\", \"--freeze\", \"/vault/file/\"]",
-			"post.hook.backup.velero.io/container": "fsfreeze",
+			"post.hook.backup.velero.io/container": "velero-fsfreeze",
 			"post.hook.backup.velero.io/command":   "[\"/sbin/fsfreeze\", \"--unfreeze\", \"/vault/file/\"]",
 		}
 
@@ -1584,14 +1584,23 @@ func withVaultInitContainers(v *vaultv1alpha1.Vault, containers []corev1.Contain
 func withVeleroContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
 	if v.Spec.VeleroEnabled {
 		containers = append(containers, corev1.Container{
-			Image:           "velero/fsfreeze-pause:latest",
+			Image:           v.Spec.GetVeleroFsfreezeImage(),
 			ImagePullPolicy: corev1.PullIfNotPresent,
-			Name:            "fsfreeze",
+			Name:            "velero-fsfreeze",
 			VolumeMounts:    withVaultVolumeMounts(v, nil),
 			SecurityContext: &corev1.SecurityContext{
 				Privileged: pointer.BoolPtr(true),
 			},
-			Resources: *getBankVaultsResource(v),
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("32Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("32Mi"),
+				},
+			},
 		})
 	}
 	return containers
@@ -1828,18 +1837,6 @@ func withVaultConfigurerLabels(v *vaultv1alpha1.Vault, labels map[string]string)
 	}
 
 	return l
-}
-
-// asOwner returns an OwnerReference set as the vault CR
-func asOwner(v *vaultv1alpha1.Vault) metav1.OwnerReference {
-	trueVar := true
-	return metav1.OwnerReference{
-		APIVersion: v.APIVersion,
-		Kind:       v.Kind,
-		Name:       v.Name,
-		UID:        v.UID,
-		Controller: &trueVar,
-	}
 }
 
 // podList returns a v1.PodList object

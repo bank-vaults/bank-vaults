@@ -30,6 +30,7 @@ import (
 	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 // Vault is the Schema for the vaults API
@@ -331,6 +332,10 @@ type VaultSpec struct {
 	// default: false
 	VeleroEnabled bool `json:"veleroEnabled,omitempty"`
 
+	// VeleroFsfreezeImage specifices the Velero Fsrfeeze image to use in Velero backup hooks
+	// default: velero/fsfreeze-pause:latest
+	VeleroFsfreezeImage string `json:"veleroFsfreezeImage"`
+
 	// InitContainers add extra initContainers
 	VaultInitContainers []v1.Container `json:"vaultInitContainers,omitempty"`
 }
@@ -475,6 +480,14 @@ func (spec *VaultSpec) GetStatsDImage() string {
 		return "prom/statsd-exporter:latest"
 	}
 	return spec.StatsDImage
+}
+
+// GetVeleroFsfreezeImage returns the Velero Fsreeze image to use
+func (spec *VaultSpec) GetVeleroFsfreezeImage() string {
+	if spec.VeleroFsfreezeImage == "" {
+		return "velero/fsfreeze-pause:latest"
+	}
+	return spec.VeleroFsfreezeImage
 }
 
 // GetVolumeClaimTemplates fixes the "status diff" in PVC templates
@@ -649,6 +662,17 @@ func (vault *Vault) LabelsForVault() map[string]string {
 // belonging to the given vault CR name.
 func (vault *Vault) LabelsForVaultConfigurer() map[string]string {
 	return map[string]string{"app.kubernetes.io/name": "vault-configurator", "vault_cr": vault.Name}
+}
+
+// AsOwnerReference returns this Vault instance as an OwnerReference
+func (vault *Vault) AsOwnerReference() metav1.OwnerReference {
+	return metav1.OwnerReference{
+		APIVersion: vault.APIVersion,
+		Kind:       vault.Kind,
+		Name:       vault.Name,
+		UID:        vault.UID,
+		Controller: pointer.BoolPtr(true),
+	}
 }
 
 // VaultStatus defines the observed state of Vault
