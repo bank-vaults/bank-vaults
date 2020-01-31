@@ -23,7 +23,7 @@ Install Velero with [Restic](https://restic.net/) so we get PV snapshots as well
 ```bash
 BUCKET=bank-vaults-velero
 REGION=eu-north-1
-KMS_KEY_ID=15934c4b-724a-4630-ae55-3c4fc8d10bc6
+KMS_KEY_ID=alias/bank-vaults-velero
 SECRET_FILE=~/.aws/credentials
 
 helm upgrade --install velero --namespace velero \
