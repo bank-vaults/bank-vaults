@@ -23,22 +23,24 @@ Install Velero with [Restic](https://restic.net/) so we get PV snapshots as well
 ```bash
 BUCKET=bank-vaults-velero
 REGION=eu-north-1
+KMS_KEY_ID=15934c4b-724a-4630-ae55-3c4fc8d10bc6
 SECRET_FILE=~/.aws/credentials
 
 helm upgrade --install velero --namespace velero \
---set configuration.provider=aws \
---set-file credentials.secretContents.cloud=${SECRET_FILE} \
---set deployRestic=true \
---set configuration.backupStorageLocation.name=aws \
---set configuration.backupStorageLocation.bucket=${BUCKET} \
---set configuration.backupStorageLocation.config.region=${REGION} \
---set configuration.volumeSnapshotLocation.name=aws \
---set configuration.volumeSnapshotLocation.config.region=${REGION} \
---set "initContainers[0].name"=velero-plugin-for-aws \
---set "initContainers[0].image"=velero/velero-plugin-for-aws:v1.0.0 \
---set "initContainers[0].volumeMounts[0].mountPath"=/target \
---set "initContainers[0].volumeMounts[0].name"=plugins \
-vmware-tanzu/velero
+          --set configuration.provider=aws \
+          --set-file credentials.secretContents.cloud=${SECRET_FILE} \
+          --set deployRestic=true \
+          --set configuration.backupStorageLocation.name=aws \
+          --set configuration.backupStorageLocation.bucket=${BUCKET} \
+          --set configuration.backupStorageLocation.config.region=${REGION} \
+          --set configuration.backupStorageLocation.config.kmsKeyId=${KMS_KEY_ID} \
+          --set configuration.volumeSnapshotLocation.name=aws \
+          --set configuration.volumeSnapshotLocation.config.region=${REGION} \
+          --set "initContainers[0].name"=velero-plugin-for-aws \
+          --set "initContainers[0].image"=velero/velero-plugin-for-aws:v1.0.0 \
+          --set "initContainers[0].volumeMounts[0].mountPath"=/target \
+          --set "initContainers[0].volumeMounts[0].name"=plugins \
+          vmware-tanzu/velero
 ```
 
 Install the vault-operator to the cluster:
