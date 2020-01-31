@@ -168,3 +168,5 @@ Delete the backup if you don't wish to keep it anymore:
 ```bash
 velero backup delete vault-1
 ```
+
+For a daily scheduled backup please see `docs/backup/schedule.yaml`.
