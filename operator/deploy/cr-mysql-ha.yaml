@@ -52,8 +52,8 @@ spec:
             bound_service_account_names: default
             bound_service_account_namespaces: default
             policies: allow_database
-            ttl: 2m
-            max_ttl: 5m
+            ttl: 1m
+            max_ttl: 2m
     secrets:
       - type: database
         description: MySQL Database secret engine.
@@ -71,7 +71,7 @@ spec:
               db_name: my-mysql
               creation_statements: "CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}'; GRANT ALL ON `app\_%`.* TO '{{name}}'@'%';"
               default_ttl: "2m"
-              max_ttl: "5m"
+              max_ttl: "10m"
 
   vaultEnvsConfig:
     - name: MYSQL_VAULT_PASSWORD

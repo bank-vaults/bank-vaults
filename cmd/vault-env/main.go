@@ -91,7 +91,7 @@ func (environ *sanitizedEnviron) append(name string, value string) {
 	}
 }
 
-func startSecretRenewal(client *vault.Client, secret *vaultapi.Secret) error {
+func startSecretRenewal(client *vault.Client, path string, secret *vaultapi.Secret) error {
 	renewerInput := vaultapi.RenewerInput{Secret: secret}
 	secretRenewer, err := client.RawClient().NewRenewer(&renewerInput)
 	if err != nil {
@@ -99,6 +99,18 @@ func startSecretRenewal(client *vault.Client, secret *vaultapi.Secret) error {
 	}
 
 	go secretRenewer.Renew()
+
+	go func() {
+		for {
+			select {
+			case renewOutput := <-secretRenewer.RenewCh():
+				log.Infof("secret %s renewed for %ds", path, renewOutput.Secret.LeaseDuration)
+			case doneError := <-secretRenewer.DoneCh():
+				log.WithField("error", doneError).Infof("secret renewal for %s has finished", path)
+				return
+			}
+		}
+	}()
 
 	return nil
 }
@@ -259,8 +271,8 @@ func main() {
 			}
 
 			if daemonMode && secret.Renewable && secret.LeaseDuration > 0 {
-				log.Infof("secret %q has a lease duration of %ds, starting renewal", valuePath, secret.LeaseDuration)
-				err = startSecretRenewal(client, secret)
+				log.Infof("secret %s has a lease duration of %ds, starting renewal", valuePath, secret.LeaseDuration)
+				err = startSecretRenewal(client, valuePath, secret)
 				if err != nil {
 					logger.Fatalln("secret renewal can't be established", err)
 				}
