@@ -333,20 +333,26 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	tlsExpiration := time.Time{}
 	if !v.Spec.GetTLSDisable() {
 		// Check if we have an existing TLS Secret for Vault
-		var sec *corev1.Secret
+		secretName := v.Name + "-tls"
+		if v.Spec.ExistingTlsSecretName != "" {
+			secretName = v.Spec.ExistingTlsSecretName
+		}
 		existingSec := corev1.Secret{}
 		// Get tls secret
 		err := r.client.Get(context.TODO(), types.NamespacedName{
 			Namespace: v.Namespace,
-			Name:      v.Name + "-tls",
+			Name:      secretName,
 		}, &existingSec)
+		sec := &existingSec
 		if apierrors.IsNotFound(err) {
-			// If tls secret doesn't exist generate tls
-			sec, tlsExpiration, err = secretForVault(v, ser)
-			if err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
+			if v.Spec.ExistingTlsSecretName == "" {
+				// If tls secret doesn't exist generate tls
+				sec, tlsExpiration, err = secretForVault(v, ser)
+				if err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
+				}
 			}
-		} else if len(existingSec.Data) > 0 {
+		} else if v.Spec.ExistingTlsSecretName == "" && len(existingSec.Data) > 0 {
 			// If tls secret exists check expiration date
 			certPEM := string(existingSec.Data["server.crt"])
 			tlsExpiration, err = getCertExpirationDate(certPEM)
@@ -364,10 +370,8 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 				if err != nil {
 					return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
 				}
-			} else {
-				sec = &existingSec
 			}
-		} else {
+		} else if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to get tls secret for vault: %v", err)
 		}
 
@@ -376,11 +380,12 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			return reconcile.Result{}, err
 		}
 
-		err = r.createOrUpdateObject(sec)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to create secret for vault: %v", err)
+		if v.Spec.ExistingTlsSecretName == "" {
+			err = r.createOrUpdateObject(sec)
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to create secret for vault: %v", err)
+			}
 		}
-
 		// Distribute the CA certificate to every namespace defined
 		if len(v.Spec.CANamespaces) > 0 {
 			err = r.distributeCACertificate(v, client.ObjectKey{Name: sec.Name, Namespace: sec.Namespace})
@@ -388,6 +393,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 				return reconcile.Result{}, fmt.Errorf("failed to distribute CA secret for vault: %v", err)
 			}
 		}
+
 	}
 
 	if v.Spec.IsFluentDEnabled() {
@@ -1440,11 +1446,15 @@ func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool, envs []corev1.EnvVar) []
 
 func withTLSVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
 	if !v.Spec.GetTLSDisable() {
+		secretName := v.Name + "-tls"
+		if v.Spec.ExistingTlsSecretName != "" {
+			secretName = v.Spec.ExistingTlsSecretName
+		}
 		volumes = append(volumes, corev1.Volume{
 			Name: "vault-tls",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: v.Name + "-tls",
+					SecretName: secretName,
 				},
 			},
 		})

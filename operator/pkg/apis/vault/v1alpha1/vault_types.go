@@ -311,6 +311,11 @@ type VaultSpec struct {
 	// default: false
 	ServiceMonitorEnabled bool `json:"serviceMonitorEnabled,omitempty"`
 
+	// existingTLSSecretName is name of the secret contains TLS certificate
+	// If it set geenerating certificate is disabled
+	// default: ""
+	ExistingTLSSecretName string `json:"existingTlsSecretName,omitempty"`
+
 	// TLSExpiryThreshold is the Vault TLS certificate expiration threshold in Go's Duration format.
 	// default: 168h
 	TLSExpiryThreshold *time.Duration `json:"tlsExpiryThreshold,omitempty"`
