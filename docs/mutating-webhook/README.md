@@ -72,7 +72,7 @@ Writing into Vault, for example getting a [dynamic database username/password pa
       value: "vault:secret/data/accounts/dockerhub#My username on DockerHub is: ${title .DOCKER_USERNAME}"
 ```
 
-In this case the a init-container will be injected to the given Pod which copies a small binary, called `vault-env` into an in-memory volume and mounts that Volume to all the containers which have an environment variable definition like that. It also changes the `command` of the container to run `vault-env` instead of your application directly. `vault-env` starts up, connects to Vault with (currently with the [Kubernetes Auth method](https://www.vaultproject.io/docs/auth/kubernetes.html) checks the environment variables, and that has a reference to a value stored in Vault (`vault:secret/....`) will be replaced with that value read from the Secret backend, after this `vault-env` immediately executes (with `syscall.Exec()`) your process with the given arguments, replacing itself with that process.
+In this case the a init-container will be injected to the given Pod which copies a small binary, called `vault-env` into an in-memory volume and mounts that Volume to all the containers which have an environment variable definition like that. It also changes the `command` of the container to run `vault-env` instead of your application directly. `vault-env` starts up, connects to Vault with (currently with the [Kubernetes Auth method](https://www.vaultproject.io/docs/auth/kubernetes.html) checks the environment variables, and that has a reference to a value stored in Vault (`vault:secret/....`) will be replaced with that value read from the Secret backend, after this `vault-env` immediately executes (with `syscall.Exec()`) your process with the given arguments, replacing itself with that process (in non-daemon mode).
 
 **With this solution none of your Secrets stored in Vault will ever land in Kubernetes Secrets, thus in etcd.**
 
@@ -80,8 +80,25 @@ In this case the a init-container will be injected to the given Pod which copies
 
 Currently the Kubernetes Service Account based Vault authentication mechanism is used by `vault-env`, so it requests a Vault token based on the Service Account of the container it is injected into. Implementation is ongoing to use [Vault Agent's Auto-Auth](https://www.vaultproject.io/docs/agent/autoauth/index.html) to request tokens in an init-container with all the supported authentication mechanisms.
 
-Kubernetes 1.12 introduced a feature called [APIServer dry-run](https://kubernetes.io/blog/2019/01/14/apiserver-dry-run-and-kubectl-diff/) which became beta as of 1.13. This feature requires some changes in webhooks with side effects.
-Vault mutating admission webhook is `dry-run aware`.
+Kubernetes 1.12 introduced a feature called [APIServer dry-run](https://kubernetes.io/blog/2019/01/14/apiserver-dry-run-and-kubectl-diff/) which became beta as of 1.13. This feature requires some changes in webhooks with side effects. Vault mutating admission webhook is `dry-run aware`.
+
+
+## Common Annotations
+
+### PodSpec, Secret and ConfigMap annotations:
+|Annotation    |default     |Explanation |
+|--------------|------------|------------|
+`vault.security.banzaicloud.io/vault-addr`|`"https://vault:8200"`|Same as VAULT_ADDR|
+`vault.security.banzaicloud.io/vault-role`|`""`|The Vault role for Vault agent to use, for Pods it is the name of the ServiceAccount if not specified|
+`vault.security.banzaicloud.io/vault-path`|`"kubernetes"`|The mount path of the auth method|
+`vault.security.banzaicloud.io/vault-skip-verify`|`"false"`|Same as VAULT_SKIP_VERIFY|
+`vault.security.banzaicloud.io/vault-tls-secret`|`""`|Name of the Kubernetes Secret holding the CA certificate for Vault|
+`vault.security.banzaicloud.io/vault-ignore-missing-secrets`|`"false"`|When enabled will only log warnings when Vault secrets are missing|
+`vault.security.banzaicloud.io/vault-env-passthrough`|`""`|Comma seprated list of `VAULT_*` related environment variables to pass through to `vault-env` to the main process. E.g.`VAULT_ADDR,VAULT_ROLE`.|
+`vault.security.banzaicloud.io/vault-env-daemon`|`"false"`|Run `vault-env` as a daemon instead of replacing itself with the main process|
+`vault.security.banzaicloud.io/mutate-configmap`|`"false"`|Mutate the annotated ConfigMap as well (only Secrets and Pods are mutated by default)|
+`vault.security.banzaicloud.io/enable-json-log`|`"false"`|Log in JSON format in `vault-env`|
+
 
 ## Deploying the webhook
 
@@ -89,10 +106,13 @@ Vault mutating admission webhook is `dry-run aware`.
 
 There is a Helm chart available to deploy the [Vault Secrets Webhook](https://github.com/banzaicloud/bank-vaults/tree/master/charts/vault-secrets-webhook).
 
+Deploying with Helm 3:
+
 ```bash
-helm init -c
 helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com
-helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook
+kubectl create namespace vault-infra
+kubectl label namespace vault-infra name=vault-infra 
+helm upgrade --namespace vault-infra --install vault-secrets-webhook banzaicloud-stable/vault-secrets-webhook
 ```
 
 For further details follow the webhook's Helm chart [repository](https://github.com/banzaicloud/bank-vaults/tree/master/charts/vault-secrets-webhook).
@@ -137,6 +157,31 @@ spec:
         env:
         - name: AWS_SECRET_ACCESS_KEY
           value: vault:secret/data/valami/aws#AWS_SECRET_ACCESS_KEY
+```
+
+## Daemon mode
+
+`vault-env` by default replaces itself with the original process of the Pod after reading the secrets from Vault, but with the `vault.security.banzaicloud.io/vault-env-daemon: "true"` annotation this behaviour can be changed, so `vault-env` can changed to `daemon mode` so `vault-env` starts the original process as a child process and remains in memory, this it renews the lease of the requested Vault token and of the dynamic secrets (if requested any) until their final expiration time.
+
+A full example can be found in the repository using with MySQL dynamic secrets:
+
+```bash
+# Deploy MySQL first as the Vault storage backend and our application will request dynamic secrets for this database as well:
+helm upgrade --install mysql stable/mysql --set mysqlRootPassword=your-root-password --set mysqlDatabase=vault --set mysqlUser=vault --set mysqlPassword=secret --set 'initializationFiles.app-db\.sql=CREATE DATABASE IF NOT EXISTS app;'
+
+# Deploy the vault-operator and the vault-secerts-webhook
+kubectl create namespace vault-infra
+kubectl label namespace vault-infra name=vault-infra 
+helm upgrade --namespace vault-infra --install vault-operator banzaicloud-stable/vault-operator
+helm upgrade --namespace vault-infra --install vault-secrets-webhook banzaicloud-stable/vault-secrets-webhook
+
+# Create a Vault instance with MySQL storage and a configured dynamic database secerts backend
+kubectl apply -f operator/deploy/rbac.yaml
+kubectl apply -f operator/deploy/cr-mysql-ha.yaml
+
+# Deploy the example application requesting dynamic database credentials from the above Vault instance
+kubectl apply -f deploy/test-dynamic-env-vars.yaml
+kubectl logs -f deployment/hello-secrets
 ```
 
 ## Getting secret data from Vault and replace it in Kubernetes Secret
