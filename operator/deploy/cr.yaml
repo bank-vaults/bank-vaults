@@ -5,16 +5,16 @@ metadata:
 spec:
   size: 1
   image: vault:1.3.1
-  bankVaultsImage: banzaicloud/bank-vaults:latest
+  bankVaultsImage: banzaicloud/bank-vaults:disable-tls-gen
 
   # Common annotations for all created resources
   annotations:
     common/annotation: "true"
-  
+
   # Vault Pods , Services and TLS Secret annotations
   vaultAnnotations:
     type/instance: "vault"
-  
+
   # Vault Configurer Pods and Services annotations
   vaultConfigurerAnnotations:
     type/instance: "vaultconfigurer"
@@ -56,6 +56,9 @@ spec:
   # Please note that some Ingress controllers like https://github.com/kubernetes/ingress-gce
   # forces you to expose your Service on a NodePort
   serviceType: ClusterIP
+
+  # Specify existing TLS secret
+  # existingTlsSecretName: selfsigned-cert-tls-2
 
   # Request an Ingress controller with the default configuration
   ingress:
