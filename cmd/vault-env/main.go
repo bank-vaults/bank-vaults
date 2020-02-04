@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
 	"syscall"
 
@@ -346,12 +347,36 @@ func main() {
 		cmd.Stdin = os.Stdin
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
+
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs)
+
+		go func() {
+			sig := <-sigs
+			err := cmd.Process.Signal(sig)
+			if err != nil {
+				log.Warnf("failed to signal process with %s: %v", sig, err)
+			} else {
+				log.Infof("received signal: %s", sig)
+			}
+		}()
+
 		err = cmd.Run()
+
+		close(sigs)
+
+		if _, ok := err.(*exec.ExitError); ok {
+			os.Exit(cmd.ProcessState.ExitCode())
+		} else if err != nil {
+			logger.Fatalln("failed to exec process", entrypointCmd, err.Error())
+			os.Exit(-1)
+		} else {
+			os.Exit(cmd.ProcessState.ExitCode())
+		}
 	} else {
 		err = syscall.Exec(binary, entrypointCmd, sanitized)
-	}
-
-	if err != nil {
-		logger.Fatalln("failed to exec process", entrypointCmd, err.Error())
+		if err != nil {
+			logger.Fatalln("failed to exec process", entrypointCmd, err.Error())
+		}
 	}
 }

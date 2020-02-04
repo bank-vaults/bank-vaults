@@ -280,12 +280,12 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					}
 
 					if secret == nil {
-						logger.Println("Received empty answer from Vault, retrying")
+						logger.Println("received empty answer from Vault, retrying")
 						time.Sleep(1 * time.Second)
 						continue
 					}
 
-					logger.Println("Received new Vault token")
+					logger.Println("received new Vault token")
 
 					// Set the first token from the response
 					rawClient.SetToken(secret.Auth.ClientToken)
@@ -298,7 +298,7 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					// Start the renewing process
 					tokenRenewer, err = rawClient.NewRenewer(&vaultapi.RenewerInput{Secret: secret})
 					if err != nil {
-						logger.Println("Failed to renew Vault token", err.Error())
+						logger.Println("failed to renew Vault token", err.Error())
 						continue
 					}
 
@@ -315,7 +315,7 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 
 			select {
 			case <-initialTokenArrived:
-				logger.Println("Initial Vault token arrived")
+				logger.Println("initial Vault token arrived")
 
 			case <-time.After(initialTokenTimeout):
 				client.Close()
@@ -332,12 +332,12 @@ func runRenewChecker(tokenRenewer *vaultapi.Renewer) {
 		select {
 		case err := <-tokenRenewer.DoneCh():
 			if err != nil {
-				logger.Println("Vault token renewal error:", err.Error())
+				logger.Println("error in Vault token renewal:", err.Error())
 			}
 			return
 		case o := <-tokenRenewer.RenewCh():
 			ttl, _ := o.Secret.TokenTTL()
-			logger.Println("Renewed Vault token ttl =", ttl)
+			logger.Println("renewed Vault token ttl =", ttl)
 		}
 	}
 }
