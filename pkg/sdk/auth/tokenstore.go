@@ -19,9 +19,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/spf13/cast"
+
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 // Verify tokenstores satisfy the correct interface
@@ -57,7 +58,6 @@ func parseToken(secret *vaultapi.Secret, showExpired bool) (*Token, error) {
 	metadata := cast.ToStringMap(secret.Data["metadata"])
 
 	if tokenData, ok := data["token"]; ok {
-
 		tokenData := tokenData.(map[string]interface{})
 		token := Token{}
 
@@ -136,7 +136,7 @@ func (tokenStore *inMemoryTokenStore) Lookup(userID, tokenID string) (*Token, er
 	tokenStore.RLock()
 	defer tokenStore.RUnlock()
 	if userTokens, ok := tokenStore.store[userID]; ok {
-		token, _ := userTokens[tokenID]
+		token := userTokens[tokenID]
 		return token, nil
 	}
 	return nil, nil
