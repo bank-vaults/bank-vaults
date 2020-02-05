@@ -18,9 +18,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
+
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 // DynamicSecretDataSource creates a SQL data source but instead of passing username:password
@@ -32,7 +33,6 @@ import (
 // The underlying Vault client will make sure that the credential is renewed when it
 // is close to the time of expiry.
 func DynamicSecretDataSource(dialect string, source string) (dynamicSecretDataSource string, err error) {
-
 	postgresql := false
 	if strings.HasPrefix(source, "postgresql://") {
 		source = strings.TrimPrefix(source, "postgresql://")

@@ -113,10 +113,12 @@ func TestGenerateTLS(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_, err = client.Do(req)
+			resp, err := client.Do(req)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			resp.Body.Close()
 		})
 	}
 
