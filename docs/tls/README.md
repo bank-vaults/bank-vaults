@@ -69,3 +69,41 @@ helm upgrade --install vault ../charts/vault --set tls.secretName=vault-tls
 ```bash
 kubectl apply -f vault-cr.yaml
 ```
+
+## Generating custom certificates with cert-manager for Bank-Vaults
+
+Example custom resource used by the cert-manager to generate the certificate for Bank-Vaults
+```bash
+kubectl apply -f - <<EOF
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: test-selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: selfsigned-cert
+spec:
+  commonName: vault
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+    - vault
+    - vault.default
+    - vault.default.svc
+    - vault.default.svc.cluster.local
+  ipAddresses:
+    - 127.0.0.1
+  secretName: selfsigned-cert-tls
+  issuerRef:
+    name: test-selfsigned
+EOF
+```
+
+## Using the generated custom TLS certificate with vault-operator:
+
+Using existing secret, which contains the TLS certificate, define `existingTlsSecretName` in the Vault custom resource.
