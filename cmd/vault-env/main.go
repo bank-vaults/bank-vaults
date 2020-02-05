@@ -280,7 +280,7 @@ func main() {
 				}
 			}
 
-			if daemonMode && secret.Renewable && secret.LeaseDuration > 0 {
+			if daemonMode && secret != nil && secret.Renewable && secret.LeaseDuration > 0 {
 				log.Infof("secret %s has a lease duration of %ds, starting renewal", valuePath, secret.LeaseDuration)
 				err = startSecretRenewal(client, valuePath, secret, sigs)
 				if err != nil {
