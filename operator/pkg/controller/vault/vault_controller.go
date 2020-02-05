@@ -334,27 +334,26 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	if !v.Spec.GetTLSDisable() {
 		// Check if we have an existing TLS Secret for Vault
 		secretName := v.Name + "-tls"
-		if v.Spec.ExistingTlsSecretName != "" {
-			secretName = v.Spec.ExistingTlsSecretName
+		if v.Spec.ExistingTLSSecretName != "" {
+			secretName = v.Spec.ExistingTLSSecretName
 		}
-		existingSec := corev1.Secret{}
+		sec := &corev1.Secret{}
 		// Get tls secret
 		err := r.client.Get(context.TODO(), types.NamespacedName{
 			Namespace: v.Namespace,
 			Name:      secretName,
-		}, &existingSec)
-		sec := &existingSec
-		if apierrors.IsNotFound(err) {
-			if v.Spec.ExistingTlsSecretName == "" {
-				// If tls secret doesn't exist generate tls
-				sec, tlsExpiration, err = secretForVault(v, ser)
-				if err != nil {
-					return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
-				}
+		}, sec)
+		if apierrors.IsNotFound(err) && v.Spec.ExistingTLSSecretName == "" {
+			// If tls secret doesn't exist generate tls
+			sec, tlsExpiration, err = secretForVault(v, ser)
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
 			}
-		} else if v.Spec.ExistingTlsSecretName == "" && len(existingSec.Data) > 0 {
+		} else if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to get tls secret for vault: %v", err)
+		} else if v.Spec.ExistingTLSSecretName == "" && len(sec.Data) > 0 {
 			// If tls secret exists check expiration date
-			certPEM := string(existingSec.Data["server.crt"])
+			certPEM := string(sec.Data["server.crt"])
 			tlsExpiration, err = getCertExpirationDate(certPEM)
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to get certificate expiration: %v", err)
@@ -371,21 +370,19 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 					return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
 				}
 			}
-		} else if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to get tls secret for vault: %v", err)
 		}
 
 		// Set Vault instance as the owner and controller
-		if err := controllerutil.SetControllerReference(v, sec, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		if v.Spec.ExistingTlsSecretName == "" {
+		if v.Spec.ExistingTLSSecretName == "" {
+			if err := controllerutil.SetControllerReference(v, sec, r.scheme); err != nil {
+				return reconcile.Result{}, err
+			}
 			err = r.createOrUpdateObject(sec)
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to create secret for vault: %v", err)
 			}
 		}
+
 		// Distribute the CA certificate to every namespace defined
 		if len(v.Spec.CANamespaces) > 0 {
 			err = r.distributeCACertificate(v, client.ObjectKey{Name: sec.Name, Namespace: sec.Namespace})
@@ -393,7 +390,6 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 				return reconcile.Result{}, fmt.Errorf("failed to distribute CA secret for vault: %v", err)
 			}
 		}
-
 	}
 
 	if v.Spec.IsFluentDEnabled() {
@@ -1446,18 +1442,39 @@ func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool, envs []corev1.EnvVar) []
 
 func withTLSVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
 	if !v.Spec.GetTLSDisable() {
-		secretName := v.Name + "-tls"
-		if v.Spec.ExistingTlsSecretName != "" {
-			secretName = v.Spec.ExistingTlsSecretName
-		}
-		volumes = append(volumes, corev1.Volume{
-			Name: "vault-tls",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: secretName,
+		if v.Spec.ExistingTLSSecretName != "" {
+			volumes = append(volumes, corev1.Volume{
+				Name: "vault-tls",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: v.Spec.ExistingTLSSecretName,
+						Items: []corev1.KeyToPath{
+							{
+								Key:  "ca.crt",
+								Path: "ca.crt",
+							},
+							{
+								Key:  "tls.crt",
+								Path: "server.crt",
+							},
+							{
+								Key:  "tls.key",
+								Path: "server.key",
+							},
+						},
+					},
 				},
-			},
-		})
+			})
+		} else {
+			volumes = append(volumes, corev1.Volume{
+				Name: "vault-tls",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: v.Name + "-tls",
+					},
+				},
+			})
+		}
 	}
 	return volumes
 }
@@ -1950,10 +1967,19 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 	}
 
 	// We need the CA certificate only
-	delete(currentSecret.StringData, "server.crt")
-	delete(currentSecret.StringData, "server.key")
-	delete(currentSecret.Data, "server.crt")
-	delete(currentSecret.Data, "server.key")
+	if currentSecret.Type == "kubernetes.io/tls" {
+		currentSecret.Type = "Opaque"
+		delete(currentSecret.Data, "tls.crt")
+		delete(currentSecret.Data, "tls.key")
+		if err := controllerutil.SetControllerReference(v, &currentSecret, r.scheme); err != nil {
+			return fmt.Errorf("failed to set current secret controller reference: %v", err)
+		}
+	} else {
+		delete(currentSecret.StringData, "server.crt")
+		delete(currentSecret.StringData, "server.key")
+		delete(currentSecret.Data, "server.crt")
+		delete(currentSecret.Data, "server.key")
+	}
 
 	var namespaces []string
 

@@ -311,8 +311,8 @@ type VaultSpec struct {
 	// default: false
 	ServiceMonitorEnabled bool `json:"serviceMonitorEnabled,omitempty"`
 
-	// existingTLSSecretName is name of the secret contains TLS certificate
-	// If it set geenerating certificate is disabled
+	// ExistingTLSSecretName is name of the secret contains TLS certificate (accepted secret type: kubernetes.io/tls)
+	// If it is set, generating certificate will be disabled
 	// default: ""
 	ExistingTLSSecretName string `json:"existingTlsSecretName,omitempty"`
 
