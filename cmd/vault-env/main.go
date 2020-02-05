@@ -21,6 +21,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"emperror.dev/errors"
 	vaultapi "github.com/hashicorp/vault/api"
@@ -92,7 +93,7 @@ func (environ *sanitizedEnviron) append(name string, value string) {
 	}
 }
 
-func startSecretRenewal(client *vault.Client, path string, secret *vaultapi.Secret) error {
+func startSecretRenewal(client *vault.Client, path string, secret *vaultapi.Secret, sigs chan os.Signal) error {
 	renewerInput := vaultapi.RenewerInput{Secret: secret}
 	secretRenewer, err := client.RawClient().NewRenewer(&renewerInput)
 	if err != nil {
@@ -107,7 +108,14 @@ func startSecretRenewal(client *vault.Client, path string, secret *vaultapi.Secr
 			case renewOutput := <-secretRenewer.RenewCh():
 				log.Infof("secret %s renewed for %ds", path, renewOutput.Secret.LeaseDuration)
 			case doneError := <-secretRenewer.DoneCh():
-				log.WithField("error", doneError).Infof("secret renewal for %s has finished", path)
+				log.WithField("error", doneError).Infof("secret renewal for %s has stopped, sending SIGTERM to process", path)
+
+				sigs <- syscall.SIGTERM
+
+				timeout := <-time.After(10 * time.Second)
+				log.Infoln("killing process due to SIGTERM timeout =", timeout)
+				sigs <- syscall.SIGKILL
+
 				return
 			}
 		}
@@ -120,6 +128,7 @@ func main() {
 	enableJSONLog := os.Getenv("VAULT_JSON_LOG")
 
 	daemonMode := cast.ToBool(os.Getenv("VAULT_ENV_DAEMON"))
+	sigs := make(chan os.Signal, 1)
 
 	logger = log.New()
 	// Add additional fields to all log messages
@@ -273,7 +282,7 @@ func main() {
 
 			if daemonMode && secret.Renewable && secret.LeaseDuration > 0 {
 				log.Infof("secret %s has a lease duration of %ds, starting renewal", valuePath, secret.LeaseDuration)
-				err = startSecretRenewal(client, valuePath, secret)
+				err = startSecretRenewal(client, valuePath, secret, sigs)
 				if err != nil {
 					logger.Fatalln("secret renewal can't be established", err)
 				}
@@ -348,7 +357,6 @@ func main() {
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
 
-		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs)
 
 		go func() {
