@@ -113,7 +113,7 @@ auth:
     # Add cross account number and role to assume in the cross account
     # https://www.vaultproject.io/api/auth/aws/index.html#create-sts-role
     - sts_account: 12345671234
-      sts_role_arn: arn:aws:iam::12345671234:role/crossaccountrole
+      sts_role: arn:aws:iam::12345671234:role/crossaccountrole
     roles:
     # Add roles for AWS instances or principals
     # See https://www.vaultproject.io/api/auth/aws/index.html#create-role
