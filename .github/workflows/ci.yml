@@ -5,6 +5,16 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+
+    services:
+      vault:
+        image: vault:1.3.2
+        env:
+          SKIP_SETCAP: true
+          VAULT_DEV_ROOT_TOKEN_ID: 227e1cce-6bf7-30bb-2d2a-acc854318caf
+        ports:
+          - 8200:8200
+
     steps:
 
     - name: Set up Go 1.13
@@ -17,6 +27,8 @@ jobs:
 
     - name: Build
       run: make check
+      env:
+        VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
 
   acceptance-test:
     name: Acceptance test
