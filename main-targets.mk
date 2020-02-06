@@ -37,11 +37,11 @@ bin/golangci-lint-${GOLANGCI_VERSION}:
 
 .PHONY: lint
 lint: bin/golangci-lint ## Run linter
-	bin/golangci-lint run
+	bin/golangci-lint run --timeout 2m
 
 .PHONY: lint-sdk
 lint-sdk: bin/golangci-lint ## Run linter
-	cd pkg/sdk && ../../bin/golangci-lint run
+	cd pkg/sdk && ../../bin/golangci-lint run --timeout 2m
 
 .PHONY: fix
 fix: bin/golangci-lint ## Fix lint violations
