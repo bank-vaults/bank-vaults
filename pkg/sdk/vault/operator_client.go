@@ -117,7 +117,6 @@ func (t kvTester) Test(key string) error {
 
 // New returns a new vault Vault, or an error.
 func New(k KVService, cl *api.Client, config Config) (Vault, error) {
-
 	if config.SecretShares < config.SecretThreshold {
 		return nil, errors.New("the secret threshold can't be bigger than the shares")
 	}
@@ -356,7 +355,6 @@ func (v *vault) Init() error {
 
 // RaftJoin joins Vault raft cluster if is not initialized already
 func (v *vault) RaftJoin(leaderAPIAddr string) error {
-
 	initialized, err := v.cl.Sys().InitStatus()
 	if err != nil {
 		return fmt.Errorf("error testing if vault is initialized: %s", err.Error())
@@ -667,7 +665,7 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 			if err != nil {
 				return fmt.Errorf("error configuring aws auth roles for vault: %s", err.Error())
 			}
-		case "gcp","oci":
+		case "gcp", "oci":
 			config, err := cast.ToStringMapE(authMethod["config"])
 			if err != nil {
 				return fmt.Errorf("error finding config block for %s: %s", authMethodType, err.Error())
@@ -789,7 +787,6 @@ func (v *vault) configurePolicies(config *viper.Viper) error {
 	}
 
 	for _, policy := range policies {
-
 		policyName := policy["name"]
 		policyRules, err := hclPrinter.Format([]byte(policy["rules"]))
 		if err != nil {
@@ -938,7 +935,7 @@ func (v *vault) configurePlugins(config *viper.Viper) error {
 		return fmt.Errorf("failed to retrieve list of plugins: %s", err.Error())
 	}
 
-	logrus.Debugf("already registered plugins: %#v", listPlugins.Names)
+	logrus.Debugf("already registered plugins: %#v", listPlugins.PluginsByType)
 
 	for _, plugin := range plugins {
 		command, err := getOrError(plugin, "command")
@@ -1054,7 +1051,6 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 			}
 
 			logrus.Infoln("mounted", secretEngineType, "to", path)
-
 		} else {
 			logrus.Infof("tuning already existing mount: %s/", path)
 			config, err := getMountConfigInput(secretEngine)
@@ -1152,7 +1148,6 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 				if rotate && mountExists &&
 					((secretEngineType == "database" && configOption == "config") ||
 						(secretEngineType == "aws" && configOption == "config/root")) {
-
 					// TODO we need to find out if it was rotated or not
 					err = v.rotateSecretEngineCredentials(secretEngineType, path, name.(string), configPath)
 					if err != nil {
@@ -1180,7 +1175,6 @@ func (v *vault) rotateSecretEngineCredentials(secretEngineType, path, name, conf
 	}
 
 	if _, ok := v.rotateCache[rotatePath]; !ok {
-
 		logrus.Infoln("doing credential rotation at", rotatePath)
 
 		_, err := v.cl.Logical().Write(rotatePath, nil)
@@ -1240,7 +1234,6 @@ func (v *vault) configureAuditDevices(config *viper.Viper) error {
 			}
 
 			logrus.Infoln("mounted audit device", auditDeviceType, "to", path)
-
 		} else {
 			logrus.Infof("audit device is already mounted: %s/", path)
 		}
@@ -1413,7 +1406,7 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 			return fmt.Errorf("error reading group: %s", err)
 		}
 
-		// Currently does not support specifing members directly in the group config
+		// Currently does not support specifying members directly in the group config
 		// Use group aliases for that
 		if cast.ToString(group["type"]) != "external" {
 			return fmt.Errorf("only external groups are supported for now")

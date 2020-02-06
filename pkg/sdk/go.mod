@@ -13,6 +13,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cast v1.3.0
 	github.com/spf13/viper v1.4.0
-	gopkg.in/inf.v0 v0.9.1 // indirect
+	k8s.io/api v0.0.0-20190918155943-95b840bb6a1f
 	k8s.io/client-go v0.0.0-20190918160344-1fbdaa4c8d90
+	sigs.k8s.io/controller-runtime v0.4.0
 )
