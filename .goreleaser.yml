@@ -1,0 +1,39 @@
+builds:
+    -
+        main: ./cmd/bank-vaults
+        binary: bank-vaults
+        env:
+            - CGO_ENABLED=0
+        ldflags: "-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}"
+        goos:
+            - linux
+            - darwin
+            - windows
+        goarch:
+            - amd64
+
+archives:
+    -
+        id: bin
+        name_template: "bank-vaults-{{ .Os }}-{{ .Arch }}"
+        format: binary
+    -
+        id: targz
+        name_template: "bank-vaults-{{ .Os }}-{{ .Arch }}"
+
+checksum:
+    name_template: "bank-vaults_checksums.txt"
+
+changelog:
+    skip: false
+
+brews:
+    -
+        github:
+            owner: banzaicloud
+            name: homebrew-tap
+        folder: Formula
+        homepage: https://banzaicloud.com/products/bank-vaults/
+        description: A Vault swiss-army knife CLI with Kubernetes support
+        test: |
+            system "#{bin}/bank-vaults"
