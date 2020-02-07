@@ -59,16 +59,23 @@ Bank-Vaults is a core part of [Banzai Cloud Pipeline](https://banzaicloud.com/),
 </p>
 
 
-## Installing:
+## Installing
+
+You usually don't need to use the CLI directly, rather you should install the charts and create Vault instances with the operator and use the webhook inside Kubernetes.
+
+To grab the CLI binary go to the [releases](https://github.com/banzaicloud/bank-vaults/releases) page and download it.
+
+On macOs, you can directly Homebrew the CLI:
+
+```
+$ brew install banzaicloud/tap/bank-vaults
+```
+
+Alternatively, fetch the source and compile it using `go get`:
+
 ```shell
 go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
 go get github.com/banzaicloud/bank-vaults/cmd/vault-env
-```
-
-If compilation is failed, you should try to enable go modules:
-```shell
-GOPATH=/tmp/gopath-for-bank-vaults GO111MODULE=on go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
-GOPATH=/tmp/gopath-for-bank-vaults GO111MODULE=on go get github.com/banzaicloud/bank-vaults/cmd/vault-env
 ```
 
 Read more about usage of bank-vaults in [detailed documentation](docs/README.md)
