@@ -19,6 +19,11 @@ The operator doesn't overwrite this Secret holding the certificate if it already
 There are some attributes that can influence the TLS settings in the operator:
 
 ```go
+	// ExistingTLSSecretName is name of the secret contains TLS certificate (accepted secret type: kubernetes.io/tls)
+	// If it is set, generating certificate will be disabled
+    // default: ""
+    ExistingTLSSecretName string `json:"existingTlsSecretName,omitempty"`
+
     // TLSExpiryThreshold is the Vault TLS certificate expiration threshold in Go's Duration format.
     // default: 168h
     TLSExpiryThreshold *time.Duration `json:"tlsExpiryThreshold,omitempty"`
@@ -33,7 +38,11 @@ There are some attributes that can influence the TLS settings in the operator:
     CANamespaces []string `json:"caNamespaces,omitempty"`
 ```
 
-## Generating custom certificates with CFSSL for Bank-Vaults
+## Using the generated custom TLS certificate with vault-operator:
+
+Using existing secret, which contains the TLS certificate, define `existingTlsSecretName` in the Vault custom resource.
+
+### Generating custom certificates with CFSSL for Bank-Vaults
 
 If you don't wish to use the Helm or Operator genereted certificates the most easiest way to create a custom certificate for Bank-Vaults is [CFSSL](https://github.com/cloudflare/cfssl).
 This directory holds a set of custom CFSSL configurations which are prepared for the Helm release name `vault` in the `default` namespace. Of course you can put any other certificates into the Secret below, this is just an example:
@@ -70,7 +79,7 @@ helm upgrade --install vault ../charts/vault --set tls.secretName=vault-tls
 kubectl apply -f vault-cr.yaml
 ```
 
-## Generating custom certificates with cert-manager for Bank-Vaults
+### Generating custom certificates with cert-manager for Bank-Vaults
 
 Example custom resource used by the cert-manager to generate the certificate for Bank-Vaults
 ```bash
@@ -103,7 +112,3 @@ spec:
     name: test-selfsigned
 EOF
 ```
-
-## Using the generated custom TLS certificate with vault-operator:
-
-Using existing secret, which contains the TLS certificate, define `existingTlsSecretName` in the Vault custom resource.
