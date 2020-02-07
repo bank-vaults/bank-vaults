@@ -45,3 +45,6 @@ bin/*
 !/.idea/scopes/
 
 vault-config.yaml
+
+# goreleaser
+dist/
