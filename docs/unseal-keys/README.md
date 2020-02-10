@@ -1,6 +1,8 @@
 # Unseal Keys
 
-The keys that will be stored are:
+Vault data and the unseal keys live together, if you delete a Vault instance installed by the operator or the Helm chart all your data and the unseal keys to that initialized state should remain untouched. Read more about it in the [official documentaion](https://www.vaultproject.io/docs/concepts/seal/).
+
+The keys that will be stored by Bank-Vaults are:
 
 - `vault-root`, which is the Vault's root token
 - `vault-unseal-N`, where `N` is a number, starting at 0 up to the maximum defined minus 1, e.g. 5 unseal keys will be `vault-unseal-0` up to including `vault-unseal-4`
@@ -45,4 +47,14 @@ export VAULT_TOKEN=$(gsutil cat gs://${BUCKET}/vault-root | gcloud kms decrypt \
                      --key ${KEY} \
                      --ciphertext-file - \
                      --plaintext-file -)
+```
+
+### Kubernetes
+
+There is a Kubernetes Secret backed unseal storage in Bank-Vaults, you should be aware of that Kubernetes Secrets are base64 encoded only if you are not using a [EncryptionConfiguration](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/) in your Kubernetes cluster.
+
+```bash
+VAULT_NAME="vault"
+
+export VAULT_TOKEN=$(kubectl get secrets ${VAULT_NAME}-unseal-keys -o jsonpath={.data.vault-root} | base64 -d)
 ```
