@@ -65,6 +65,7 @@ kubectl delete secret vault-unseal-keys
 kubectl wait --for=delete pod/vault-0 --timeout=120s || true
 kubectl wait --for=delete pod/vault-1 --timeout=120s || true
 kubectl delete pvc --all # persitentVolumeClaims has to be cleared
+kubectl delete deployment vault-operator-etcd-operator-etcd-operator # the etcd operator is also unused from this point
 
 # Second test: test the external secrets watcher work and match as expected
 kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
