@@ -91,6 +91,8 @@ kubectl apply -f operator/deploy/priorityclass.yaml
 kubectl apply -f operator/deploy/cr-priority.yaml
 waitfor kubectl get pod/vault-0
 kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
+kubectl delete -f operator/deploy/cr-priority.yaml
+kubectl delete secret vault-unseal-keys
 
 # Fourth test: Raft HA setup
 kubectl apply -f operator/deploy/cr-raft.yaml
@@ -100,6 +102,8 @@ kubectl delete -f operator/deploy/cr-raft.yaml
 kubectl wait --for=delete pod/vault-0 --timeout=120s || true
 kubectl wait --for=delete pod/vault-1 --timeout=120s || true
 kubectl wait --for=delete pod/vault-2 --timeout=120s || true
+kubectl delete -f operator/deploy/cr-raft.yaml
+kubectl delete secret vault-unseal-keys
 
 # Run a client test
 
