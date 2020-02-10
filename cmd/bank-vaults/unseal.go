@@ -102,7 +102,7 @@ from one of the followings:
 
 			initialized, err := v.RaftInitialized()
 			if err != nil {
-				logrus.Fatalf("error checking if vault is initalized: %s", err.Error())
+				logrus.Fatalf("error checking if vault is initialized: %s", err.Error())
 			}
 
 			// If this is the first instance we have to init it, this happens once in the clusters lifetime
