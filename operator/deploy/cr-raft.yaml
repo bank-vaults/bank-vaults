@@ -138,6 +138,17 @@ spec:
   
   statsdDisabled: true
 
+  resources:
+    # A YAML representation of resource ResourceRequirements for vault container
+    # Detail can reference: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container
+    vault:
+      limits:
+        memory: "512Mi"
+        cpu: "200m"
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+
   # See: https://github.com/banzaicloud/bank-vaults#example-external-vault-configuration for more details.
   externalConfig:
     policies:
