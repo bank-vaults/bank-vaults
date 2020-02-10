@@ -84,7 +84,7 @@ var _ Vault = &vault{}
 // a Vault server.
 type Vault interface {
 	Init() error
-	isInit() (bool, error)
+	RaftInitialized() (bool, error)
 	RaftJoin(string) error
 	Sealed() (bool, error)
 	Active() (bool, error)
@@ -355,7 +355,7 @@ func (v *vault) Init() error {
 }
 
 // in our case Vault is initialized when root key is stored in the Cloud KMS
-func (v *vault) isInit() (bool, error) {
+func (v *vault) RaftInitialized() (bool, error) {
 	rootToken, err := v.keyStore.Get(v.rootTokenKey())
 	if err != nil {
 		return fmt.Errorf("unable to get key '%s': %s", v.rootTokenKey(), err.Error())

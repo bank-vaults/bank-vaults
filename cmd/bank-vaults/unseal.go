@@ -100,7 +100,7 @@ from one of the followings:
 		if unsealConfig.proceedInit && unsealConfig.raft {
 			logrus.Info("joining leader vault...")
 
-			initialized, err := v.isInit()
+			initialized, err := v.RaftInitialized()
 			if err != nil {
 				logrus.Fatalf("error checking if vault is initalized: %s", err.Error())
 			}
