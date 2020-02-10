@@ -25,6 +25,82 @@ The Access Policy in which the Pod is running has to have the following IAM Role
 
 ## AWS
 
+### Enable IAM OIDC provider for cluster
+
+To allow Vault pods to assume IAM roles in order to access AWS services the IAM OIDC provider needs to be enabled on the cluster.
+
+```bash
+cluster_name="mycluster"
+
+# Enable OIDC provider
+eksctl utils associate-iam-oidc-provider \
+    --name $cluster_name \
+    --approve
+
+# Create IAM policy to allow Vault to read/write and encrypt unseal keys in an S3 bucket
+policy_name="vault-operator"
+
+# Create a KMS key and S3 bucket and enter details here
+kms_key_arn="kms key ARN here"
+s3_bucket_name="name of S3 bucket to store keys in"
+
+cat > /tmp/operator-policy.json <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "kms:Decrypt",
+                "kms:Encrypt"
+            ],
+            "Resource": [
+                "$kms_key_arn",
+                "arn:aws:s3:::$s3_bucket_name/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": "s3:ListBucket",
+            "Resource": "arn:aws:s3:::$s3_bucket_name"
+        }
+    ]
+}
+EOF
+policy_arn=$(aws iam create-policy \
+    --policy-name $policy_name \
+    --policy-document file:///tmp/operator-policy.json \
+    | jq -r '.Policy.Arn')
+
+# Cleanup
+rm /tmp/operator-policy.json
+
+# Kubernetes service account and IAM role setup
+eksctl create iamserviceaccount \
+    --name "vault-operator" \
+    --namespace "vault-operator" \
+    --cluster $cluster_name \
+    --attach-policy-arn $policy_arn \
+    --approve
+```
+
+### Getting the root token
+
+After the Vault is successfully deployed, you will need to get the root token for first access.
+
+```bash
+# Fetch Vault root token, check bucket for actual name based on unsealConfig.aws.s3Prefix
+aws s3 cp s3://$s3_bucket_name/vault-root /tmp/vault-root
+
+export VAULT_TOKEN="$(aws kms decrypt \
+  --ciphertext-blob fileb:///tmp/vault-root \
+  --encryption-context Tool=bank-vaults \
+  --query Plaintext --output text | base64 --decode)"
+```
+
+
 The Instance profile in which the Pod is running has to have the following IAM Policies:
 
 - KMS: `kms:Encrypt, kms:Decrypt`
