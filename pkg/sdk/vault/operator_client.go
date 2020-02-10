@@ -358,7 +358,7 @@ func (v *vault) Init() error {
 func (v *vault) RaftInitialized() (bool, error) {
 	rootToken, err := v.keyStore.Get(v.rootTokenKey())
 	if err != nil {
-		return fmt.Errorf("unable to get key '%s': %s", v.rootTokenKey(), err.Error())
+		return false, fmt.Errorf("unable to get key '%s': %s", v.rootTokenKey(), err.Error())
 	}
 
 	if len(rootToken) > 0 {
