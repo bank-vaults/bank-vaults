@@ -20,7 +20,6 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"net/http"
@@ -33,7 +32,6 @@ import (
 
 	"github.com/Masterminds/semver"
 	vaultv1alpha1 "github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
-	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
 	bvtls "github.com/banzaicloud/bank-vaults/pkg/sdk/tls"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
@@ -1151,11 +1149,6 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		volumeMounts = append(volumeMounts, etcdVolumeMount)
 	}
 
-	ownerJSON, err := json.Marshal(v.AsOwnerReference())
-	if err != nil {
-		return nil, err
-	}
-
 	unsealCommand := []string{"bank-vaults", "unseal", "--init"}
 	if v.Spec.IsAutoUnseal() {
 		unsealCommand = append(unsealCommand, "--auto")
@@ -1209,7 +1202,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			},
 		}),
 
-		Containers: withVeleroContainer(v, withStatsDContainer(v, string(ownerJSON), withAuditLogContainer(v, string(ownerJSON), []corev1.Container{
+		Containers: withVeleroContainer(v, withStatsDContainer(v, withAuditLogContainer(v, []corev1.Container{
 			{
 				Image:           v.Spec.GetVaultImage(),
 				ImagePullPolicy: corev1.PullIfNotPresent,
@@ -1254,10 +1247,6 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Command:         unsealCommand,
 				Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
 				Env: withTLSEnv(v, true, withCredentialsEnv(v, withCommonEnv(v, []corev1.EnvVar{
-					{
-						Name:  k8s.EnvK8SOwnerReference,
-						Value: string(ownerJSON),
-					},
 					{
 						Name: "POD_NAME",
 						ValueFrom: &corev1.EnvVarSource{
@@ -1633,19 +1622,13 @@ func withVeleroContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) 
 	return containers
 }
 
-func withStatsDContainer(v *vaultv1alpha1.Vault, owner string, containers []corev1.Container) []corev1.Container {
+func withStatsDContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
 	if !v.Spec.IsStatsDDisabled() {
 		containers = append(containers, corev1.Container{
 			Image:           v.Spec.GetStatsDImage(),
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Name:            "prometheus-exporter",
 			Args:            []string{"--statsd.mapping-config=/tmp/statsd-mapping.conf"},
-			Env: withTLSEnv(v, true, withCredentialsEnv(v, []corev1.EnvVar{
-				{
-					Name:  k8s.EnvK8SOwnerReference,
-					Value: owner,
-				},
-			})),
 			Ports: []corev1.ContainerPort{{
 				Name:          "statsd",
 				ContainerPort: 9125,
@@ -1699,18 +1682,12 @@ func withAuditLogVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.Volum
 	return volumeMounts
 }
 
-func withAuditLogContainer(v *vaultv1alpha1.Vault, owner string, containers []corev1.Container) []corev1.Container {
+func withAuditLogContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
 	if v.Spec.IsFluentDEnabled() {
 		containers = append(containers, corev1.Container{
 			Image:           v.Spec.GetFluentDImage(),
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Name:            "auditlog-exporter",
-			Env: withCommonEnv(v, withCredentialsEnv(v, []corev1.EnvVar{
-				{
-					Name:  k8s.EnvK8SOwnerReference,
-					Value: owner,
-				},
-			})),
 			VolumeMounts: withCredentialsVolumeMount(v, []corev1.VolumeMount{
 				{
 					Name:      "vault-auditlogs",

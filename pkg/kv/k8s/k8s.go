@@ -30,6 +30,7 @@ import (
 )
 
 // EnvK8SOwnerReference holds the environment variable name for passing in K8S owner refs
+// TODO: remove this in the next release.
 const EnvK8SOwnerReference = "K8S_OWNER_REFERENCE"
 
 type k8sStorage struct {
