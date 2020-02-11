@@ -16,7 +16,6 @@ package main
 
 import (
 	"os"
-	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -101,9 +100,13 @@ from one of the followings:
 		if unsealConfig.proceedInit && unsealConfig.raft {
 			logrus.Info("joining leader vault...")
 
-			podName := os.Getenv("POD_NAME")
+			initialized, err := v.RaftInitialized()
+			if err != nil {
+				logrus.Fatalf("error checking if vault is initialized: %s", err.Error())
+			}
+
 			// If this is the first instance we have to init it, this happens once in the clusters lifetime
-			if strings.HasSuffix(podName, "-0") && !unsealConfig.raftSecondary {
+			if !initialized && !unsealConfig.raftSecondary {
 				logrus.Info("initializing vault...")
 				if err := v.Init(); err != nil {
 					logrus.Fatalf("error initializing vault: %s", err.Error())
