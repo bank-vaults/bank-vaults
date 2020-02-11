@@ -58,3 +58,25 @@ VAULT_NAME="vault"
 
 export VAULT_TOKEN=$(kubectl get secrets ${VAULT_NAME}-unseal-keys -o jsonpath={.data.vault-root} | base64 -d)
 ```
+
+## Moving unseal keys to be managed by Bank-Vaults
+
+### AWS
+
+```bash
+REGION=eu-central-1
+KMS_KEY_ID=02a2ba49-42ce-487f-b006-34c64f4b760e
+BUCKET=bank-vaults-1
+
+for key in "vault-root" ""
+do
+    aws kms encrypt \
+        --region ${REGION} --key-id ${KMS_KEY_ID} \
+        --plaintext fileb://${key}.txt \
+        --encryption-context Tool=bank-vaults \
+        --output text \
+        --query CiphertextBlob | base64 -d > ${key}
+
+    aws s3 cp ./${key} s3://${BUCKET}/
+done
+```
