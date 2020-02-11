@@ -18,15 +18,18 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
-	"github.com/banzaicloud/bank-vaults/internal/configuration"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
-
+	"emperror.dev/errors"
 	vaultapi "github.com/hashicorp/vault/api"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
+
+	"github.com/banzaicloud/bank-vaults/internal/configuration"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 // The special value for VAULT_ENV which marks that the login token needs to be passed through to the application
@@ -61,6 +64,7 @@ var (
 		"VAULT_ENV_PASSTHROUGH":        true,
 		"VAULT_JSON_LOG":               true,
 		"VAULT_REVOKE_TOKEN":           true,
+		"VAULT_ENV_DAEMON":             true,
 	}
 
 	logger *log.Logger
@@ -89,8 +93,42 @@ func (environ *sanitizedEnviron) append(name string, value string) {
 	}
 }
 
+func startSecretRenewal(client *vault.Client, path string, secret *vaultapi.Secret, sigs chan os.Signal) error {
+	renewerInput := vaultapi.RenewerInput{Secret: secret}
+	secretRenewer, err := client.RawClient().NewRenewer(&renewerInput)
+	if err != nil {
+		return errors.Wrap(err, "failed to create secret renewer")
+	}
+
+	go secretRenewer.Renew()
+
+	go func() {
+		for {
+			select {
+			case renewOutput := <-secretRenewer.RenewCh():
+				log.Infof("secret %s renewed for %ds", path, renewOutput.Secret.LeaseDuration)
+			case doneError := <-secretRenewer.DoneCh():
+				log.WithField("error", doneError).Infof("secret renewal for %s has stopped, sending SIGTERM to process", path)
+
+				sigs <- syscall.SIGTERM
+
+				timeout := <-time.After(10 * time.Second)
+				log.Infoln("killing process due to SIGTERM timeout =", timeout)
+				sigs <- syscall.SIGKILL
+
+				return
+			}
+		}
+	}()
+
+	return nil
+}
+
 func main() {
 	enableJSONLog := os.Getenv("VAULT_JSON_LOG")
+
+	daemonMode := cast.ToBool(os.Getenv("VAULT_ENV_DAEMON"))
+	sigs := make(chan os.Signal, 1)
 
 	logger = log.New()
 	// Add additional fields to all log messages
@@ -241,6 +279,14 @@ func main() {
 					secretCache[secretCacheKey] = secret
 				}
 			}
+
+			if daemonMode && secret != nil && secret.Renewable && secret.LeaseDuration > 0 {
+				log.Infof("secret %s has a lease duration of %ds, starting renewal", valuePath, secret.LeaseDuration)
+				err = startSecretRenewal(client, valuePath, secret, sigs)
+				if err != nil {
+					logger.Fatalln("secret renewal can't be established", err)
+				}
+			}
 		}
 
 		if secret == nil {
@@ -298,10 +344,47 @@ func main() {
 			// Do not exit on error, token revoking can be denied by policy
 			logger.Warnln("failed to revoke token")
 		}
+		client.Close()
 	}
 
-	err = syscall.Exec(binary, entrypointCmd, sanitized)
-	if err != nil {
-		logger.Fatalln("failed to exec process", binary, entrypointCmd, err.Error())
+	logger.Infoln("spawning process:", entrypointCmd)
+
+	if daemonMode {
+		logger.Infoln("in daemon mode...")
+		cmd := exec.Command(binary, entrypointCmd[1:]...)
+		cmd.Env = append(os.Environ(), sanitized...)
+		cmd.Stdin = os.Stdin
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+
+		signal.Notify(sigs)
+
+		go func() {
+			sig := <-sigs
+			err := cmd.Process.Signal(sig)
+			if err != nil {
+				log.Warnf("failed to signal process with %s: %v", sig, err)
+			} else {
+				log.Infof("received signal: %s", sig)
+			}
+		}()
+
+		err = cmd.Run()
+
+		close(sigs)
+
+		if _, ok := err.(*exec.ExitError); ok {
+			os.Exit(cmd.ProcessState.ExitCode())
+		} else if err != nil {
+			logger.Fatalln("failed to exec process", entrypointCmd, err.Error())
+			os.Exit(-1)
+		} else {
+			os.Exit(cmd.ProcessState.ExitCode())
+		}
+	} else {
+		err = syscall.Exec(binary, entrypointCmd, sanitized)
+		if err != nil {
+			logger.Fatalln("failed to exec process", entrypointCmd, err.Error())
+		}
 	}
 }

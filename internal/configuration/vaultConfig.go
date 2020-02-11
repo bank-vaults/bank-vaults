@@ -27,6 +27,7 @@ type VaultConfig struct {
 	SkipVerify                  string
 	TLSSecret                   string
 	UseAgent                    bool
+	VaultEnvDaemon              bool
 	TransitKeyID                string
 	TransitPath                 string
 	CtConfigMap                 string
