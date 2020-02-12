@@ -84,7 +84,7 @@ export VAULT_TOKEN=$(kubectl get secrets ${VAULT_NAME}-unseal-keys -o jsonpath={
 
 If you need to move your Vault instance from one provider or an external managed Vault, you will have to store those the unseal keys and a root token in the Bank-Vaults format.
 
-All examples assume that you have created files holding the root-token and the 5 unseal keys:
+All examples assume that you have created files holding the root-token and the 5 unseal keys in plaintext:
 - vault-root.txt
 - vault-unseal-0.txt
 - vault-unseal-1.txt
