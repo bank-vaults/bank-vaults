@@ -17,12 +17,33 @@ To unseal Vault the `vault-root` token is not needed and can be removed from the
 To use the KMS-encrypted root token with Vault CLI:
 
 Required CLI tools:
-- aws
+  - aws
 
-1. Download root token file to your local file system
-1. Decrypt the token and save it as an environment variable
+Steps:
+
+1. Download and decrypt the root token (and the unseal keys, but that is not mandatory) into a file on your local file system:
     ```bash
-    export VAULT_TOKEN="$(aws kms decrypt --ciphertext-blob fileb://<encrypted token file> --encryption-context Tool=bank-vaults --query Plaintext --output text | base64 --decode)"
+    BUCKET=bank-vaults-0
+    REGION=eu-central-1
+
+    for key in "vault-root" "vault-unseal-0" "vault-unseal-1" "vault-unseal-2" "vault-unseal-3" "vault-unseal-4"
+    do
+        aws s3 cp s3://${BUCKET}/${key} .
+
+        aws kms decrypt \
+            --region ${REGION} \
+            --ciphertext-blob fileb://${key} \
+            --encryption-context Tool=bank-vaults \
+            --output text \
+            --query Plaintext | base64 -d > ${key}.txt
+
+        rm ${key}
+    done
+    ```
+
+1. Save it as an environment variable:
+    ```bash
+    export VAULT_TOKEN="$(cat vault-root.txt)"
     ```
 
 ### Google Cloud
@@ -57,4 +78,42 @@ There is a Kubernetes Secret backed unseal storage in Bank-Vaults, you should be
 VAULT_NAME="vault"
 
 export VAULT_TOKEN=$(kubectl get secrets ${VAULT_NAME}-unseal-keys -o jsonpath={.data.vault-root} | base64 -d)
+```
+
+## Moving unseal keys to be managed by Bank-Vaults or migrating between cloud providers
+
+If you need to move your Vault instance from one provider or an external managed Vault, you will have to store those the unseal keys and a root token in the Bank-Vaults format.
+
+All examples assume that you have created files holding the root-token and the 5 unseal keys in plaintext:
+- vault-root.txt
+- vault-unseal-0.txt
+- vault-unseal-1.txt
+- vault-unseal-2.txt
+- vault-unseal-3.txt
+- vault-unseal-4.txt
+
+For migrating the Vault storage data you will have to use [official migration command](https://www.vaultproject.io/docs/commands/operator/migrate/) provided by Vault.
+
+### AWS
+
+Moving the above mentioned files to an AWS bucket and encrypt them with KMS before:
+
+```bash
+REGION=eu-central-1
+KMS_KEY_ID=02a2ba49-42ce-487f-b006-34c64f4b760e
+BUCKET=bank-vaults-1
+
+for key in "vault-root" "vault-unseal-0" "vault-unseal-1" "vault-unseal-2" "vault-unseal-3" "vault-unseal-4"
+do
+    aws kms encrypt \
+        --region ${REGION} --key-id ${KMS_KEY_ID} \
+        --plaintext fileb://${key}.txt \
+        --encryption-context Tool=bank-vaults \
+        --output text \
+        --query CiphertextBlob | base64 -d > ${key}
+
+    aws s3 cp ./${key} s3://${BUCKET}/
+
+    rm ${key} ${key}.txt
+done
 ```
