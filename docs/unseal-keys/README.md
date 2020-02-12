@@ -92,6 +92,8 @@ All examples assume that you have created files holding the root-token and the 5
 - vault-unseal-3.txt
 - vault-unseal-4.txt
 
+For migrating the Vault storage data you will have to use [official migration command](https://www.vaultproject.io/docs/commands/operator/migrate/) provided by Vault.
+
 ### AWS
 
 Moving the above mentioned files to an AWS bucket and encrypt them with KMS before:
