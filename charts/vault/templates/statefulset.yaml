@@ -255,6 +255,8 @@ spec:
                   app.kubernetes.io/name: {{ template "vault.fullname" . }}
                   app.kubernetes.io/instance: {{ .Release.Name | quote }}
       serviceAccountName: {{ template "vault.fullname" . }}
+      securityContext:
+        fsGroup: 65534
       volumes:
         - name: vault-raw-config
           secret:

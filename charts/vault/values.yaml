@@ -55,6 +55,9 @@ podAnnotations:
 labels: {}
   #  team: banzai
 
+serviceAccount:
+  annotations: {}
+
 resources:
   requests:
     cpu: 100m
