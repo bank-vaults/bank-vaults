@@ -30,60 +30,86 @@ The Access Policy in which the Pod is running has to have the following IAM Role
 To allow Vault pods to assume IAM roles in order to access AWS services the IAM OIDC provider needs to be enabled on the cluster.
 
 ```bash
-cluster_name="mycluster"
+CLUSTER_NAME="mycluster"
 
-# Enable OIDC provider
+# Enable OIDC provider for the cluster with eksctl
+# Follow the docs here to do it manually https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html
 eksctl utils associate-iam-oidc-provider \
-    --name $cluster_name \
+    --name $CLUSTER_NAME \
     --approve
 
-# Create IAM policy to allow Vault to read/write and encrypt unseal keys in an S3 bucket
-policy_name="vault-operator"
-
 # Create a KMS key and S3 bucket and enter details here
-kms_key_arn="kms key ARN here"
-s3_bucket_name="name of S3 bucket to store keys in"
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+KMS_KEY_ARN="arn:aws:kms:eu-central-1:123456789191:key/02a2ba49-42ce-487f-b006-34c64f4b760e"
+BUCKET="bank-vaults"
+OIDC_PROVIDER=$(aws eks describe-cluster --name ${CLUSTER_NAME} --query "cluster.identity.oidc.issuer" --output text | sed -e "s/^https:\/\///")
+SERVICE_ACCOUNT_NAME=vault
+SERVICE_ACCOUNT_NAMESPACE=vault
 
-cat > /tmp/operator-policy.json <<EOF
+cat > trust.json <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER}"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "${OIDC_PROVIDER}:sub": "system:serviceaccount:${SERVICE_ACCOUNT_NAMESPACE}:${SERVICE_ACCOUNT_NAME}"
+        }
+      }
+    }
+  ]
+}
+EOF
+
+cat > vault-policy.json <<EOF
 {
     "Version": "2012-10-17",
     "Statement": [
         {
             "Effect": "Allow",
             "Action": [
-                "s3:PutObject",
-                "s3:GetObject",
                 "kms:Decrypt",
                 "kms:Encrypt"
             ],
             "Resource": [
-                "$kms_key_arn",
-                "arn:aws:s3:::$s3_bucket_name/*"
+                "${KMS_KEY_ARN}"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::${BUCKET}/*"
             ]
         },
         {
             "Effect": "Allow",
             "Action": "s3:ListBucket",
-            "Resource": "arn:aws:s3:::$s3_bucket_name"
+            "Resource": "arn:aws:s3:::${BUCKET}"
         }
     ]
 }
 EOF
-policy_arn=$(aws iam create-policy \
-    --policy-name $policy_name \
-    --policy-document file:///tmp/operator-policy.json \
-    | jq -r '.Policy.Arn')
+
+# AWS IAM role and Kubernetes service account setup
+aws iam create-role --role-name vault --assume-role-policy-document file://trust.json
+aws iam create-policy --policy-name vault --policy-document file://vault-policy.json
+aws iam attach-role-policy --role-name vault --policy-arn arn:aws:iam::${AWS_ACCOUNT_ID}:policy/vault
+
+# If you are having a ServiceAccount already, only the annotation is needed
+kubectl create serviceaccount $SERVICE_ACCOUNT_NAME --namespace $SERVICE_ACCOUNT_NAMESPACE
+kubectl annotate serviceaccount $SERVICE_ACCOUNT_NAME  --namespace $SERVICE_ACCOUNT_NAMESPACE eks.amazonaws.com/role-arn="arn:aws:iam::${AWS_ACCOUNT_ID}:role/vault"
 
 # Cleanup
 rm /tmp/operator-policy.json
-
-# Kubernetes service account and IAM role setup
-eksctl create iamserviceaccount \
-    --name "vault-operator" \
-    --namespace "vault-operator" \
-    --cluster $cluster_name \
-    --attach-policy-arn $policy_arn \
-    --approve
 ```
 
 ### Getting the root token
