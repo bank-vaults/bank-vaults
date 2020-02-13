@@ -113,7 +113,7 @@ from one of the followings:
 				}
 			} else {
 				raftLeaderAddress := unsealConfig.raftLeaderAddress
-				if unsealConfig.raftLeaderAddress == "" {
+				if raftLeaderAddress == "" {
 					logrus.Info("retrieving raft leader IP address...")
 					raftLeaderAddress, err = v.RaftLeaderAPIAddr()
 
