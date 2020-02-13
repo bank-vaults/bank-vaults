@@ -86,6 +86,7 @@ type Vault interface {
 	Init() error
 	RaftInitialized() (bool, error)
 	RaftJoin(string) error
+	RaftLeaderAPIAddr() (string, error)
 	Sealed() (bool, error)
 	Active() (bool, error)
 	Unseal() error
@@ -297,6 +298,19 @@ func (v *vault) Init() error {
 
 	rootToken := resp.RootToken
 
+	leaderResp, err := v.cl.Sys().Leader()
+	if err != nil {
+		return fmt.Errorf("error checking leader: %s", err.Error())
+	}
+
+	leaderAPIAddr := leaderResp.LeaderAddress
+	err = v.keyStoreSet(v.raftLeaderAPIAddr(), []byte(leaderAPIAddr))
+	if err != nil {
+		return fmt.Errorf("error storing leader address '%s': %s", leaderAPIAddr, err.Error())
+	}
+
+	logrus.WithField("leader address", leaderAPIAddr).Info("leader address stored in key store")
+
 	// this sets up a predefined root token
 	if v.config.InitRootToken != "" {
 		logrus.Info("setting up init root token, waiting for vault to be unsealed")
@@ -412,6 +426,17 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 	return fmt.Errorf("vault haven't joined raft cluster")
 }
 
+func (v *vault) RaftLeaderAPIAddr() (string, error) {
+	logrus.Debugf("retrieving raft leader IP address from kms service...")
+
+	leaderAPIAddr, err := v.keyStore.Get(v.raftLeaderAPIAddr())
+	if err != nil {
+		return "", fmt.Errorf("unable to get key '%s': %s", v.raftLeaderAPIAddr(), err.Error())
+	}
+
+	return string(leaderAPIAddr), nil
+}
+
 func (v *vault) StepDownActive(address string) error {
 	logrus.Debugf("retrieving key from kms service...")
 
@@ -498,6 +523,10 @@ func (*vault) recoveryKeyForID(i int) string {
 
 func (*vault) rootTokenKey() string {
 	return fmt.Sprint("vault-root")
+}
+
+func (*vault) raftLeaderAPIAddr() string {
+	return fmt.Sprint("raft-leader-api-address")
 }
 
 func (*vault) testKey() string {
