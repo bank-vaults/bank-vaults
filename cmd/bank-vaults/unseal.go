@@ -112,16 +112,18 @@ from one of the followings:
 					logrus.Fatalf("error initializing vault: %s", err.Error())
 				}
 			} else {
+				raftLeaderAddress := unsealConfig.raftLeaderAddress
 				if unsealConfig.raftLeaderAddress == "" {
 					logrus.Info("retrieving raft leader IP address...")
-					unsealConfig.raftLeaderAddress, err = v.RaftLeaderAPIAddr()
+					raftLeaderAddress, err = v.RaftLeaderAPIAddr()
+
 					if err != nil {
 						logrus.Fatalf("error retrieving raf leader IP address: %s", err.Error())
 					}
 				}
 
 				logrus.Info("joining raft cluster...")
-				if err := v.RaftJoin(unsealConfig.raftLeaderAddress); err != nil {
+				if err := v.RaftJoin(raftLeaderAddress); err != nil {
 					logrus.Fatalf("error joining leader vault: %s", err.Error())
 				}
 			}
