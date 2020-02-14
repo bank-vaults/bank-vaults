@@ -78,8 +78,10 @@ go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
 go get github.com/banzaicloud/bank-vaults/cmd/vault-env
 ```
 
-Read more about usage of bank-vaults in [detailed
-documentation](https://banzaicloud.com/docs/bank-vaults/)
+## Documentation
+
+Read more about usage of bank-vaults in the [detailed
+documentation](https://banzaicloud.com/docs/bank-vaults/).
 
 ## Development
 
