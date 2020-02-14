@@ -78,11 +78,13 @@ go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
 go get github.com/banzaicloud/bank-vaults/cmd/vault-env
 ```
 
-Read more about usage of bank-vaults in [detailed documentation](docs/README.md)
+Read more about usage of bank-vaults in [detailed
+documentation](https://banzaicloud.com/docs/bank-vaults/)
 
 ## Development
 
-If you want to hack with bank-vaults please follow the [development documentation](docs/contributing/README.md).
+If you want to hack with bank-vaults please follow the [development
+documentation](https://banzaicloud.com/docs/bank-vaults/contributing/).
 
 ## Community
 
