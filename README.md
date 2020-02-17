@@ -46,6 +46,8 @@
 - [Vault unseal flow with KMS](https://banzaicloud.com/blog/vault-unsealing/)
 - [Monitoring Vault on Kubernetes using Cloud Native technologies](https://banzaicloud.com/blog/monitoring-vault-grafana/)
 - [Inject secrets directly into pods from Vault](https://banzaicloud.com/blog/inject-secrets-into-pods-vault-revisited/)
+- [Backing up Vault with Velero](https://banzaicloud.com/blog/vault-backup-velero/)
+- [Vault replication across multiple datacenters on Kubernetes](https://banzaicloud.com/blog/vault-multi-datacenter/)
 
 We use Vault across our large Kubernetes deployments and all the projects were `reinventing` the wheel. We have externalized all the codebase into this project and removed all the [Pipeline](https://github.com/banzaicloud/pipeline) and [Hollowtrees](https://github.com/banzaicloud/hollowtrees) dependencies thus this project can be used independently as a CLI tool to manage Vault, a Golang library to build upon (OAuth2 tokens, K8s auth, Vault operator, dynamic secrets, cloud credential storage, etc), Helm chart for a HA cluster, operator, mutating webhook and a collection of scripts to support some advanced features (dynamic SSH, etc).
 
@@ -78,11 +80,15 @@ go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
 go get github.com/banzaicloud/bank-vaults/cmd/vault-env
 ```
 
-Read more about usage of bank-vaults in [detailed documentation](docs/README.md)
+## Documentation
+
+Read more about usage of bank-vaults in the [detailed
+documentation](https://banzaicloud.com/docs/bank-vaults/).
 
 ## Development
 
-If you want to hack with bank-vaults please follow the [development documentation](docs/contributing/README.md).
+If you want to hack with bank-vaults please follow the [development
+documentation](https://banzaicloud.com/docs/bank-vaults/contributing/).
 
 ## Community
 
