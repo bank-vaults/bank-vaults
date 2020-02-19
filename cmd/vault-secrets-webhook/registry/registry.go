@@ -171,6 +171,10 @@ func parseContainerImage(image string) (string, string) {
 
 	if strings.Contains(image, "@") {
 		split = strings.SplitN(image, "@", 2)
+		subsplit := strings.SplitN(split[0], ":", 2)
+		if len(subsplit) > 1 {
+			split[0] = subsplit[0]
+		}
 	} else {
 		split = strings.SplitN(image, ":", 2)
 	}
