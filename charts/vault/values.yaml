@@ -192,7 +192,7 @@ vault:
 unsealer:
   image:
     repository: banzaicloud/bank-vaults
-    tag: 0.8.1
+    tag: 0.9.0
     pullPolicy: IfNotPresent
   args: [
       "--mode",
