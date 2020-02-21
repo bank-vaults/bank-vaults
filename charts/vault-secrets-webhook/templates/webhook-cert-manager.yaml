@@ -1,0 +1,79 @@
+{{- if .Values.certificate.useCertManager }}
+---
+# Create a selfsigned Issuer, in order to create a root CA certificate for
+# signing webhook serving certificates
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: {{ include "vault-secrets-webhook.selfSignedIssuer" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app: {{ include "vault-secrets-webhook.name" . }}
+    chart: {{ include "vault-secrets-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  selfSigned: {}
+
+---
+
+# Generate a CA Certificate used to sign certificates for the webhook
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: {{ include "vault-secrets-webhook.rootCACertificate" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app: {{ include "vault-secrets-webhook.name" . }}
+    chart: {{ include "vault-secrets-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  secretName: {{ include "vault-secrets-webhook.rootCACertificate" . }}
+  duration: 43800h # 5y
+  issuerRef:
+    name: {{ include "vault-secrets-webhook.selfSignedIssuer" . }}
+  commonName: "ca.vault-secrets-webhook.cert-manager"
+  isCA: true
+
+---
+
+# Create an Issuer that uses the above generated CA certificate to issue certs
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: {{ include "vault-secrets-webhook.rootCAIssuer" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app: {{ include "vault-secrets-webhook.name" . }}
+    chart: {{ include "vault-secrets-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  ca:
+    secretName: {{ include "vault-secrets-webhook.rootCACertificate" . }}
+
+---
+
+# Finally, generate a serving certificate for the webhook to use
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: {{ include "vault-secrets-webhook.servingCertificate" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app: {{ include "vault-secrets-webhook.name" . }}
+    chart: {{ include "vault-secrets-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  secretName: {{ template "vault-secrets-webhook.fullname" . }}
+  duration: 8760h # 1y
+  issuerRef:
+    name: {{ include "vault-secrets-webhook.rootCAIssuer" . }}
+  dnsNames:
+  - {{ include "vault-secrets-webhook.fullname" . }}
+  - {{ include "vault-secrets-webhook.fullname" . }}.{{ .Release.Namespace }}
+  - {{ include "vault-secrets-webhook.fullname" . }}.{{ .Release.Namespace }}.svc
+
+{{- end }}

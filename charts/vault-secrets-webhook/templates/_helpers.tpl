@@ -30,3 +30,19 @@ Create chart name and version as used by the chart label.
 {{- define "vault-secrets-webhook.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{- define "vault-secrets-webhook.selfSignedIssuer" -}}
+{{ printf "%s-selfsign" (include "vault-secrets-webhook.fullname" .) }}
+{{- end -}}
+
+{{- define "vault-secrets-webhook.rootCAIssuer" -}}
+{{ printf "%s-ca" (include "vault-secrets-webhook.fullname" .) }}
+{{- end -}}
+
+{{- define "vault-secrets-webhook.rootCACertificate" -}}
+{{ printf "%s-ca" (include "vault-secrets-webhook.fullname" .) }}
+{{- end -}}
+
+{{- define "vault-secrets-webhook.servingCertificate" -}}
+{{ printf "%s-webhook-tls" (include "vault-secrets-webhook.fullname" .) }}
+{{- end -}}
