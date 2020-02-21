@@ -137,8 +137,52 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | podDisruptionBudget.enabled      | enable PodDisruptionBudget                                                   | `false`                             |
 | podDisruptionBudget.minAvailable | represents the number of Pods that must be available (integer or percentage) | `1`                                 |
 | certificate.generate             | should a new CA and TLS certificate be generated for the webhook             | `true`                              |
+| certificate.useCertManager       | should request cert-manager for getting a new CA and TLS certificate         | `false`                             |
 | certificate.ca.crt               | Base64 encoded CA certificate                                                | ``                                  |
 | certificate.server.tls.crt       | Base64 encoded TLS certificate signed by the CA                              | ``                                  |
 | certificate.server.tls.key       | Base64 encoded  private key of TLS certificate signed by the CA              | ``                                  |
 | apiSideEffectValue               | Webhook sideEffect value                                                     | `NoneOnDryRun`                      |
+
+### Certificate options
+
+There are the following options for suppling the webhook with CA and TLS certificate.
+
+#### Generate (default)
+
+The default option is to let helm generate the CA and TLS certificates on deploy time.
+
+This will renew the certificates on each deployment.
+
+```
+certificate:
+    generate: true
+```
+
+#### Manually supplied
+
+Another option is to generate everything manually and specify the TLS `crt` and `key` plus the CA `crt` as values.
+These values needs to be base64 encoded x509 certificates.
+
+```
+certificate:
+  generate: false
+  server:
+    tls:
+      crt: LS0tLS1...
+      key: LS0tLS1...
+  ca:
+    crt: LS0tLS1...
+```
+
+#### Using cert-manager
+
+If you use cert-manager in you cluster, you can instruct cert-manager to manage everything.
+The following options will let cert-manager generate TLS `certificate` and `key` plus the CA `certificate`.
+
+
+```
+certificate:
+  generate: false
+  useCertManager: true
+```
 
