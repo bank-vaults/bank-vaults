@@ -246,6 +246,11 @@ type VaultSpec struct {
 	// default:
 	EtcdPVCSpec *v1.PersistentVolumeClaimSpec `json:"etcdPVCSpec,omitempty"`
 
+	// EtcdAffinity is a Kubernetes Affinity that will be used by the ETCD Pods.
+	// If not defined PodAntiAffinity will be use.  If both are empty no Affinity is used
+	// default:
+	EtcdAffinity *v1.Affinity `json:"etcdAffinity,omitempty"`
+
 	// ServiceType is a Kuberrnetes Service type of the Vault Service.
 	// default: ClusterIP
 	ServiceType string `json:"serviceType"`

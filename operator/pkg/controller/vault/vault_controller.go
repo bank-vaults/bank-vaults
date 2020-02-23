@@ -670,6 +670,7 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
 		Resources:                 *getEtcdResource(v),
 		Annotations:               v.Spec.EtcdPodAnnotations,
 		BusyboxImage:              v.Spec.EtcdPodBusyBoxImage,
+		Affinity:                  getEtcdAffinity(v),
 	}
 	etcdCluster.Spec.Version = v.Spec.GetEtcdVersion()
 	etcdCluster.Spec.TLS = &etcdv1beta2.TLSPolicy{
@@ -1719,6 +1720,27 @@ func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
 			},
 		},
 	}
+}
+
+func getEtcdAffinity(v *vaultv1alpha1.Vault) *corev1.Affinity {
+	if v.Spec.EtcdAffinity != nil {
+		return v.Spec.EtcdAffinity
+	}
+	if v.Spec.PodAntiAffinity != "" {
+		return &corev1.Affinity{
+			PodAntiAffinity: &corev1.PodAntiAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"app": "etcd"},
+						},
+						TopologyKey: v.Spec.PodAntiAffinity,
+					},
+				},
+			},
+		}
+	}
+	return nil
 }
 
 func getNodeAffinity(v *vaultv1alpha1.Vault) *corev1.NodeAffinity {
