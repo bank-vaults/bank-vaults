@@ -92,7 +92,7 @@ documentation](https://banzaicloud.com/docs/bank-vaults/contributing/).
 
 ## Community
 
-If you have any questions about Bank-Vaults, and would like to talk to us and the other members of the Banzai Cloud community, please join our **#bank-vaults** channel on [Slack](https://slack.banzaicloud.io/).
+If you have any questions about Bank-Vaults, and would like to talk to us and the other members of the Banzai Cloud community, please join our **#bank-vaults** channel on [Slack](https://pages.banzaicloud.com/invite-slack).
 
 If you find this project useful, help us:
 
