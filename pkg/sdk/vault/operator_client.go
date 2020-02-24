@@ -66,6 +66,9 @@ type Config struct {
 
 	// should the KV backend be tested first to validate access rights
 	PreFlightChecks bool
+
+	// if vault runs as storage backend Raft
+	Raft bool
 }
 
 // vault is an implementation of the Vault interface that will perform actions
@@ -298,18 +301,21 @@ func (v *vault) Init() error {
 
 	rootToken := resp.RootToken
 
-	leaderResp, err := v.cl.Sys().Leader()
-	if err != nil {
-		return fmt.Errorf("error checking leader: %s", err.Error())
-	}
+	// in vault runs as a storage backend Raft, store leader IP address in the kv service
+	if v.config.Raft {
+		leaderResp, err := v.cl.Sys().Leader()
+		if err != nil {
+			return fmt.Errorf("error checking leader: %s", err.Error())
+		}
 
-	leaderAPIAddr := leaderResp.LeaderAddress
-	err = v.keyStoreSet(v.raftLeaderAPIAddr(), []byte(leaderAPIAddr))
-	if err != nil {
-		return fmt.Errorf("error storing leader address '%s': %s", leaderAPIAddr, err.Error())
-	}
+		leaderAPIAddr := leaderResp.LeaderAddress
+		err = v.keyStoreSet(v.raftLeaderAPIAddr(), []byte(leaderAPIAddr))
+		if err != nil {
+			return fmt.Errorf("error storing leader address '%s': %s", leaderAPIAddr, err.Error())
+		}
 
-	logrus.WithField("leader address", leaderAPIAddr).Info("leader address stored in key store")
+		logrus.WithField("leader address", leaderAPIAddr).Info("leader address stored in key store")
+	}
 
 	// this sets up a predefined root token
 	if v.config.InitRootToken != "" {

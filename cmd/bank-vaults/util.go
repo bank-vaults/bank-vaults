@@ -46,6 +46,8 @@ func vaultConfigForConfig(_ *viper.Viper) (vault.Config, error) {
 		StoreRootToken: appConfig.GetBool(cfgStoreRootToken),
 
 		PreFlightChecks: appConfig.GetBool(cfgPreFlightChecks),
+
+		Raft: appConfig.GetBool(cfgRaft),
 	}, nil
 }
 
