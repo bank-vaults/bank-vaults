@@ -147,8 +147,12 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 			svc := o.(*corev1.Service)
 			// Preserve the ClusterIP when updating the service
 			svc.Spec.ClusterIP = currentSvc.Spec.ClusterIP
-			// Preserve the annotation when updating the service
-			svc.Annotations = currentSvc.Annotations
+			// Preserve the annotation when updating the service, ensure any updated annotation is preserved
+			for key, value := range currentSvc.Annotations {
+				if _, present := svc.Annotations[key]; !present {
+					svc.Annotations[key] = value
+				}
+			}
 
 			if svc.Spec.Type == corev1.ServiceTypeNodePort || svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
 				for i := range svc.Spec.Ports {
