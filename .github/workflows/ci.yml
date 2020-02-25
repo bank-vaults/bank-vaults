@@ -25,6 +25,11 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v1
 
+    - name: Check licenses
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: make license-check
+
     - name: Build
       run: make check
       env:
