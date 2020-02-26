@@ -23,25 +23,28 @@ jobs:
           name: Install dependencies
           command: go mod download
 
-      - restore_cache:
-          name: Restore license cache
-          keys:
-              - licensei-v3-{{ checksum "go.sum" }}
-              - licensei-v3
+      # NOTE: Disable license check for now, because we don't wan't to leak a GITHUB_TOKEN in external PRs.
+      # It is enabled in the GitHub Actions build as a backup.
+      # 
+      # - restore_cache:
+      #     name: Restore license cache
+      #     keys:
+      #         - licensei-v3-{{ checksum "go.sum" }}
+      #         - licensei-v3
 
-      - run:
-          name: Download license information for dependencies
-          command: make license-cache
+      # - run:
+      #     name: Download license information for dependencies
+      #     command: make license-cache
 
-      - save_cache:
-          name: Save license cache
-          key: licensei-v3-{{ checksum "go.sum" }}
-          paths:
-              - .licensei.cache
+      # - save_cache:
+      #     name: Save license cache
+      #     key: licensei-v3-{{ checksum "go.sum" }}
+      #     paths:
+      #         - .licensei.cache
 
-      - run:
-          name: Check dependency licenses
-          command: make license-check
+      # - run:
+      #     name: Check dependency licenses
+      #     command: make license-check
 
       - run:
           name: Run verification
