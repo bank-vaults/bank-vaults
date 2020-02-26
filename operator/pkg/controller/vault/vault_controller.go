@@ -40,6 +40,7 @@ import (
 	monitorv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/hashicorp/vault/api"
 	"github.com/imdario/mergo"
+	"github.com/spf13/cast"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
@@ -982,7 +983,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			},
 		},
 		Volumes:         withTLSVolume(v, withCredentialsVolume(v, volumes)),
-		SecurityContext: withSecurityContext(v),
+		SecurityContext: withPodSecurityContext(v),
 		NodeSelector:    v.Spec.NodeSelector,
 		Tolerations:     v.Spec.Tolerations,
 	}
@@ -1215,11 +1216,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Args:            []string{"server"},
 				Ports:           containerPorts,
 				Env:             withClusterAddr(v, service, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{}))),
-				SecurityContext: &corev1.SecurityContext{
-					Capabilities: &corev1.Capabilities{
-						Add: []corev1.Capability{"IPC_LOCK"},
-					},
-				},
+				SecurityContext: withContainerSecurityContext(v),
 				// This probe makes sure Vault is responsive in a HTTPS manner
 				// See: https://www.vaultproject.io/api/system/init.html
 				LivenessProbe: &corev1.Probe{
@@ -1271,7 +1268,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			},
 		}))),
 		Volumes:         withVaultVolumes(v, volumes),
-		SecurityContext: withSecurityContext(v),
+		SecurityContext: withPodSecurityContext(v),
 		NodeSelector:    v.Spec.NodeSelector,
 		Tolerations:     v.Spec.Tolerations,
 	}
@@ -1831,7 +1828,18 @@ func withNamespaceEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.Env
 	}...)
 }
 
-func withSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
+func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContext {
+	if cast.ToBool(v.Spec.Config["disable_mlock"]) {
+		return &corev1.SecurityContext{}
+	}
+	return &corev1.SecurityContext{
+		Capabilities: &corev1.Capabilities{
+			Add: []corev1.Capability{"IPC_LOCK"},
+		},
+	}
+}
+
+func withPodSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
 	if v.Spec.SecurityContext.Size() == 0 {
 		vaultGID := int64(1000)
 		return &corev1.PodSecurityContext{
