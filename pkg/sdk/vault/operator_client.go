@@ -477,7 +477,7 @@ func (v *vault) Configure(config *viper.Viper) error {
 
 	err = v.configureStartupSecrets(config)
 	if err != nil {
-		return fmt.Errorf("error writing startup secrets tor vault: %s", err.Error())
+		return fmt.Errorf("error writing startup secrets to vault: %s", err.Error())
 	}
 
 	err = v.configureIdentityGroups(config)
@@ -1275,34 +1275,78 @@ func (v *vault) configureStartupSecrets(config *viper.Viper) error {
 
 		switch startupSecretType {
 		case "kv":
-			path, err := cast.ToStringE(startupSecret["path"])
+			path, data, err := readStartupSecret(startupSecret)
 			if err != nil {
-				return fmt.Errorf("error findind path for startup secret: %s", err.Error())
-			}
-
-			data, err := getOrDefaultStringMap(startupSecret, "data")
-			if err != nil {
-				return fmt.Errorf("error getting data for startup secret '%s': %s", path, err.Error())
-			}
-
-			if _, ok := data["secretKeyRef"]; ok {
-				secData, err := getOrDefaultSecretData(data["secretKeyRef"])
-				if err != nil {
-					return fmt.Errorf("error getting data from k8s secret %s", err.Error())
-				}
-				data = secData
+				return fmt.Errorf("unable to read 'kv' startup secret due to: %s", err.Error())
 			}
 
 			_, err = v.cl.Logical().Write(path, data)
 			if err != nil {
-				return fmt.Errorf("error writing data for startup secret '%s': %s", path, err.Error())
+				return fmt.Errorf("error writing data for startup 'kv' secret '%s': %s", path, err.Error())
+			}
+
+		case "pki":
+			path, data, err := readStartupSecret(startupSecret)
+			if err != nil {
+				return fmt.Errorf("unable to read 'pki' startup secret due to: %s", err.Error())
+			}
+
+			certData, err := generateCertPayload(data["data"])
+			if err != nil {
+				return fmt.Errorf("error generating 'pki' startup secret due to: %s", err.Error())
+			}
+
+			_, err = v.cl.Logical().Write(path, certData)
+			if err != nil {
+				return fmt.Errorf("error writing data for startup 'pki' secret '%s': %s", path, err.Error())
 			}
 
 		default:
-			return errors.New("other startup secret type than 'kv' is not supported yet")
+			return errors.New("other startup secret type than 'kv' or 'pki' is not supported yet")
 		}
 	}
+
 	return nil
+}
+
+func readStartupSecret(startupSecret map[string]interface{}) (string, map[string]interface{}, error) {
+	path, err := cast.ToStringE(startupSecret["path"])
+	if err != nil {
+		return "", nil, fmt.Errorf("error findind path for startup secret: %s", err.Error())
+	}
+
+	data, err := getOrDefaultStringMap(startupSecret, "data")
+	if err != nil {
+		return "", nil, fmt.Errorf("error getting data for startup secret '%s': %s", path, err.Error())
+	}
+
+	if _, ok := data["secretKeyRef"]; ok {
+		secData, err := getOrDefaultSecretData(data["secretKeyRef"])
+		if err != nil {
+			return "", nil, fmt.Errorf("error getting data from k8s secret %s", err.Error())
+		}
+		data = secData
+	}
+
+	return path, data, nil
+}
+
+func generateCertPayload(data interface{}) (map[string]interface{}, error) {
+	pkiData, err := cast.ToStringMapStringE(data)
+	if err != nil {
+		return map[string]interface{}{}, fmt.Errorf("cast to srtingmap failed: %v, %s", data, err.Error())
+	}
+
+	pkiSlice := []string{}
+	for _, v := range pkiData {
+		pkiSlice = append(pkiSlice, v)
+	}
+
+	if len(pkiSlice) < 2 {
+		return map[string]interface{}{}, fmt.Errorf("missing key or certificate in pki data: %v", pkiData)
+	}
+
+	return map[string]interface{}{"pem_bundle": strings.Join(pkiSlice, "\n")}, nil
 }
 
 func readVaultGroup(group string, client *api.Client) (secret *api.Secret, err error) {
