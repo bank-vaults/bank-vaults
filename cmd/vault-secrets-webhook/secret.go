@@ -39,7 +39,7 @@ func secretNeedsMutation(secret *corev1.Secret) bool {
 	return false
 }
 
-func mutateSecret(secret *corev1.Secret, vaultConfig internal.VaultConfig, _ string) error {
+func mutateSecret(secret *corev1.Secret, vaultConfig internal.VaultConfig) error {
 	// do an early exit and don't construct the Vault client if not needed
 	if !secretNeedsMutation(secret) {
 		return nil
