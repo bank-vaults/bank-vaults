@@ -189,7 +189,6 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			cfg.GetString(cfgK8SSecret),
 			k8sSecretLabels,
 		)
-
 		if err != nil {
 			return nil, fmt.Errorf("error creating K8S Secret kv store: %s", err.Error())
 		}
@@ -203,25 +202,19 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			cfg.GetString(cfgK8SSecret),
 			k8sSecretLabels,
 		)
-
 		if err != nil {
 			return nil, fmt.Errorf("error creating K8S Secret with with kv store: %s", err.Error())
 		}
 
-		modulePath := cfg.GetString(cfgHSMModulePath)
-		slotID := cfg.GetUint(cfgHSMSlotID)
-		tokenLabel := cfg.GetString(cfgHSMTokenLabel)
-		pin := cfg.GetString(cfgHSMPin)
-		keyLabel := cfg.GetString(cfgHSMKeyLabel)
+		config := hsm.Config{
+			ModulePath: cfg.GetString(cfgHSMModulePath),
+			SlotID:     cfg.GetUint(cfgHSMSlotID),
+			TokenLabel: cfg.GetString(cfgHSMTokenLabel),
+			Pin:        cfg.GetString(cfgHSMPin),
+			KeyLabel:   cfg.GetString(cfgHSMKeyLabel),
+		}
 
-		hsm, err := hsm.New(hsm.Config{
-			ModulePath: modulePath,
-			SlotID:     slotID,
-			TokenLabel: tokenLabel,
-			Pin:        pin,
-			KeyLabel:   keyLabel,
-		}, k8s)
-
+		hsm, err := hsm.New(config, k8s)
 		if err != nil {
 			return nil, fmt.Errorf("error creating HSM kv store: %s", err.Error())
 		}

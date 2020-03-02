@@ -38,6 +38,7 @@ type hsmKV struct {
 	decrypt    cryptoFunc
 }
 
+// Config holds the HSM access information
 type Config struct {
 	ModulePath string
 	SlotID     uint
@@ -46,7 +47,7 @@ type Config struct {
 	KeyLabel   string
 }
 
-// NewHSM: currently RSA keys are supported only
+// New returns a HSM backed KV encryptor. Currently RSA keys are supported only.
 func New(config Config, storage kv.Service) (kv.Service, error) {
 
 	log := logrus.New()
@@ -132,13 +133,12 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 
 	session, err := slot.OpenWriteSession()
 	if err != nil {
-
-		return nil, err
+		return nil, errors.WrapIf(err, "opening session with HSM failed")
 	}
 
 	err = session.Login(config.Pin)
 	if err != nil {
-		return nil, errors.WrapIf(err, "logint to HSM failed")
+		return nil, errors.WrapIf(err, "login to HSM failed")
 	}
 
 	publicKeyAttributes := []*pkcs11.Attribute{
@@ -182,8 +182,9 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 		return nil, errors.WrapIf(errors.Combine(publicKeyErr, privateKeyErr), "only one of the keys found with the specified label")
 	}
 
-	// Some devices doesn't support encryption, just storing public keys, in this case we have to extract the key
-	// and encrypt with on the computer with the corresping Go crypto package.
+	// Some HSM devices doesn't support encryption, just storing public keys,
+	// in this case we have to extract the key and encrypt externally with
+	// the corresponding Go crypto package.
 	var encrypt cryptoFunc
 
 	if info.ManufacturerID == "OpenSC Project" {
@@ -209,9 +210,13 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 		}
 	}
 
+	// Decryption is always done on the HSM device.
 	decrypt := func(ciphertext []byte) ([]byte, error) {
 		return privateKey.Decrypt(*bestMechanism, ciphertext)
 	}
+
+	// TODO
+	// session.Close()
 
 	return &hsmKV{
 		log:        log,
@@ -248,35 +253,16 @@ func (h *hsmKV) Set(key string, value []byte) error {
 }
 
 /*
-Purpose: Generate RSA keypair with a given name and persistence.
-Inputs: test object
-	context
-	session handle
+Purpose: Generate RSA keypair with a given tokenLabel and persistence.
 	tokenLabel: string to set as the token labels
-	tokenPersistent: boolean. Whether or not the token should be
-			session based or persistent. If false, the
-			token will not be saved in the HSM and is
-			destroyed upon termination of the session.
-Outputs: creates persistent or ephemeral tokens within the HSM.
-Returns: object handles for public and private keys. Fatal on error.
 */
 func generateRSAKeyPairRequest(tokenLabel string) p11.GenerateKeyPairRequest {
-	/*
-		inputs: test object, context, session handle
-			tokenLabel: string to set as the token labels
-			tokenPersistent: boolean. Whether or not the token should be
-					session based or persistent. If false, the
-					token will not be saved in the HSM and is
-					destroyed upon termination of the session.
-		outputs: creates persistent or ephemeral tokens within the HSM.
-		returns: object handles for public and private keys.
-	*/
 	mechanism := *pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_KEY_PAIR_GEN, nil)
 
 	publicKeyTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
 		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
-		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true), // persist the key token
 		pkcs11.NewAttribute(pkcs11.CKA_VERIFY, true),
 		pkcs11.NewAttribute(pkcs11.CKA_ENCRYPT, true),
 		pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, []byte{1, 0, 1}),
@@ -286,12 +272,16 @@ func generateRSAKeyPairRequest(tokenLabel string) p11.GenerateKeyPairRequest {
 	privateKeyTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
 		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
-		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true), // persist the key token
 		pkcs11.NewAttribute(pkcs11.CKA_DECRYPT, true),
 		pkcs11.NewAttribute(pkcs11.CKA_PRIVATE, true),
 		pkcs11.NewAttribute(pkcs11.CKA_EXTRACTABLE, false),
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, tokenLabel),
 	}
 
-	return p11.GenerateKeyPairRequest{Mechanism: mechanism, PublicKeyAttributes: publicKeyTemplate, PrivateKeyAttributes: privateKeyTemplate}
+	return p11.GenerateKeyPairRequest{
+		Mechanism:            mechanism,
+		PublicKeyAttributes:  publicKeyTemplate,
+		PrivateKeyAttributes: privateKeyTemplate,
+	}
 }
