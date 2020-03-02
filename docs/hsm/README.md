@@ -4,7 +4,7 @@ On OSX where you run Docker in VMs you need to do some extra steps before develo
 
 ## NitroKey HSM
 
-[Nitrokey HSM](https://www.nitrokey.com/) is a an USB HSM device. We are using NitroKey to develop HSM support for Bank-Vaults. The follwing steps are needed to mount it into Kubernetes.
+[Nitrokey HSM](https://www.nitrokey.com/) is a USB HSM device. We are using NitroKey to develop HSM support for Bank-Vaults. The following steps are needed to mount it into Kubernetes.
 
 ```bash
 # You need to the Oracle VM VirtualBox Extension Pack for USB 2.0 support, make sure it is installed
@@ -30,9 +30,9 @@ minikube start --vm-driver virtualbox
 
 ## Kubernetes node setup
 
-Since the HSM is a hardware device connected to a node Bank-Vaults has to find its way to that node. We can create a HSM extended resource on the Kubernetes node for which the device is pluggeg in.
+Since the HSM is a hardware device connected to a node Bank-Vaults has to find its way to that node. We can create a HSM extended resource on the Kubernetes node for which the device is plugged in.
 
-Patch the minikube node to contain the hsm as a resource: https://kubernetes.io/docs/tasks/administer-cluster/extended-resource-node/
+Patch the minikube node to contain the HSM as a resource: https://kubernetes.io/docs/tasks/administer-cluster/extended-resource-node/
 
 ```bash
 kubectl proxy &
@@ -43,7 +43,7 @@ curl --header "Content-Type: application/json-patch+json" \
      http://localhost:8001/api/v1/nodes/minikube/status
 ```
 
-This resource later on can be requested in the PodSpec:
+This resource can be requested from now on in the PodSpec:
 
 ```yaml
     resources:
