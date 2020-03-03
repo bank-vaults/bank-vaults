@@ -14,6 +14,8 @@ function finish {
     kubectl get pods
     kubectl describe pods
     kubectl logs deployment/vault-operator
+    echo "pod/vault-1 logs"
+    kubectl logs --all-containers pod/vault-1
     kubectl logs --all-containers statefulset/vault
     kubectl logs -n vswh deployment/vault-secrets-webhook
     kubectl describe deployment/hello-secrets
