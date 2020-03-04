@@ -37,6 +37,7 @@ const cfgModeValueAlibabaKMSOSS = "alibaba-kms-oss"
 const cfgModeValueVault = "vault"
 const cfgModeValueK8S = "k8s"
 const cfgModeValueHSMK8S = "hsm-k8s"
+const cfgModeValueHSM = "hsm"
 const cfgModeValueDev = "dev"
 const cfgModeValueFile = "file"
 
@@ -142,6 +143,7 @@ func init() {
 						'%s' => Remote Vault;
 						'%s' => Kubernetes Secrets;
 						'%s' => Kubernetes Secrets encrypted with HSM;
+						'%s' => HSM object on device, using HSM encryption;
 						'%s' => Dev (vault server -dev) mode
 						'%s' => File mode`,
 			cfgModeValueGoogleCloudKMSGCS,
@@ -151,6 +153,7 @@ func init() {
 			cfgModeValueVault,
 			cfgModeValueK8S,
 			cfgModeValueHSMK8S,
+			cfgModeValueHSM,
 			cfgModeValueDev,
 			cfgModeValueFile,
 		),

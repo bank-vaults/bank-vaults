@@ -195,7 +195,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 
 		return k8s, nil
 
-	// BANK_VAULTS_HSM_PIN=secret bank-vaults unseal --init --mode hsm-k8s --k8s-secret-name hsm --k8s-secret-namespace default --hsm-slot-id 1234541666
+	// BANK_VAULTS_HSM_PIN=banzai bank-vaults unseal --init --mode hsm-k8s --k8s-secret-name hsm --k8s-secret-namespace default --hsm-slot-id 0
 	case cfgModeValueHSMK8S:
 		k8s, err := k8s.New(
 			cfg.GetString(cfgK8SNamespace),
@@ -215,6 +215,23 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		}
 
 		hsm, err := hsm.New(config, k8s)
+		if err != nil {
+			return nil, fmt.Errorf("error creating HSM kv store: %s", err.Error())
+		}
+
+		return hsm, nil
+
+	// BANK_VAULTS_HSM_PIN=banzai bank-vaults unseal --init --mode hsm --hsm-slot-id 0 --hsm-module-path /usr/local/lib/opensc-pkcs11.so
+	case cfgModeValueHSM:
+		config := hsm.Config{
+			ModulePath: cfg.GetString(cfgHSMModulePath),
+			SlotID:     cfg.GetUint(cfgHSMSlotID),
+			TokenLabel: cfg.GetString(cfgHSMTokenLabel),
+			Pin:        cfg.GetString(cfgHSMPin),
+			KeyLabel:   cfg.GetString(cfgHSMKeyLabel),
+		}
+
+		hsm, err := hsm.New(config, nil)
 		if err != nil {
 			return nil, fmt.Errorf("error creating HSM kv store: %s", err.Error())
 		}

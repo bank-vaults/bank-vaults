@@ -26,14 +26,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const noObjectsFoundErrMsg = "no objects found"
+
 type cryptoFunc func([]byte) ([]byte, error)
 
-type hsmKV struct {
+type hsmCrypto struct {
 	mechanism  pkcs11.Mechanism
 	publicKey  p11.PublicKey
 	privateKey p11.PrivateKey
 	storage    kv.Service
 	log        *logrus.Logger
+	session    p11.Session
 	encrypt    cryptoFunc
 	decrypt    cryptoFunc
 }
@@ -189,7 +192,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 
 	if info.ManufacturerID == "OpenSC Project" {
 
-		log.Info("this HSM device doesn't support encryption, extracting public key and doing encrytion on the computer")
+		log.Info("this HSM doesn't support on-device encryption, extracting public key and doing encrytion on the computer")
 
 		publicKeyValue, err := p11.Object(publicKey).Value()
 		if err != nil {
@@ -218,8 +221,14 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	// TODO
 	// session.Close()
 
-	return &hsmKV{
+	if storage == nil {
+		log.Info("no storage backend specified for HSM, using on device storage")
+		storage = &hsmStorage{session: session}
+	}
+
+	return &hsmCrypto{
 		log:        log,
+		session:    session,
 		privateKey: privateKey,
 		publicKey:  publicKey,
 		storage:    storage,
@@ -229,7 +238,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	}, nil
 }
 
-func (h *hsmKV) Get(key string) ([]byte, error) {
+func (h *hsmCrypto) Get(key string) ([]byte, error) {
 	ciphertext, err := h.storage.Get(key)
 	if err != nil {
 		return nil, err
@@ -243,7 +252,7 @@ func (h *hsmKV) Get(key string) ([]byte, error) {
 	return plaintext, nil
 }
 
-func (h *hsmKV) Set(key string, value []byte) error {
+func (h *hsmCrypto) Set(key string, value []byte) error {
 	ciphertext, err := h.encrypt(value)
 	if err != nil {
 		return errors.WrapIf(err, "can't encrypt data with HSM")
@@ -284,4 +293,36 @@ func generateRSAKeyPairRequest(tokenLabel string) p11.GenerateKeyPairRequest {
 		PublicKeyAttributes:  publicKeyTemplate,
 		PrivateKeyAttributes: privateKeyTemplate,
 	}
+}
+
+type hsmStorage struct {
+	session p11.Session
+}
+
+func (h *hsmStorage) Get(key string) ([]byte, error) {
+	attributes := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_DATA),
+		pkcs11.NewAttribute(pkcs11.CKA_LABEL, key),
+	}
+
+	object, err := h.session.FindObject(attributes)
+	if err != nil {
+		if err.Error() == noObjectsFoundErrMsg {
+			return nil, kv.NewNotFoundError("object doesn't exist in HSM: %s", key)
+		}
+		return nil, errors.Wrap(err, "failed to read object from HSM")
+	}
+
+	return object.Value()
+}
+
+func (h *hsmStorage) Set(key string, value []byte) error {
+	attributes := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_DATA),
+		pkcs11.NewAttribute(pkcs11.CKA_VALUE, value),
+		pkcs11.NewAttribute(pkcs11.CKA_LABEL, key),
+	}
+
+	_, err := h.session.CreateObject(attributes)
+	return errors.Wrap(err, "failed to write object to HSM")
 }
