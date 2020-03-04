@@ -1259,7 +1259,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		containers = append(containers, corev1.Container{
 			Image:           v.Spec.GetBankVaultsImage(),
 			ImagePullPolicy: corev1.PullIfNotPresent,
-			Name:            "bank-vaults-hsm",
+			Name:            "bank-vaults-hsm-pcscd",
 			Command:         []string{"pcscd-entrypoint.sh"},
 			VolumeMounts:    withHSMVolumeMount(v, nil),
 			Resources:       *getHSMDaemonResource(v),
