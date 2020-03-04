@@ -377,8 +377,12 @@ func (v *vault) Init() error {
 // in our case Vault is initialized when root key is stored in the Cloud KMS
 func (v *vault) RaftInitialized() (bool, error) {
 	rootToken, err := v.keyStore.Get(v.rootTokenKey())
+
+	logrus.Info("Root token: ", rootToken)
+
 	if err != nil {
 		if e, ok := err.(notFoundError); ok && e.NotFound() {
+			logrus.Info("NotFound: ", e.NotFound())
 			return false, nil
 		}
 
