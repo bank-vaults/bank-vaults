@@ -105,6 +105,8 @@ from one of the followings:
 				logrus.Fatalf("error checking if vault is initialized: %s", err.Error())
 			}
 
+			logrus.Info("Vault initialized", initialized)
+
 			// If this is the first instance we have to init it, this happens once in the clusters lifetime
 			if !initialized && !unsealConfig.raftSecondary {
 				logrus.Info("initializing vault...")
