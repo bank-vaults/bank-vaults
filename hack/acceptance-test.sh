@@ -14,6 +14,8 @@ function finish {
     kubectl get pods
     kubectl describe pods
     kubectl logs deployment/vault-operator
+    kubectl get secret -n default
+    kubectl get secret -n default -oyaml vault-root
     echo "pod/vault-1 logs"
     kubectl logs --all-containers pod/vault-1
     kubectl logs --all-containers statefulset/vault
