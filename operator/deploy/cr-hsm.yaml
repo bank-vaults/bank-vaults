@@ -81,12 +81,13 @@ spec:
   # # This example relies on an OpenSC HSM (NitroKey HSM) device initialized and plugged in to the Kubernetes Node.
   # unsealConfig:
   #   hsm:
+  #     # OpenSC daemon is needed in this case to communicate with the device
   #     daemon: true
   #     modulePath: /usr/lib/opensc-pkcs11.so
   #     # For OpenSC slotId is the preferred way instead of tokenLabel
   #     # (OpenSC appends/prepends some extra stuff to labels)
   #     slotId: 0
-  #     pin: banzai
+  #     pin: banzai # This can be specified in the BANK_VAULTS_HSM_PIN environment variable as well, from a Secret
   #     keyLabel: bank-vaults
 
   # # If using the NitroKey HSM example, that resource has to be part of the resource scheduling request.
