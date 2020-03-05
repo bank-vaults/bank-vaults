@@ -1,6 +1,6 @@
 # Vault Secrets webhook
 
-This chart will install a mutating admission webhook, that injects an executable to containers in a deployment/statefulset which than can request secrets from Vault through environment variable definitions.
+This chart will install a mutating admission webhook, that injects an executable to containers in Pods which than can request secrets from Vault through environment variable definitions. Also, it can inject statically into ConfigMaps, Secrets, and CustomResources.
 
 ## Before you start
 
@@ -69,23 +69,16 @@ subjects:
   namespace: vswh # Change it if you don't use the defaults when you install it via Helm
 ```
 
-### Creating the namespace
 
-The namespace must have a label of `name` with the namespace name as it's value.
+## Installing the Chart
 
-set the target namespace name or skip for the default name: vswh
-
-```bash
-export WEBHOOK_NS=`<namespace>`
-```
+**The namespace where you install the webhook must have a label of `name` with the namespace name as the value, so the `namespaceSelector` in the `MutatingWebhookConfiguration` can skip the namespace of the webhook, so no self-mutation takes place.**
 
 ```bash
 WEBHOOK_NS=${WEBHOOK_NS:-vswh}
 kubectl create namespace "${WEBHOOK_NS}"
 kubectl label ns "${WEBHOOK_NS}" name="${WEBHOOK_NS}"
 ```
-
-## Installing the Chart
 
 ```bash
 $ helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch/master
@@ -102,7 +95,7 @@ $ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-
 
 When Google configure the control plane for private clusters, they automatically configure VPC peering between your Kubernetes cluster’s network in a separate Google managed project.
 
-The auto-generated rules **only** open ports 10250 and 443 between masters and nodes. This means that in order to use the webhook component with a GKE private cluster, you must configure an additional firewall rule to allow your masters CIDR to access your webhook pod using the port 8443.
+The auto-generated rules **only** open ports 10250 and 443 between masters and nodes. This means that to use the webhook component with a GKE private cluster, you must configure an additional firewall rule to allow your masters CIDR to access your webhook pod using the port 8443.
 
 You can read more information on how to add firewall rules for the GKE control plane nodes in the [GKE docs](https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters#add_firewall_rules).
 
@@ -134,6 +127,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | volumes                          | extra volume definitions                                                     | `[]`                                |
 | volumeMounts                     | extra volume mounts                                                          | `[]`                                |
 | configMapMutation                | enable injecting values from Vault to ConfigMaps                             | `false`                             |
+| customResourceMutations         | list of CustomResources to inject values from Vault                           | `[]`                           |
 | podDisruptionBudget.enabled      | enable PodDisruptionBudget                                                   | `false`                             |
 | podDisruptionBudget.minAvailable | represents the number of Pods that must be available (integer or percentage) | `1`                                 |
 | certificate.generate             | should a new CA and TLS certificate be generated for the webhook             | `true`                              |
@@ -145,7 +139,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 
 ### Certificate options
 
-There are the following options for suppling the webhook with CA and TLS certificate.
+There are the following options for suppling the webhook with CA and TLS certificates.
 
 #### Generate (default)
 
@@ -161,9 +155,9 @@ certificate:
 #### Manually supplied
 
 Another option is to generate everything manually and specify the TLS `crt` and `key` plus the CA `crt` as values.
-These values needs to be base64 encoded x509 certificates.
+These values need to be base64 encoded x509 certificates.
 
-```
+```yaml
 certificate:
   generate: false
   server:
@@ -176,13 +170,11 @@ certificate:
 
 #### Using cert-manager
 
-If you use cert-manager in you cluster, you can instruct cert-manager to manage everything.
+If you use cert-manager in your cluster, you can instruct cert-manager to manage everything.
 The following options will let cert-manager generate TLS `certificate` and `key` plus the CA `certificate`.
 
-
-```
+```yaml
 certificate:
   generate: false
   useCertManager: true
 ```
-
