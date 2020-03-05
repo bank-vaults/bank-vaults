@@ -111,20 +111,18 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 
 	bestMechanism := pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)
 
-	// TODO find the best mechanism the HSM supports
+	// // TODO find the best mechanism the HSM supports
 	// mechanisms, err := slot.Mechanisms()
 	// if err != nil {
 	// 	return nil, err
 	// }
 	// for _, mechanism := range mechanisms {
-	// 	fmt.Printf("mechanism: %+v\n", mechanism)
-
 	// 	info, err := mechanism.Info()
 	// 	if err != nil {
 	// 		return nil, err
 	// 	}
 
-	// 	fmt.Printf("mechanism info: %+v\n", info)
+	// 	fmt.Printf("RSA mechanism info: %+v supports encrpyt: %t\n", info, info.Flags&pkcs11.CKA_ENCRYPT == pkcs11.CKA_ENCRYPT)
 	// }
 
 	slotInfo, err := slot.Info()

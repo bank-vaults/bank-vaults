@@ -76,6 +76,7 @@ spec:
   # across Pods without volumes.
   unsealConfig:
     hsm:
+      # The HSM SO module path (softhsm is built into the bank-vaults image)
       modulePath: /usr/lib/softhsm/libsofthsm2.so 
       tokenLabel: bank-vaults
       pin: banzai
@@ -83,31 +84,6 @@ spec:
     kubernetes:
       secretName: vault-hsm-unseal-keys
       secretNamespace: default
-
-  # # This example relies on an OpenSC HSM (NitroKey HSM) device initialized and plugged in to the Kubernetes Node.
-  # # Kubernetes Secret storage is not defined the encrpyted unseal keys will be stored on the HSM device.
-  # unsealConfig:
-  #   hsm:
-  #     # OpenSC daemon is needed in this case to communicate with the device
-  #     daemon: true
-  #     modulePath: /usr/lib/opensc-pkcs11.so
-  #     # For OpenSC slotId is the preferred way instead of tokenLabel
-  #     # (OpenSC appends/prepends some extra stuff to labels)
-  #     slotId: 0
-  #     pin: banzai # This can be specified in the BANK_VAULTS_HSM_PIN environment variable as well, from a Secret
-  #     keyLabel: bank-vaults
-
-  # # If using the NitroKey HSM example, that resource has to be part of the resource scheduling request.
-  # resources:
-  #   hsmDaemon:
-  #     requests:
-  #       cpu: 100m
-  #       memory: 64Mi
-  #       nitrokey.com/hsm: 1
-  #     limits:
-  #       cpu: 200m
-  #       memory: 128Mi
-  #       nitrokey.com/hsm: 1
 
   # A YAML representation of a final vault config file.
   # See https://www.vaultproject.io/docs/configuration/ for more information.
