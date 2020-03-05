@@ -149,6 +149,50 @@ webhooks:
       values:
       - {{ .Release.Namespace }}
 {{- end }}
+{{- if .Values.customResourceMutations }}
+- name: objects.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+  clientConfig:
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: {{ template "vault-secrets-webhook.fullname" . }}
+      path: /objects
+    caBundle: {{ $caCrt }}
+  rules:
+  - operations:
+    - CREATE
+    - UPDATE
+    apiGroups:
+    - "*"
+    apiVersions:
+    - "*"
+    resources:
+{{ toYaml .Values.customResourceMutations | indent 6 }}
+  failurePolicy: {{ .Values.customResourcesFailurePolicy }}
+  namespaceSelector:
+  {{- if .Values.namespaceSelector.matchLabels }}
+    matchLabels:
+{{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
+  {{- end }}
+    matchExpressions:
+    {{- if .Values.namespaceSelector.matchExpressions }}
+{{ toYaml .Values.namespaceSelector.matchExpressions | indent 4 }}
+    {{- end }}
+    - key: name
+      operator: NotIn
+      values:
+      - {{ .Release.Namespace }}
+{{- if and (eq (int $major) 1) (ge (int $minor) 15) }}
+  objectSelector:
+    matchExpressions:
+    {{- if .Values.objectSelector.matchExpressions }}
+{{ toYaml .Values.objectSelector.matchExpressions | indent 4 }}
+    {{- end }}
+    - key: security.banzaicloud.io/mutate
+      operator: NotIn
+      values:
+      - skip
+{{- end }}
+{{- end }}
 {{- if and (ge (int $major) 1) (ge (int $minor) 12) }}
   sideEffects: {{ .Values.apiSideEffectValue }}
 {{- end }}

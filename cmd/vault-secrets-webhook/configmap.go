@@ -17,7 +17,6 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -27,19 +26,19 @@ import (
 
 func configMapNeedsMutation(configMap *corev1.ConfigMap) bool {
 	for _, value := range configMap.Data {
-		if strings.HasPrefix(value, "vault:") {
+		if hasVaultPrefix(value) {
 			return true
 		}
 	}
 	for _, value := range configMap.BinaryData {
-		if strings.HasPrefix(string(value), "vault:") {
+		if hasVaultPrefix(string(value)) {
 			return true
 		}
 	}
 	return false
 }
 
-func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConfig, _ string) error {
+func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConfig) error {
 	// do an early exit and don't construct the Vault client if not needed
 	if !configMapNeedsMutation(configMap) {
 		return nil
@@ -53,7 +52,7 @@ func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConf
 	defer vaultClient.Close()
 
 	for key, value := range configMap.Data {
-		if strings.HasPrefix(value, "vault:") {
+		if hasVaultPrefix(value) {
 			data := map[string]string{
 				key: value,
 			}
@@ -65,7 +64,7 @@ func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConf
 	}
 
 	for key, value := range configMap.BinaryData {
-		if strings.HasPrefix(string(value), "vault:") {
+		if hasVaultPrefix(string(value)) {
 			binaryData := map[string]string{
 				key: string(value),
 			}
