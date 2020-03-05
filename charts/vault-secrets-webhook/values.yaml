@@ -75,6 +75,12 @@ rbac:
   psp:
     enabled: false
 
+# A list of Kubernetes resource types to mutate as well:
+# Example: ["ingresses", "servicemonitors"] 
+customResourceMutations: []
+
+customResourcesFailurePolicy: Ignore
+
 # This can cause issues when used with Helm, so it is not enabled by default
 configMapMutation: false
 

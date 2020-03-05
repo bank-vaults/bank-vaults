@@ -37,6 +37,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kubeVer "k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	kubernetesConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -407,12 +408,18 @@ func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.O
 		return false, mw.mutatePod(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.IsAdmissionRequestDryRun(ctx))
 	case *corev1.Secret:
 		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/vault-addr"]; ok {
-			return false, mutateSecret(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
+			return false, mutateSecret(v, parseVaultConfig(obj))
 		}
 		return false, nil
 	case *corev1.ConfigMap:
 		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/mutate-configmap"]; ok {
-			return false, mutateConfigMap(v, parseVaultConfig(obj), whcontext.GetAdmissionRequest(ctx).Namespace)
+			return false, mutateConfigMap(v, parseVaultConfig(obj))
+		}
+		return false, nil
+
+	case *unstructured.Unstructured:
+		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/vault-addr"]; ok {
+			return false, mutateObject(v, parseVaultConfig(obj))
 		}
 		return false, nil
 	default:
@@ -1150,12 +1157,7 @@ func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, rec
 		logger.Fatalf("error creating webhook: %s", err)
 	}
 
-	handler, err := whhttp.HandlerFor(webhook)
-	if err != nil {
-		logger.Fatalf("error creating webhook: %s", err)
-	}
-
-	return handler
+	return whhttp.MustHandlerFor(webhook)
 }
 
 var logger *log.Logger
@@ -1204,11 +1206,13 @@ func main() {
 	podHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-pods", Obj: &corev1.Pod{}}, mutator, metricsRecorder, logger)
 	secretHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-secret", Obj: &corev1.Secret{}}, mutator, metricsRecorder, logger)
 	configMapHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-configmap", Obj: &corev1.ConfigMap{}}, mutator, metricsRecorder, logger)
+	objectHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-object", Obj: &unstructured.Unstructured{}}, mutator, metricsRecorder, logger)
 
 	mux := http.NewServeMux()
 	mux.Handle("/pods", podHandler)
 	mux.Handle("/secrets", secretHandler)
 	mux.Handle("/configmaps", configMapHandler)
+	mux.Handle("/objects", objectHandler)
 	mux.Handle("/healthz", http.HandlerFunc(healthzHandler))
 
 	telemetryAddress := viper.GetString("telemetry_listen_address")
