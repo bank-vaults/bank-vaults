@@ -814,22 +814,14 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 
 	} else if usc.HSM != nil {
 
-		secretNamespace := vault.Namespace
-		if usc.Kubernetes.SecretNamespace != "" {
-			secretNamespace = usc.HSM.SecretNamespace
-		}
-		secretName := vault.Name + "-unseal-keys"
-		if usc.Kubernetes.SecretName != "" {
-			secretName = usc.HSM.SecretName
+		mode := "hsm"
+		if usc.Kubernetes.SecretNamespace != "" && usc.Kubernetes.SecretName != "" {
+			mode = "hsm-k8s"
 		}
 
 		args = append(args,
 			"--mode",
-			"hsm-k8s",
-			"--k8s-secret-namespace",
-			secretNamespace,
-			"--k8s-secret-name",
-			secretName,
+			mode,
 			"--hsm-module-path",
 			usc.HSM.ModulePath,
 			"--hsm-slot-id",
@@ -844,6 +836,24 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			args = append(args,
 				"--hsm-token-label",
 				usc.HSM.TokenLabel,
+			)
+		}
+
+		if mode == "hsm-k8s" {
+			var secretLabels []string
+			for k, v := range vault.LabelsForVault() {
+				secretLabels = append(secretLabels, k+"="+v)
+			}
+
+			sort.Strings(secretLabels)
+
+			args = append(args,
+				"--k8s-secret-namespace",
+				usc.Kubernetes.SecretNamespace,
+				"--k8s-secret-name",
+				usc.Kubernetes.SecretName,
+				"--k8s-secret-labels",
+				strings.Join(secretLabels, ","),
 			)
 		}
 
@@ -938,7 +948,6 @@ type VaultUnsealConfig struct {
 
 // HSMUnsealConfig holds the parameters for remote HSM based unsealing
 type HSMUnsealConfig struct {
-	KubernetesUnsealConfig
 	Daemon     bool   `json:"daemon"`
 	ModulePath string `json:"modulePath"`
 	SlotID     uint   `json:"slotId"`

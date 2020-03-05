@@ -71,14 +71,21 @@ spec:
       mountPath: /vault/file
 
   # This example relies on the SoftHSM device initialized in the Docker image.
+  # It is preinitialized to have the same keys in the configurer and in the Vault pods.
+  # Kubernetes Secrets are used for storing the encrypted data, so it can be shared
+  # across Pods without volumes.
   unsealConfig:
     hsm:
       modulePath: /usr/lib/softhsm/libsofthsm2.so 
       tokenLabel: bank-vaults
       pin: banzai
       keyLabel: bank-vaults
+    kubernetes:
+      secretName: vault-hsm-unseal-keys
+      secretNamespace: default
 
   # # This example relies on an OpenSC HSM (NitroKey HSM) device initialized and plugged in to the Kubernetes Node.
+  # # Kubernetes Secret storage is not defined the encrpyted unseal keys will be stored on the HSM device.
   # unsealConfig:
   #   hsm:
   #     # OpenSC daemon is needed in this case to communicate with the device
