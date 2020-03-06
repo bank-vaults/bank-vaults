@@ -79,8 +79,8 @@ github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f h1:ZNv7
 github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f/go.mod h1:AuiFmCCPBSrqvVMvuqFuk0qogytodnVFVSN5CeJB8Gc=
 github.com/banzaicloud/docker-registry-client v0.0.0-20191118103116-f48ee8de5b3b h1:vQXGABBGO894ccaGsT0GTa41blOyigwBTtx6QWNlGkQ=
 github.com/banzaicloud/docker-registry-client v0.0.0-20191118103116-f48ee8de5b3b/go.mod h1:Yho0S7KhsnHQRCC5lDraYF1SsLMeWtf/tKdufKu3TJA=
-github.com/banzaicloud/k8s-objectmatcher v1.1.1 h1:OWS/mUIb7HWI27pOYdxix4xu3nekNOvmS+Y3r9L5mFE=
-github.com/banzaicloud/k8s-objectmatcher v1.1.1/go.mod h1:NTk6nNix5oP7/lE/5/YxFO87+241sDmTOKvoZ9E+Muw=
+github.com/banzaicloud/k8s-objectmatcher v1.2.2 h1:WekhVqrRa/wUCPuESExwRjy5R+BDTf/s7DKP99y8MvY=
+github.com/banzaicloud/k8s-objectmatcher v1.2.2/go.mod h1:+kRcvF2kyA0u8k9AvTYgtt8zhv30Gi8ITKdMWqh7j+A=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 h1:xJ4a3vCFaGF/jqvzLMYoU8P317H5OQ+Via4RmuPwCS0=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
