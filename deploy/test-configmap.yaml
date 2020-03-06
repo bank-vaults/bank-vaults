@@ -10,5 +10,6 @@ metadata:
     vault.security.banzaicloud.io/mutate-configmap: "true"
 data:
   aws-access-key-id: vault:secret/data/accounts/aws#AWS_ACCESS_KEY_ID
+  aws-access-key-id-formatted: "vault:secret/data/accounts/aws#AWS key in base64: ${.AWS_ACCESS_KEY_ID | b64enc}"
 binaryData:
   aws-access-key-id-binary: dmF1bHQ6c2VjcmV0L2RhdGEvYWNjb3VudHMvYXdzI0FXU19BQ0NFU1NfS0VZX0lE

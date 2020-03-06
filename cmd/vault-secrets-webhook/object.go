@@ -17,9 +17,9 @@ package main
 import (
 	"fmt"
 
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	internal "github.com/banzaicloud/bank-vaults/internal/configuration"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
@@ -74,7 +74,7 @@ func sliceIterator(s []interface{}) iterator {
 	return c
 }
 
-func traverseObject(o interface{}, vaultClient *vault.Client) error {
+func traverseObject(o interface{}, vaultClient *vault.Client, vaultConfig VaultConfig, logger logrus.FieldLogger) error {
 	var iterator iterator
 
 	switch value := o.(type) {
@@ -90,7 +90,7 @@ func traverseObject(o interface{}, vaultClient *vault.Client) error {
 		switch s := e.Get().(type) {
 		case string:
 			if hasVaultPrefix(s) {
-				dataFromVault, err := getDataFromVault(map[string]string{"data": s}, vaultClient)
+				dataFromVault, err := getDataFromVault(map[string]string{"data": s}, vaultClient, vaultConfig, logger)
 				if err != nil {
 					return err
 				}
@@ -98,7 +98,7 @@ func traverseObject(o interface{}, vaultClient *vault.Client) error {
 				e.Set(dataFromVault["data"])
 			}
 		case map[string]interface{}, []interface{}:
-			err := traverseObject(e.Get(), vaultClient)
+			err := traverseObject(e.Get(), vaultClient, vaultConfig, logger)
 			if err != nil {
 				return err
 			}
@@ -108,9 +108,8 @@ func traverseObject(o interface{}, vaultClient *vault.Client) error {
 	return nil
 }
 
-func mutateObject(object *unstructured.Unstructured, vaultConfig internal.VaultConfig) error {
-	logger.Infof("mutating object: %s.%s", object.GetNamespace(), object.GetName())
-	logger.Infof("object: %+v", object.Object)
+func (mw *mutatingWebhook) mutateObject(object *unstructured.Unstructured, vaultConfig VaultConfig) error {
+	mw.logger.Debugf("mutating object: %s.%s", object.GetNamespace(), object.GetName())
 
 	vaultClient, err := newVaultClient(vaultConfig)
 	if err != nil {
@@ -119,5 +118,5 @@ func mutateObject(object *unstructured.Unstructured, vaultConfig internal.VaultC
 
 	defer vaultClient.Close()
 
-	return traverseObject(object.Object, vaultClient)
+	return traverseObject(object.Object, vaultClient, vaultConfig, mw.logger)
 }

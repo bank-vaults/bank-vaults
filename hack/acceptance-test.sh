@@ -134,6 +134,7 @@ test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}'
 
 kubectl apply -f deploy/test-configmap.yaml
 test `kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id}'` = "secretId"
+test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id-formatted}')" = "AWS key in base64: c2VjcmV0SWQ="
 test `kubectl get cm sample-configmap -o jsonpath='{.binaryData.aws-access-key-id-binary}'` = "secretId"
 
 kubectl apply -f deploy/test-deployment-seccontext.yaml

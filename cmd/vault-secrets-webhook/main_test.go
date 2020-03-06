@@ -1,4 +1,4 @@
-// Copyright © 2019 Banzai Cloud
+// Copyright © 2020 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,18 +18,17 @@ import (
 	"testing"
 
 	cmp "github.com/google/go-cmp/cmp"
+	imagev1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
 	fake "k8s.io/client-go/kubernetes/fake"
 
-	imagev1 "github.com/opencontainers/image-spec/specs-go/v1"
-
 	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
-	internal "github.com/banzaicloud/bank-vaults/internal/configuration"
 )
 
-var vaultConfig = internal.VaultConfig{
+var vaultConfig = VaultConfig{
 	Addr:                 "addr",
 	SkipVerify:           "skipVerify",
 	Path:                 "path",
@@ -55,7 +54,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 	type args struct {
 		containers  []corev1.Container
 		podSpec     *corev1.PodSpec
-		vaultConfig internal.VaultConfig
+		vaultConfig VaultConfig
 		ns          string
 	}
 	tests := []struct {
@@ -288,6 +287,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			mw := &mutatingWebhook{
 				k8sClient: tt.fields.k8sClient,
 				registry:  tt.fields.registry,
+				logger:    logrus.New(),
 			}
 			got, err := mw.mutateContainers(tt.args.containers, tt.args.podSpec, tt.args.vaultConfig, tt.args.ns)
 			if (err != nil) != tt.wantErr {
@@ -311,7 +311,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 	}
 	type args struct {
 		pod         *corev1.Pod
-		vaultConfig internal.VaultConfig
+		vaultConfig VaultConfig
 		ns          string
 	}
 	defaultMode := int32(420)
@@ -353,7 +353,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 						},
 					},
 				},
-				vaultConfig: internal.VaultConfig{
+				vaultConfig: VaultConfig{
 					CtConfigMap:          "config-map-test",
 					ConfigfilePath:       "/vault/secrets",
 					Addr:                 "test",
@@ -538,7 +538,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 						},
 					},
 				},
-				vaultConfig: internal.VaultConfig{
+				vaultConfig: VaultConfig{
 					AgentConfigMap:       "config-map-test",
 					ConfigfilePath:       "/vault/secrets",
 					Addr:                 "test",
@@ -664,6 +664,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 			mw := &mutatingWebhook{
 				k8sClient: tt.fields.k8sClient,
 				registry:  tt.fields.registry,
+				logger:    logrus.New(),
 			}
 			err := mw.mutatePod(tt.args.pod, tt.args.vaultConfig, tt.args.ns, false)
 			if (err != nil) != tt.wantErr {
