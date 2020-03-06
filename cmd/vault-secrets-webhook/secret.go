@@ -1,4 +1,4 @@
-// Copyright © 2019 Banzai Cloud
+// Copyright © 2020 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,8 +25,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
-	internal "github.com/banzaicloud/bank-vaults/internal/configuration"
-	"github.com/banzaicloud/bank-vaults/internal/injector"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
@@ -39,7 +37,7 @@ func secretNeedsMutation(secret *corev1.Secret) bool {
 	return false
 }
 
-func mutateSecret(secret *corev1.Secret, vaultConfig internal.VaultConfig) error {
+func (mw *mutatingWebhook) mutateSecret(secret *corev1.Secret, vaultConfig VaultConfig) error {
 	// do an early exit and don't construct the Vault client if not needed
 	if !secretNeedsMutation(secret) {
 		return nil
@@ -59,7 +57,7 @@ func mutateSecret(secret *corev1.Secret, vaultConfig internal.VaultConfig) error
 			if err != nil {
 				return fmt.Errorf("unmarshal dockerconfig json failed: %v", err)
 			}
-			err = mutateDockerCreds(secret, &dc, vaultClient)
+			err = mw.mutateDockerCreds(secret, &dc, vaultClient, vaultConfig)
 			if err != nil {
 				return fmt.Errorf("mutate dockerconfig json failed: %v", err)
 			}
@@ -67,7 +65,7 @@ func mutateSecret(secret *corev1.Secret, vaultConfig internal.VaultConfig) error
 			sc := map[string]string{
 				key: string(value),
 			}
-			err := mutateSecretData(secret, sc, vaultClient)
+			err := mw.mutateSecretData(secret, sc, vaultClient, vaultConfig)
 			if err != nil {
 				return fmt.Errorf("mutate generic secret failed: %v", err)
 			}
@@ -77,7 +75,7 @@ func mutateSecret(secret *corev1.Secret, vaultConfig internal.VaultConfig) error
 	return nil
 }
 
-func mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultClient *vault.Client) error {
+func (mw *mutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultClient *vault.Client, vaultConfig VaultConfig) error {
 	assembled := registry.DockerCreds{Auths: map[string]dockerTypes.AuthConfig{}}
 
 	for key, creds := range dc.Auths {
@@ -99,7 +97,7 @@ func mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultCli
 				"password": password,
 			}
 
-			dcCreds, err := getDataFromVault(credPath, vaultClient)
+			dcCreds, err := getDataFromVault(credPath, vaultClient, vaultConfig, mw.logger)
 			if err != nil {
 				return err
 			}
@@ -119,15 +117,14 @@ func mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultCli
 	if err != nil {
 		return fmt.Errorf("marshaling dockerconfig failed: %v", err)
 	}
-	logger.Debugf("assembled %s", marshalled)
 
 	secret.Data[corev1.DockerConfigJsonKey] = marshalled
 
 	return nil
 }
 
-func mutateSecretData(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client) error {
-	secCreds, err := getDataFromVault(sc, vaultClient)
+func (mw *mutatingWebhook) mutateSecretData(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+	secCreds, err := getDataFromVault(sc, vaultClient, vaultConfig, mw.logger)
 	if err != nil {
 		return err
 	}
@@ -142,24 +139,4 @@ func removePunctuation(r rune) rune {
 		return -1
 	}
 	return r
-}
-
-// TODO review this function's returned error
-// nolint: unparam
-func getDataFromVault(data map[string]string, vaultClient *vault.Client) (map[string]string, error) {
-	vaultData := make(map[string]string, len(data))
-
-	for key, value := range data {
-		value = strings.Map(removePunctuation, value)
-		data[key] = value
-	}
-
-	inject := func(key, value string) {
-		vaultData[key] = value
-	}
-
-	config := injector.Config{}
-	secretInjector := injector.NewSecretInjector(config, vaultClient, nil, logger.WithField("component", "injector"))
-
-	return vaultData, secretInjector.InjectSecretsFromVault(data, inject)
 }

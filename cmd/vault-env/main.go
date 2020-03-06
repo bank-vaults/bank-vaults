@@ -25,7 +25,7 @@ import (
 
 	"emperror.dev/errors"
 	vaultapi "github.com/hashicorp/vault/api"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 
 	"github.com/banzaicloud/bank-vaults/internal/injector"
@@ -66,8 +66,6 @@ var (
 		"VAULT_REVOKE_TOKEN":           true,
 		"VAULT_ENV_DAEMON":             true,
 	}
-
-	logger *log.Entry
 )
 
 // Appends variable an entry (name=value) into the environ list.
@@ -81,6 +79,7 @@ func (environ *sanitizedEnviron) append(name string, value string) {
 type daemonSecretRenewer struct {
 	client *vault.Client
 	sigs   chan os.Signal
+	logger logrus.FieldLogger
 }
 
 func (r daemonSecretRenewer) Renew(path string, secret *vaultapi.Secret) error {
@@ -96,14 +95,14 @@ func (r daemonSecretRenewer) Renew(path string, secret *vaultapi.Secret) error {
 		for {
 			select {
 			case renewOutput := <-renewer.RenewCh():
-				logger.Infof("secret %s renewed for %ds", path, renewOutput.Secret.LeaseDuration)
+				r.logger.Infof("secret %s renewed for %ds", path, renewOutput.Secret.LeaseDuration)
 			case doneError := <-renewer.DoneCh():
-				logger.WithField("error", doneError).Infof("secret renewal for %s has stopped, sending SIGTERM to process", path)
+				r.logger.WithField("error", doneError).Infof("secret renewal for %s has stopped, sending SIGTERM to process", path)
 
 				r.sigs <- syscall.SIGTERM
 
 				timeout := <-time.After(10 * time.Second)
-				logger.Infoln("killing process due to SIGTERM timeout =", timeout)
+				r.logger.Infoln("killing process due to SIGTERM timeout =", timeout)
 				r.sigs <- syscall.SIGKILL
 
 				return
@@ -117,11 +116,14 @@ func (r daemonSecretRenewer) Renew(path string, secret *vaultapi.Secret) error {
 func main() {
 	enableJSONLog := cast.ToBool(os.Getenv("VAULT_JSON_LOG"))
 
-	l := log.New()
-	if enableJSONLog {
-		l.SetFormatter(&log.JSONFormatter{})
+	var logger logrus.FieldLogger
+	{
+		log := logrus.New()
+		if enableJSONLog {
+			log.SetFormatter(&logrus.JSONFormatter{})
+		}
+		logger = log.WithField("app", "vault-env")
 	}
-	logger = l.WithField("app", "vault-env")
 
 	daemonMode := cast.ToBool(os.Getenv("VAULT_ENV_DAEMON"))
 	sigs := make(chan os.Signal, 1)
@@ -184,7 +186,7 @@ func main() {
 
 	var secretRenewer injector.SecretRenewer
 	if daemonMode {
-		secretRenewer = daemonSecretRenewer{client: client, sigs: sigs}
+		secretRenewer = daemonSecretRenewer{client: client, sigs: sigs, logger: logger}
 	}
 
 	secretInjector := injector.NewSecretInjector(config, client, secretRenewer, logger)
