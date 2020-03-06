@@ -44,10 +44,10 @@ type SecretInjector struct {
 	config  Config
 	client  *vault.Client
 	renewer SecretRenewer
-	logger  *logrus.Entry
+	logger  logrus.FieldLogger
 }
 
-func NewSecretInjector(config Config, client *vault.Client, renewer SecretRenewer, logger *logrus.Entry) SecretInjector {
+func NewSecretInjector(config Config, client *vault.Client, renewer SecretRenewer, logger logrus.FieldLogger) SecretInjector {
 	return SecretInjector{config: config, client: client, renewer: renewer, logger: logger}
 }
 

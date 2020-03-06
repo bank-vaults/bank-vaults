@@ -1,4 +1,4 @@
-// Copyright © 2019 Banzai Cloud
+// Copyright © 2020 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	internal "github.com/banzaicloud/bank-vaults/internal/configuration"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
@@ -38,7 +37,7 @@ func configMapNeedsMutation(configMap *corev1.ConfigMap) bool {
 	return false
 }
 
-func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConfig) error {
+func (mw *mutatingWebhook) mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig VaultConfig) error {
 	// do an early exit and don't construct the Vault client if not needed
 	if !configMapNeedsMutation(configMap) {
 		return nil
@@ -56,7 +55,7 @@ func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConf
 			data := map[string]string{
 				key: value,
 			}
-			err := mutateConfigMapData(configMap, data, vaultClient)
+			err := mw.mutateConfigMapData(configMap, data, vaultClient, vaultConfig)
 			if err != nil {
 				return err
 			}
@@ -68,7 +67,7 @@ func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConf
 			binaryData := map[string]string{
 				key: string(value),
 			}
-			err := mutateConfigMapBinaryData(configMap, binaryData, vaultClient)
+			err := mw.mutateConfigMapBinaryData(configMap, binaryData, vaultClient, vaultConfig)
 			if err != nil {
 				return err
 			}
@@ -78,8 +77,8 @@ func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConf
 	return nil
 }
 
-func mutateConfigMapData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client) error {
-	mapData, err := getDataFromVault(data, vaultClient)
+func (mw *mutatingWebhook) mutateConfigMapData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+	mapData, err := getDataFromVault(data, vaultClient, vaultConfig, mw.logger)
 	if err != nil {
 		return err
 	}
@@ -89,8 +88,8 @@ func mutateConfigMapData(configMap *corev1.ConfigMap, data map[string]string, va
 	return nil
 }
 
-func mutateConfigMapBinaryData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client) error {
-	mapData, err := getDataFromVault(data, vaultClient)
+func (mw *mutatingWebhook) mutateConfigMapBinaryData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+	mapData, err := getDataFromVault(data, vaultClient, vaultConfig, mw.logger)
 	if err != nil {
 		return err
 	}
