@@ -28,7 +28,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 
-	"github.com/banzaicloud/bank-vaults/internal/configuration"
+	"github.com/banzaicloud/bank-vaults/internal/injector"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
@@ -67,23 +67,8 @@ var (
 		"VAULT_ENV_DAEMON":             true,
 	}
 
-	logger *log.Logger
+	logger *log.Entry
 )
-
-// GlobalHook struct used for adding additional fields to the log
-type GlobalHook struct {
-}
-
-// Levels returning all log levels
-func (h *GlobalHook) Levels() []log.Level {
-	return log.AllLevels
-}
-
-// Fire adding the additional fields to all log entries
-func (h *GlobalHook) Fire(e *log.Entry) error {
-	e.Data["app"] = "vault-env"
-	return nil
-}
 
 // Appends variable an entry (name=value) into the environ list.
 // VAULT_* variables are not populated into this list.
@@ -93,28 +78,33 @@ func (environ *sanitizedEnviron) append(name string, value string) {
 	}
 }
 
-func startSecretRenewal(client *vault.Client, path string, secret *vaultapi.Secret, sigs chan os.Signal) error {
+type daemonSecretRenewer struct {
+	client *vault.Client
+	sigs   chan os.Signal
+}
+
+func (r daemonSecretRenewer) Renew(path string, secret *vaultapi.Secret) error {
 	renewerInput := vaultapi.RenewerInput{Secret: secret}
-	secretRenewer, err := client.RawClient().NewRenewer(&renewerInput)
+	renewer, err := r.client.RawClient().NewRenewer(&renewerInput)
 	if err != nil {
 		return errors.Wrap(err, "failed to create secret renewer")
 	}
 
-	go secretRenewer.Renew()
+	go renewer.Renew()
 
 	go func() {
 		for {
 			select {
-			case renewOutput := <-secretRenewer.RenewCh():
-				log.Infof("secret %s renewed for %ds", path, renewOutput.Secret.LeaseDuration)
-			case doneError := <-secretRenewer.DoneCh():
-				log.WithField("error", doneError).Infof("secret renewal for %s has stopped, sending SIGTERM to process", path)
+			case renewOutput := <-renewer.RenewCh():
+				logger.Infof("secret %s renewed for %ds", path, renewOutput.Secret.LeaseDuration)
+			case doneError := <-renewer.DoneCh():
+				logger.WithField("error", doneError).Infof("secret renewal for %s has stopped, sending SIGTERM to process", path)
 
-				sigs <- syscall.SIGTERM
+				r.sigs <- syscall.SIGTERM
 
 				timeout := <-time.After(10 * time.Second)
-				log.Infoln("killing process due to SIGTERM timeout =", timeout)
-				sigs <- syscall.SIGKILL
+				logger.Infoln("killing process due to SIGTERM timeout =", timeout)
+				r.sigs <- syscall.SIGKILL
 
 				return
 			}
@@ -125,19 +115,16 @@ func startSecretRenewal(client *vault.Client, path string, secret *vaultapi.Secr
 }
 
 func main() {
-	enableJSONLog := os.Getenv("VAULT_JSON_LOG")
+	enableJSONLog := cast.ToBool(os.Getenv("VAULT_JSON_LOG"))
+
+	l := log.New()
+	if enableJSONLog {
+		l.SetFormatter(&log.JSONFormatter{})
+	}
+	logger = l.WithField("app", "vault-env")
 
 	daemonMode := cast.ToBool(os.Getenv("VAULT_ENV_DAEMON"))
 	sigs := make(chan os.Signal, 1)
-
-	logger = log.New()
-	// Add additional fields to all log messages
-	logger.AddHook(&GlobalHook{})
-	if enableJSONLog == "true" {
-		logger.SetFormatter(&log.JSONFormatter{})
-	}
-
-	templater := configuration.NewTemplater(configuration.DefaultLeftDelimiter, configuration.DefaultRightDelimiter)
 
 	var entrypointCmd []string
 	if len(os.Args) == 1 {
@@ -152,7 +139,7 @@ func main() {
 	}
 
 	// Used both for reading secrets and transit encryption
-	ignoreMissingSecrets := os.Getenv("VAULT_IGNORE_MISSING_SECRETS") == "true"
+	ignoreMissingSecrets := cast.ToBool(os.Getenv("VAULT_IGNORE_MISSING_SECRETS"))
 
 	// The login procedure takes the token from a file (if using Vault Agent)
 	// or requests one for itself (Kubernetes Auth), so if we got a VAULT_TOKEN
@@ -184,166 +171,48 @@ func main() {
 		}
 	}
 
-	transitKeyID := os.Getenv("VAULT_TRANSIT_KEY_ID")
-	transitPath := os.Getenv("VAULT_TRANSIT_PATH")
-	transitCache := map[string][]byte{}
-
-	secretCache := map[string]*vaultapi.Secret{}
-
 	// initial and sanitized environs
-	environ := syscall.Environ()
+	environ := make(map[string]string, len(os.Environ()))
 	sanitized := make(sanitizedEnviron, 0, len(environ))
 
-	for _, env := range environ {
+	config := injector.Config{
+		TransitKeyID:         os.Getenv("VAULT_TRANSIT_KEY_ID"),
+		TransitPath:          os.Getenv("VAULT_TRANSIT_PATH"),
+		DaemonMode:           daemonMode,
+		IgnoreMissingSecrets: ignoreMissingSecrets,
+	}
+
+	var secretRenewer injector.SecretRenewer
+	if daemonMode {
+		secretRenewer = daemonSecretRenewer{client: client, sigs: sigs}
+	}
+
+	secretInjector := injector.NewSecretInjector(config, client, secretRenewer, logger)
+
+	for _, env := range os.Environ() {
 		split := strings.SplitN(env, "=", 2)
 		name := split[0]
 		value := split[1]
-
-		var update bool
-		if strings.HasPrefix(value, ">>vault:") {
-			value = strings.TrimPrefix(value, ">>")
-			update = true
-		} else {
-			update = false
-		}
-
-		if !strings.HasPrefix(value, "vault:") {
-			sanitized.append(name, value)
-			continue
-		}
-		valuePath := strings.TrimPrefix(value, "vault:")
-
-		// handle special case for vault:login env value
-		// namely pass through the the VAULT_TOKEN received from the Vault login procedure
-		if name == "VAULT_TOKEN" && valuePath == "login" {
-			value = client.RawClient().Token()
-			sanitized.append(name, value)
-			continue
-		}
-
-		// decrypts value with Vault Transit Secret Engine
-		if client.Transit.IsEncrypted(value) {
-			if len(transitKeyID) == 0 {
-				logger.Fatalln("Found encrypted variable, but transit key ID is empty:", name)
-			}
-			if v, ok := transitCache[value]; ok {
-				sanitized.append(name, string(v))
-				continue
-			}
-			out, err := client.Transit.Decrypt(transitPath, transitKeyID, []byte(value))
-			if err != nil {
-				if !ignoreMissingSecrets {
-					logger.Fatalln("failed to decrypt variable:", name, err)
-				}
-				logger.Errorln("failed to decrypt variable:", name, err)
-				continue
-			}
-			transitCache[value] = out
-			sanitized.append(name, string(out))
-			continue
-		}
-
-		split = strings.SplitN(valuePath, "#", 3)
-		valuePath = split[0]
-
-		var key string
-		if len(split) > 1 {
-			key = split[1]
-		}
-
-		version := "-1"
-		if len(split) == 3 {
-			version = split[2]
-		}
-
-		secretCacheKey := valuePath + "#" + version
-
-		var secret *vaultapi.Secret
-		var err error
-
-		if secret = secretCache[secretCacheKey]; secret == nil {
-			if update {
-				secret, err = client.RawClient().Logical().Write(valuePath, map[string]interface{}{})
-				if err != nil {
-					logger.Fatalln("failed to write secret to path:", valuePath, err.Error())
-				}
-				secretCache[secretCacheKey] = secret
-			} else {
-				secret, err = client.RawClient().Logical().ReadWithData(valuePath, map[string][]string{"version": {version}})
-				if err != nil {
-					if !ignoreMissingSecrets {
-						logger.Fatalln("failed to read secret from path:", valuePath, err.Error())
-					}
-					logger.Errorln("failed to read secret from path:", valuePath, err.Error())
-				} else {
-					secretCache[secretCacheKey] = secret
-				}
-			}
-
-			if daemonMode && secret != nil && secret.Renewable && secret.LeaseDuration > 0 {
-				log.Infof("secret %s has a lease duration of %ds, starting renewal", valuePath, secret.LeaseDuration)
-				err = startSecretRenewal(client, valuePath, secret, sigs)
-				if err != nil {
-					logger.Fatalln("secret renewal can't be established", err)
-				}
-			}
-		}
-
-		if secret == nil {
-			if !ignoreMissingSecrets {
-				logger.Fatalln("path not found:", valuePath)
-			}
-			logger.Errorln("path not found:", valuePath)
-			continue
-		}
-
-		var data map[string]interface{}
-		v2Data, ok := secret.Data["data"]
-		if ok {
-			data = cast.ToStringMap(v2Data)
-
-			// Check if a given version of a path is destroyed
-			metadata := secret.Data["metadata"].(map[string]interface{})
-			if metadata["destroyed"].(bool) {
-				logger.Warnln("version of secret has been permanently destroyed version:", version, "path:", valuePath)
-			}
-
-			// Check if a given version of a path still exists
-			if deletionTime, ok := metadata["deletion_time"].(string); ok && deletionTime != "" {
-				logger.Warnln("cannot find data for path, given version has been deleted",
-					"path:", valuePath, "version:", version,
-					"deletion_time", deletionTime)
-			}
-		} else {
-			data = cast.ToStringMap(secret.Data)
-		}
-
-		if templater.IsGoTemplate(key) {
-			if value, err := templater.Template(key, data); err != nil {
-				logger.Fatalln("failed to interpolate template key with vault data:", key, err.Error())
-			} else {
-				sanitized.append(name, value.String())
-			}
-		} else {
-			if value, ok := data[key]; ok {
-				value, err := cast.ToStringE(value)
-				if err != nil {
-					logger.Fatalln("value can't be cast to a string:", err.Error())
-				}
-				sanitized.append(name, value)
-			} else {
-				logger.Fatalln("key not found:", key)
-			}
-		}
+		environ[name] = value
 	}
 
-	if os.Getenv("VAULT_REVOKE_TOKEN") == "true" {
+	inject := func(key, value string) {
+		sanitized.append(key, value)
+	}
+
+	err = secretInjector.InjectSecretsFromVault(environ, inject)
+	if err != nil {
+		logger.Fatalln("failed to inject secrets from vault:", err)
+	}
+
+	if cast.ToBool(os.Getenv("VAULT_REVOKE_TOKEN")) {
 		// ref: https://www.vaultproject.io/api/auth/token/index.html#revoke-a-token-self-
 		err = client.RawClient().Auth().Token().RevokeSelf(client.RawClient().Token())
 		if err != nil {
 			// Do not exit on error, token revoking can be denied by policy
-			logger.Warnln("failed to revoke token")
+			logger.Warn("failed to revoke token")
 		}
+
 		client.Close()
 	}
 
@@ -363,9 +232,9 @@ func main() {
 			sig := <-sigs
 			err := cmd.Process.Signal(sig)
 			if err != nil {
-				log.Warnf("failed to signal process with %s: %v", sig, err)
+				logger.Warnf("failed to signal process with %s: %v", sig, err)
 			} else {
-				log.Infof("received signal: %s", sig)
+				logger.Infof("received signal: %s", sig)
 			}
 		}()
 

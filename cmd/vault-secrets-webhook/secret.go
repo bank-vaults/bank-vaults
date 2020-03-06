@@ -22,11 +22,11 @@ import (
 	"strings"
 
 	dockerTypes "github.com/docker/docker/api/types"
-	"github.com/spf13/cast"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
 	internal "github.com/banzaicloud/bank-vaults/internal/configuration"
+	"github.com/banzaicloud/bank-vaults/internal/injector"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
@@ -137,64 +137,29 @@ func mutateSecretData(secret *corev1.Secret, sc map[string]string, vaultClient *
 	return nil
 }
 
+func removePunctuation(r rune) rune {
+	if strings.ContainsRune(";<>=\"'", r) {
+		return -1
+	}
+	return r
+}
+
 // TODO review this function's returned error
 // nolint: unparam
 func getDataFromVault(data map[string]string, vaultClient *vault.Client) (map[string]string, error) {
-	var vaultData = make(map[string]string)
-
-	removePunctuation := func(r rune) rune {
-		if strings.ContainsRune(";<>=\"'", r) {
-			return -1
-		}
-		return r
-	}
+	vaultData := make(map[string]string, len(data))
 
 	for key, value := range data {
-		for _, val := range strings.Fields(value) {
-			val = strings.Map(removePunctuation, val)
-			if hasVaultPrefix(val) {
-				path := trimVaultPrefix(val)
-				split := strings.SplitN(path, "#", 3)
-				path = split[0]
-				var vaultKey string
-				if len(split) > 1 {
-					vaultKey = split[1]
-				}
-				version := "-1"
-				if len(split) == 3 {
-					version = split[2]
-				}
+		value = strings.Map(removePunctuation, value)
+		data[key] = value
+	}
 
-				var vaultSecret map[string]interface{}
-
-				secret, err := vaultClient.RawClient().Logical().ReadWithData(path, map[string][]string{"version": {version}})
-				if err != nil {
-					logger.Errorf("Failed to read secret path: %s error: %s", path, err.Error())
-					// TODO return error?
-				}
-				if secret == nil {
-					logger.Errorf("Path not found path: %s", path)
-				} else {
-					v2Data, ok := secret.Data["data"]
-					if ok {
-						vaultSecret = cast.ToStringMap(v2Data)
-					} else {
-						vaultSecret = cast.ToStringMap(secret.Data)
-					}
-				}
-				value = strings.ReplaceAll(value, val, cast.ToString(vaultSecret[vaultKey]))
-			}
-		}
+	inject := func(key, value string) {
 		vaultData[key] = value
 	}
-	return vaultData, nil
-}
 
-func trimVaultPrefix(value string) string {
-	if strings.HasPrefix(value, "vault:") {
-		return strings.TrimPrefix(value, "vault:")
-	} else if strings.HasPrefix(value, ">>vault:") {
-		return strings.TrimPrefix(value, ">>vault:")
-	}
-	return value
+	config := injector.Config{}
+	secretInjector := injector.NewSecretInjector(config, vaultClient, nil, logger.WithField("component", "injector"))
+
+	return vaultData, secretInjector.InjectSecretsFromVault(data, inject)
 }
