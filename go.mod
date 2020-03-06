@@ -16,7 +16,7 @@ require (
 	github.com/aws/aws-sdk-go v1.27.2
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/banzaicloud/bank-vaults/pkg/sdk v0.2.1
-	github.com/banzaicloud/k8s-objectmatcher v1.1.1
+	github.com/banzaicloud/k8s-objectmatcher v1.2.2
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/coreos/etcd-operator v0.9.4
 	github.com/coreos/prometheus-operator v0.29.0

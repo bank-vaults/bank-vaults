@@ -160,11 +160,9 @@ func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
 					svc.Spec.Ports[i].NodePort = currentSvc.Spec.Ports[i].NodePort
 				}
 			}
-
-			svc.Status = currentSvc.Status
 		}
 
-		result, err := patch.DefaultPatchMaker.Calculate(current, o)
+		result, err := patch.DefaultPatchMaker.Calculate(current, o, patch.IgnoreStatusFields())
 		if err != nil {
 			log.Error(err, "failed to calculate patch to match objects, moving on to update")
 			// if there is an error with matching, we still want to update
