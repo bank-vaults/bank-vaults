@@ -18,6 +18,7 @@ nameOverride: ""
 fullnameOverride: ""
 
 crdAnnotations: {}
+crdEnabled: true
 
 # The namespace where the operator watches for vault CRD objects, if not defined
 # all namespaces are watched
