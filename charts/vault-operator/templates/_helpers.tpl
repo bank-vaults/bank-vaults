@@ -30,3 +30,15 @@ Create chart name and version as used by the chart label.
 {{- define "vault-operator.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{/*
+Determines if the current executing Helm environment is v3 or not.
+If yes, it returns the string "helm3", otherwise it returns "".
+*/}}
+{{- define "isHelm3" -}}
+{{- if hasKey (toJson .Chart | fromJson) "type" -}}
+{{- "helm3" -}}
+{{- else -}}
+{{- "" -}}
+{{- end -}}
+{{- end -}}
