@@ -167,7 +167,19 @@ jobs:
           charts-dir: charts
       - helm/build:
           charts-dir: charts
-      - helm/publish
+      - run:
+          name: Helm push
+          command: |
+            cd /workspace/tgz
+            tgz="$(find . -name '*.tgz')"
+            curl \
+              --silent \
+              --show-error \
+              --fail \
+              -X POST \
+              -u "${HELM_REPO_USERNAME}:${HELM_REPO_PASSWORD}" \
+              --data-binary "@${tgz}" \
+              "https://kubernetes-charts.banzaicloud.com/api/charts"
 
 workflows:
   version: 2
