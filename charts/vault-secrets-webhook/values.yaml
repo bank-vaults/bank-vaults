@@ -17,7 +17,7 @@ certificate:
         crt:
 image:
   repository: banzaicloud/vault-secrets-webhook
-  tag: 0.9.0
+  tag: 1.0.0
   pullPolicy: IfNotPresent
   imagePullSecrets: []
 
@@ -28,8 +28,8 @@ service:
   internalPort: 8443
 
 env:
-  VAULT_IMAGE: vault:1.3.1
-  VAULT_ENV_IMAGE: banzaicloud/vault-env:0.9.0
+  VAULT_IMAGE: vault:1.3.2
+  VAULT_ENV_IMAGE: banzaicloud/vault-env:1.0.0
   # VAULT_CAPATH: /vault/tls
   # used when the pod that should get secret injected does not specify
   # an imagePullSecret
