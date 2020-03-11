@@ -161,6 +161,7 @@ workflows:
   helm-chart:
     jobs:
       - helm/lint-chart:
+          executor: helm/helm2
           charts-dir: charts
           filters:
             tags:
