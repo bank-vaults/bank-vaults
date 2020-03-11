@@ -149,6 +149,24 @@ jobs:
           command:
             hack/acceptance-test.sh
 
+  publish-chart:
+    executor: helm/helm3
+    resource_class: small
+    parameters:
+      charts-dir:
+        default: charts
+        description: Path of helm chart(s)
+        type: string
+    steps:
+      - checkout
+      - helm/setup-repositories:
+          chartmuseum-url: 'https://kubernetes-charts.banzaicloud.com'
+      - helm/check-parameters:
+          charts-dir: charts
+      - helm/build:
+          charts-dir: charts
+      - helm/publish
+
 workflows:
   version: 2
   ci:
@@ -167,7 +185,7 @@ workflows:
             tags:
               ignore: /.*/
 
-      - helm/publish-chart:
+      - publish-chart:
           context: helm
           charts-dir: charts
           filters:
