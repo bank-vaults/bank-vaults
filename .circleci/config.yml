@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  helm: banzaicloud/helm@0.0.5
+  helm: banzaicloud/helm@0.0.7
 
 jobs:
   check:
@@ -161,6 +161,7 @@ workflows:
   helm-chart:
     jobs:
       - helm/lint-chart:
+          executor: helm/helm2
           charts-dir: charts
           filters:
             tags:
