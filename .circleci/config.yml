@@ -163,6 +163,8 @@ jobs:
           chartmuseum-url: 'https://kubernetes-charts.banzaicloud.com'
       - helm/check-parameters:
           charts-dir: charts
+      - helm/update-dependencies:
+          charts-dir: charts
       - helm/build:
           charts-dir: charts
       - helm/publish
