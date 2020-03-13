@@ -1,5 +1,12 @@
+{{- $major := .Capabilities.KubeVersion.Major -}}
+{{- $minor := .Capabilities.KubeVersion.Minor -}}
+
 {{- if and .Values.rbac.enabled .Values.rbac.psp.enabled}}
+{{- if and (eq (int $major) 1) (ge (int $minor) 16) }}
+apiVersion: policy/v1beta1
+{{- else  }}
 apiVersion: extensions/v1beta1
+{{- end }}
 kind: PodSecurityPolicy
 metadata:
   name: {{ template "vault-secrets-webhook.fullname" . }}
@@ -31,7 +38,11 @@ spec:
   - emptyDir
   - configMap
 ---
+{{- if and (eq (int $major) 1) (ge (int $minor) 16) }}
+apiVersion: policy/v1beta1
+{{- else  }}
 apiVersion: extensions/v1beta1
+{{- end }}
 kind: PodSecurityPolicy
 metadata:
   annotations:
