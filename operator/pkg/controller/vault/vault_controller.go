@@ -960,6 +960,24 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 		}
 	}
 
+	// If Vault runs with PCSCD the configurer needs to run on the same host
+	// to be able to access the shared (hostPath) UNIX socket of that daemon.
+	var affinity *corev1.Affinity
+	if v.Spec.UnsealConfig.HSMDaemonNeeded() {
+		affinity = &corev1.Affinity{
+			PodAffinity: &corev1.PodAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: v.LabelsForVault(),
+						},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+				},
+			},
+		}
+	}
+
 	podSpec := corev1.PodSpec{
 		ServiceAccountName: v.Spec.GetServiceAccount(),
 		Containers: []corev1.Container{
@@ -975,15 +993,16 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 					Protocol:      "TCP",
 				}},
 				Env:          withNamespaceEnv(v, withCommonEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{})))),
-				VolumeMounts: withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts)),
+				VolumeMounts: withHSMVolumeMount(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts))),
 				WorkingDir:   "/config",
 				Resources:    *getBankVaultsResource(v),
 			},
 		},
-		Volumes:         withTLSVolume(v, withCredentialsVolume(v, volumes)),
+		Volumes:         withHSMVolume(v, withTLSVolume(v, withCredentialsVolume(v, volumes))),
 		SecurityContext: withPodSecurityContext(v),
 		NodeSelector:    v.Spec.NodeSelector,
 		Tolerations:     v.Spec.Tolerations,
+		Affinity:        affinity,
 	}
 
 	// merge provided VaultConfigurerPodSpec into the PodSpec defined above
@@ -1105,7 +1124,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		},
 	}))
 
-	volumes = withStatsdVolume(v, withAuditLogVolume(v, volumes))
+	volumes = withHSMVolume(v, withStatsdVolume(v, withAuditLogVolume(v, volumes)))
 
 	volumeMounts := withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{
 		{
@@ -1154,9 +1173,11 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	}
 
 	unsealCommand := []string{"bank-vaults", "unseal", "--init"}
+
 	if v.Spec.IsAutoUnseal() {
 		unsealCommand = append(unsealCommand, "--auto")
 	}
+
 	if v.Spec.IsRaftStorage() {
 		raftLeaderAddress := v.Name
 		if v.Spec.RaftLeaderAddress != "" {
@@ -1173,6 +1194,81 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	configJSON := v.Spec.ConfigJSON()
 
 	_, containerPorts := getServicePorts(v)
+
+	containers := withVeleroContainer(v, withStatsDContainer(v, withAuditLogContainer(v, []corev1.Container{
+		{
+			Image:           v.Spec.GetVaultImage(),
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Name:            "vault",
+			Args:            []string{"server"},
+			Ports:           containerPorts,
+			Env:             withClusterAddr(v, service, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{}))),
+			SecurityContext: withContainerSecurityContext(v),
+			// This probe makes sure Vault is responsive in a HTTPS manner
+			// See: https://www.vaultproject.io/api/system/init.html
+			LivenessProbe: &corev1.Probe{
+				Handler: corev1.Handler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Scheme: getVaultURIScheme(v),
+						Port:   intstr.FromString(v.Spec.GetAPIPortName()),
+						Path:   "/v1/sys/init",
+					}},
+			},
+			// This probe makes sure that only the active Vault instance gets traffic
+			// See: https://www.vaultproject.io/api/system/health.html
+			ReadinessProbe: &corev1.Probe{
+				Handler: corev1.Handler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Scheme: getVaultURIScheme(v),
+						Port:   intstr.FromString(v.Spec.GetAPIPortName()),
+						Path:   "/v1/sys/health?standbyok=true&perfstandbyok=true",
+					}},
+				PeriodSeconds:    5,
+				FailureThreshold: 2,
+			},
+			VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
+			Resources:    *getVaultResource(v),
+		},
+		{
+			Image:           v.Spec.GetBankVaultsImage(),
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Name:            "bank-vaults",
+			Command:         unsealCommand,
+			Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
+			Env: withTLSEnv(v, true, withCredentialsEnv(v, withCommonEnv(v, []corev1.EnvVar{
+				{
+					Name: "POD_NAME",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "metadata.name",
+						},
+					},
+				},
+			}))),
+			Ports: []corev1.ContainerPort{{
+				Name:          "metrics",
+				ContainerPort: 9091,
+				Protocol:      "TCP",
+			}},
+			VolumeMounts: withHSMVolumeMount(v, withBanksVaultsVolumeMounts(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{})))),
+			Resources:    *getBankVaultsResource(v),
+		},
+	})))
+
+	if v.Spec.UnsealConfig.HSMDaemonNeeded() {
+		containers = append(containers, corev1.Container{
+			Image:           v.Spec.GetBankVaultsImage(),
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Name:            "bank-vaults-hsm-pcscd",
+			Command:         []string{"pcscd-entrypoint.sh"},
+			VolumeMounts:    withHSMVolumeMount(v, nil),
+			Resources:       *getHSMDaemonResource(v),
+			SecurityContext: &corev1.SecurityContext{
+				Privileged: pointer.BoolPtr(true),
+				RunAsUser:  pointer.Int64Ptr(0),
+			},
+		})
+	}
 
 	podSpec := corev1.PodSpec{
 		Affinity: &corev1.Affinity{
@@ -1206,65 +1302,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			},
 		}),
 
-		Containers: withVeleroContainer(v, withStatsDContainer(v, withAuditLogContainer(v, []corev1.Container{
-			{
-				Image:           v.Spec.GetVaultImage(),
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Name:            "vault",
-				Args:            []string{"server"},
-				Ports:           containerPorts,
-				Env:             withClusterAddr(v, service, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{}))),
-				SecurityContext: withContainerSecurityContext(v),
-				// This probe makes sure Vault is responsive in a HTTPS manner
-				// See: https://www.vaultproject.io/api/system/init.html
-				LivenessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Scheme: getVaultURIScheme(v),
-							Port:   intstr.FromString(v.Spec.GetAPIPortName()),
-							Path:   "/v1/sys/init",
-						}},
-				},
-				// This probe makes sure that only the active Vault instance gets traffic
-				// See: https://www.vaultproject.io/api/system/health.html
-				ReadinessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Scheme: getVaultURIScheme(v),
-							Port:   intstr.FromString(v.Spec.GetAPIPortName()),
-							Path:   "/v1/sys/health?standbyok=true&perfstandbyok=true",
-						}},
-					PeriodSeconds:    5,
-					FailureThreshold: 2,
-				},
-				VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
-				Resources:    *getVaultResource(v),
-			},
-			{
-				Image:           v.Spec.GetBankVaultsImage(),
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Name:            "bank-vaults",
-				Command:         unsealCommand,
-				Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
-				Env: withTLSEnv(v, true, withCredentialsEnv(v, withCommonEnv(v, []corev1.EnvVar{
-					{
-						Name: "POD_NAME",
-						ValueFrom: &corev1.EnvVarSource{
-							FieldRef: &corev1.ObjectFieldSelector{
-								FieldPath: "metadata.name",
-							},
-						},
-					},
-				}))),
-				Ports: []corev1.ContainerPort{{
-					Name:          "metrics",
-					ContainerPort: 9091,
-					Protocol:      "TCP",
-				}},
-				VolumeMounts: withBanksVaultsVolumeMounts(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{}))),
-				Resources:    *getBankVaultsResource(v),
-			},
-		}))),
+		Containers:      containers,
 		Volumes:         withVaultVolumes(v, volumes),
 		SecurityContext: withPodSecurityContext(v),
 		NodeSelector:    v.Spec.NodeSelector,
@@ -1703,6 +1741,32 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, containers []corev1.Container
 	return containers
 }
 
+// Share the PCSLite Unix Socket across the host:
+// https://salsa.debian.org/rousseau/PCSC/blob/master/src/pcscd.h.in#L50
+func withHSMVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
+	if v.Spec.UnsealConfig.HSMDaemonNeeded() {
+		volumes = append(volumes, corev1.Volume{
+			Name: "hsm-pcscd",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: "/var/run/pcscd/",
+				},
+			},
+		})
+	}
+	return volumes
+}
+
+func withHSMVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
+	if v.Spec.UnsealConfig.HSMDaemonNeeded() {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "hsm-pcscd",
+			MountPath: "/var/run/pcscd/",
+		})
+	}
+	return volumeMounts
+}
+
 func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
 	if v.Spec.PodAntiAffinity == "" {
 		return nil
@@ -1935,6 +1999,24 @@ func getBankVaultsResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements 
 func getEtcdResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
 	if v.Spec.Resources != nil && v.Spec.Resources.Etcd != nil {
 		return v.Spec.Resources.Etcd
+	}
+
+	return &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("200m"),
+			corev1.ResourceMemory: resource.MustParse("128Mi"),
+		},
+	}
+}
+
+// getHSMDaemonResource return resource in spec or return pre-defined resource if not configurated
+func getHSMDaemonResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
+	if v.Spec.Resources != nil && v.Spec.Resources.HSMDaemon != nil {
+		return v.Spec.Resources.HSMDaemon
 	}
 
 	return &corev1.ResourceRequirements{

@@ -19,6 +19,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -701,6 +702,7 @@ type UnsealConfig struct {
 	Azure      *AzureUnsealConfig     `json:"azure,omitempty"`
 	AWS        *AWSUnsealConfig       `json:"aws,omitempty"`
 	Vault      *VaultUnsealConfig     `json:"vault,omitempty"`
+	HSM        *HSMUnsealConfig       `json:"hsm,omitempty"`
 }
 
 // UnsealOptions represents the common options to all unsealing backends
@@ -810,6 +812,51 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			)
 		}
 
+	} else if usc.HSM != nil {
+
+		mode := "hsm"
+		if usc.Kubernetes.SecretNamespace != "" && usc.Kubernetes.SecretName != "" {
+			mode = "hsm-k8s"
+		}
+
+		args = append(args,
+			"--mode",
+			mode,
+			"--hsm-module-path",
+			usc.HSM.ModulePath,
+			"--hsm-slot-id",
+			fmt.Sprint(usc.HSM.SlotID),
+			"--hsm-key-label",
+			usc.HSM.KeyLabel,
+			"--hsm-pin",
+			usc.HSM.Pin,
+		)
+
+		if usc.HSM.TokenLabel != "" {
+			args = append(args,
+				"--hsm-token-label",
+				usc.HSM.TokenLabel,
+			)
+		}
+
+		if mode == "hsm-k8s" {
+			var secretLabels []string
+			for k, v := range vault.LabelsForVault() {
+				secretLabels = append(secretLabels, k+"="+v)
+			}
+
+			sort.Strings(secretLabels)
+
+			args = append(args,
+				"--k8s-secret-namespace",
+				usc.Kubernetes.SecretNamespace,
+				"--k8s-secret-name",
+				usc.Kubernetes.SecretName,
+				"--k8s-secret-labels",
+				strings.Join(secretLabels, ","),
+			)
+		}
+
 	} else {
 
 		secretNamespace := vault.Namespace
@@ -843,6 +890,11 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 	}
 
 	return args
+}
+
+// HSMDaemonNeeded returns if the unsealing mechanims needs a HSM Daemon present
+func (usc *UnsealConfig) HSMDaemonNeeded() bool {
+	return usc.HSM != nil && usc.HSM.Daemon
 }
 
 // KubernetesUnsealConfig holds the parameters for Kubernetes based unsealing
@@ -894,6 +946,16 @@ type VaultUnsealConfig struct {
 	Token          string `json:"token"`
 }
 
+// HSMUnsealConfig holds the parameters for remote HSM based unsealing
+type HSMUnsealConfig struct {
+	Daemon     bool   `json:"daemon"`
+	ModulePath string `json:"modulePath"`
+	SlotID     uint   `json:"slotId"`
+	TokenLabel string `json:"tokenLabel"`
+	Pin        string `json:"pin"`
+	KeyLabel   string `json:"keyLabel"`
+}
+
 // CredentialsConfig configuration for a credentials file provided as a secret
 type CredentialsConfig struct {
 	Env        string `json:"env"`
@@ -905,6 +967,7 @@ type CredentialsConfig struct {
 type Resources struct {
 	Vault              *v1.ResourceRequirements `json:"vault,omitempty"`
 	BankVaults         *v1.ResourceRequirements `json:"bankVaults,omitempty"`
+	HSMDaemon          *v1.ResourceRequirements `json:"hsmDaemon,omitempty"`
 	Etcd               *v1.ResourceRequirements `json:"etcd,omitempty"`
 	PrometheusExporter *v1.ResourceRequirements `json:"prometheusExporter,omitempty"`
 }

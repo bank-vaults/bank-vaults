@@ -28,6 +28,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv/file"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/gckms"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/gcs"
+	"github.com/banzaicloud/bank-vaults/pkg/kv/hsm"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/k8s"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/multi"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/s3"
@@ -188,12 +189,54 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			cfg.GetString(cfgK8SSecret),
 			k8sSecretLabels,
 		)
-
 		if err != nil {
 			return nil, fmt.Errorf("error creating K8S Secret kv store: %s", err.Error())
 		}
 
 		return k8s, nil
+
+	// BANK_VAULTS_HSM_PIN=banzai bank-vaults unseal --init --mode hsm-k8s --k8s-secret-name hsm --k8s-secret-namespace default --hsm-slot-id 0
+	case cfgModeValueHSMK8S:
+		k8s, err := k8s.New(
+			cfg.GetString(cfgK8SNamespace),
+			cfg.GetString(cfgK8SSecret),
+			k8sSecretLabels,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error creating K8S Secret with with kv store: %s", err.Error())
+		}
+
+		config := hsm.Config{
+			ModulePath: cfg.GetString(cfgHSMModulePath),
+			SlotID:     cfg.GetUint(cfgHSMSlotID),
+			TokenLabel: cfg.GetString(cfgHSMTokenLabel),
+			Pin:        cfg.GetString(cfgHSMPin),
+			KeyLabel:   cfg.GetString(cfgHSMKeyLabel),
+		}
+
+		hsm, err := hsm.New(config, k8s)
+		if err != nil {
+			return nil, fmt.Errorf("error creating HSM kv store: %s", err.Error())
+		}
+
+		return hsm, nil
+
+	// BANK_VAULTS_HSM_PIN=banzai bank-vaults unseal --init --mode hsm --hsm-slot-id 0 --hsm-module-path /usr/local/lib/opensc-pkcs11.so
+	case cfgModeValueHSM:
+		config := hsm.Config{
+			ModulePath: cfg.GetString(cfgHSMModulePath),
+			SlotID:     cfg.GetUint(cfgHSMSlotID),
+			TokenLabel: cfg.GetString(cfgHSMTokenLabel),
+			Pin:        cfg.GetString(cfgHSMPin),
+			KeyLabel:   cfg.GetString(cfgHSMKeyLabel),
+		}
+
+		hsm, err := hsm.New(config, nil)
+		if err != nil {
+			return nil, fmt.Errorf("error creating HSM kv store: %s", err.Error())
+		}
+
+		return hsm, nil
 
 	case cfgModeValueDev:
 		dev, err := dev.New()
