@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/prometheus/client_golang/prometheus"
@@ -48,6 +49,7 @@ type VaultConfig struct {
 	Path                        string
 	SkipVerify                  string
 	TLSSecret                   string
+	ClientTimeout               time.Duration
 	UseAgent                    bool
 	VaultEnvDaemon              bool
 	TransitKeyID                string
@@ -87,6 +89,7 @@ func init() {
 	viper.SetDefault("vault_path", "kubernetes")
 	viper.SetDefault("vault_role", "")
 	viper.SetDefault("vault_tls_secret", "")
+	viper.SetDefault("vault_client_timeout", "10s")
 	viper.SetDefault("vault_agent", "false")
 	viper.SetDefault("vault_env_daemon", "false")
 	viper.SetDefault("vault_ct_share_process_namespace", "")
@@ -149,6 +152,12 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.TLSSecret = val
 	} else {
 		vaultConfig.TLSSecret = viper.GetString("vault_tls_secret")
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-client-timeout"]; ok {
+		vaultConfig.ClientTimeout, _ = time.ParseDuration(val)
+	} else {
+		vaultConfig.ClientTimeout, _ = time.ParseDuration(viper.GetString("vault_client_timeout"))
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-agent"]; ok {
@@ -519,6 +528,10 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			{
 				Name:  "VAULT_JSON_LOG",
 				Value: vaultConfig.EnableJSONLog,
+			},
+			{
+				Name:  "VAULT_CLIENT_TIMEOUT",
+				Value: vaultConfig.ClientTimeout.String(),
 			},
 		}...)
 
