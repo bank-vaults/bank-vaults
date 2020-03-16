@@ -371,10 +371,22 @@ func (spec *VaultSpec) HasHAStorage() bool {
 	if _, ok := HAStorageTypes[storageType]; ok {
 		return spec.HasStorageHAEnabled()
 	}
-	if len(spec.getHAStorage()) != 0 {
+	if spec.hasHAStorageStanza() {
 		return true
 	}
 	return false
+}
+
+func (spec *VaultSpec) hasHAStorageStanza() bool {
+	return len(spec.getHAStorage()) != 0
+}
+
+// HasEtcdStorage detects if Vault is configured to use etcd as storage or ha_storage backend
+func (spec *VaultSpec) HasEtcdStorage() bool {
+	if spec.hasHAStorageStanza() && spec.GetHAStorageType() == "etcd" {
+		return true
+	}
+	return spec.GetStorageType() == "etcd"
 }
 
 // GetStorage returns Vault's storage stanza
@@ -387,14 +399,37 @@ func (spec *VaultSpec) getStorage() map[string]interface{} {
 	return cast.ToStringMap(spec.Config["storage"])
 }
 
+// GetHAStorage returns Vault's ha_storage stanza
+func (spec *VaultSpec) GetHAStorage() map[string]interface{} {
+	haStorage := spec.getHAStorage()
+	return cast.ToStringMap(haStorage[spec.GetHAStorageType()])
+}
+
 func (spec *VaultSpec) getHAStorage() map[string]interface{} {
 	return cast.ToStringMap(spec.Config["ha_storage"])
+}
+
+// GetEtcdStorage returns the etcd storage if configured or nil
+func (spec *VaultSpec) GetEtcdStorage() map[string]interface{} {
+	if spec.hasHAStorageStanza() && spec.GetHAStorageType() == "etcd" {
+		return spec.GetHAStorage()
+	}
+	if spec.GetStorageType() == "etcd" {
+		return spec.GetStorage()
+	}
+	return nil
 }
 
 // GetStorageType returns the type of Vault's storage stanza
 func (spec *VaultSpec) GetStorageType() string {
 	storage := spec.getStorage()
 	return reflect.ValueOf(storage).MapKeys()[0].String()
+}
+
+// GetHAStorageType returns the type of Vault's ha_storage stanza
+func (spec *VaultSpec) GetHAStorageType() string {
+	haStorage := spec.getHAStorage()
+	return reflect.ValueOf(haStorage).MapKeys()[0].String()
 }
 
 // GetVersion returns the version of Vault
