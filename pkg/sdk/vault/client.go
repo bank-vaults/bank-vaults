@@ -31,8 +31,7 @@ import (
 )
 
 const (
-	serviceAccountFile  = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-	initialTokenTimeout = 10 * time.Second
+	serviceAccountFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
 var logger *log.Logger
@@ -51,6 +50,7 @@ type clientOptions struct {
 	authPath  string
 	tokenPath string
 	token     string
+	timeout   time.Duration
 }
 
 // ClientOption configures a Vault client using the functional options paradigm popularized by Rob Pike and Dave Cheney.
@@ -94,6 +94,13 @@ type ClientToken string
 
 func (co ClientToken) apply(o *clientOptions) {
 	o.token = string(co)
+}
+
+// ClientTimeout after which the client fails.
+type ClientTimeout time.Duration
+
+func (co ClientTimeout) apply(o *clientOptions) {
+	o.timeout = time.Duration(co)
 }
 
 // Client is a Vault client with Kubernetes support, token automatic renewing and
@@ -236,6 +243,17 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		}
 	}
 
+	// Default timeout
+	if o.timeout == 0 {
+		o.timeout = 10 * time.Second
+		if env, ok := os.LookupEnv("VAULT_CLIENT_TIMEOUT"); ok {
+			var err error
+			if o.timeout, err = time.ParseDuration(env); err != nil {
+				return nil, fmt.Errorf("could not set timeout: %w", err)
+			}
+		}
+	}
+
 	// Add token if set
 	if o.token != "" {
 		rawClient.SetToken(o.token)
@@ -317,9 +335,9 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 			case <-initialTokenArrived:
 				logger.Println("initial Vault token arrived")
 
-			case <-time.After(initialTokenTimeout):
+			case <-time.After(o.timeout):
 				client.Close()
-				return nil, fmt.Errorf("timeout [%s] during waiting for Vault token", initialTokenTimeout)
+				return nil, fmt.Errorf("timeout [%s] during waiting for Vault token", o.timeout)
 			}
 		}
 	}
