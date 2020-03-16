@@ -35,6 +35,7 @@ env:
   # an imagePullSecret
   # DEFAULT_IMAGE_PULL_SECRET:
   # DEFAULT_IMAGE_PULL_SECRET_NAMESPACE:
+  # VAULT_CLIENT_TIMEOUT: 10s
 
 metrics:
   enabled: false
