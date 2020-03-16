@@ -16,6 +16,7 @@ package main
 
 import (
 	"testing"
+	"time"
 
 	cmp "github.com/google/go-cmp/cmp"
 	imagev1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -36,6 +37,7 @@ var vaultConfig = VaultConfig{
 	IgnoreMissingSecrets: "ignoreMissingSecrets",
 	VaultEnvPassThrough:  "vaultEnvPassThrough",
 	EnableJSONLog:        "enableJSONLog",
+	ClientTimeout:        10 * time.Second,
 }
 
 type MockRegistry struct {
@@ -105,6 +107,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 						{Name: "VAULT_IGNORE_MISSING_SECRETS", Value: "ignoreMissingSecrets"},
 						{Name: "VAULT_ENV_PASSTHROUGH", Value: "vaultEnvPassThrough"},
 						{Name: "VAULT_JSON_LOG", Value: "enableJSONLog"},
+						{Name: "VAULT_CLIENT_TIMEOUT", Value: "10s"},
 					},
 				},
 			},
@@ -151,6 +154,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 						{Name: "VAULT_IGNORE_MISSING_SECRETS", Value: "ignoreMissingSecrets"},
 						{Name: "VAULT_ENV_PASSTHROUGH", Value: "vaultEnvPassThrough"},
 						{Name: "VAULT_JSON_LOG", Value: "enableJSONLog"},
+						{Name: "VAULT_CLIENT_TIMEOUT", Value: "10s"},
 					},
 				},
 			},
@@ -199,6 +203,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 						{Name: "VAULT_IGNORE_MISSING_SECRETS", Value: "ignoreMissingSecrets"},
 						{Name: "VAULT_ENV_PASSTHROUGH", Value: "vaultEnvPassThrough"},
 						{Name: "VAULT_JSON_LOG", Value: "enableJSONLog"},
+						{Name: "VAULT_CLIENT_TIMEOUT", Value: "10s"},
 					},
 				},
 			},
@@ -247,6 +252,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 						{Name: "VAULT_IGNORE_MISSING_SECRETS", Value: "ignoreMissingSecrets"},
 						{Name: "VAULT_ENV_PASSTHROUGH", Value: "vaultEnvPassThrough"},
 						{Name: "VAULT_JSON_LOG", Value: "enableJSONLog"},
+						{Name: "VAULT_CLIENT_TIMEOUT", Value: "10s"},
 					},
 				},
 			},
