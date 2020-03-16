@@ -33,6 +33,7 @@ spec:
   config:
     storage:
       s3:
+        region: "us-east-1"
         bucket: "my-vault"
     listener:
       tcp:

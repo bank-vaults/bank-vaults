@@ -272,7 +272,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	// check if we need to create an etcd cluster
 	// if etcd size is < 0. Will not create etcd cluster
-	if v.Spec.GetStorageType() == "etcd" && v.Spec.GetEtcdSize() > 0 {
+	if v.Spec.HasEtcdStorage() && v.Spec.GetEtcdSize() > 0 {
 		etcdCluster, err := etcdForVault(v)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to fabricate etcd cluster: %v", err)
@@ -652,7 +652,7 @@ func secretForEtcd(v *vaultv1alpha1.Vault, e *etcdv1beta2.EtcdCluster) (*corev1.
 }
 
 func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
-	storage := v.Spec.GetStorage()
+	storage := v.Spec.GetEtcdStorage()
 	etcdAddress := storage["address"].(string)
 	etcdURL, err := url.Parse(etcdAddress)
 	if err != nil {
@@ -1138,10 +1138,10 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	// TODO Configure Vault to wait for etcd in an init container in this case
 	// If etcd size is < 0 means not create new etcd cluster
 	// No need to override etcd config, and use user input value
-	if v.Spec.GetStorageType() == "etcd" && v.Spec.GetEtcdSize() > 0 {
+	if v.Spec.HasEtcdStorage() && v.Spec.GetEtcdSize() > 0 {
 
 		// Overwrite Vault config with the generated TLS certificate's settings
-		etcdStorage := v.Spec.GetStorage()
+		etcdStorage := v.Spec.GetEtcdStorage()
 		etcdStorage["tls_ca_file"] = "/etcd/tls/" + etcdutil.CliCAFile
 		etcdStorage["tls_cert_file"] = "/etcd/tls/" + etcdutil.CliCertFile
 		etcdStorage["tls_key_file"] = "/etcd/tls/" + etcdutil.CliKeyFile
