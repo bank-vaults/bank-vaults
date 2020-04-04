@@ -1084,10 +1084,24 @@ func populateTLSSecret(v *vaultv1alpha1.Vault, service *corev1.Service, secret *
 
 	certMgr, err := bvtls.NewCertificateManager(strings.Join(hostsAndIPs, ","), "8760h")
 
-	caCrt := secret.StringData["ca.crt"]
-	caKey := secret.StringData["ca.key"]
+	// If a secret already exists, load the ca.crt and ca.key from it
+	caCrt := ""
+	caKey := ""
+	if secret == nil {
+		secret = &corev1.Secret{}
+	} else {
+		caCrt = secret.StringData["ca.crt"]
+		caKey = secret.StringData["ca.key"]
+	}
 
-	if secret != nil && (caCrt != "" || caKey != "") {
+	// Has the existing CA expired?
+	caExpired := false
+
+	// Check that the CA certificate and key are not empty
+	// We explicitly do not regenerate the CA if there is an error loading it
+	// replacing an existing CA unexpectedly (in case of an error) is likely
+	// to be worse than not renewing it
+	if caCrt != "" && caKey != "" {
 		// Load the existing certificate authority
 		err := certMgr.LoadCA([]byte(caCrt), []byte(caKey))
 		if err != nil {
@@ -1101,19 +1115,20 @@ func populateTLSSecret(v *vaultv1alpha1.Vault, service *corev1.Service, secret *
 		}
 
 		if tlsExpiration.Sub(time.Now()) < v.Spec.GetTLSExpiryThreshold() {
-			err := certMgr.NewChain()
-			if err != nil {
-				return time.Time{}, err
-			}
+			// CA is unusable and we need a new chain instead
+			caExpired = true
 		} else {
-			// Generate a new server certificate
+			// Generate a new server certificate using the existing CA
 			err = certMgr.GenerateServer()
 			if err != nil {
 				return time.Time{}, err
 			}
 		}
-	} else {
-		secret = &corev1.Secret{}
+	}
+
+	// If the CA certificate or key is empty, or we did have a CA but is
+	// has now expired. Generate a entirely new chain
+	if (caCrt == "" || caKey == "") || caExpired {
 		err := certMgr.NewChain()
 		if err != nil {
 			return time.Time{}, err
