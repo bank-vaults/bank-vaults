@@ -21,6 +21,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestWildCardValidation(t *testing.T) {
@@ -147,7 +148,7 @@ func TestLoadAndRegenerateTLS(t *testing.T) {
 	}
 
 	// Load an existing certificate authority
-	err = cm.LoadCA([]byte(cmTemp.Chain.CACert), []byte(cmTemp.Chain.CAKey))
+	err = cm.LoadCA([]byte(cmTemp.Chain.CACert), []byte(cmTemp.Chain.CAKey), time.Minute*50)
 	if err != nil {
 		t.Fatal(err)
 	}

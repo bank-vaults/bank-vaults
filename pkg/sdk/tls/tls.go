@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"net"
 	"strings"
@@ -41,11 +42,17 @@ const (
 )
 
 var (
-	// InvalidHostNameError is thrown when you have a hostname that has already been covered by a wildcard hostname
+	// InvalidHostNameError is returned when you have a hostname that has already been covered by a wildcard hostname
 	InvalidHostNameError = errors.New("invalid host name, this has been already covered by the wildcard")
 
-	// InvalidCAError will be thrown if the provided CA is invalid
+	// InvalidCAError will be returned if the provided CA is invalid
 	InvalidCAError = errors.New("the CA provided is not valid")
+
+	// NoCAError will be returned if the CA provided was empty
+	EmptyCAError = errors.New("an empty CA was provided")
+
+	// ExpiredCAError will be returned if the CA does not meet the required threshold of validity
+	ExpiredCAError = errors.New("the CA provided will expired before the provided threshold")
 )
 
 // CertificateManager contains a certificate chain and methods to generate certificates on that chain
@@ -140,6 +147,20 @@ func (sh *separatedCertHosts) validate() error {
 	return nil
 }
 
+// GetCertExpirationDate will return a PEM encoded certificate's expiration date
+func GetCertExpirationDate(certPEM []byte) (time.Time, error) {
+	block, _ := pem.Decode(certPEM)
+	if block == nil {
+		return time.Time{}, fmt.Errorf("failed to parse certificate PEM")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to parse certificate: %v", err)
+	}
+
+	return cert.NotAfter, nil
+}
+
 func getTimes(validity string) (notBefore time.Time, validityDuration time.Duration, notAfter time.Time, err error) {
 	notBefore = time.Now()
 
@@ -203,7 +224,21 @@ func certToBytes(certBytes []byte) ([]byte, error) {
 }
 
 // LoadCA will load an existing certifiate authority into the CertificateManager and underlying chain
-func (c *CertificateManager) LoadCA(caCertBytes []byte, caKeyBytes []byte) error {
+func (cc *CertificateManager) LoadCA(caCertBytes []byte, caKeyBytes []byte, expirationThreshold time.Duration) error {
+	if len(caCertBytes) == 0 || len(caKeyBytes) == 0 {
+		return EmptyCAError
+	}
+
+	// Get CA expiration date
+	tlsExpiration, err := GetCertExpirationDate(caCertBytes)
+	if err != nil {
+		return errors.Wrap(err, "unable to get the CA expiration date")
+	}
+
+	if tlsExpiration.Sub(time.Now()) < expirationThreshold {
+		return ExpiredCAError
+	}
+
 	caCertPem, _ := pem.Decode(caCertBytes)
 	if caCertPem == nil {
 		return errors.Wrap(InvalidCAError, "no PEM encoded CA certificate could be found")
@@ -223,18 +258,18 @@ func (c *CertificateManager) LoadCA(caCertBytes []byte, caKeyBytes []byte) error
 
 	caCert, err := x509.ParseCertificate(caCertPem.Bytes)
 	if err != nil {
-		return errors.Wrap(InvalidCAError, "the CA certificate was not not x509 parsable")
+		return errors.Wrap(err, "the CA certificate was not not x509 parsable")
 	}
 
 	caKey, err := x509.ParsePKCS1PrivateKey(caKeyPem.Bytes)
 	if err != nil {
-		return errors.Wrap(InvalidCAError, "the CA key was not not PKCS1 parsable")
+		return errors.Wrap(err, "the CA key was not not PKCS1 parsable")
 	}
 
-	c.caCertTemplate = caCert
-	c.caKey = caKey
-	c.Chain.CACert = string(caCertBytes)
-	c.Chain.CAKey = string(caKeyBytes)
+	cc.caCertTemplate = caCert
+	cc.caKey = caKey
+	cc.Chain.CACert = string(caCertBytes)
+	cc.Chain.CAKey = string(caKeyBytes)
 	return nil
 }
 

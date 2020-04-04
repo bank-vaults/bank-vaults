@@ -355,7 +355,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		} else if v.Spec.ExistingTLSSecretName == "" && len(sec.Data) > 0 {
 			// If tls secret exists check expiration date
 			certPEM := string(sec.Data["server.crt"])
-			tlsExpiration, err = getCertExpirationDate(certPEM)
+			tlsExpiration, err = bvtls.GetCertExpirationDate([]byte(certPEM))
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to get certificate expiration: %v", err)
 			}
@@ -1094,45 +1094,27 @@ func populateTLSSecret(v *vaultv1alpha1.Vault, service *corev1.Service, secret *
 		caKey = secret.StringData["ca.key"]
 	}
 
-	// Has the existing CA expired?
-	caExpired := false
-
+	// Load the existing certificate authority
 	// Check that the CA certificate and key are not empty
 	// We explicitly do not regenerate the CA if there is an error loading it
 	// replacing an existing CA unexpectedly (in case of an error) is likely
 	// to be worse than not renewing it
-	if caCrt != "" && caKey != "" {
-		// Load the existing certificate authority
-		err := certMgr.LoadCA([]byte(caCrt), []byte(caKey))
+	err = certMgr.LoadCA([]byte(caCrt), []byte(caKey), v.Spec.GetTLSExpiryThreshold())
+
+	// If the CA is expired, empty or not valid but not errored - create a new chain
+	if err == bvtls.ExpiredCAError || err == bvtls.EmptyCAError {
+		err = certMgr.NewChain()
 		if err != nil {
 			return time.Time{}, err
 		}
-
-		// Get CA expiration date
-		tlsExpiration, err := getCertExpirationDate(certMgr.Chain.CACert)
-		if err != nil {
-			return time.Time{}, err
-		}
-
-		if tlsExpiration.Sub(time.Now()) < v.Spec.GetTLSExpiryThreshold() {
-			// CA is unusable and we need a new chain instead
-			caExpired = true
-		} else {
-			// Generate a new server certificate using the existing CA
-			err = certMgr.GenerateServer()
-			if err != nil {
-				return time.Time{}, err
-			}
-		}
+	} else if err != nil {
+		return time.Time{}, err
 	}
 
-	// If the CA certificate or key is empty, or we did have a CA but is
-	// has now expired. Generate a entirely new chain
-	if (caCrt == "" || caKey == "") || caExpired {
-		err := certMgr.NewChain()
-		if err != nil {
-			return time.Time{}, err
-		}
+	// Generate a server certificate
+	err = certMgr.GenerateServer()
+	if err != nil {
+		return time.Time{}, err
 	}
 
 	secret.Name = v.Name + "-tls"
@@ -1145,7 +1127,7 @@ func populateTLSSecret(v *vaultv1alpha1.Vault, service *corev1.Service, secret *
 	secret.StringData["server.crt"] = certMgr.Chain.ServerCert
 	secret.StringData["server.key"] = certMgr.Chain.ServerKey
 
-	tlsExpiration, err := getCertExpirationDate(certMgr.Chain.ServerCert)
+	tlsExpiration, err := bvtls.GetCertExpirationDate([]byte(certMgr.Chain.ServerCert))
 	if err != nil {
 		return time.Time{}, fmt.Errorf("failed to get certificate expiration: %v", err)
 	}
@@ -2156,19 +2138,6 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 	}
 
 	return nil
-}
-
-func getCertExpirationDate(certPEM string) (time.Time, error) {
-	block, _ := pem.Decode([]byte(certPEM))
-	if block == nil {
-		return time.Time{}, fmt.Errorf("failed to parse certificate PEM")
-	}
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("failed to parse certificate: %v", err)
-	}
-
-	return cert.NotAfter, nil
 }
 
 func certHostsAndIPsChanged(certPEM string, v *vaultv1alpha1.Vault, service *corev1.Service) (bool, error) {
