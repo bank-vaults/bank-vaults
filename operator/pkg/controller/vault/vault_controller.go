@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -363,13 +364,19 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to get certificate hosts: %v", err)
 			}
-			// Generate new tls if expiration date is too close
-			if tlsExpiration.Sub(time.Now()) < v.Spec.GetTLSExpiryThreshold() || tlsHostsChanged {
+
+			// Do we need to regenerate the TLS certificate and possibly even the CA?
+			if time.Until(tlsExpiration) < v.Spec.GetTLSExpiryThreshold() {
+				// Generate new TLS server certificate if expiration date is too close
 				reqLogger.Info("cert expiration date too close", "date", tlsExpiration.UTC().Format(time.RFC3339))
 				tlsExpiration, err = populateTLSSecret(v, ser, sec)
-				if err != nil {
-					return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
-				}
+			} else if tlsHostsChanged {
+				// Generate new TLS server certificate if the TLS hosts have changed
+				reqLogger.Info("TLS server hosts have changed")
+				tlsExpiration, err = populateTLSSecret(v, ser, sec)
+			}
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
 			}
 		}
 
@@ -1078,17 +1085,20 @@ func hostsAndIPsForVault(om *vaultv1alpha1.Vault, service *corev1.Service) []str
 	return hostsAndIPs
 }
 
-// populateTLSSecret will populate a secret containing the TLS chain
+// populateTLSSecret will populate a secret containing a TLS chain
 func populateTLSSecret(v *vaultv1alpha1.Vault, service *corev1.Service, secret *corev1.Secret) (time.Time, error) {
 	hostsAndIPs := hostsAndIPsForVault(v, service)
 
 	certMgr, err := bvtls.NewCertificateManager(strings.Join(hostsAndIPs, ","), "8760h")
+	if err != nil {
+		return time.Time{}, err
+	}
 
 	// If a secret already exists, load the ca.crt and ca.key from it
 	caCrt := ""
 	caKey := ""
 	if secret == nil {
-		secret = &corev1.Secret{}
+		return time.Time{}, errors.New("a nil secret was passed into populateTLSSecret, please instantiate the secret first")
 	} else {
 		caCrt = secret.StringData["ca.crt"]
 		caKey = secret.StringData["ca.key"]

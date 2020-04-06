@@ -235,7 +235,7 @@ func (cc *CertificateManager) LoadCA(caCertBytes []byte, caKeyBytes []byte, expi
 		return errors.Wrap(err, "unable to get the CA expiration date")
 	}
 
-	if tlsExpiration.Sub(time.Now()) < expirationThreshold {
+	if time.Until(tlsExpiration) < expirationThreshold {
 		return ExpiredCAError
 	}
 
@@ -395,4 +395,20 @@ func (c *CertificateManager) GeneratePeer() error {
 	c.Chain.PeerKey = string(peerCert.Key)
 	c.Chain.PeerCert = string(peerCert.Certificate)
 	return nil
+}
+
+// GenerateTLS generates ca, server, client and peer TLS certificates.
+// hosts: Comma-separated hostnames and IPs to generate a certificate for
+// validity: Duration that certificate is valid for, in Go Duration format
+func GenerateTLS(hosts string, validity string) (*CertificateChain, error) {
+	cm, err := NewCertificateManager(hosts, validity)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = cm.NewChain(); err != nil {
+		return nil, err
+	}
+
+	return cm.Chain, nil
 }
