@@ -230,6 +230,11 @@ func main() {
 
 		signal.Notify(sigs)
 
+		err = cmd.Start()
+		if err != nil {
+			logger.Fatalln("failed to start process", entrypointCmd, err.Error())
+		}
+
 		go func() {
 			sig := <-sigs
 			err := cmd.Process.Signal(sig)
@@ -240,7 +245,7 @@ func main() {
 			}
 		}()
 
-		err = cmd.Run()
+		err = cmd.Wait()
 
 		close(sigs)
 
