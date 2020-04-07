@@ -83,7 +83,7 @@ func init() {
 	viper.SetDefault("vault_image_pull_policy", string(corev1.PullIfNotPresent))
 	viper.SetDefault("vault_env_image", "banzaicloud/vault-env:latest")
 	viper.SetDefault("vault_env_image_pull_policy", string(corev1.PullIfNotPresent))
-	viper.SetDefault("vault_ct_image", "hashicorp/consul-template:0.19.6-dev-alpine")
+	viper.SetDefault("vault_ct_image", "hashicorp/consul-template:0.24.1-alpine")
 	viper.SetDefault("vault_addr", "https://vault:8200")
 	viper.SetDefault("vault_skip_verify", "false")
 	viper.SetDefault("vault_path", "kubernetes")
