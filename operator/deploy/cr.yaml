@@ -61,7 +61,7 @@ spec:
   # If it is set, generating certificate will be disabled
   # existingTlsSecretName: selfsigned-cert-tls
 
-  # Specify treshold for renewing certificates. Valid time units are "ns", "us", "ms", "s", "m", "h".
+  # Specify threshold for renewing certificates. Valid time units are "ns", "us", "ms", "s", "m", "h".
   # tlsExpiryThreshold: 168h
 
   # Request an Ingress controller with the default configuration
