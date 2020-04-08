@@ -32,7 +32,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
+
+var log = logf.Log.WithName("controller_vault")
 
 // Vault is the Schema for the vaults API
 
@@ -325,7 +328,7 @@ type VaultSpec struct {
 
 	// TLSExpiryThreshold is the Vault TLS certificate expiration threshold in Go's Duration format.
 	// default: 168h
-	TLSExpiryThreshold *time.Duration `json:"tlsExpiryThreshold,omitempty"`
+	TLSExpiryThreshold string `json:"tlsExpiryThreshold,omitempty"`
 
 	// TLSAdditionalHosts is a list of additional hostnames or IP addresses to add to the SAN on the automatically generated TLS certificate.
 	// default:
@@ -495,10 +498,15 @@ func (spec *VaultSpec) GetTLSDisable() bool {
 
 // GetTLSExpiryThreshold returns the Vault TLS certificate expiration threshold
 func (spec *VaultSpec) GetTLSExpiryThreshold() time.Duration {
-	if spec.TLSExpiryThreshold == nil {
+	if spec.TLSExpiryThreshold == "" {
 		return time.Hour * 168
 	}
-	return *spec.TLSExpiryThreshold
+	duration, err := time.ParseDuration(spec.TLSExpiryThreshold)
+	if err != nil {
+		log.Error(err, "using default treshold due to parse error", "tlsExpiryThreshold", spec.TLSExpiryThreshold)
+		return time.Hour * 168
+	}
+	return duration
 }
 
 func (spec *VaultSpec) getListener() map[string]interface{} {

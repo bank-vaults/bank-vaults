@@ -19,8 +19,6 @@
 package v1alpha1
 
 import (
-	time "time"
-
 	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -518,11 +516,6 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 		in, out := &in.Ingress, &out.Ingress
 		*out = new(Ingress)
 		(*in).DeepCopyInto(*out)
-	}
-	if in.TLSExpiryThreshold != nil {
-		in, out := &in.TLSExpiryThreshold, &out.TLSExpiryThreshold
-		*out = new(time.Duration)
-		**out = **in
 	}
 	if in.TLSAdditionalHosts != nil {
 		in, out := &in.TLSAdditionalHosts, &out.TLSAdditionalHosts
