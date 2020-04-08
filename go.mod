@@ -67,6 +67,8 @@ require (
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.1+incompatible
+	// https://github.com/gomodules/jsonpatch/pull/22
+	github.com/appscode/jsonpatch => github.com/appscode/jsonpatch v1.0.1
 	github.com/banzaicloud/bank-vaults/pkg/sdk => ./pkg/sdk
 	github.com/heroku/docker-registry-client => github.com/banzaicloud/docker-registry-client v0.0.0-20191118103116-f48ee8de5b3b
 	golang.org/x/oauth2 => golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
