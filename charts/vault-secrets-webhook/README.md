@@ -109,7 +109,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | debug                            | debug logs for webhook                                                       | `false`                             |
 | image.pullPolicy                 | image pull policy                                                            | `IfNotPresent`                      |
 | image.repository                 | image repo that contains the admission server                                | `banzaicloud/vault-secrets-webhook` |
-| image.tag                        | image tag                                                                    | `1.0.1`                             |
+| image.tag                        | image tag                                                                    | `1.1.0`                             |
 | image.imagePullSecrets           | image pull secrets for private repositories                                  | `[]`                                |
 | namespaceSelector                | namespace selector to use, will limit webhook scope                          | `{}`                                |
 | nodeSelector                     | node selector to use                                                         | `{}`                                |
@@ -123,7 +123,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | rbac.enabled                     | use rbac                                                                     | `true`                              |
 | rbac.psp.enabled                 | use pod security policy                                                      | `false`                             |
 | env.VAULT_IMAGE                  | vault image                                                                  | `vault:1.3.2`                      |
-| env.VAULT_ENV_IMAGE              | vault-env image                                                           | `banzaicloud/vault-env:1.0.1`      |
+| env.VAULT_ENV_IMAGE              | vault-env image                                                           | `banzaicloud/vault-env:1.1.0`      |
 | volumes                          | extra volume definitions                                                     | `[]`                                |
 | volumeMounts                     | extra volume mounts                                                          | `[]`                                |
 | configMapMutation                | enable injecting values from Vault to ConfigMaps                             | `false`                             |
