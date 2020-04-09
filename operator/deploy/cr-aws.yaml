@@ -8,21 +8,18 @@ spec:
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Insted of credentialsConfig one can use IAM instance profiles, or kube2iam for example:
-  annotations:
-    iam.amazonaws.com/role: "role-arn..."
+    annotations:
+      iam.amazonaws.com/role: "role-arn..."
 
   # Describe where you would like to store the Vault unseal keys and root token
   # in S3 encrypted with KMS.
   unsealConfig:
-    options:
-      # The preFlightChecks flag enables unseal and root token storage tests
-      preFlightChecks: true
     aws:
-      kmsKeyId: "94c836b9-4907-47a7-928e-85d5d5518eff"
-      kmsRegion: "us-east-1"
-      s3Bucket: "my-vault"
+      kmsKeyId: "9f054126-2a98-470c-9f10-9b3b0cad94a1"
+      kmsRegion: "eu-west-1"
+      s3Bucket: "bank-vaults"
       s3Prefix: "vault-operator/"
-      s3Region: "us-east-1"
+      s3Region: "eu-west-1"
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault
@@ -33,8 +30,8 @@ spec:
   config:
     storage:
       s3:
-        region: "us-east-1"
-        bucket: "my-vault"
+        region: "eu-west-1"
+        bucket: "bank-vaults"
     listener:
       tcp:
         address: "0.0.0.0:8200"
@@ -67,7 +64,10 @@ spec:
   # create the "aws-cred" secret manually, it has to have a key called "credentials" holding
   # the configuration in the following format:
   # https://docs.aws.amazon.com/cli/latest/topic/config-vars.html#the-shared-credentials-file
-  credentialsConfig:
-    env: AWS_SHARED_CREDENTIALS_FILE
-    path: /etc/aws/credentials
-    secretName: aws-cred
+  # credentialsConfig:
+  #   env: AWS_SHARED_CREDENTIALS_FILE
+  #   path: /etc/aws/credentials
+  #   secretName: aws-cred
+
+  # Or you can follow: https://banzaicloud.com/docs/bank-vaults/cloud-permissions/#aws
+  # to give access to AWS S3 and KMS on an EKS cluster (recommended).
