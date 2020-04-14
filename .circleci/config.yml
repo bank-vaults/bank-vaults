@@ -67,12 +67,12 @@ jobs:
       docker_layer_caching: true
 
     environment:
-      GO_VERSION: "1.13.1"
+      GO_VERSION: "1.14.2"
       K8S_VERSION: v1.15.3
-      VAULT_VERSION: "1.2.3"
+      VAULT_VERSION: "1.3.4"
       KUBECONFIG: /home/circleci/.kube/config
-      KURUN_VERSION: "0.2.5"
-      MINIKUBE_VERSION: v1.4.0
+      KURUN_VERSION: "0.3.3"
+      MINIKUBE_VERSION: v1.9.2
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       MINIKUBE_HOME: /home/circleci
