@@ -1094,25 +1094,25 @@ func populateTLSSecret(v *vaultv1alpha1.Vault, service *corev1.Service, secret *
 		return time.Time{}, err
 	}
 
-	// If a secret already exists, load the ca.crt and ca.key from it
-	caCrt := ""
-	caKey := ""
 	if secret == nil {
 		return time.Time{}, errors.New("a nil secret was passed into populateTLSSecret, please instantiate the secret first")
-	} else {
-		caCrt = secret.StringData["ca.crt"]
-		caKey = secret.StringData["ca.key"]
 	}
+
+	// These will be empty if the keys don't exist on the Data map
+	caCrt := secret.Data["ca.crt"]
+	caKey := secret.Data["ca.key"]
 
 	// Load the existing certificate authority
 	// Check that the CA certificate and key are not empty
 	// We explicitly do not regenerate the CA if there is an error loading it
 	// replacing an existing CA unexpectedly (in case of an error) is likely
 	// to be worse than not renewing it
-	err = certMgr.LoadCA([]byte(caCrt), []byte(caKey), v.Spec.GetTLSExpiryThreshold())
+	err = certMgr.LoadCA(caCrt, caKey, v.Spec.GetTLSExpiryThreshold())
 
 	// If the CA is expired, empty or not valid but not errored - create a new chain
 	if err == bvtls.ExpiredCAError || err == bvtls.EmptyCAError {
+		log.Info("TLS CA will be regenerated due to: ", "error", err.Error())
+
 		err = certMgr.NewChain()
 		if err != nil {
 			return time.Time{}, err
