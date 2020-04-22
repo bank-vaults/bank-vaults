@@ -16,7 +16,9 @@ package configuration
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -26,6 +28,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/goph/emperror"
+
+	cloudkms "cloud.google.com/go/kms/apiv1"
+	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
 const DefaultLeftDelimiter = "${"
@@ -90,6 +95,7 @@ func funcMap() map[string]interface{} {
 	return map[string]interface{}{
 		"awskms": awsKmsDecrypt,
 		"file":   fileContent,
+		"gcpkms": gcpKmsDecrypt,
 	}
 }
 
@@ -108,6 +114,27 @@ func awsKmsDecrypt(encodedString string, encryptionContext ...string) (string, e
 		return "", err
 	}
 	return string(result.Plaintext), nil
+}
+
+func gcpKmsDecrypt(encodedString string, projectId string, location string, keyRing string, key string) (string, error) {
+	decoded, err := base64.StdEncoding.DecodeString(encodedString)
+	if err != nil {
+		return "", err
+	}
+	ctx := context.Background()
+	client, err := cloudkms.NewKeyManagementClient(ctx)
+	if err != nil {
+		return "", err
+	}
+	req := &kmspb.DecryptRequest{
+		Name:       fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", projectId, location, keyRing, key),
+		Ciphertext: decoded,
+	}
+	resp, err := client.Decrypt(ctx, req)
+	if err != nil {
+		panic(fmt.Sprintf("Decrypt: %v", err))
+	}
+	return string(resp.Plaintext), nil
 }
 
 func fileContent(path string) (string, error) {

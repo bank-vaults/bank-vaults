@@ -12,8 +12,6 @@ spec:
   # Vault Configurer Pods and Services annotations
   vaultConfigurerAnnotations:
     type/instance: "vaultconfigurer"
-    # This may be required if you're using kube2iam to enable vault-configurer to decrypt secrets using the awskms template function
-    # iam.amazonaws.com/role: "role-arn..."
 
   # Use local disk to store Vault file data, see config section.
   volumes:
@@ -89,7 +87,7 @@ spec:
             connection_url: "{{username}}:{{password}}@tcp(mysql:3306)/"
             allowed_roles: ['*']
             username: root
-            password: '${ awskms (env `ENCRYPTED_DB_CREDS`) }'
+            password: '${ gcpkms (env `ENCRYPTED_DB_CREDS`) `project-id` `location` `keyring` `key` }' # Use the actual identifiers for project-id, location, keyring, and key
           roles:
             - name: app
               db_name: mysql
@@ -99,11 +97,17 @@ spec:
 
   envsConfig:
     - name: ENCRYPTED_DB_CREDS
-      value: "SomeAWSKMSEncryptedString" # This should be the base64-encoded ciphertext blob
-    - name: AWS_ACCESS_KEY_ID # If you're not using an EC2 instance role, or something annotation-based like kube2iam, set the appropriate credentials here
-    - name: AWS_SECRET_ACCESS_KEY # But you should never hard-code credentials and keep them in source control :)
-    - name: AWS_REGION
-      value: us-east-1
+      value: "SomeGCPKMSEncryptedString" # This is the base64-encoded ciphertext blob
+
+  # If you are not using a Service Account to authenticate against GCP you can pass in an
+  # GCP credentials refering to a Secret with the following configuration block. You have to
+  # create the "gcp-sa" secret manually, it has to have a key called "service-account.json"
+  # holding the configuration in the following format:
+  # https://cloud.google.com/docs/authentication/getting-started
+  credentialsConfig:
+    env: GOOGLE_APPLICATION_CREDENTIALS
+    path: /etc/gcp/service-account.json
+    secretName: gcp-sa
 
   # Marks presence of Istio, which influences things like port namings
   istioEnabled: false
