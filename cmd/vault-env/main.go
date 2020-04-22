@@ -236,12 +236,18 @@ func main() {
 		}
 
 		go func() {
-			sig := <-sigs
-			err := cmd.Process.Signal(sig)
-			if err != nil {
-				logger.Warnf("failed to signal process with %s: %v", sig, err)
-			} else {
-				logger.Infof("received signal: %s", sig)
+			for sig := range sigs {
+				// We don't want to signal a non-running process.
+				if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
+					break
+				}
+
+				err := cmd.Process.Signal(sig)
+				if err != nil {
+					logger.Warnf("failed to signal process with %s: %v", sig, err)
+				} else {
+					logger.Infof("received signal: %s", sig)
+				}
 			}
 		}()
 
