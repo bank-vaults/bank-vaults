@@ -49,6 +49,7 @@ require (
 	github.com/ugorji/go v1.1.7 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	google.golang.org/api v0.7.0
+	google.golang.org/genproto v0.0.0-20190716160619-c506a9f90610
 	k8s.io/api v0.18.0
 	k8s.io/apimachinery v0.18.1-beta.0
 	k8s.io/client-go v0.18.0

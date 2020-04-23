@@ -16,12 +16,21 @@ package configuration
 
 import (
 	"bytes"
+	"context"
+	"encoding/base64"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/goph/emperror"
+
+	cloudkms "cloud.google.com/go/kms/apiv1"
+	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
 const DefaultLeftDelimiter = "${"
@@ -60,6 +69,7 @@ func (t Templater) EnvTemplate(templateText string) (*bytes.Buffer, error) {
 func (t Templater) Template(templateText string, data interface{}) (*bytes.Buffer, error) {
 	configTemplate, err := template.New(templateName).
 		Funcs(sprig.TxtFuncMap()).
+		Funcs(customFuncs()).
 		Delims(t.leftDelimiter, t.rightDelimiter).
 		Parse(templateText)
 
@@ -75,6 +85,73 @@ func (t Templater) Template(templateText string, data interface{}) (*bytes.Buffe
 	}
 
 	return buffer, nil
+}
+
+func customFuncs() template.FuncMap {
+	return template.FuncMap(funcMap())
+}
+
+func funcMap() map[string]interface{} {
+	return map[string]interface{}{
+		"awskms": awsKmsDecrypt,
+		"file":   fileContent,
+		"gcpkms": gcpKmsDecrypt,
+	}
+}
+
+func awsKmsDecrypt(encodedString string, encryptionContext ...string) (string, error) {
+	awsSession, err := session.NewSession()
+	if err != nil {
+		return "", err
+	}
+	svc := kms.New(awsSession)
+	decoded, err := base64.StdEncoding.DecodeString(encodedString)
+	if err != nil {
+		return "", err
+	}
+	result, err := svc.Decrypt(&kms.DecryptInput{CiphertextBlob: decoded, EncryptionContext: convertContextMap(encryptionContext)})
+	if err != nil {
+		return "", err
+	}
+	return string(result.Plaintext), nil
+}
+
+func gcpKmsDecrypt(encodedString string, projectId string, location string, keyRing string, key string) (string, error) {
+	decoded, err := base64.StdEncoding.DecodeString(encodedString)
+	if err != nil {
+		return "", err
+	}
+	ctx := context.Background()
+	client, err := cloudkms.NewKeyManagementClient(ctx)
+	if err != nil {
+		return "", err
+	}
+	req := &kmspb.DecryptRequest{
+		Name:       fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", projectId, location, keyRing, key),
+		Ciphertext: decoded,
+	}
+	resp, err := client.Decrypt(ctx, req)
+	if err != nil {
+		panic(fmt.Sprintf("Decrypt: %v", err))
+	}
+	return string(resp.Plaintext), nil
+}
+
+func fileContent(path string) (string, error) {
+	r, err := ioutil.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(r), nil
+}
+
+func convertContextMap(encryptionContext []string) map[string]*string {
+	m := make(map[string]*string)
+	for _, p := range encryptionContext {
+		v := strings.Split(p, "=")
+		m[v[0]] = &v[1]
+	}
+	return m
 }
 
 // IsGoTemplate returns true if s is probably a Go Template
