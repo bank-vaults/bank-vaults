@@ -1,7 +1,3 @@
-[![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/banzaicloud/bank-vaults) 
-
-
-
 <p align="center"><img src="docs/images/logo.svg" width="260"></p>
 
 <p align="center">
@@ -26,6 +22,9 @@
     <img src="https://goreportcard.com/badge/github.com/banzaicloud/bank-vaults" alt="Go Report Card">
   </a>
 
+  <a href="https://gitpod.io/#https://github.com/banzaicloud/bank-vaults">
+    <img src="https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod" alt="Gitpod Ready-to-Code">
+  </a>
 
 </p>
 
