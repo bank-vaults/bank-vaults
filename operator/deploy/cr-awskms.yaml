@@ -90,6 +90,8 @@ spec:
             allowed_roles: ['*']
             username: root
             password: '${ awskms (env `ENCRYPTED_DB_CREDS`) }'
+            # You can use the blob function to read the encrypted value from S3 directly
+            # password: '${ awskms (blob `s3://bank-vaults/encrypted/db-creds?region=eu-west-1`) }'
           roles:
             - name: app
               db_name: mysql
