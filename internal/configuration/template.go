@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"strings"
 	"text/template"
@@ -28,6 +29,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/goph/emperror"
+
+	"gocloud.dev/blob"
+	// These drivers are supported currently by the blob function
+	_ "gocloud.dev/blob/azureblob"
+	_ "gocloud.dev/blob/fileblob"
+	_ "gocloud.dev/blob/gcsblob"
+	_ "gocloud.dev/blob/s3blob"
 
 	cloudkms "cloud.google.com/go/kms/apiv1"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
@@ -96,7 +104,40 @@ func funcMap() map[string]interface{} {
 		"awskms": awsKmsDecrypt,
 		"file":   fileContent,
 		"gcpkms": gcpKmsDecrypt,
+		"blob":   blobRead,
 	}
+}
+
+// blob reads a content from a blob url
+// examples:
+// - file:///path/to/dir/file
+// - s3://my-bucket/object?region=us-west-1
+// - gs://my-bucket/object
+// - azblob://my-container/blob
+func blobRead(urlstr string) (string, error) {
+	ctx := context.Background()
+
+	u, err := url.Parse(urlstr)
+	if err != nil {
+		return "", err
+	}
+
+	i := strings.LastIndex(u.Path, "/")
+	key := u.Path[i+1:]
+	u.Path = u.Path[:i]
+
+	bucket, err := blob.OpenBucket(ctx, u.String())
+	if err != nil {
+		return "", err
+	}
+	defer bucket.Close()
+
+	data, err := bucket.ReadAll(ctx, key)
+	if err != nil {
+		return "", err
+	}
+
+	return string(data), nil
 }
 
 func awsKmsDecrypt(encodedString string, encryptionContext ...string) (string, error) {
@@ -116,7 +157,7 @@ func awsKmsDecrypt(encodedString string, encryptionContext ...string) (string, e
 	return string(result.Plaintext), nil
 }
 
-func gcpKmsDecrypt(encodedString string, projectId string, location string, keyRing string, key string) (string, error) {
+func gcpKmsDecrypt(encodedString string, projectID string, location string, keyRing string, key string) (string, error) {
 	decoded, err := base64.StdEncoding.DecodeString(encodedString)
 	if err != nil {
 		return "", err
@@ -127,7 +168,7 @@ func gcpKmsDecrypt(encodedString string, projectId string, location string, keyR
 		return "", err
 	}
 	req := &kmspb.DecryptRequest{
-		Name:       fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", projectId, location, keyRing, key),
+		Name:       fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", projectID, location, keyRing, key),
 		Ciphertext: decoded,
 	}
 	resp, err := client.Decrypt(ctx, req)
