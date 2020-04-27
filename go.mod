@@ -1,9 +1,9 @@
 module github.com/banzaicloud/bank-vaults
 
 require (
-	cloud.google.com/go v0.43.0
+	cloud.google.com/go v0.44.3
 	emperror.dev/errors v0.4.3
-	github.com/Azure/azure-sdk-for-go v23.2.0+incompatible
+	github.com/Azure/azure-sdk-for-go v30.1.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.9.2
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.1
 	github.com/Azure/go-autorest/autorest/to v0.3.0 // indirect
@@ -13,7 +13,7 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190308093441-53f19b3c6bee
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20171213061034-52de7239022c
 	github.com/aokoli/goutils v1.0.1 // indirect
-	github.com/aws/aws-sdk-go v1.27.2
+	github.com/aws/aws-sdk-go v1.30.7
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/banzaicloud/bank-vaults/pkg/sdk v0.2.1
 	github.com/banzaicloud/k8s-objectmatcher v1.2.2
@@ -33,7 +33,6 @@ require (
 	github.com/huandu/xstrings v1.2.1 // indirect
 	github.com/imdario/mergo v0.3.7
 	github.com/jpillora/backoff v0.0.0-20180909062703-3050d21c67d7
-	github.com/mattn/go-isatty v0.0.8 // indirect
 	github.com/miekg/pkcs11 v1.0.3
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -47,9 +46,10 @@ require (
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.5.1
 	github.com/ugorji/go v1.1.7 // indirect
+	gocloud.dev v0.19.1-0.20200414210820-bb59d59f26d5
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	google.golang.org/api v0.7.0
-	google.golang.org/genproto v0.0.0-20190716160619-c506a9f90610
+	google.golang.org/api v0.9.0
+	google.golang.org/genproto v0.0.0-20190801165951-fa694d86fc64
 	k8s.io/api v0.18.0
 	k8s.io/apimachinery v0.18.1-beta.0
 	k8s.io/client-go v0.18.0

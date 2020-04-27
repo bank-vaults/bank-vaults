@@ -90,6 +90,10 @@ spec:
             allowed_roles: ['*']
             username: root
             password: '${ awskms (env `ENCRYPTED_DB_CREDS`) }'
+            # You can use the `blob` function to read the encrypted value from S3 directly
+            # Because `awskms` expects  base64-encoded content you need to store it in base64
+            # or use Sprig's `b64enc` function: http://masterminds.github.io/sprig/encoding.html
+            # password: '${ awskms (blob `s3://bank-vaults/encrypted/db-creds?region=eu-west-1`) }'
           roles:
             - name: app
               db_name: mysql
