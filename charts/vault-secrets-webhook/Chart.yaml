@@ -5,5 +5,5 @@ description: A Helm chart that deploys a mutating admission webhook that configu
 name: vault-secrets-webhook
 home: https://banzaicloud.com/products/bank-vaults/
 maintainers:
-- name: Banzai Cloud
-  email: info@banzaicloud.com
+  - name: Banzai Cloud
+    email: info@banzaicloud.com

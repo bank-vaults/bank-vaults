@@ -7,14 +7,14 @@ replicaCount: 2
 debug: false
 
 certificate:
-    useCertManager: false
-    generate: true
-    server:
-        tls:
-            crt:
-            key:
-    ca:
-        crt:
+  useCertManager: false
+  generate: true
+  server:
+    tls:
+      crt:
+      key:
+  ca:
+    crt:
 image:
   repository: banzaicloud/vault-secrets-webhook
   tag: 1.2.0
@@ -77,7 +77,7 @@ rbac:
     enabled: false
 
 # A list of Kubernetes resource types to mutate as well:
-# Example: ["ingresses", "servicemonitors"] 
+# Example: ["ingresses", "servicemonitors"]
 customResourceMutations: []
 
 customResourcesFailurePolicy: Ignore
@@ -95,10 +95,10 @@ apiSideEffectValue: NoneOnDryRun
 
 namespaceSelector:
   matchExpressions:
-  - key: name
-    operator: NotIn
-    values:
-    - kube-system
+    - key: name
+      operator: NotIn
+      values:
+        - kube-system
   # matchLabels:
   #   vault-injection: enabled
 

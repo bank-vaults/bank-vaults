@@ -9,5 +9,5 @@ sources:
   - https://github.com/hashicorp/vault
   - https://github.com/banzaicloud/bank-vaults
 maintainers:
-- name: Banzai Cloud
-  email: info@banzaicloud.com
+  - name: Banzai Cloud
+    email: info@banzaicloud.com
