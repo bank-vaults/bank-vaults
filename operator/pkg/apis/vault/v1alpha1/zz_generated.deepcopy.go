@@ -555,6 +555,11 @@ func (in *VaultStatus) DeepCopyInto(out *VaultStatus) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Conditions != nil {
+		in, out := &in.Conditions, &out.Conditions
+		*out = make([]v1.ComponentCondition, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

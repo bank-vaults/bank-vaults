@@ -44,6 +44,7 @@ import (
 	"github.com/spf13/cast"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -579,6 +580,8 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 				leader = podName
 				break
 			}
+		} else {
+			log.WithName("health").Error(err, "failed to query vault health")
 		}
 	}
 
@@ -600,6 +603,14 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	if !reflect.DeepEqual(podNames, v.Status.Nodes) || !reflect.DeepEqual(leader, v.Status.Leader) {
 		v.Status.Nodes = podNames
 		v.Status.Leader = leader
+		conditionStatus := v1.ConditionFalse
+		if leader != "" {
+			conditionStatus = v1.ConditionTrue
+		}
+		v.Status.Conditions = []v1.ComponentCondition{{
+			Type:   v1.ComponentHealthy,
+			Status: conditionStatus,
+		}}
 		log.V(1).Info("Updating vault status", "status", v.Status, "resourceVersion", v.ResourceVersion)
 		err := r.client.Update(context.TODO(), v)
 		if err != nil {
