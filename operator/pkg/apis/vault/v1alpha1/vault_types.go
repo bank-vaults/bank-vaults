@@ -735,7 +735,7 @@ type VaultStatus struct {
 	// Important: Run "make generate-code" to regenerate code after modifying this file
 	Nodes      []string                `json:"nodes"`
 	Leader     string                  `json:"leader"`
-	Conditions []v1.ComponentCondition `json:"conditions"`
+	Conditions []v1.ComponentCondition `json:"conditions,omitempty"`
 }
 
 // UnsealConfig represents the UnsealConfig field of a VaultSpec Kubernetes object
