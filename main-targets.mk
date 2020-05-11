@@ -145,11 +145,9 @@ bin/controller-gen-${CONTROLLER_GEN_VERSION}:
 bin/controller-gen: bin/controller-gen-${CONTROLLER_GEN_VERSION}
 	@ln -sf controller-gen-${CONTROLLER_GEN_VERSION}/controller-gen bin/controller-gen
 
-# Please ignore the errors because of using `interface{}`
-# See: https://github.com/kubernetes-sigs/controller-tools/issues/287
 .PHONY: generate-crds
 generate-crds: bin/controller-gen ## Regenerate CRDs in the Helm chart and examples
-	bin/controller-gen crd paths=./operator/... output:crd:artifacts:config=./operator/deploy/ || true
+	bin/controller-gen crd paths=./operator/... output:crd:artifacts:config=./operator/deploy/
 	cp operator/deploy/vault.banzaicloud.com_vaults.yaml charts/vault-operator/crds/crd.yaml
 	cp operator/deploy/vault.banzaicloud.com_vaults.yaml operator/deploy/crd.yaml
 	rm operator/deploy/vault.banzaicloud.com_vaults.yaml
