@@ -21,7 +21,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/http"
@@ -507,7 +506,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Create configurer if there is any external config
-	if len(v.Spec.ExternalConfig) != 0 {
+	if len(v.Spec.ExternalConfig.Raw) != 0 {
 		err := r.deployConfigurer(v, tlsAnnotations)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -1030,8 +1029,10 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 
 	// merge provided VaultConfigurerPodSpec into the PodSpec defined above
 	// the values in VaultConfigurerPodSpec will never overwrite fields defined in the PodSpec above
-	if err := mergo.Merge(&podSpec, v.Spec.VaultConfigurerPodSpec); err != nil {
-		return nil, err
+	if v.Spec.VaultConfigurerPodSpec != nil {
+		if err := mergo.Merge(&podSpec, v.Spec.VaultConfigurerPodSpec); err != nil {
+			return nil, err
+		}
 	}
 
 	dep := &appsv1.Deployment{

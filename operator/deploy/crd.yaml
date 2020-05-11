@@ -1786,9 +1786,6 @@ spec:
                       type: string
                     secretNamespace:
                       type: string
-                  required:
-                  - secretName
-                  - secretNamespace
                   type: object
                 options:
                   description: UnsealOptions represents the common options to all
@@ -15627,40 +15624,7 @@ spec:
                 type: object
               type: array
           required:
-          - annotations
-          - bankVaultsImage
           - config
-          - credentialsConfig
-          - envsConfig
-          - etcdSize
-          - etcdVersion
-          - externalConfig
-          - fluentdConfig
-          - fluentdEnabled
-          - fluentdImage
-          - image
-          - nodeAffinity
-          - nodeSelector
-          - podAntiAffinity
-          - raftLeaderAddress
-          - serviceAccount
-          - servicePorts
-          - serviceType
-          - size
-          - statsdDisabled
-          - statsdImage
-          - tolerations
-          - unsealConfig
-          - vaultAnnotations
-          - vaultConfigurerAnnotations
-          - vaultConfigurerLabels
-          - vaultConfigurerPodSpec
-          - vaultEnvsConfig
-          - vaultLabels
-          - vaultPodSpec
-          - veleroFsfreezeImage
-          - watchedSecretsAnnotations
-          - watchedSecretsLabels
           type: object
         status:
           description: VaultStatus defines the observed state of Vault
