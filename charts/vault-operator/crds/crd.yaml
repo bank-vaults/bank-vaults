@@ -93,6 +93,7 @@ spec:
             config:
               description: 'Config is the Vault Server configuration. See https://www.vaultproject.io/docs/configuration/
                 for more details. default:'
+              x-kubernetes-preserve-unknown-fields: true
             credentialsConfig:
               description: 'CredentialsConfig defines a external Secret for Vault
                 and how it should be mounted to the Vault Pod for example accessing
@@ -955,6 +956,7 @@ spec:
                 Devices - Plugin Backends - Policies - Startup Secrets (Bank Vaults
                 feature) A documented example: https://github.com/banzaicloud/bank-vaults/blob/master/vault-config.yml
                 default:'
+              x-kubernetes-preserve-unknown-fields: true
             fluentdConfig:
               description: 'FluentDConfig specifices the FluentD configuration to
                 use for Vault log exportation default:'
