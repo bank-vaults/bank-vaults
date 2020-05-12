@@ -88,21 +88,20 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 		},
 	}
 	if vaultConfig.TLSSecret != "" {
-		mountPath := "/vault/tls/ca.crt"
+		mountPath := "/vault/tls/"
 		volumeName := "vault-tls"
 		if hasTLSVolume(pod.Spec.Volumes) {
-			mountPath = "/vault-env/tls/ca.crt"
+			mountPath = "/vault-env/tls/"
 			volumeName = "vault-env-tls"
 		}
 
 		containerEnvVars = append(containerEnvVars, corev1.EnvVar{
 			Name:  "VAULT_CACERT",
-			Value: mountPath,
+			Value: mountPath + "ca.crt",
 		})
 		containerVolMounts = append(containerVolMounts, corev1.VolumeMount{
 			Name:      volumeName,
 			MountPath: mountPath,
-			SubPath:   "ca.crt",
 		})
 	}
 
@@ -313,21 +312,20 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 		}
 
 		if vaultConfig.TLSSecret != "" {
-			mountPath := "/vault/tls/ca.crt"
+			mountPath := "/vault/tls/"
 			volumeName := "vault-tls"
 			if hasTLSVolume(podSpec.Volumes) {
-				mountPath = "/vault-env/tls/ca.crt"
+				mountPath = "/vault-env/tls/"
 				volumeName = "vault-env-tls"
 			}
 
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  "VAULT_CACERT",
-				Value: mountPath,
+				Value: mountPath + "ca.crt",
 			})
 			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
 				Name:      volumeName,
 				MountPath: mountPath,
-				SubPath:   "ca.crt",
 			})
 		}
 
@@ -420,8 +418,18 @@ func (mw *mutatingWebhook) getVolumes(existingVolumes []corev1.Volume, agentConf
 		volumes = append(volumes, corev1.Volume{
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: vaultConfig.TLSSecret,
+				Projected: &corev1.ProjectedVolumeSource{
+					Sources: []corev1.VolumeProjection{{
+						Secret: &corev1.SecretProjection{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: vaultConfig.TLSSecret,
+							},
+							Items: []corev1.KeyToPath{{
+								Key:  "ca.crt",
+								Path: "ca.crt",
+							}},
+						},
+					}},
 				},
 			},
 		})
