@@ -772,7 +772,7 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 			Interval: "30s",
 			Port:     v.Spec.GetAPIPortName(),
 			Scheme:   strings.ToLower(string(getVaultURIScheme(v))),
-			Params:   map[string][]string{"format": []string{"prometheus"}},
+			Params:   map[string][]string{"format": {"prometheus"}},
 			Path:     "/v1/sys/metrics",
 			TLSConfig: &monitorv1.TLSConfig{
 				InsecureSkipVerify: true,
