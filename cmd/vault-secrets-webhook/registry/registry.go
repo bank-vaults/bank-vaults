@@ -294,13 +294,24 @@ func (k *ContainerInfo) fixDockerHubImage(image string) string {
 func (k *ContainerInfo) checkImagePullSecret(namespace string, secret string) (bool, error) {
 	data, err := k.readDockerSecret(namespace, secret)
 	if err != nil {
-		return false, fmt.Errorf("cannot read imagePullSecret '%s' in namespace '%s': %s", secret, namespace, err.Error())
+		return false, fmt.Errorf("cannot read imagePullSecret %s.%s: %s", secret, namespace, err.Error())
+	}
+
+	dockerConfigJSONKey := viper.GetString("default_image_pull_docker_config_json_key")
+	var dockercfg []byte
+	// check the old .dockercfg key as a fallback option as well
+	for _, key := range []string{dockerConfigJSONKey, corev1.DockerConfigKey} {
+		if dockercfg = data[key]; dockercfg != nil {
+			break
+		}
+	}
+
+	if dockercfg == nil {
+		return false, fmt.Errorf("failed to find any dockercfg key in imagePullSecret: %s.%s", secret, namespace)
 	}
 
 	var dockerCreds DockerCreds
-
-	dockerConfigJSONKey := viper.GetString("default_image_pull_docker_config_json_key")
-	err = json.Unmarshal(data[dockerConfigJSONKey], &dockerCreds)
+	err = json.Unmarshal(dockercfg, &dockerCreds)
 	if err != nil {
 		return false, fmt.Errorf("cannot unmarshal docker configuration from imagePullSecret: %s", err.Error())
 	}
