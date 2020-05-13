@@ -88,21 +88,20 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 		},
 	}
 	if vaultConfig.TLSSecret != "" {
-		mountPath := "/vault/tls/ca.crt"
+		mountPath := "/vault/tls/"
 		volumeName := "vault-tls"
 		if hasTLSVolume(pod.Spec.Volumes) {
-			mountPath = "/vault-env/tls/ca.crt"
+			mountPath = "/vault-env/tls/"
 			volumeName = "vault-env-tls"
 		}
 
 		containerEnvVars = append(containerEnvVars, corev1.EnvVar{
 			Name:  "VAULT_CACERT",
-			Value: mountPath,
+			Value: mountPath + "ca.crt",
 		})
 		containerVolMounts = append(containerVolMounts, corev1.VolumeMount{
 			Name:      volumeName,
 			MountPath: mountPath,
-			SubPath:   "ca.crt",
 		})
 	}
 
@@ -194,6 +193,162 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 	return nil
 }
 
+func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSpec *corev1.PodSpec, vaultConfig VaultConfig, ns string) (bool, error) {
+	mutated := false
+
+	for i, container := range containers {
+		var envVars []corev1.EnvVar
+		if len(container.EnvFrom) > 0 {
+			envFrom, err := mw.lookForEnvFrom(container.EnvFrom, ns)
+			if err != nil {
+				return false, err
+			}
+			envVars = append(envVars, envFrom...)
+		}
+
+		for _, env := range container.Env {
+			if hasVaultPrefix(env.Value) {
+				envVars = append(envVars, env)
+			}
+			if env.ValueFrom != nil {
+				valueFrom, err := mw.lookForValueFrom(env, ns)
+				if err != nil {
+					return false, err
+				}
+				if valueFrom == nil {
+					continue
+				}
+				envVars = append(envVars, *valueFrom)
+			}
+		}
+
+		if len(envVars) == 0 {
+			continue
+		}
+
+		mutated = true
+
+		args := container.Command
+
+		// the container has no explicitly specified command
+		if len(args) == 0 {
+			imageConfig, err := mw.registry.GetImageConfig(mw.k8sClient, ns, &container, podSpec)
+			if err != nil {
+				return false, err
+			}
+
+			args = append(args, imageConfig.Entrypoint...)
+
+			// If no Args are defined we can use the Docker CMD from the image
+			// https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#notes
+			if len(container.Args) == 0 {
+				args = append(args, imageConfig.Cmd...)
+			}
+		}
+
+		args = append(args, container.Args...)
+
+		container.Command = []string{"/vault/vault-env"}
+		container.Args = args
+
+		container.VolumeMounts = append(container.VolumeMounts, []corev1.VolumeMount{
+			{
+				Name:      "vault-env",
+				MountPath: "/vault/",
+			},
+		}...)
+
+		container.Env = append(container.Env, []corev1.EnvVar{
+			{
+				Name:  "VAULT_ADDR",
+				Value: vaultConfig.Addr,
+			},
+			{
+				Name:  "VAULT_SKIP_VERIFY",
+				Value: vaultConfig.SkipVerify,
+			},
+			{
+				Name:  "VAULT_PATH",
+				Value: vaultConfig.Path,
+			},
+			{
+				Name:  "VAULT_ROLE",
+				Value: vaultConfig.Role,
+			},
+			{
+				Name:  "VAULT_IGNORE_MISSING_SECRETS",
+				Value: vaultConfig.IgnoreMissingSecrets,
+			},
+			{
+				Name:  "VAULT_ENV_PASSTHROUGH",
+				Value: vaultConfig.VaultEnvPassThrough,
+			},
+			{
+				Name:  "VAULT_JSON_LOG",
+				Value: vaultConfig.EnableJSONLog,
+			},
+			{
+				Name:  "VAULT_CLIENT_TIMEOUT",
+				Value: vaultConfig.ClientTimeout.String(),
+			},
+		}...)
+
+		if len(vaultConfig.TransitKeyID) > 0 {
+			container.Env = append(container.Env, []corev1.EnvVar{
+				{
+					Name:  "VAULT_TRANSIT_KEY_ID",
+					Value: vaultConfig.TransitKeyID,
+				},
+			}...)
+		}
+
+		if len(vaultConfig.TransitPath) > 0 {
+			container.Env = append(container.Env, []corev1.EnvVar{
+				{
+					Name:  "VAULT_TRANSIT_PATH",
+					Value: vaultConfig.TransitPath,
+				},
+			}...)
+		}
+
+		if vaultConfig.TLSSecret != "" {
+			mountPath := "/vault/tls/"
+			volumeName := "vault-tls"
+			if hasTLSVolume(podSpec.Volumes) {
+				mountPath = "/vault-env/tls/"
+				volumeName = "vault-env-tls"
+			}
+
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  "VAULT_CACERT",
+				Value: mountPath + "ca.crt",
+			})
+			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+				Name:      volumeName,
+				MountPath: mountPath,
+			})
+		}
+
+		if vaultConfig.UseAgent {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  "VAULT_TOKEN_FILE",
+				Value: "/vault/.vault-token",
+			})
+		}
+
+		if vaultConfig.VaultEnvDaemon {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  "VAULT_ENV_DAEMON",
+				Value: "true",
+			})
+		}
+
+		containers[i] = container
+	}
+
+	return mutated, nil
+}
+
 func (mw *mutatingWebhook) addSecretsVolToContainers(vaultConfig VaultConfig, containers []corev1.Container) {
 	for i, container := range containers {
 		mw.logger.Debugf("Add secrets VolumeMount to container %s", container.Name)
@@ -263,8 +418,18 @@ func (mw *mutatingWebhook) getVolumes(existingVolumes []corev1.Volume, agentConf
 		volumes = append(volumes, corev1.Volume{
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: vaultConfig.TLSSecret,
+				Projected: &corev1.ProjectedVolumeSource{
+					Sources: []corev1.VolumeProjection{{
+						Secret: &corev1.SecretProjection{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: vaultConfig.TLSSecret,
+							},
+							Items: []corev1.KeyToPath{{
+								Key:  "ca.crt",
+								Path: "ca.crt",
+							}},
+						},
+					}},
 				},
 			},
 		})
