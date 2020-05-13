@@ -820,7 +820,7 @@ func (v *vault) configurePolicies(config *viper.Viper) error {
 
 			// Policies are parsable but couldn't be HCL formatted (most likely JSON)
 			policyRules = []byte(policy["rules"])
-			logrus.Warnf("error HCL-formatting %s policy rules (ignore if rules are JSON-formatted): %s", policyName, err.Error())
+			logrus.Debugf("error HCL-formatting %s policy rules (ignore if rules are JSON-formatted): %s", policyName, err.Error())
 		}
 
 		err = v.cl.Sys().PutPolicy(policyName, string(policyRules))
