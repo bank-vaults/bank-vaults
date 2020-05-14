@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/hcl"
 	hclPrinter "github.com/hashicorp/hcl/hcl/printer"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -807,9 +808,19 @@ func (v *vault) configurePolicies(config *viper.Viper) error {
 
 	for _, policy := range policies {
 		policyName := policy["name"]
+
+		// Try to format rules (HCL only)
 		policyRules, err := hclPrinter.Format([]byte(policy["rules"]))
 		if err != nil {
-			return fmt.Errorf("error formatting %s policy rules: %s", policyName, err.Error())
+			// Check if rules parse (HCL or JSON)
+			_, parseErr := hcl.Parse(policy["rules"])
+			if parseErr != nil {
+				return fmt.Errorf("error parsing %s policy rules: %s", policyName, parseErr.Error())
+			}
+
+			// Policies are parsable but couldn't be HCL formatted (most likely JSON)
+			policyRules = []byte(policy["rules"])
+			logrus.Debugf("error HCL-formatting %s policy rules (ignore if rules are JSON-formatted): %s", policyName, err.Error())
 		}
 
 		err = v.cl.Sys().PutPolicy(policyName, string(policyRules))
