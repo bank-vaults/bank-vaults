@@ -24,7 +24,7 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/frankban/quicktest v1.4.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
-	github.com/gin-gonic/gin v1.4.0
+	github.com/gin-gonic/gin v1.6.3
 	github.com/google/go-cmp v0.4.0
 	github.com/goph/emperror v0.17.2
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
@@ -45,7 +45,6 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.5.1
-	github.com/ugorji/go v1.1.7 // indirect
 	gocloud.dev v0.19.1-0.20200414210820-bb59d59f26d5
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	google.golang.org/api v0.9.0
