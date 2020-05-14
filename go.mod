@@ -16,7 +16,7 @@ require (
 	github.com/aws/aws-sdk-go v1.30.7
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/banzaicloud/bank-vaults/pkg/sdk v0.2.1
-	github.com/banzaicloud/k8s-objectmatcher v1.2.2
+	github.com/banzaicloud/k8s-objectmatcher v1.3.2
 	github.com/coreos/etcd-operator v0.9.4
 	github.com/coreos/prometheus-operator v0.29.0
 	github.com/docker/distribution v2.7.1+incompatible // indirect
@@ -53,7 +53,7 @@ require (
 	k8s.io/api v0.18.0
 	k8s.io/apimachinery v0.18.1-beta.0
 	k8s.io/client-go v0.18.0
-	k8s.io/code-generator v0.17.2
+	k8s.io/code-generator v0.17.4
 	k8s.io/kube-openapi v0.0.0-20200121204235-bf4fb3bd569c
 	k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89
 	sigs.k8s.io/controller-runtime v0.5.2
