@@ -10,7 +10,7 @@ require (
 	github.com/Azure/go-autorest/autorest/validation v0.2.0 // indirect
 	github.com/Masterminds/semver v1.4.2
 	github.com/Masterminds/sprig v2.15.0+incompatible
-	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190308093441-53f19b3c6bee
+	github.com/aliyun/alibaba-cloud-sdk-go v1.61.193
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20171213061034-52de7239022c
 	github.com/aokoli/goutils v1.0.1 // indirect
 	github.com/aws/aws-sdk-go v1.30.7
