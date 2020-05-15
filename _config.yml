@@ -1,4 +1,2 @@
-theme: jekyll-theme-minimal
-# title: Bank-Vaults
-logo: /docs/images/banzai cloud logo-ikon.png
+remote_theme: banzaicloud/minima
 google_analytics: UA-109213883-1
