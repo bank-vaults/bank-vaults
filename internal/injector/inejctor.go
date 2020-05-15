@@ -15,6 +15,7 @@
 package injector
 
 import (
+	"encoding/json"
 	"strings"
 
 	"emperror.dev/errors"
@@ -114,25 +115,34 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 			key = split[1]
 		}
 
-		version := "-1"
+		versionOrData := "-1"
+		if update {
+			versionOrData = "{}"
+		}
 		if len(split) == 3 {
-			version = split[2]
+			versionOrData = split[2]
 		}
 
-		secretCacheKey := valuePath + "#" + version
+		secretCacheKey := valuePath + "#" + versionOrData
 
 		var secret *vaultapi.Secret
 		var err error
 
 		if secret = secretCache[secretCacheKey]; secret == nil {
 			if update {
-				secret, err = i.client.RawClient().Logical().Write(valuePath, map[string]interface{}{})
+				var data map[string]interface{}
+				err = json.Unmarshal([]byte(versionOrData), &data)
+				if err != nil {
+					return errors.Wrap(err, "failed to unmarshal data for writing")
+				}
+
+				secret, err = i.client.RawClient().Logical().Write(valuePath, data)
 				if err != nil {
 					return errors.WrapWithDetails(err, "failed to write secret to path:", valuePath)
 				}
 				secretCache[secretCacheKey] = secret
 			} else {
-				secret, err = i.client.RawClient().Logical().ReadWithData(valuePath, map[string][]string{"version": {version}})
+				secret, err = i.client.RawClient().Logical().ReadWithData(valuePath, map[string][]string{"version": {versionOrData}})
 				if err != nil {
 					if !i.config.IgnoreMissingSecrets {
 						return errors.WrapWithDetails(err, "failed to read secret from path:", valuePath)
@@ -170,13 +180,13 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 			// Check if a given version of a path is destroyed
 			metadata := secret.Data["metadata"].(map[string]interface{})
 			if metadata["destroyed"].(bool) {
-				i.logger.Warnln("version of secret has been permanently destroyed version:", version, "path:", valuePath)
+				i.logger.Warnln("version of secret has been permanently destroyed version:", versionOrData, "path:", valuePath)
 			}
 
 			// Check if a given version of a path still exists
 			if deletionTime, ok := metadata["deletion_time"].(string); ok && deletionTime != "" {
 				i.logger.Warnln("cannot find data for path, given version has been deleted",
-					"path:", valuePath, "version:", version,
+					"path:", valuePath, "version:", versionOrData,
 					"deletion_time", deletionTime)
 			}
 		} else {
