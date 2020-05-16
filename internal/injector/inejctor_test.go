@@ -17,6 +17,7 @@
 package injector
 
 import (
+	"encoding/base64"
 	"testing"
 
 	vaultapi "github.com/hashicorp/vault/api"
@@ -30,11 +31,27 @@ func TestSecretInjector(t *testing.T) {
 	client, err := vault.NewClientFromConfig(vaultapi.DefaultConfig())
 	assert.NoError(t, err)
 
+	err = client.RawClient().Sys().Mount("transit", &vaultapi.MountInput{Type: "transit"})
+	assert.NoError(t, err)
+
+	_, err = client.RawClient().Logical().Write("transit/keys/mykey", nil)
+	assert.NoError(t, err)
+
+	secret, err := client.RawClient().Logical().Write("transit/encrypt/mykey", map[string]interface{}{
+		"plaintext": base64.StdEncoding.EncodeToString([]byte("secret")),
+	})
+	assert.NoError(t, err)
+
+	ciphertext := secret.Data["ciphertext"].(string)
+
 	_, err = client.RawClient().Logical().Write("secret/data/account", vault.NewData(0, map[string]interface{}{"password": "secret"}))
 	assert.NoError(t, err)
 
 	defer func() {
-		_, err := client.RawClient().Logical().Delete("secret/metadata/account")
+		err = client.RawClient().Sys().Unmount("transit")
+		assert.NoError(t, err)
+
+		_, err = client.RawClient().Logical().Delete("secret/metadata/account")
 		assert.NoError(t, err)
 	}()
 
@@ -52,6 +69,7 @@ func TestSecretInjector(t *testing.T) {
 
 	references := map[string]string{
 		"ACCOUNT_PASSWORD": "vault:secret/data/account#password",
+		"TRANSIT_SECRET":   ">>vault:transit/decrypt/mykey#${.plaintext | b64dec}#{\"ciphertext\":\"" + ciphertext + "\"}",
 	}
 
 	results := map[string]string{}
@@ -62,5 +80,8 @@ func TestSecretInjector(t *testing.T) {
 	err = injector.InjectSecretsFromVault(references, injectFunc)
 	assert.NoError(t, err)
 
-	assert.Equal(t, map[string]string{"ACCOUNT_PASSWORD": "secret"}, results)
+	assert.Equal(t, map[string]string{
+		"ACCOUNT_PASSWORD": "secret",
+		"TRANSIT_SECRET":   "secret",
+	}, results)
 }
