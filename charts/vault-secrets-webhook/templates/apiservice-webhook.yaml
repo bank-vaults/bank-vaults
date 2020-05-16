@@ -19,8 +19,6 @@
 {{- $tlsKey = required "Required when certificate.generate is false" .Values.certificate.server.tls.key }}
 {{- $caCrt = required "Required when certificate.generate is false" .Values.certificate.ca.crt }}
 {{- end }}
-{{- $major := .Capabilities.KubeVersion.Major -}}
-{{- $minor := .Capabilities.KubeVersion.Minor -}}
 
 {{- if (eq .Values.certificate.useCertManager false) }}
 apiVersion: v1
@@ -74,7 +72,7 @@ webhooks:
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
-{{- if and (eq (int $major) 1) (ge (int $minor) 15) }}
+{{- if semverCompare ">=1.15-0" .Capabilities.KubeVersion.GitVersion }}
   objectSelector:
     matchExpressions:
     {{- if .Values.objectSelector.matchExpressions }}
@@ -181,7 +179,7 @@ webhooks:
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
-{{- if and (eq (int $major) 1) (ge (int $minor) 15) }}
+{{- if semverCompare ">=1.15-0" .Capabilities.KubeVersion.GitVersion }}
   objectSelector:
     matchExpressions:
     {{- if .Values.objectSelector.matchExpressions }}
@@ -193,6 +191,6 @@ webhooks:
       - skip
 {{- end }}
 {{- end }}
-{{- if and (ge (int $major) 1) (ge (int $minor) 12) }}
+{{- if semverCompare ">=1.12-0" .Capabilities.KubeVersion.GitVersion }}
   sideEffects: {{ .Values.apiSideEffectValue }}
 {{- end }}
