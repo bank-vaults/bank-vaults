@@ -206,6 +206,10 @@ workflows:
       - check
       - snyk:
           context: snyk
+          filters:
+            branches:
+              only:
+                - master
       - acceptance-test:
           requires:
             - check
