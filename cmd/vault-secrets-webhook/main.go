@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -47,7 +46,7 @@ type VaultConfig struct {
 	Addr                        string
 	Role                        string
 	Path                        string
-	SkipVerify                  string
+	SkipVerify                  bool
 	TLSSecret                   string
 	ClientTimeout               time.Duration
 	UseAgent                    bool
@@ -143,9 +142,9 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-skip-verify"]; ok {
-		vaultConfig.SkipVerify = val
+		vaultConfig.SkipVerify, _ = strconv.ParseBool(val)
 	} else {
-		vaultConfig.SkipVerify = viper.GetString("vault_skip_verify")
+		vaultConfig.SkipVerify = viper.GetBool("vault_skip_verify")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-tls-secret"]; ok {
@@ -439,12 +438,7 @@ func newVaultClient(vaultConfig VaultConfig) (*vault.Client, error) {
 	clientConfig := vaultapi.DefaultConfig()
 	clientConfig.Address = vaultConfig.Addr
 
-	vaultInsecure, err := strconv.ParseBool(vaultConfig.SkipVerify)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
-	}
-
-	tlsConfig := vaultapi.TLSConfig{Insecure: vaultInsecure}
+	tlsConfig := vaultapi.TLSConfig{Insecure: vaultConfig.SkipVerify}
 
 	clientConfig.ConfigureTLS(&tlsConfig)
 

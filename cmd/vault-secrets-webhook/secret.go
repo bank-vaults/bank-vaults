@@ -17,10 +17,10 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
+	"emperror.dev/errors"
 	dockerTypes "github.com/docker/docker/api/types"
 	corev1 "k8s.io/api/core/v1"
 
@@ -45,7 +45,7 @@ func (mw *mutatingWebhook) mutateSecret(secret *corev1.Secret, vaultConfig Vault
 
 	vaultClient, err := newVaultClient(vaultConfig)
 	if err != nil {
-		return fmt.Errorf("failed to create vault client: %v", err)
+		return errors.Wrap(err, "failed to create vault client")
 	}
 
 	defer vaultClient.Close()
@@ -55,11 +55,11 @@ func (mw *mutatingWebhook) mutateSecret(secret *corev1.Secret, vaultConfig Vault
 			var dc registry.DockerCreds
 			err := json.Unmarshal(value, &dc)
 			if err != nil {
-				return fmt.Errorf("unmarshal dockerconfig json failed: %v", err)
+				return errors.Wrap(err, "unmarshal dockerconfig json failed")
 			}
 			err = mw.mutateDockerCreds(secret, &dc, vaultClient, vaultConfig)
 			if err != nil {
-				return fmt.Errorf("mutate dockerconfig json failed: %v", err)
+				return errors.Wrap(err, "mutate dockerconfig json failed")
 			}
 		} else if hasVaultPrefix(string(value)) {
 			sc := map[string]string{
@@ -67,7 +67,7 @@ func (mw *mutatingWebhook) mutateSecret(secret *corev1.Secret, vaultConfig Vault
 			}
 			err := mw.mutateSecretData(secret, sc, vaultClient, vaultConfig)
 			if err != nil {
-				return fmt.Errorf("mutate generic secret failed: %v", err)
+				return errors.Wrap(err, "mutate generic secret failed")
 			}
 		}
 	}
@@ -81,13 +81,13 @@ func (mw *mutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *registry
 	for key, creds := range dc.Auths {
 		authBytes, err := base64.StdEncoding.DecodeString(creds.Auth)
 		if err != nil {
-			return fmt.Errorf("auth base64 decoding failed: %v", err)
+			return errors.Wrap(err, "auth base64 decoding failed")
 		}
 		auth := string(authBytes)
 		if hasVaultPrefix(auth) {
 			split := strings.Split(auth, ":")
 			if len(split) != 4 {
-				return errors.New("splitting auth credentials failed")
+				return errors.New("splitting auth credentials failed") // nolint:goerr113
 			}
 			username := fmt.Sprintf("%s:%s", split[0], split[1])
 			password := fmt.Sprintf("%s:%s", split[2], split[3])
@@ -115,7 +115,7 @@ func (mw *mutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *registry
 
 	marshalled, err := json.Marshal(assembled)
 	if err != nil {
-		return fmt.Errorf("marshaling dockerconfig failed: %v", err)
+		return errors.Wrap(err, "marshaling dockerconfig failed")
 	}
 
 	secret.Data[corev1.DockerConfigJsonKey] = marshalled

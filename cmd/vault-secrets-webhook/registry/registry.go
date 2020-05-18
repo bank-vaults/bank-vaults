@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"emperror.dev/errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
@@ -136,30 +137,30 @@ func getImageBlob(container ContainerInfo) (*imagev1.ImageConfig, error) {
 		hub, err = registry.New(container.RegistryAddress, container.RegistryUsername, container.RegistryPassword)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("cannot create client for registry: %s", err.Error())
+		return nil, errors.Wrap(err, "cannot create client for registry")
 	}
 
 	manifest, err := hub.ManifestV2(imageName, reference)
 	if err != nil {
-		return nil, fmt.Errorf("cannot download manifest for image: %s", err.Error())
+		return nil, errors.Wrap(err, "cannot download manifest for image")
 	}
 
 	reader, err := hub.DownloadBlob(imageName, manifest.Config.Digest)
 	if err != nil {
-		return nil, fmt.Errorf("cannot download blob: %s", err.Error())
+		return nil, errors.Wrap(err, "cannot download blob")
 	}
 
 	defer reader.Close()
 
 	b, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read blob: %s", err.Error())
+		return nil, errors.Wrap(err, "cannot read blob")
 	}
 
 	var imageMetadata imagev1.Image
 	err = json.Unmarshal(b, &imageMetadata)
 	if err != nil {
-		return nil, fmt.Errorf("cannot unmarshal BlobResponse JSON: %s", err.Error())
+		return nil, errors.Wrap(err, "cannot unmarshal BlobResponse JSON")
 	}
 
 	return &imageMetadata.Config, nil
@@ -243,26 +244,26 @@ func (k *ContainerInfo) parseDockerConfig(dockerCreds DockerCreds) (bool, error)
 				// The registry.Auth field contains a base64 encoded string of the format <username>:<password>
 				decodedAuth, err := base64.StdEncoding.DecodeString(registryAuth.Auth)
 				if err != nil {
-					return false, fmt.Errorf("failed to decode auth field for registry %s: %s", registryName, err.Error())
+					return false, errors.Wrapf(err, "failed to decode auth field for registry %s", registryName)
 				}
 				auth := strings.Split(string(decodedAuth), ":")
 				if len(auth) != 2 {
-					return false, fmt.Errorf("unexpected number of elements in auth field for registry %s: %d (expected 2)", registryName, len(auth))
+					return false, errors.Errorf("unexpected number of elements in auth field for registry %s: %d (expected 2)", registryName, len(auth))
 				}
 				// decodedAuth is something like ":xxx"
 				if len(auth[0]) <= 0 {
-					return false, fmt.Errorf("username element of auth field for registry %s missing", registryName)
+					return false, errors.Errorf("username element of auth field for registry %s missing", registryName)
 				}
 				// decodedAuth is something like "xxx:"
 				if len(auth[1]) <= 0 {
-					return false, fmt.Errorf("password element of auth field for registry %s missing", registryName)
+					return false, errors.Errorf("password element of auth field for registry %s missing", registryName)
 				}
 				k.RegistryUsername = auth[0]
 				k.RegistryPassword = auth[1]
 			} else {
 				// the auths section has an entry for the registry, but it neither contains
 				// username/password fields nor an auth field, fail
-				return false, fmt.Errorf("found %s in imagePullSecrets but it contains no usable credentials; either username/password fields or an auth field are required", registryName)
+				return false, errors.Errorf("found %s in imagePullSecrets but it contains no usable credentials; either username/password fields or an auth field are required", registryName)
 			}
 
 			return true, nil
@@ -294,26 +295,27 @@ func (k *ContainerInfo) fixDockerHubImage(image string) string {
 func (k *ContainerInfo) checkImagePullSecret(namespace string, secret string) (bool, error) {
 	data, err := k.readDockerSecret(namespace, secret)
 	if err != nil {
-		return false, fmt.Errorf("cannot read imagePullSecret %s.%s: %s", secret, namespace, err.Error())
+		return false, errors.Wrapf(err, "cannot read imagePullSecret %s.%s", secret, namespace)
 	}
 
 	dockerConfigJSONKey := viper.GetString("default_image_pull_docker_config_json_key")
 	var dockercfg []byte
 	// check the old .dockercfg key as a fallback option as well
-	for _, key := range []string{dockerConfigJSONKey, corev1.DockerConfigKey} {
+	keys := []string{dockerConfigJSONKey, corev1.DockerConfigKey}
+	for _, key := range keys {
 		if dockercfg = data[key]; dockercfg != nil {
 			break
 		}
 	}
 
 	if dockercfg == nil {
-		return false, fmt.Errorf("failed to find any dockercfg key in imagePullSecret: %s.%s", secret, namespace)
+		return false, errors.Errorf("cannot find any dockercfg key %v in imagePullSecret: %s.%s", keys, secret, namespace)
 	}
 
 	var dockerCreds DockerCreds
 	err = json.Unmarshal(dockercfg, &dockerCreds)
 	if err != nil {
-		return false, fmt.Errorf("cannot unmarshal docker configuration from imagePullSecret: %s", err.Error())
+		return false, errors.Wrap(err, "cannot unmarshal docker configuration from imagePullSecret")
 	}
 
 	found, err := k.parseDockerConfig(dockerCreds)

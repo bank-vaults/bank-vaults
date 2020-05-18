@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"emperror.dev/errors"
 	"golang.org/x/oauth2/google"
 	cloudkms "google.golang.org/api/cloudkms/v1"
 	"google.golang.org/api/option"
@@ -43,13 +44,13 @@ func New(store kv.Service, project, location, keyring, cryptoKey string) (kv.Ser
 	client, err := google.DefaultClient(ctx, cloudkms.CloudPlatformScope)
 
 	if err != nil {
-		return nil, fmt.Errorf("error creating google client: %s", err.Error())
+		return nil, errors.Wrap(err, "error creating google client")
 	}
 
 	kmsService, err := cloudkms.NewService(context.Background(), option.WithHTTPClient(client))
 
 	if err != nil {
-		return nil, fmt.Errorf("error creating google kms service client: %s", err.Error())
+		return nil, errors.Wrap(err, "error creating google kms service client")
 	}
 
 	return &googleKms{
@@ -65,7 +66,7 @@ func (g *googleKms) encrypt(s []byte) ([]byte, error) {
 	}).Do()
 
 	if err != nil {
-		return nil, fmt.Errorf("error encrypting data: %s", err.Error())
+		return nil, errors.Wrap(err, "error encrypting data")
 	}
 
 	return base64.StdEncoding.DecodeString(resp.Ciphertext)
@@ -77,7 +78,7 @@ func (g *googleKms) decrypt(s []byte) ([]byte, error) {
 	}).Do()
 
 	if err != nil {
-		return nil, fmt.Errorf("error decrypting data: %s", err.Error())
+		return nil, errors.Wrap(err, "error decrypting data")
 	}
 
 	return base64.StdEncoding.DecodeString(resp.Plaintext)
@@ -87,7 +88,7 @@ func (g *googleKms) Get(key string) ([]byte, error) {
 	cipherText, err := g.store.Get(key)
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error getting data")
 	}
 
 	return g.decrypt(cipherText)
@@ -97,7 +98,7 @@ func (g *googleKms) Set(key string, val []byte) error {
 	cipherText, err := g.encrypt(val)
 
 	if err != nil {
-		return err
+		return errors.Wrap(err, "error setting data")
 	}
 
 	return g.store.Set(key, cipherText)

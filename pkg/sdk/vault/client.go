@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"emperror.dev/errors"
 	"github.com/fsnotify/fsnotify"
 	"github.com/hashicorp/vault/api"
 	vaultapi "github.com/hashicorp/vault/api"
@@ -249,7 +250,7 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		if env, ok := os.LookupEnv("VAULT_CLIENT_TIMEOUT"); ok {
 			var err error
 			if o.timeout, err = time.ParseDuration(env); err != nil {
-				return nil, fmt.Errorf("could not set timeout: %w", err)
+				return nil, errors.Wrap(err, "could not parse timeout duration")
 			}
 		}
 	}
@@ -337,7 +338,7 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 
 			case <-time.After(o.timeout):
 				client.Close()
-				return nil, fmt.Errorf("timeout [%s] during waiting for Vault token", o.timeout)
+				return nil, errors.Errorf("timeout [%s] during waiting for Vault token", o.timeout)
 			}
 		}
 	}

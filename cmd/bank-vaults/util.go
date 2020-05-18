@@ -15,8 +15,7 @@
 package main
 
 import (
-	"fmt"
-
+	"emperror.dev/errors"
 	"github.com/spf13/viper"
 
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
@@ -57,9 +56,8 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			cfg.GetString(cfgGoogleCloudStorageBucket),
 			cfg.GetString(cfgGoogleCloudStoragePrefix),
 		)
-
 		if err != nil {
-			return nil, fmt.Errorf("error creating google cloud storage kv store: %s", err.Error())
+			return nil, errors.Wrap(err, "error creating google cloud storage kv store")
 		}
 
 		kms, err := gckms.New(gcs,
@@ -68,9 +66,8 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			cfg.GetString(cfgGoogleCloudKMSKeyRing),
 			cfg.GetString(cfgGoogleCloudKMSCryptoKey),
 		)
-
 		if err != nil {
-			return nil, fmt.Errorf("error creating google cloud kms kv store: %s", err.Error())
+			return nil, errors.Wrap(err, "error creating google cloud kms kv store")
 		}
 
 		return kms, nil
@@ -82,7 +79,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		s3Prefix := cfg.GetString(cfgAWSS3Prefix)
 
 		if len(s3Regions) != len(s3Buckets) {
-			return nil, fmt.Errorf("specify the same number of regions and buckets for AWS S3 kv store")
+			return nil, errors.Errorf("specify the same number of regions and buckets for AWS S3 kv store [%d != %d]", len(s3Regions), len(s3Buckets))
 		}
 
 		var s3Services []kv.Service
@@ -94,7 +91,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 				s3Prefix,
 			)
 			if err != nil {
-				return nil, fmt.Errorf("error creating AWS S3 kv store: %s", err.Error())
+				return nil, errors.Wrap(err, "error creating AWS S3 kv store")
 			}
 
 			s3Services = append(s3Services, s3Service)
@@ -104,11 +101,11 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		kmsKeyIDs := cfg.GetStringSlice(cfgAWSKMSKeyID)
 
 		if len(kmsRegions) != len(kmsKeyIDs) {
-			return nil, fmt.Errorf("specify the same number of regions and key IDs for AWS KMS kv store")
+			return nil, errors.Errorf("specify the same number of regions and key IDs for AWS KMS kv store")
 		}
 
 		if len(kmsRegions) != len(s3Regions) {
-			return nil, fmt.Errorf("specify the same number of S3 buckets and KMS keys for AWS kv store")
+			return nil, errors.Errorf("specify the same number of S3 buckets and KMS keys for AWS kv store")
 		}
 
 		var kmsServices []kv.Service
@@ -116,7 +113,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		for i := range kmsRegions {
 			kmsService, err := awskms.New(s3Services[i], kmsRegions[i], kmsKeyIDs[i])
 			if err != nil {
-				return nil, fmt.Errorf("error creating AWS KMS kv store: %s", err.Error())
+				return nil, errors.Wrap(err, "error creating AWS KMS kv store")
 			}
 
 			kmsServices = append(kmsServices, kmsService)
@@ -127,7 +124,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 	case cfgModeValueAzureKeyVault:
 		akv, err := azurekv.New(cfg.GetString(cfgAzureKeyVaultName))
 		if err != nil {
-			return nil, fmt.Errorf("error creating Azure Key Vault kv store: %s", err.Error())
+			return nil, errors.Wrap(err, "error creating Azure Key Vault kv store")
 		}
 
 		return akv, nil
@@ -137,13 +134,13 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		accessKeySecret := cfg.GetString(cfgAlibabaAccessKeySecret)
 
 		if accessKeyID == "" || accessKeySecret == "" {
-			return nil, fmt.Errorf("Alibaba accessKeyID or accessKeySecret can't be empty")
+			return nil, errors.Errorf("Alibaba accessKeyID or accessKeySecret can't be empty")
 		}
 
 		bucket := cfg.GetString(cfgAlibabaOSSBucket)
 
 		if bucket == "" {
-			return nil, fmt.Errorf("Alibaba OSS bucket should be specified")
+			return nil, errors.Errorf("Alibaba OSS bucket should be specified")
 		}
 
 		oss, err := alibabaoss.New(
@@ -154,7 +151,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			cfg.GetString(cfgAlibabaOSSPrefix),
 		)
 		if err != nil {
-			return nil, fmt.Errorf("error creating Alibaba OSS kv store: %s", err.Error())
+			return nil, errors.Wrap(err, "error creating Alibaba OSS kv store")
 		}
 
 		kms, err := alibabakms.New(
@@ -164,7 +161,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			cfg.GetString(cfgAlibabaKMSKeyID),
 			oss)
 		if err != nil {
-			return nil, fmt.Errorf("error creating Alibaba KMS kv store: %s", err.Error())
+			return nil, errors.Wrap(err, "error creating Alibaba KMS kv store")
 		}
 
 		return kms, nil
@@ -178,7 +175,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			cfg.GetString(cfgVaultTokenPath),
 			cfg.GetString(cfgVaultToken))
 		if err != nil {
-			return nil, fmt.Errorf("error creating Vault kv store: %s", err.Error())
+			return nil, errors.Wrap(err, "error creating Vault kv store")
 		}
 
 		return vault, nil
@@ -190,7 +187,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			k8sSecretLabels,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("error creating K8S Secret kv store: %s", err.Error())
+			return nil, errors.Wrap(err, "error creating K8S Secret kv store")
 		}
 
 		return k8s, nil
@@ -203,7 +200,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			k8sSecretLabels,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("error creating K8S Secret with with kv store: %s", err.Error())
+			return nil, errors.Wrap(err, "error creating K8S Secret with with kv store")
 		}
 
 		config := hsm.Config{
@@ -216,7 +213,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 
 		hsm, err := hsm.New(config, k8s)
 		if err != nil {
-			return nil, fmt.Errorf("error creating HSM kv store: %s", err.Error())
+			return nil, errors.Wrap(err, "error creating HSM kv store")
 		}
 
 		return hsm, nil
@@ -233,7 +230,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 
 		hsm, err := hsm.New(config, nil)
 		if err != nil {
-			return nil, fmt.Errorf("error creating HSM kv store: %s", err.Error())
+			return nil, errors.Wrap(err, "error creating HSM kv store")
 		}
 
 		return hsm, nil
@@ -241,7 +238,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 	case cfgModeValueDev:
 		dev, err := dev.New()
 		if err != nil {
-			return nil, fmt.Errorf("error creating Dev Secret kv store: %s", err.Error())
+			return nil, errors.Wrap(err, "error creating Dev Secret kv store")
 		}
 
 		return dev, nil
@@ -249,12 +246,12 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 	case cfgModeValueFile:
 		file, err := file.New(cfg.GetString(cfgFilePath))
 		if err != nil {
-			return nil, fmt.Errorf("error creating File kv store: %s", err.Error())
+			return nil, errors.Wrap(err, "error creating File kv store")
 		}
 
 		return file, nil
 
 	default:
-		return nil, fmt.Errorf("Unsupported backend mode: '%s'", cfg.GetString(cfgMode))
+		return nil, errors.Errorf("unsupported backend mode: '%s'", cfg.GetString(cfgMode))
 	}
 }

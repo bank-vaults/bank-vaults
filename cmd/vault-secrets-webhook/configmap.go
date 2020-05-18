@@ -16,8 +16,8 @@ package main
 
 import (
 	"encoding/base64"
-	"fmt"
 
+	"emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
@@ -45,7 +45,7 @@ func (mw *mutatingWebhook) mutateConfigMap(configMap *corev1.ConfigMap, vaultCon
 
 	vaultClient, err := newVaultClient(vaultConfig)
 	if err != nil {
-		return fmt.Errorf("failed to create vault client: %v", err)
+		return errors.Wrap(err, "failed to create vault client")
 	}
 
 	defer vaultClient.Close()

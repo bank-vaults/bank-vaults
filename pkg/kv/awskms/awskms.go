@@ -15,8 +15,7 @@
 package awskms
 
 import (
-	"fmt"
-
+	"emperror.dev/errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
@@ -36,7 +35,7 @@ var _ kv.Service = &awsKMS{}
 // NewWithSession creates a new kv.Service encrypted by AWS KMS with and existing AWS Session
 func NewWithSession(sess *session.Session, store kv.Service, kmsID string) (kv.Service, error) {
 	if kmsID == "" {
-		return nil, fmt.Errorf("invalid kmsID specified: '%s'", kmsID)
+		return nil, errors.Errorf("invalid kmsID specified: '%s'", kmsID)
 	}
 
 	return &awsKMS{
@@ -87,7 +86,6 @@ func (a *awsKMS) encrypt(plainText []byte) ([]byte, error) {
 
 func (a *awsKMS) Set(key string, val []byte) error {
 	cipherText, err := a.encrypt(val)
-
 	if err != nil {
 		return err
 	}

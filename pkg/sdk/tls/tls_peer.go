@@ -23,7 +23,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/pkg/errors"
+	"emperror.dev/errors"
 )
 
 // PeerCertificateRequest contains a set of options configurable for peer certificate generation.
@@ -46,7 +46,7 @@ type PeerCertificate struct {
 func GeneratePeerCertificate(req PeerCertificateRequest, signerCert *x509.Certificate, signerKey crypto.Signer) (*PeerCertificate, error) {
 	key, err := rsa.GenerateKey(rand.Reader, defaultKeyBits)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "failed to generate rsa key")
 	}
 
 	keyBytes, err := keyToBytes(key)
@@ -84,7 +84,7 @@ func GeneratePeerCertificate(req PeerCertificateRequest, signerCert *x509.Certif
 
 	cert, err := x509.CreateCertificate(rand.Reader, certTemplate, signerCert, key.Public(), signerKey)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "failed to create x509 certificate")
 	}
 
 	certBytes, err := certToBytes(cert)
