@@ -1,8 +1,5 @@
-{{- $major := .Capabilities.KubeVersion.Major -}}
-{{- $minor := .Capabilities.KubeVersion.Minor -}}
-
 {{- if and .Values.rbac.enabled .Values.rbac.psp.enabled}}
-{{- if and (eq (int $major) 1) (ge (int $minor) 16) }}
+{{- if semverCompare ">=1.16-0" .Capabilities.KubeVersion.GitVersion }}
 apiVersion: policy/v1beta1
 {{- else  }}
 apiVersion: extensions/v1beta1
@@ -38,7 +35,7 @@ spec:
   - emptyDir
   - configMap
 ---
-{{- if and (eq (int $major) 1) (ge (int $minor) 16) }}
+{{- if semverCompare ">=1.16-0" .Capabilities.KubeVersion.GitVersion }}
 apiVersion: policy/v1beta1
 {{- else  }}
 apiVersion: extensions/v1beta1
