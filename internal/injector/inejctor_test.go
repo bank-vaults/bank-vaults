@@ -18,6 +18,7 @@ package injector
 
 import (
 	"encoding/base64"
+	"os"
 	"testing"
 
 	vaultapi "github.com/hashicorp/vault/api"
@@ -28,6 +29,8 @@ import (
 )
 
 func TestSecretInjector(t *testing.T) {
+	os.Setenv("VAULT_ADDR", "http://localhost:8200")
+
 	client, err := vault.NewClientFromConfig(vaultapi.DefaultConfig())
 	assert.NoError(t, err)
 
