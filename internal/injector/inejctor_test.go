@@ -60,31 +60,51 @@ func TestSecretInjector(t *testing.T) {
 
 	injector := NewSecretInjector(Config{}, client, nil, logrus.New())
 
-	// test correct path but missing secret
-	// references := map[string]string{
-	// 	"SECRET": "vault:secret/data/get/data#data",
-	// }
+	t.Run("success", func(t *testing.T) {
+		references := map[string]string{
+			"ACCOUNT_PASSWORD": "vault:secret/data/account#password",
+			"TRANSIT_SECRET":   `>>vault:transit/decrypt/mykey#${.plaintext | b64dec}#{"ciphertext":"` + ciphertext + `"}`,
+		}
 
-	// test incorrect kv2 path
-	// references := map[string]string{
-	// 	"SECRET": "vault:secret/get/data#data",
-	// }
+		results := map[string]string{}
+		injectFunc := func(key, value string) {
+			results[key] = value
+		}
 
-	references := map[string]string{
-		"ACCOUNT_PASSWORD": "vault:secret/data/account#password",
-		"TRANSIT_SECRET":   ">>vault:transit/decrypt/mykey#${.plaintext | b64dec}#{\"ciphertext\":\"" + ciphertext + "\"}",
-	}
+		err = injector.InjectSecretsFromVault(references, injectFunc)
+		assert.NoError(t, err)
 
-	results := map[string]string{}
-	injectFunc := func(key, value string) {
-		results[key] = value
-	}
+		assert.Equal(t, map[string]string{
+			"ACCOUNT_PASSWORD": "secret",
+			"TRANSIT_SECRET":   "secret",
+		}, results)
+	})
 
-	err = injector.InjectSecretsFromVault(references, injectFunc)
-	assert.NoError(t, err)
+	t.Run("correct path but missing secret", func(t *testing.T) {
+		references := map[string]string{
+			"SECRET": "vault:secret/data/supersecret#password",
+		}
 
-	assert.Equal(t, map[string]string{
-		"ACCOUNT_PASSWORD": "secret",
-		"TRANSIT_SECRET":   "secret",
-	}, results)
+		results := map[string]string{}
+		injectFunc := func(key, value string) {
+			results[key] = value
+		}
+
+		err = injector.InjectSecretsFromVault(references, injectFunc)
+		assert.EqualError(t, err, "path not found: secret/data/supersecret")
+	})
+
+	t.Run("incorrect kv2 path", func(t *testing.T) {
+		references := map[string]string{
+			"SECRET": "vault:secret/get/data#data",
+		}
+
+		results := map[string]string{}
+		injectFunc := func(key, value string) {
+			results[key] = value
+		}
+
+		err = injector.InjectSecretsFromVault(references, injectFunc)
+		assert.EqualError(t, err, "key 'data' not found under path: secret/get/data")
+	})
 }
