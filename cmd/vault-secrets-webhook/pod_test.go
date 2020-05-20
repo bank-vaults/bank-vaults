@@ -31,7 +31,7 @@ import (
 
 var vaultConfig = VaultConfig{
 	Addr:                 "addr",
-	SkipVerify:           "skipVerify",
+	SkipVerify:           false,
 	Path:                 "path",
 	Role:                 "role",
 	IgnoreMissingSecrets: "ignoreMissingSecrets",
@@ -101,7 +101,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 					Env: []corev1.EnvVar{
 						{Name: "myvar", Value: "vault:secrets"},
 						{Name: "VAULT_ADDR", Value: "addr"},
-						{Name: "VAULT_SKIP_VERIFY", Value: "skipVerify"},
+						{Name: "VAULT_SKIP_VERIFY", Value: "false"},
 						{Name: "VAULT_PATH", Value: "path"},
 						{Name: "VAULT_ROLE", Value: "role"},
 						{Name: "VAULT_IGNORE_MISSING_SECRETS", Value: "ignoreMissingSecrets"},
@@ -148,7 +148,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 					Env: []corev1.EnvVar{
 						{Name: "myvar", Value: ">>vault:secrets"},
 						{Name: "VAULT_ADDR", Value: "addr"},
-						{Name: "VAULT_SKIP_VERIFY", Value: "skipVerify"},
+						{Name: "VAULT_SKIP_VERIFY", Value: "false"},
 						{Name: "VAULT_PATH", Value: "path"},
 						{Name: "VAULT_ROLE", Value: "role"},
 						{Name: "VAULT_IGNORE_MISSING_SECRETS", Value: "ignoreMissingSecrets"},
@@ -197,7 +197,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 					Env: []corev1.EnvVar{
 						{Name: "myvar", Value: ">>vault:secrets"},
 						{Name: "VAULT_ADDR", Value: "addr"},
-						{Name: "VAULT_SKIP_VERIFY", Value: "skipVerify"},
+						{Name: "VAULT_SKIP_VERIFY", Value: "false"},
 						{Name: "VAULT_PATH", Value: "path"},
 						{Name: "VAULT_ROLE", Value: "role"},
 						{Name: "VAULT_IGNORE_MISSING_SECRETS", Value: "ignoreMissingSecrets"},
@@ -246,7 +246,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 					Env: []corev1.EnvVar{
 						{Name: "myvar", Value: ">>vault:secrets"},
 						{Name: "VAULT_ADDR", Value: "addr"},
-						{Name: "VAULT_SKIP_VERIFY", Value: "skipVerify"},
+						{Name: "VAULT_SKIP_VERIFY", Value: "false"},
 						{Name: "VAULT_PATH", Value: "path"},
 						{Name: "VAULT_ROLE", Value: "role"},
 						{Name: "VAULT_IGNORE_MISSING_SECRETS", Value: "ignoreMissingSecrets"},
@@ -363,7 +363,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					CtConfigMap:          "config-map-test",
 					ConfigfilePath:       "/vault/secrets",
 					Addr:                 "test",
-					SkipVerify:           "false",
+					SkipVerify:           false,
 					CtCPU:                resource.MustParse("50m"),
 					CtMemory:             resource.MustParse("128Mi"),
 					AgentImage:           "vault:latest",
@@ -548,7 +548,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					AgentConfigMap:       "config-map-test",
 					ConfigfilePath:       "/vault/secrets",
 					Addr:                 "test",
-					SkipVerify:           "false",
+					SkipVerify:           false,
 					AgentCPU:             resource.MustParse("50m"),
 					AgentMemory:          resource.MustParse("128Mi"),
 					AgentImage:           "vault:latest",

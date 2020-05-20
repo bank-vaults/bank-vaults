@@ -20,10 +20,11 @@ import (
 	"crypto/x509"
 
 	"emperror.dev/errors"
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/miekg/pkcs11"
 	"github.com/miekg/pkcs11/p11"
 	"github.com/sirupsen/logrus"
+
+	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 
 const noObjectsFoundErrMsg = "no objects found"
@@ -52,11 +53,10 @@ type Config struct {
 
 // New returns a HSM backed KV encryptor. Currently RSA keys are supported only.
 func New(config Config, storage kv.Service) (kv.Service, error) {
-
 	log := logrus.New()
 
 	if config.KeyLabel == "" {
-		return nil, errors.New("key label is required")
+		return nil, errors.New("key label is required") // nolint:goerr113
 	}
 
 	module, err := p11.OpenModule(config.ModulePath)
@@ -81,7 +81,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	for _, s := range slots {
 		if config.TokenLabel == "" {
 			if s.ID() == config.SlotID {
-				slot = &s
+				slot = &s // nolint:gosec
 				log.Infof("found HSM slot %d in HSM by slot ID", slot.ID())
 				break
 			}
@@ -91,7 +91,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 				return nil, errors.WrapIf(err, "can't query token info from slot")
 			}
 			if tokenInfo.Label == config.TokenLabel {
-				slot = &s
+				slot = &s // nolint:gosec
 				log.Infof("found HSM slot %d in HSM by token label", slot.ID())
 				break
 			}
@@ -99,7 +99,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	}
 
 	if slot == nil {
-		return nil, errors.New("can't find HSM slot")
+		return nil, errors.New("can't find HSM slot") // nolint:goerr113
 	}
 
 	tokenInfo, err := slot.TokenInfo()
@@ -122,7 +122,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	// 		return nil, err
 	// 	}
 
-	// 	fmt.Printf("RSA mechanism info: %+v supports encrpyt: %t\n", info, info.Flags&pkcs11.CKA_ENCRYPT == pkcs11.CKA_ENCRYPT)
+	// 	fmt.Printf("RSA mechanism info: %+v supports encrypt: %t\n", info, info.Flags&pkcs11.CKA_ENCRYPT == pkcs11.CKA_ENCRYPT)
 	// }
 
 	slotInfo, err := slot.Info()
@@ -159,7 +159,6 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 
 	// ignore "no objects found" errors and generate a key
 	if publicKeyErr != nil && privateKeyErr != nil {
-
 		log.Info("generating key pair in HSM...")
 
 		request := generateRSAKeyPairRequest(config.KeyLabel)
@@ -170,16 +169,12 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 
 		publicKey = keyPair.Public
 		privateKey = keyPair.Private
-
 	} else if publicKeyErr == nil && privateKeyErr == nil {
-
 		log.Infof("found objects with label %q in HSM", config.KeyLabel)
 
 		publicKey = p11.PublicKey(publicKeyObj)
 		privateKey = p11.PrivateKey(privateKeyObj)
-
 	} else {
-
 		return nil, errors.WrapIf(errors.Combine(publicKeyErr, privateKeyErr), "only one of the keys found with the specified label")
 	}
 
@@ -189,7 +184,6 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	var encrypt cryptoFunc
 
 	if info.ManufacturerID == "OpenSC Project" {
-
 		log.Info("this HSM doesn't support on-device encryption, extracting public key and doing encrytion on the computer")
 
 		publicKeyValue, err := p11.Object(publicKey).Value()

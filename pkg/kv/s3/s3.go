@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"emperror.dev/errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -36,11 +37,11 @@ type s3Storage struct {
 // New creates a new kv.Service backed by AWS S3
 func New(region, bucket, prefix string) (kv.Service, error) {
 	if region == "" {
-		return nil, fmt.Errorf("region must be specified")
+		return nil, errors.New("region must be specified") // nolint:goerr113
 	}
 
 	if bucket == "" {
-		return nil, fmt.Errorf("bucket must be specified")
+		return nil, errors.New("bucket must be specified") // nolint:goerr113
 	}
 
 	sess := session.Must(session.NewSession(aws.NewConfig().WithRegion(region)))
@@ -59,7 +60,7 @@ func (s3 *s3Storage) Set(key string, val []byte) error {
 	}
 
 	if _, err := s3.client.PutObject(&input); err != nil {
-		return fmt.Errorf("error writing key '%s' to s3 bucket '%s': '%s'", n, s3.bucket, err.Error())
+		return errors.Wrapf(err, "error writing key '%s' to s3 bucket '%s'", n, s3.bucket)
 	}
 
 	return nil
@@ -74,19 +75,18 @@ func (s3 *s3Storage) Get(key string) ([]byte, error) {
 	}
 
 	r, err := s3.client.GetObject(&input)
-
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == awss3.ErrCodeNoSuchKey {
 			return nil, kv.NewNotFoundError("error getting object for key '%s': %s", n, aerr.Error())
 		}
-		return nil, fmt.Errorf("error getting object for key '%s': %s", n, err.Error())
+		return nil, errors.Wrapf(err, "error getting object for key '%s'", n)
 	}
 
 	b, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 
 	if err != nil {
-		return nil, fmt.Errorf("error reading object with key '%s': %s", n, err.Error())
+		return nil, errors.Wrapf(err, "error reading object with key '%s'", n)
 	}
 
 	return b, nil

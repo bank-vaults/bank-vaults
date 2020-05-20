@@ -21,13 +21,12 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"fmt"
 	"math/big"
 	"net"
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	"emperror.dev/errors"
 )
 
 var serialNumberLimit *big.Int
@@ -151,11 +150,11 @@ func (sh *separatedCertHosts) validate() error {
 func GetCertExpirationDate(certPEM []byte) (time.Time, error) {
 	block, _ := pem.Decode(certPEM)
 	if block == nil {
-		return time.Time{}, fmt.Errorf("failed to parse certificate PEM")
+		return time.Time{}, errors.Errorf("failed to parse certificate PEM")
 	}
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("failed to parse certificate: %v", err)
+		return time.Time{}, errors.Wrap(err, "failed to parse certificate")
 	}
 
 	return cert.NotAfter, nil
@@ -207,7 +206,7 @@ func keyToBytes(key *rsa.PrivateKey) ([]byte, error) {
 	var buf bytes.Buffer
 
 	if err := pem.Encode(&buf, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: keyBytes}); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "failed to PEM encode private key")
 	}
 
 	return buf.Bytes(), nil
@@ -217,7 +216,7 @@ func certToBytes(certBytes []byte) ([]byte, error) {
 	var buf bytes.Buffer
 
 	if err := pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes}); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "failed to PEM encode certificate")
 	}
 
 	return buf.Bytes(), nil

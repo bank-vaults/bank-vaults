@@ -14,11 +14,14 @@ linters:
         - maligned
         - funlen
         - dupl
+        - nestif
         - wsl
         - lll
 
         # TODO: fixme
         - godox
+        - godot
+        - gomnd
         - gochecknoglobals
         - gochecknoinits
         - goconst
@@ -29,3 +32,4 @@ linters:
         - gocritic
         - stylecheck
         - gocyclo
+        - testpackage

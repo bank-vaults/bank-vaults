@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"emperror.dev/errors"
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -38,7 +39,7 @@ var _ kv.Service = &azureKeyVault{}
 // New creates a new kv.Service backed by Azure Key Vault
 func New(name string) (kv.Service, error) {
 	if name == "" {
-		return nil, fmt.Errorf("invalid Key Vault specified: '%s'", name)
+		return nil, errors.Errorf("invalid Key Vault specified: '%s'", name)
 	}
 
 	keyClient := keyvault.New()

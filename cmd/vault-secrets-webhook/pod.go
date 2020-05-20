@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -78,7 +79,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 		},
 		{
 			Name:  "VAULT_SKIP_VERIFY",
-			Value: vaultConfig.SkipVerify,
+			Value: strconv.FormatBool(vaultConfig.SkipVerify),
 		},
 	}
 	containerVolMounts := []corev1.VolumeMount{
@@ -232,7 +233,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 
 		// the container has no explicitly specified command
 		if len(args) == 0 {
-			imageConfig, err := mw.registry.GetImageConfig(mw.k8sClient, ns, &container, podSpec)
+			imageConfig, err := mw.registry.GetImageConfig(mw.k8sClient, ns, &container, podSpec) // nolint:gosec
 			if err != nil {
 				return false, err
 			}
@@ -265,7 +266,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			},
 			{
 				Name:  "VAULT_SKIP_VERIFY",
-				Value: vaultConfig.SkipVerify,
+				Value: strconv.FormatBool(vaultConfig.SkipVerify),
 			},
 			{
 				Name:  "VAULT_PATH",

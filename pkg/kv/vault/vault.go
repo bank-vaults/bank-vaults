@@ -18,13 +18,14 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"emperror.dev/errors"
 	"github.com/spf13/cast"
 
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
-type VaultStorage struct {
+type vaultStorage struct {
 	client *vault.Client
 	path   string
 }
@@ -38,16 +39,16 @@ func New(addr, unsealKeysPath, role, authPath, tokenPath, token string) (kv.Serv
 		vault.ClientTokenPath(tokenPath),
 		vault.ClientToken(token))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create vault client: %s", err.Error())
+		return nil, errors.Wrap(err, "failed to create vault client")
 	}
 
-	return &VaultStorage{
+	return &vaultStorage{
 		client: client,
 		path:   unsealKeysPath,
 	}, nil
 }
 
-func (v *VaultStorage) Set(key string, val []byte) error {
+func (v *vaultStorage) Set(key string, val []byte) error {
 	// Done to prevent overwrite in Vault
 	path := fmt.Sprintf("%s/%s", v.path, key)
 	if _, err := v.client.RawClient().Logical().Write(
@@ -58,23 +59,23 @@ func (v *VaultStorage) Set(key string, val []byte) error {
 			},
 		},
 	); err != nil {
-		return fmt.Errorf("error writing key '%s' to vault addr %s and path '%s': '%s'", key, v.client.RawClient().Address(), v.path, err.Error())
+		return errors.Wrapf(err, "error writing key '%s' to vault addr %s and path '%s'", key, v.client.RawClient().Address(), v.path)
 	}
 	return nil
 }
 
-func (v *VaultStorage) Get(key string) ([]byte, error) {
+func (v *vaultStorage) Get(key string) ([]byte, error) {
 	path := fmt.Sprintf("%s/%s", v.path, key)
 	secret, err := v.client.RawClient().Logical().Read(path)
 	if err != nil {
-		return nil, fmt.Errorf("error getting object for key '%s': %s", key, err.Error())
+		return nil, errors.Wrapf(err, "error getting object for key '%s'", key)
 	}
 	if secret == nil {
 		return nil, kv.NewNotFoundError("key not found under path: %s", key)
 	}
 	data, err := cast.ToStringMapE(secret.Data["data"])
 	if err != nil {
-		return nil, fmt.Errorf("error findind data under path '%s': %s", key, err.Error())
+		return nil, errors.Wrapf(err, "error findind data under path '%s'", key)
 	}
 	return base64.StdEncoding.DecodeString(data[key].(string))
 }

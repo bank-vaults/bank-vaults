@@ -79,7 +79,7 @@ const cfgK8SLabels = "k8s-secret-labels"
 
 const cfgHSMModulePath = "hsm-module-path"
 const cfgHSMSlotID = "hsm-slot-id"
-const cfgHSMTokenLabel = "hsm-token-label"
+const cfgHSMTokenLabel = "hsm-token-label" // nolint:gosec
 const cfgHSMPin = "hsm-pin"
 const cfgHSMKeyLabel = "hsm-key-label"
 

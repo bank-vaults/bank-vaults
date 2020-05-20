@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"emperror.dev/errors"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/spf13/cast"
 
@@ -76,13 +77,13 @@ func parseToken(secret *vaultapi.Secret, showExpired bool) (*Token, error) {
 
 		tokenID := tokenData["id"]
 		if tokenID == nil {
-			return nil, fmt.Errorf("Can't find \"token.id\" in Secret")
+			return nil, errors.Errorf("Can't find \"token.id\" in Secret")
 		}
 		token.ID = tokenID.(string)
 
 		tokenName := tokenData["name"]
 		if tokenName == nil {
-			return nil, fmt.Errorf("Can't find \"token.name\" in Secret")
+			return nil, errors.Errorf("Can't find \"token.name\" in Secret")
 		}
 		token.Name = tokenName.(string)
 
@@ -99,7 +100,7 @@ func parseToken(secret *vaultapi.Secret, showExpired bool) (*Token, error) {
 
 		return &token, nil
 	}
-	return nil, fmt.Errorf("Can't find \"token\" in Secret")
+	return nil, errors.Errorf("Can't find \"token\" in Secret")
 }
 
 // In-memory implementation

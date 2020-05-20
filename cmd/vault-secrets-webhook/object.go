@@ -15,8 +15,7 @@
 package main
 
 import (
-	"fmt"
-
+	"emperror.dev/errors"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -113,7 +112,7 @@ func (mw *mutatingWebhook) mutateObject(object *unstructured.Unstructured, vault
 
 	vaultClient, err := newVaultClient(vaultConfig)
 	if err != nil {
-		return fmt.Errorf("failed to create vault client: %v", err)
+		return errors.Wrap(err, "failed to create vault client")
 	}
 
 	defer vaultClient.Close()
