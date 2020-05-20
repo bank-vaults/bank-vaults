@@ -111,7 +111,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 		valuePath = split[0]
 
 		if len(split) < 2 {
-			return errors.New("secret data key not defined")
+			return errors.New("secret data key or template not defined") // nolint:goerr113
 		}
 
 		key := split[1]
