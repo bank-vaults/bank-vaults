@@ -15,6 +15,7 @@
 package injector
 
 import (
+	"encoding/json"
 	"strings"
 
 	"emperror.dev/errors"
@@ -84,7 +85,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 		// decrypts value with Vault Transit Secret Engine
 		if i.client.Transit.IsEncrypted(value) {
 			if len(i.config.TransitKeyID) == 0 {
-				return errors.NewWithDetails("found encrypted variable, but transit key ID is empty:", name)
+				return errors.Errorf("found encrypted variable, but transit key ID is empty: %s", name)
 			}
 
 			if v, ok := transitCache[value]; ok {
@@ -95,7 +96,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 			out, err := i.client.Transit.Decrypt(i.config.TransitPath, i.config.TransitKeyID, []byte(value))
 			if err != nil {
 				if !i.config.IgnoreMissingSecrets {
-					return errors.WrapWithDetails(err, "failed to decrypt variable:", name)
+					return errors.Wrapf(err, "failed to decrypt variable: %s", name)
 				}
 				i.logger.Errorln("failed to decrypt variable:", name, err)
 				continue
@@ -109,37 +110,41 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 		split := strings.SplitN(valuePath, "#", 3)
 		valuePath = split[0]
 
-		var key string
-		if len(split) > 1 {
-			key = split[1]
+		if len(split) < 2 {
+			return errors.New("secret data key or template not defined") // nolint:goerr113
 		}
 
-		version := "-1"
+		key := split[1]
+
+		versionOrData := "-1"
+		if update {
+			versionOrData = "{}"
+		}
 		if len(split) == 3 {
-			version = split[2]
+			versionOrData = split[2]
 		}
 
-		secretCacheKey := valuePath + "#" + version
+		secretCacheKey := valuePath + "#" + versionOrData
 
 		var secret *vaultapi.Secret
 		var err error
 
 		if secret = secretCache[secretCacheKey]; secret == nil {
 			if update {
-				secret, err = i.client.RawClient().Logical().Write(valuePath, map[string]interface{}{})
+				var data map[string]interface{}
+				err = json.Unmarshal([]byte(versionOrData), &data)
 				if err != nil {
-					return errors.WrapWithDetails(err, "failed to write secret to path:", valuePath)
+					return errors.Wrap(err, "failed to unmarshal data for writing")
 				}
-				secretCache[secretCacheKey] = secret
-			} else {
-				secret, err = i.client.RawClient().Logical().ReadWithData(valuePath, map[string][]string{"version": {version}})
+
+				secret, err = i.client.RawClient().Logical().Write(valuePath, data)
 				if err != nil {
-					if !i.config.IgnoreMissingSecrets {
-						return errors.WrapWithDetails(err, "failed to read secret from path:", valuePath)
-					}
-					i.logger.Errorln("failed to read secret from path:", valuePath, err.Error())
-				} else {
-					secretCache[secretCacheKey] = secret
+					return errors.Wrapf(err, "failed to write secret to path: %s", valuePath)
+				}
+			} else {
+				secret, err = i.client.RawClient().Logical().ReadWithData(valuePath, map[string][]string{"version": {versionOrData}})
+				if err != nil {
+					return errors.Wrapf(err, "failed to read secret from path: %s", valuePath)
 				}
 			}
 
@@ -155,12 +160,18 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 
 		if secret == nil {
 			if !i.config.IgnoreMissingSecrets {
-				return errors.NewWithDetails("path not found:", valuePath)
+				return errors.Errorf("path not found: %s", valuePath)
 			}
 
 			i.logger.Errorln("path not found:", valuePath)
 			continue
 		}
+
+		for _, warning := range secret.Warnings {
+			i.logger.Warnf("%s: %s", valuePath, warning)
+		}
+
+		secretCache[secretCacheKey] = secret
 
 		var data map[string]interface{}
 		v2Data, ok := secret.Data["data"]
@@ -170,13 +181,13 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 			// Check if a given version of a path is destroyed
 			metadata := secret.Data["metadata"].(map[string]interface{})
 			if metadata["destroyed"].(bool) {
-				i.logger.Warnln("version of secret has been permanently destroyed version:", version, "path:", valuePath)
+				i.logger.Warnln("version of secret has been permanently destroyed version:", versionOrData, "path:", valuePath)
 			}
 
 			// Check if a given version of a path still exists
 			if deletionTime, ok := metadata["deletion_time"].(string); ok && deletionTime != "" {
 				i.logger.Warnln("cannot find data for path, given version has been deleted",
-					"path:", valuePath, "version:", version,
+					"path:", valuePath, "version:", versionOrData,
 					"deletion_time", deletionTime)
 			}
 		} else {
@@ -186,7 +197,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 		if templater.IsGoTemplate(key) {
 			value, err := templater.Template(key, data)
 			if err != nil {
-				return errors.WrapWithDetails(err, "failed to interpolate template key with vault data:", key)
+				return errors.Wrapf(err, "failed to interpolate template key with vault data: %s", key)
 			}
 			inject(name, value.String())
 		} else {
@@ -197,7 +208,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 				}
 				inject(name, value)
 			} else {
-				return errors.NewWithDetails("key not found:", key)
+				return errors.Errorf("key '%s' not found under path: %s", key, valuePath)
 			}
 		}
 	}
