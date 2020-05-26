@@ -6,7 +6,7 @@ items:
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: ClusterRoleBinding
   metadata:
-    name: {{ template "vault.fullname" . }}-auth-delegator
+    name: {{ .Release.Namespace }}-{{ template "vault.fullname" . }}-auth-delegator
     labels:
       helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
       app.kubernetes.io/name: {{ template "vault.name" . }}
