@@ -132,20 +132,20 @@ The following tables lists the configurable parameters of the vault chart and th
 | `replicaCount`          | k8s replicas                        | `1`                                                 |
 | `resources.limits.cpu`  | Container requested CPU             | `nil`                                               |
 | `resources.limits.memory` | Container requested memory        | `nil`                                               |
-| `unsealer.args`         | Bank Vaults args | `["--mode", "k8s", "--k8s-secret-namespace", "default", "--k8s-secret-name", "bank-vaults"]` |
+| `unsealer.args`         | Bank Vaults args                    | `["--mode", "k8s", "--k8s-secret-namespace", "default", "--k8s-secret-name", "bank-vaults"]` |
+| `unsealer.image.tag`    | Bank Vaults image tag               | `1.3.0`                                             |
 | `rbac.enabled`          | Use rbac                            | `true`                                              |
 | `rbac.psp.enabled`      | Use pod security policy             | `false`                                             |
-| `nodeSelector`          | Node labels for pod assignment. https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector                                                           | `{}`
-| `tolerations`           | List of node tolerations for the pods. https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                                           | `[]`
-| `labels`                | Additonal labels to be applied to the Vault StatefulSet and Pods | `{}`
+| `nodeSelector`          | Node labels for pod assignment. https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector                                                   | `{}`                                                |
+| `tolerations`           | List of node tolerations for the pods. https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                                           | `[]`                                |
+| `labels`                | Additonal labels to be applied to the Vault StatefulSet and Pods | `{}`                   |
 | `tls.secretName`        | Custom TLS certifcate secret name    | `""`                                               |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
 ## Using Vault
 
-Once the Vault pod is ready, it can be accessed using a `kubectl
-port-forward`:
+Once the Vault pod is ready, it can be accessed using `kubectl port-forward`:
 
 ```bash
 $ kubectl port-forward vault-pod 8200
@@ -155,14 +155,14 @@ $ vault status
 ## OpenShift Implementation
 
 Tested with
-* OpenShift Conatiner Platform 3.11
+* OpenShift Container Platform 3.11
 * Helm 3
 
 First create a new project named "vault"
 ```
 oc new-app vault
 ```
-Then create a new `scc` based on the `scc` restricted and add the capability "IPC_LOCK". Now add the new scc to the Serviceaccount vault of the new vault project:
+Then create a new `scc` based on the `scc` restricted and add the capability "IPC_LOCK". Now add the new scc to the ServiceAccount vault of the new vault project:
 ```
 oc adm policy add-scc-to-user <new_scc> system:serviceaccount:vault:vault
 ```
@@ -216,8 +216,10 @@ users:
 ```
 
 You will get the message, that the user system:serviceaccount:vault:vault doesn't exist, but that's ok.
-In the next step you install the helm chart vault in the namespace "vault" with following command:
-```
+In the next step you install the helm chart vault in the namespace "vault" with the following command:
+
+```bash
 helm install vault banzaicloud-stable/vault --set "unsealer.args[0]=--mode" --set "unsealer.args[1]=k8s" --set "unsealer.args[2]=--k8s-secret-namespace" --set "unsealer.args[3]=vault" --set "unsealer.args[4]=--k8s-secret-name" --set "unsealer.args[5]=bank-vaults"
 ```
-Changing the vaulues of the arguments of the unsealer is necessary because in the values.yaml the default namespace is used to store the secret. Creating the secret in the same namespace like vault is the easiest solution. In alternative you can create a role which allows creating and read secrets in the default namespace.
+
+Changing the values of the arguments of the unsealer is necessary because in the values.yaml the default namespace is used to store the secret. Creating the secret in the same namespace like vault is the easiest solution. In alternative you can create a role which allows creating and read secrets in the default namespace.
