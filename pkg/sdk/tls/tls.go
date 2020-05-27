@@ -47,7 +47,7 @@ var (
 	// InvalidCAError will be returned if the provided CA is invalid
 	InvalidCAError = errors.New("the CA provided is not valid")
 
-	// NoCAError will be returned if the CA provided was empty
+	// EmptyCAError will be returned if the CA provided was empty
 	EmptyCAError = errors.New("an empty CA was provided")
 
 	// ExpiredCAError will be returned if the CA does not meet the required threshold of validity
@@ -59,7 +59,7 @@ type CertificateManager struct {
 	caCertTemplate *x509.Certificate
 	caKey          *rsa.PrivateKey
 
-	sHosts *separatedCertHosts
+	sHosts *SeparatedCertHosts
 
 	notBefore        time.Time
 	validityDuration time.Duration
@@ -81,7 +81,7 @@ func NewCertificateManager(hosts string, validity string) (*CertificateManager, 
 	}
 
 	cm.sHosts = NewSeparatedCertHosts(hosts)
-	err = cm.sHosts.validate()
+	err = cm.sHosts.Validate()
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ type CertificateChain struct {
 	PeerCert   string `mapstructure:"peerCert"`
 }
 
-type separatedCertHosts struct {
+type SeparatedCertHosts struct {
 	WildCardHosts []string
 	Hosts         []string
 	IPs           []net.IP
@@ -110,8 +110,8 @@ type separatedCertHosts struct {
 
 // NewSeparatedCertHosts creates a new seperatedCertsHosts struct by parsing and separating the comma-separated
 // host names and IPs.
-func NewSeparatedCertHosts(hosts string) *separatedCertHosts {
-	sHosts := separatedCertHosts{}
+func NewSeparatedCertHosts(hosts string) *SeparatedCertHosts {
+	var sHosts SeparatedCertHosts
 	for _, h := range strings.Split(hosts, ",") {
 		if ip := net.ParseIP(h); ip != nil {
 			sHosts.IPs = append(sHosts.IPs, ip)
@@ -126,23 +126,24 @@ func NewSeparatedCertHosts(hosts string) *separatedCertHosts {
 	return &sHosts
 }
 
-// validate validates the hostnames in case of wildCard host is present
+// Validate validates the hostnames in case of wildCard host is present
 // eg.: *.foo.bar boo.foo.bar is not allowed, but coo.boo.foo.bar is valid
-func (sh *separatedCertHosts) validate() error {
+func (sh *SeparatedCertHosts) Validate() error {
 	if len(sh.WildCardHosts) == 0 {
 		return nil
-	} else {
-		for _, wildCardHost := range sh.WildCardHosts {
-			hostWithoutWildCard := strings.ReplaceAll(wildCardHost, "*", "")
-			for _, host := range sh.Hosts {
-				if strings.Contains(host, hostWithoutWildCard) {
-					if !strings.Contains(strings.ReplaceAll(host, hostWithoutWildCard, ""), ".") {
-						return errors.WithStack(InvalidHostNameError)
-					}
+	}
+
+	for _, wildCardHost := range sh.WildCardHosts {
+		hostWithoutWildCard := strings.ReplaceAll(wildCardHost, "*", "")
+		for _, host := range sh.Hosts {
+			if strings.Contains(host, hostWithoutWildCard) {
+				if !strings.Contains(strings.ReplaceAll(host, hostWithoutWildCard, ""), ".") {
+					return errors.WithStack(InvalidHostNameError)
 				}
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -223,7 +224,7 @@ func certToBytes(certBytes []byte) ([]byte, error) {
 }
 
 // LoadCA will load an existing certifiate authority into the CertificateManager and underlying chain
-func (cc *CertificateManager) LoadCA(caCertBytes []byte, caKeyBytes []byte, expirationThreshold time.Duration) error {
+func (cm *CertificateManager) LoadCA(caCertBytes []byte, caKeyBytes []byte, expirationThreshold time.Duration) error {
 	if len(caCertBytes) == 0 || len(caKeyBytes) == 0 {
 		return EmptyCAError
 	}
@@ -265,26 +266,26 @@ func (cc *CertificateManager) LoadCA(caCertBytes []byte, caKeyBytes []byte, expi
 		return errors.Wrap(err, "the CA key was not not PKCS1 parsable")
 	}
 
-	cc.caCertTemplate = caCert
-	cc.caKey = caKey
-	cc.Chain.CACert = string(caCertBytes)
-	cc.Chain.CAKey = string(caKeyBytes)
+	cm.caCertTemplate = caCert
+	cm.caKey = caKey
+	cm.Chain.CACert = string(caCertBytes)
+	cm.Chain.CAKey = string(caKeyBytes)
 	return nil
 }
 
 // GenerateCA will generate a new certificate authority
-func (c *CertificateManager) GenerateCA() error {
+func (cm *CertificateManager) GenerateCA() error {
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "failed to generate serial number")
 	}
 
-	caKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := rsa.GenerateKey(rand.Reader, defaultKeyBits)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "failed to generate rsa key")
 	}
 
-	caKeyBytes, err := keyToBytes(caKey)
+	keyBytes, err := keyToBytes(key)
 	if err != nil {
 		return err
 	}
@@ -295,55 +296,56 @@ func (c *CertificateManager) GenerateCA() error {
 			Organization: []string{"Banzai Cloud"},
 			CommonName:   "Banzai Cloud Generated Root CA",
 		},
-		NotBefore:             c.notBefore,
-		NotAfter:              c.notAfter,
+		NotBefore:             cm.notBefore,
+		NotAfter:              cm.notAfter,
 		KeyUsage:              x509.KeyUsageCertSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}
 
-	caCert, err := x509.CreateCertificate(rand.Reader, &caCertTemplate, &caCertTemplate, &caKey.PublicKey, caKey)
-	if err != nil {
-		return err
-	}
-	caCertBytes, err := certToBytes(caCert)
+	caCert, err := x509.CreateCertificate(rand.Reader, &caCertTemplate, &caCertTemplate, &key.PublicKey, key)
 	if err != nil {
 		return err
 	}
 
-	c.caCertTemplate = &caCertTemplate
-	c.caKey = caKey
+	certBytes, err := certToBytes(caCert)
+	if err != nil {
+		return err
+	}
 
-	c.Chain.CACert = string(caCertBytes)
-	c.Chain.CAKey = string(caKeyBytes)
+	cm.caCertTemplate = &caCertTemplate
+	cm.caKey = key
+
+	cm.Chain.CACert = string(certBytes)
+	cm.Chain.CAKey = string(keyBytes)
 	return nil
 }
 
 // GenerateServer will generate a new server TLS certificate signed by the CA within the chain
-func (c *CertificateManager) GenerateServer() error {
+func (cm *CertificateManager) GenerateServer() error {
 	serverCertRequest := ServerCertificateRequest{
 		Subject: pkix.Name{
 			Organization: []string{"Banzai Cloud"},
 			CommonName:   "Banzai Cloud Generated Server Cert",
 		},
-		Validity:  c.validityDuration,
-		notBefore: c.notBefore,
+		Validity:  cm.validityDuration,
+		notBefore: cm.notBefore,
 	}
-	if len(c.sHosts.WildCardHosts) != 0 {
-		serverCertRequest.Subject.CommonName = c.sHosts.WildCardHosts[0]
-		serverCertRequest.DNSNames = append(serverCertRequest.DNSNames, c.sHosts.WildCardHosts...)
+	if len(cm.sHosts.WildCardHosts) != 0 {
+		serverCertRequest.Subject.CommonName = cm.sHosts.WildCardHosts[0]
+		serverCertRequest.DNSNames = append(serverCertRequest.DNSNames, cm.sHosts.WildCardHosts...)
 	}
-	serverCertRequest.IPAddresses = append(serverCertRequest.IPAddresses, c.sHosts.IPs...)
-	serverCertRequest.DNSNames = append(serverCertRequest.DNSNames, c.sHosts.Hosts...)
+	serverCertRequest.IPAddresses = append(serverCertRequest.IPAddresses, cm.sHosts.IPs...)
+	serverCertRequest.DNSNames = append(serverCertRequest.DNSNames, cm.sHosts.Hosts...)
 
-	serverCert, err := GenerateServerCertificate(serverCertRequest, c.caCertTemplate, c.caKey)
+	serverCert, err := GenerateServerCertificate(serverCertRequest, cm.caCertTemplate, cm.caKey)
 	if err != nil {
 		return err
 	}
 
-	c.Chain.ServerKey = string(serverCert.Key)
-	c.Chain.ServerCert = string(serverCert.Certificate)
+	cm.Chain.ServerKey = string(serverCert.Key)
+	cm.Chain.ServerCert = string(serverCert.Certificate)
 	return nil
 }
 

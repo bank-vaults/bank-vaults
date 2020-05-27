@@ -41,7 +41,7 @@ func TestWildCardValidation(t *testing.T) {
 	for _, test := range tests {
 		sHosts := NewSeparatedCertHosts(test.hosts)
 		t.Run(test.name, func(t *testing.T) {
-			err := sHosts.validate()
+			err := sHosts.Validate()
 			if err != nil {
 				if err.Error() != InvalidHostNameError.Error() {
 					t.Fatal(err)

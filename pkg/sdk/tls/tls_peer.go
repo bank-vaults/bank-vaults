@@ -56,7 +56,7 @@ func GeneratePeerCertificate(req PeerCertificateRequest, signerCert *x509.Certif
 
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "failed to generate serial number")
 	}
 
 	validity := req.Validity
