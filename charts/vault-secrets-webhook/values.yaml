@@ -88,7 +88,7 @@ customResourcesFailurePolicy: Ignore
 # This can cause issues when used with Helm, so it is not enabled by default
 configMapMutation: false
 
-configmapFailurePolicy: Ignore
+configMapFailurePolicy: Ignore
 
 podsFailurePolicy: Ignore
 
