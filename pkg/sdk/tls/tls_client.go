@@ -20,7 +20,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"math/big"
 	"time"
 
 	"emperror.dev/errors"
@@ -52,8 +51,10 @@ func GenerateClientCertificate(req ClientCertificateRequest, signerCert *x509.Ce
 		return nil, err
 	}
 
-	// TODO: is it correct?
-	serialNumber := new(big.Int).SetInt64(4)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate serial number")
+	}
 
 	validity := req.Validity
 	if validity < 1 {
