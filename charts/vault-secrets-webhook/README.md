@@ -93,7 +93,7 @@ $ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-
 **NOTE**: `--wait` is necessary because of Helm timing issues, please see [this issue](https://github.com/banzaicloud/banzai-charts/issues/888).
 
 ### Openshift 4.3
-For security reasons, the runAsUser must be in the range between 1000570000 and 1000579999. By setting the value of securityContext.runAsUser to "", openshift chooses a valid User.
+For security reasons, the `runAsUser` must be in the range between 1000570000 and 1000579999. By setting the value of `securityContext.runAsUser` to "", OpenShift chooses a valid User.
 
 ```bash
 $ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook --set-string securityContext.runAsUser="" --wait
@@ -117,7 +117,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | debug                            | debug logs for webhook                                                       | `false`                             |
 | image.pullPolicy                 | image pull policy                                                            | `IfNotPresent`                      |
 | image.repository                 | image repo that contains the admission server                                | `banzaicloud/vault-secrets-webhook` |
-| image.tag                        | image tag                                                                    | `1.2.0`                             |
+| image.tag                        | image tag                                                                    | `1.3.0`                             |
 | image.imagePullSecrets           | image pull secrets for private repositories                                  | `[]`                                |
 | namespaceSelector                | namespace selector to use, will limit webhook scope                          | `{}`                                |
 | objectSelector                | object selector to use, will limit webhook scope (K8s version 1.15+)            | `{}`                                |
@@ -132,7 +132,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | rbac.enabled                     | use rbac                                                                     | `true`                              |
 | rbac.psp.enabled                 | use pod security policy                                                      | `false`                             |
 | env.VAULT_IMAGE                  | vault image                                                                  | `vault:1.4.0`                      |
-| env.VAULT_ENV_IMAGE              | vault-env image                                                           | `banzaicloud/vault-env:1.2.0`      |
+| env.VAULT_ENV_IMAGE              | vault-env image                                                           | `banzaicloud/vault-env:1.3.0`      |
 | volumes                          | extra volume definitions                                                     | `[]`                                |
 | volumeMounts                     | extra volume mounts                                                          | `[]`                                |
 | configMapMutation                | enable injecting values from Vault to ConfigMaps                             | `false`                             |
