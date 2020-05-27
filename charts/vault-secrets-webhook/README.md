@@ -92,6 +92,13 @@ $ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-
 
 **NOTE**: `--wait` is necessary because of Helm timing issues, please see [this issue](https://github.com/banzaicloud/banzai-charts/issues/888).
 
+### Openshift 4.3
+For security reasons, the runAsUser must be in the range between 1000570000 and 1000579999. By setting the value of securityContext.runAsUser to "", openshift chooses a valid User.
+
+```bash
+$ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook --set-string securityContext.runAsUser="" --wait
+```
+
 ### About GKE Private Clusters
 
 When Google configure the control plane for private clusters, they automatically configure VPC peering between your Kubernetes cluster’s network in a separate Google managed project.

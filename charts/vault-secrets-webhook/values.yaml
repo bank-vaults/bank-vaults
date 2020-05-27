@@ -46,6 +46,9 @@ metrics:
     tlsConfig:
       insecureSkipVerify: true
 
+securityContext:
+  runAsUser: 65534
+
 volumes: []
 # - name: vault-tls
 #   secret:
