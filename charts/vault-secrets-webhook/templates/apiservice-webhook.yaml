@@ -132,7 +132,7 @@ webhooks:
         - "*"
       resources:
         - configmaps
-  failurePolicy: {{ .Values.configmapFailurePolicy }}
+  failurePolicy: {{ .Values.configmapFailurePolicy | default .Values.configMapFailurePolicy }}
   namespaceSelector:
   {{- if .Values.namespaceSelector.matchLabels }}
     matchLabels:
