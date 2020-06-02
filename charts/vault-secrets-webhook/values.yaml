@@ -28,7 +28,7 @@ service:
   internalPort: 8443
 
 env:
-  VAULT_IMAGE: vault:1.4.0
+  VAULT_image: vault:1.4.2
   VAULT_ENV_IMAGE: banzaicloud/vault-env:1.3.0
   # VAULT_CAPATH: /vault/tls
   # used when the pod that should get secret injected does not specify

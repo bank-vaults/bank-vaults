@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: vault:1.4.0
+  image: vault:1.4.2
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   vaultPodSpec:
