@@ -24,6 +24,9 @@ spec:
         app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
         security.banzaicloud.io/mutate: skip
+        {{- if .Values.labels }}
+{{ toYaml .Values.labels | indent 8 }}
+        {{- end }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/apiservice-webhook.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
