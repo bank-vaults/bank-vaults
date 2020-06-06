@@ -122,6 +122,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | namespaceSelector                | namespace selector to use, will limit webhook scope                          | `{}`                                |
 | objectSelector                | object selector to use, will limit webhook scope (K8s version 1.15+)            | `{}`                                |
 | nodeSelector                     | node selector to use                                                         | `{}`                                |
+| labels                           | extra labels to add to the deployment and pods                               | `{}`                                |
 | podAnnotations                   | extra annotations to add to pod metadata                                     | `{}`                                |
 | replicaCount                     | number of replicas                                                           | `2`                                 |
 | resources                        | resources to request                                                         | `{}`                                |
