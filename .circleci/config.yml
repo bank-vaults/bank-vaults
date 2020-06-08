@@ -76,6 +76,8 @@ jobs:
       image: circleci/classic:201808-01
       docker_layer_caching: true
 
+    resource_class: large
+
     environment:
       GO_VERSION: "1.14.2"
       K8S_VERSION: v1.15.3
