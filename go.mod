@@ -1,7 +1,8 @@
 module github.com/banzaicloud/bank-vaults
 
 require (
-	cloud.google.com/go v0.44.3
+	cloud.google.com/go v0.46.3
+	cloud.google.com/go/storage v1.0.0
 	emperror.dev/errors v0.7.0
 	github.com/Azure/azure-sdk-for-go v30.1.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.9.2
@@ -43,12 +44,12 @@ require (
 	github.com/slok/kubewebhook v0.9.1
 	github.com/spf13/cast v1.3.0
 	github.com/spf13/cobra v0.0.5
-	github.com/spf13/viper v1.4.0
+	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.5.1
 	gocloud.dev v0.19.1-0.20200414210820-bb59d59f26d5
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	google.golang.org/api v0.9.0
-	google.golang.org/genproto v0.0.0-20190801165951-fa694d86fc64
+	google.golang.org/api v0.13.0
+	google.golang.org/genproto v0.0.0-20191108220845-16a3f7862a1a
 	k8s.io/api v0.18.0
 	k8s.io/apimachinery v0.18.1-beta.0
 	k8s.io/client-go v0.18.0
