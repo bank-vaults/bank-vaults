@@ -109,7 +109,8 @@ func (t kvTester) Test(key string) error {
 	_, err := t.Service.Get(key)
 
 	if err != nil {
-		if e, ok := err.(notFoundError); !ok || !e.NotFound() {
+		cause := errors.Cause(err)
+		if e, ok := cause.(notFoundError); !ok || !e.NotFound() {
 			return err
 		}
 	}
@@ -204,6 +205,7 @@ type notFoundError interface {
 
 func (v *vault) keyStoreNotFound(key string) (bool, error) {
 	_, err := v.keyStore.Get(key)
+	err = errors.Cause(err)
 	if e, ok := err.(notFoundError); ok && e.NotFound() {
 		return true, nil
 	}
