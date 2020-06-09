@@ -19,6 +19,7 @@ ignored = [
   "google.golang.org/genproto",
   "google.golang.org/api",
   "cloud.google.com/go",
+  "cloud.google.com/go/storage",
 ]
 
 [header]
