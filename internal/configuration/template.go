@@ -25,11 +25,10 @@ import (
 	"strings"
 	"text/template"
 
+	"emperror.dev/errors"
 	"github.com/Masterminds/sprig"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/goph/emperror"
-
 	"gocloud.dev/blob"
 	// These drivers are supported currently by the blob function
 	_ "gocloud.dev/blob/azureblob"
@@ -82,14 +81,14 @@ func (t Templater) Template(templateText string, data interface{}) (*bytes.Buffe
 		Parse(templateText)
 
 	if err != nil {
-		return nil, emperror.Wrapf(err, "error parsing template")
+		return nil, errors.WrapIf(err, "error parsing template")
 	}
 
 	buffer := bytes.NewBuffer(nil)
 
 	err = configTemplate.ExecuteTemplate(buffer, templateName, data)
 	if err != nil {
-		return nil, emperror.Wrapf(err, "error executing template")
+		return nil, errors.WrapIf(err, "error executing template")
 	}
 
 	return buffer, nil

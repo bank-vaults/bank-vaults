@@ -27,7 +27,6 @@ require (
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gin-gonic/gin v1.6.3
 	github.com/google/go-cmp v0.4.0
-	github.com/goph/emperror v0.17.2
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/heroku/docker-registry-client v0.0.0-20181004091502-47ecf50fd8d4
