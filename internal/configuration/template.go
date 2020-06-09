@@ -26,10 +26,11 @@ import (
 	"text/template"
 
 	"emperror.dev/errors"
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"gocloud.dev/blob"
+
 	// These drivers are supported currently by the blob function
 	_ "gocloud.dev/blob/azureblob"
 	_ "gocloud.dev/blob/fileblob"
@@ -95,7 +96,7 @@ func (t Templater) Template(templateText string, data interface{}) (*bytes.Buffe
 }
 
 func customFuncs() template.FuncMap {
-	return template.FuncMap(funcMap())
+	return funcMap()
 }
 
 func funcMap() map[string]interface{} {

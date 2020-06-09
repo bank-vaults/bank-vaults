@@ -10,10 +10,9 @@ require (
 	github.com/Azure/go-autorest/autorest/to v0.3.0 // indirect
 	github.com/Azure/go-autorest/autorest/validation v0.2.0 // indirect
 	github.com/Masterminds/semver v1.4.2
-	github.com/Masterminds/sprig v2.15.0+incompatible
+	github.com/Masterminds/sprig/v3 v3.1.0
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.193
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20171213061034-52de7239022c
-	github.com/aokoli/goutils v1.0.1 // indirect
 	github.com/aws/aws-sdk-go v1.30.7
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/banzaicloud/bank-vaults/pkg/sdk v0.2.1
@@ -30,8 +29,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/heroku/docker-registry-client v0.0.0-20181004091502-47ecf50fd8d4
-	github.com/huandu/xstrings v1.2.1 // indirect
-	github.com/imdario/mergo v0.3.7
+	github.com/imdario/mergo v0.3.8
 	github.com/jpillora/backoff v0.0.0-20180909062703-3050d21c67d7
 	github.com/miekg/pkcs11 v1.0.3
 	github.com/opencontainers/image-spec v1.0.1
@@ -41,7 +39,7 @@ require (
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/slok/kubewebhook v0.9.1
-	github.com/spf13/cast v1.3.0
+	github.com/spf13/cast v1.3.1
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.6.1
