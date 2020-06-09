@@ -31,10 +31,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver"
-	vaultv1alpha1 "github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
-	bvtls "github.com/banzaicloud/bank-vaults/pkg/sdk/tls"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
+	"github.com/Masterminds/semver/v3"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
 	etcdv1beta2 "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
 	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
@@ -62,6 +59,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	vaultv1alpha1 "github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
+	bvtls "github.com/banzaicloud/bank-vaults/pkg/sdk/tls"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 var log = logf.Log.WithName("controller_vault")
