@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -27,7 +28,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/hashicorp/vault/api"
 	vaultapi "github.com/hashicorp/vault/api"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 )
 
@@ -35,7 +36,17 @@ const (
 	serviceAccountFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
-var logger *log.Logger
+var logger *logrus.Logger
+
+func init() {
+	enableJSONLog, _ := strconv.ParseBool(os.Getenv("VAULT_JSON_LOG"))
+
+	logger = logrus.New()
+
+	if enableJSONLog {
+		logger.SetFormatter(&logrus.JSONFormatter{})
+	}
+}
 
 // NewData is a helper function for Vault KV Version two secret data creation
 func NewData(cas int, data map[string]interface{}) map[string]interface{} {
@@ -136,13 +147,6 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 
 // NewClientFromConfig creates a new Vault client from custom configuration.
 func NewClientFromConfig(config *vaultapi.Config, opts ...ClientOption) (*Client, error) {
-	enableJSONLog := os.Getenv("VAULT_JSON_LOG")
-
-	logger = log.New()
-	if enableJSONLog == "true" {
-		logger.SetFormatter(&log.JSONFormatter{})
-	}
-
 	rawClient, err := vaultapi.NewClient(config)
 	if err != nil {
 		return nil, err
