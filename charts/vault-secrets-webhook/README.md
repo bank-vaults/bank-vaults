@@ -51,25 +51,6 @@ If you want to use a specific key version, you can append it after the key so it
 
 Omitting the version will tell Vault to pull the latest version.
 
-Also, you will need to create the following RBAC policy to handle the Vault Auth tokens.
-
-```
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRoleBinding
-metadata:
-  name: vault-tokenreview-binding
-  namespace: vswh # Change it if you don't use the defaults when you install it via Helm
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:auth-delegator
-subjects:
-- kind: ServiceAccount
-  name: vswh-vault-secrets-webhook # Change it if you don't use the defaults when you install it via Helm
-  namespace: vswh # Change it if you don't use the defaults when you install it via Helm
-```
-
-
 ## Installing the Chart
 
 **In case of the K8s version is lower than 1.15 the namespace where you install the webhook must have a label of `name` with the namespace name as the value, so the `namespaceSelector` in the `MutatingWebhookConfiguration` can skip the namespace of the webhook, so no self-mutation takes place. If the K8s version is 1.15 at least, the default `objectSelector` will prevent the self-mutation**
