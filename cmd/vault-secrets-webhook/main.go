@@ -315,11 +315,10 @@ func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.O
 	switch v := obj.(type) {
 	case *corev1.Pod:
 		return false, mw.mutatePod(v, vaultConfig, whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.IsAdmissionRequestDryRun(ctx))
+
 	case *corev1.Secret:
-		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/vault-addr"]; ok {
-			return false, mw.mutateSecret(v, vaultConfig)
-		}
-		return false, nil
+		return false, mw.mutateSecret(v, vaultConfig)
+
 	case *corev1.ConfigMap:
 		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/mutate-configmap"]; ok {
 			return false, mw.mutateConfigMap(v, vaultConfig)
@@ -327,10 +326,8 @@ func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.O
 		return false, nil
 
 	case *unstructured.Unstructured:
-		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/vault-addr"]; ok {
-			return false, mw.mutateObject(v, vaultConfig)
-		}
-		return false, nil
+		return false, mw.mutateObject(v, vaultConfig)
+
 	default:
 		return false, nil
 	}
