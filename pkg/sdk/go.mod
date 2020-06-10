@@ -12,7 +12,7 @@ require (
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cast v1.3.0
-	github.com/spf13/viper v1.4.0
+	github.com/spf13/viper v1.7.0
 	k8s.io/api v0.17.2
 	k8s.io/client-go v0.17.2
 	sigs.k8s.io/controller-runtime v0.5.2
