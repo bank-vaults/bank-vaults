@@ -39,7 +39,7 @@ require (
 	github.com/pierrec/lz4 v2.2.5+incompatible // indirect
 	github.com/prometheus/client_golang v1.5.1
 	github.com/satori/go.uuid v1.2.0 // indirect
-	github.com/sirupsen/logrus v1.4.2
+	github.com/sirupsen/logrus v1.6.0
 	github.com/slok/kubewebhook v0.9.1
 	github.com/spf13/cast v1.3.0
 	github.com/spf13/cobra v0.0.5
