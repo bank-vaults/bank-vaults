@@ -79,18 +79,17 @@ jobs:
     resource_class: large
 
     environment:
-      GO_VERSION: "1.14.2"
-      K8S_VERSION: v1.15.3
+      GO_VERSION: "1.14.3"
+      K8S_VERSION: v1.18.3
       VAULT_VERSION: "1.4.2"
       KUBECONFIG: /home/circleci/.kube/config
       KURUN_VERSION: "0.3.3"
-      MINIKUBE_VERSION: v1.9.2
+      MINIKUBE_VERSION: v1.11.0
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       MINIKUBE_HOME: /home/circleci
       CHANGE_MINIKUBE_NONE_USER: true
       GOPATH: /go
-      GOPROXY: https://proxy.golang.org
       DOCKER_LATEST: 1
       GIN_MODE: release
 
@@ -104,7 +103,7 @@ jobs:
           name: Start minikube
           background: true
           command: |
-            sudo -E minikube start --vm-driver=none --cpus 2 --memory 4096 --kubernetes-version=${K8S_VERSION}
+            sudo -E minikube start --vm-driver=none --cpus 4 --memory 8192 --kubernetes-version=${K8S_VERSION}
 
       - run:
           name: Setup kubectl
