@@ -73,7 +73,7 @@ jobs:
 
   acceptance-test:
     machine:
-      image: circleci/classic:201808-01
+      image: ubuntu-1604:202004-01
       docker_layer_caching: true
 
     resource_class: large
@@ -103,7 +103,7 @@ jobs:
           name: Start minikube
           background: true
           command: |
-            sudo apt-get install conntrack
+            sudo apt-get update && sudo apt-get install conntrack
             sudo -E minikube start --vm-driver=none --kubernetes-version=${K8S_VERSION}
 
       - run:
