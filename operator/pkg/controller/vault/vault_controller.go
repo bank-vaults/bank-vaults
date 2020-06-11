@@ -1002,7 +1002,9 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	}
 
 	podSpec := corev1.PodSpec{
-		ServiceAccountName: v.Spec.GetServiceAccount(),
+		ServiceAccountName:           v.Spec.GetServiceAccount(),
+		AutomountServiceAccountToken: pointer.BoolPtr(true),
+
 		Containers: []corev1.Container{
 			{
 				Image:           v.Spec.GetBankVaultsImage(),
@@ -1332,7 +1334,9 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			PodAntiAffinity: getPodAntiAffinity(v),
 			NodeAffinity:    getNodeAffinity(v),
 		},
-		ServiceAccountName: v.Spec.GetServiceAccount(),
+
+		ServiceAccountName:           v.Spec.GetServiceAccount(),
+		AutomountServiceAccountToken: pointer.BoolPtr(true),
 
 		InitContainers: withVaultInitContainers(v, []corev1.Container{
 			{
