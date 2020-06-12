@@ -109,8 +109,7 @@ func (t kvTester) Test(key string) error {
 	_, err := t.Service.Get(key)
 
 	if err != nil {
-		cause := errors.Cause(err)
-		if e, ok := cause.(notFoundError); !ok || !e.NotFound() {
+		if !isNotFoundError(err) {
 			return err
 		}
 	}
@@ -203,10 +202,17 @@ type notFoundError interface {
 	NotFound() bool
 }
 
+func isNotFoundError(err error) bool {
+	cause := errors.Cause(err)
+	if notFoundError, ok := cause.(notFoundError); ok && notFoundError.NotFound() {
+		return true
+	}
+	return false
+}
+
 func (v *vault) keyStoreNotFound(key string) (bool, error) {
 	_, err := v.keyStore.Get(key)
-	err = errors.Cause(err)
-	if e, ok := err.(notFoundError); ok && e.NotFound() {
+	if isNotFoundError(err) {
 		return true, nil
 	}
 	return false, err
@@ -361,7 +367,7 @@ func (v *vault) Init() error {
 func (v *vault) RaftInitialized() (bool, error) {
 	rootToken, err := v.keyStore.Get(v.rootTokenKey())
 	if err != nil {
-		if e, ok := err.(notFoundError); ok && e.NotFound() {
+		if isNotFoundError(err) {
 			return false, nil
 		}
 

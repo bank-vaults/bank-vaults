@@ -14,7 +14,11 @@
 
 package kv
 
-import "fmt"
+import (
+	"fmt"
+
+	"emperror.dev/errors"
+)
 
 // NotFoundError represents an error when a key is not found
 type NotFoundError struct {
@@ -32,6 +36,14 @@ func NewNotFoundError(msg string, args ...interface{}) *NotFoundError {
 	return &NotFoundError{
 		msg: fmt.Sprintf(msg, args...),
 	}
+}
+
+func IsNotFoundError(err error) bool {
+	cause := errors.Cause(err)
+	if notFoundError, ok := cause.(*NotFoundError); ok && notFoundError.NotFound() {
+		return true
+	}
+	return false
 }
 
 // Service defines a basic key-value store. Implementations of this interface
