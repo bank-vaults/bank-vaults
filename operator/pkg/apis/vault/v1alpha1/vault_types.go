@@ -496,6 +496,14 @@ func (spec *VaultSpec) GetTLSDisable() bool {
 	return cast.ToBool(tcpSpecs["tls_disable"])
 }
 
+// GetAPIScheme returns if Vault's API address should be called on http or https
+func (spec *VaultSpec) GetAPIScheme() string {
+	if spec.GetTLSDisable() {
+		return "http"
+	}
+	return "https"
+}
+
 // GetTLSExpiryThreshold returns the Vault TLS certificate expiration threshold
 func (spec *VaultSpec) GetTLSExpiryThreshold() time.Duration {
 	if spec.TLSExpiryThreshold == "" {
