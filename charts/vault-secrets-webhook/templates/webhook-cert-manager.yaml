@@ -67,7 +67,7 @@ metadata:
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
-  secretName: {{ template "vault-secrets-webhook.fullname" . }}
+  secretName: {{ include "vault-secrets-webhook.servingCertificate" . }}
   duration: 8760h # 1y
   issuerRef:
     name: {{ include "vault-secrets-webhook.rootCAIssuer" . }}
