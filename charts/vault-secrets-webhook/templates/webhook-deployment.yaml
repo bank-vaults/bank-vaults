@@ -41,7 +41,7 @@ spec:
         - name: serving-cert
           secret:
             defaultMode: 420
-            secretName: {{ template "vault-secrets-webhook.fullname" . }}
+            secretName: {{ include "vault-secrets-webhook.servingCertificate" . }}
 {{- if .Values.volumes }}
 {{ toYaml .Values.volumes | indent 8 }}
 {{- end }}

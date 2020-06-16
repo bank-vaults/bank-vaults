@@ -24,7 +24,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ template "vault-secrets-webhook.fullname" . }}
+  name: {{ include "vault-secrets-webhook.servingCertificate" . }}
   namespace: {{ .Release.Namespace }}
 data:
   tls.crt: {{ $tlsCrt }}
