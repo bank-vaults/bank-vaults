@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	serviceAccountFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	defaultServiceAccountFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
 var logger *logrus.Logger
@@ -274,6 +274,11 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 			_, err := rest.InClusterConfig()
 			if err != nil {
 				return nil, err
+			}
+
+			serviceAccountFile := defaultServiceAccountFile
+			if file := os.Getenv("KUBERNETES_SERVICE_ACCOUNT_TOKEN"); file != "" {
+				serviceAccountFile = file
 			}
 
 			jwt, err := ioutil.ReadFile(serviceAccountFile)
