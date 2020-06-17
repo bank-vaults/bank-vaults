@@ -281,11 +281,6 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 				serviceAccountFile = file
 			}
 
-			jwt, err := ioutil.ReadFile(serviceAccountFile)
-			if err != nil {
-				return nil, err
-			}
-
 			initialTokenArrived := make(chan string, 1)
 			initialTokenSent := false
 
@@ -298,11 +293,21 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					}
 					client.mu.Unlock()
 
-					data := map[string]interface{}{"jwt": string(jwt), "role": o.role}
+					// Projected SA tokens do expire, so we need to move the reading logic into the loop
+					jwt, err := ioutil.ReadFile(serviceAccountFile)
+					if err != nil {
+						logger.Error("failed to read SA token %s: %v", serviceAccountFile, err.Error())
+						continue
+					}
+
+					data := map[string]interface{}{
+						"jwt":  string(jwt),
+						"role": o.role,
+					}
 
 					secret, err := logical.Write(fmt.Sprintf("auth/%s/login", o.authPath), data)
 					if err != nil {
-						logger.Println("Failed to request new Vault token", err.Error())
+						logger.Println("failed to request new Vault token", err.Error())
 						time.Sleep(1 * time.Second)
 						continue
 					}
