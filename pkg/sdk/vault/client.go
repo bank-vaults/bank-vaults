@@ -296,7 +296,7 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					// Projected SA tokens do expire, so we need to move the reading logic into the loop
 					jwt, err := ioutil.ReadFile(serviceAccountFile)
 					if err != nil {
-						logger.Error("failed to read SA token %s: %v", serviceAccountFile, err.Error())
+						logger.Errorf("failed to read SA token %s: %v", serviceAccountFile, err.Error())
 						continue
 					}
 
