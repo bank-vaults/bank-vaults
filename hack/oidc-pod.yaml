@@ -4,7 +4,7 @@ metadata:
   name: nginx
 spec:
   containers:
-  - image: nginx:alpine
+  - image: kurun://cmd/examples/main.go
     name: nginx
     volumeMounts:
     - mountPath: /var/run/secrets/tokens
