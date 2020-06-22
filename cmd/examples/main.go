@@ -29,15 +29,9 @@ func vaultExample() {
 		vaultPath = path
 	}
 
-	vaultRole := ""
-	if role := os.Getenv("VAULT_ROLE"); role != "" {
-		vaultRole = role
-	}
-
 	client, err := vault.NewClientFromConfig(
 		api.DefaultConfig(),
 		vault.ClientAuthPath(vaultPath),
-		vault.ClientRole(vaultRole),
 	)
 	if err != nil {
 		log.Fatal(err)

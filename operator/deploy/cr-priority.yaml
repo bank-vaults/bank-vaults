@@ -144,7 +144,8 @@ spec:
             bound_audiences: vault
             bound_subject: system:serviceaccount:default:default
             user_claim: sub
-            policies: "allow_secrets"
+            policies: allow_secrets
+            ttl: 1h
 
     secrets:
       - path: secret

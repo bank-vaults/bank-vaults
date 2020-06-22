@@ -107,6 +107,7 @@ kubectl wait --for=delete pod/vault-0 --timeout=120s || true
 kubectl delete secret vault-unseal-keys
 
 # Fifth test: single node cluster with defined PriorityClass via vaultPodSpec and vaultConfigurerPodSpec
+kubectl create clusterrolebinding oidc-reviewer --clusterrole=system:service-account-issuer-discovery --group=system:unauthenticated
 kubectl apply -f operator/deploy/priorityclass.yaml
 kubectl apply -f operator/deploy/cr-priority.yaml
 waitfor kubectl get pod/vault-0
@@ -126,7 +127,6 @@ kurun run cmd/examples/main.go
 if [ "${GITHUB_ACTIONS}" == "true" ]
 then
     # Run the OIDC authenticated client test
-    kubectl create clusterrolebinding oidc-reviewer --clusterrole=system:service-account-issuer-discovery --group=system:unauthenticated
     kurun apply -f hack/oidc-pod.yaml
     waitfor "kubectl get pod/oidc -o json | jq -e '.status.phase == \"Succeeded\"'"
 fi
