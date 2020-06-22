@@ -88,9 +88,6 @@ jobs:
       run: |
         # socat
         sudo apt install socat
-        # helm
-        curl -L https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
-        helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com/
         # kurun
         curl -Lo kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-linux-amd64 && chmod +x kurun && sudo mv kurun /usr/local/bin/
 
