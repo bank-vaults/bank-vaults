@@ -53,8 +53,7 @@ jobs:
     name: Acceptance test
     runs-on: ubuntu-latest
     env:
-      KURUN_VERSION: "0.3.3"
-      GIN_MODE: release
+      KURUN_VERSION: "0.4.0"
       DOCKER_LATEST: 1
       VERSION: latest
 
@@ -90,7 +89,6 @@ jobs:
         # socat
         sudo apt install socat
         # helm
-        export KUBECONFIG="$(kind get kubeconfig-path --name="kind")"
         curl -L https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
         helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com/
         # kurun
@@ -98,5 +96,4 @@ jobs:
 
     - name: Operator and webhook acceptance test
       run: |
-        export KUBECONFIG="$(kind get kubeconfig-path --name="kind")"
         hack/acceptance-test.sh
