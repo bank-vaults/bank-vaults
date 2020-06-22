@@ -4,23 +4,23 @@ metadata:
   name: oidc
 spec:
   containers:
-  - image: kurun://cmd/examples/main.go
-    name: oidc
-    volumeMounts:
-    - mountPath: /var/run/secrets/tokens
-      name: oidc-token
-    env:
-    - name: VAULT_PATH
-      value: "jwt"
-    - name: KUBERNETES_SERVICE_ACCOUNT_TOKEN
-      value: /var/run/secrets/tokens/oidc-token
+    - image: kurun://cmd/examples/main.go
+      name: oidc
+      volumeMounts:
+        - mountPath: /var/run/secrets/tokens
+          name: oidc-token
+      env:
+        - name: KUBERNETES_SERVICE_ACCOUNT_TOKEN
+          value: /var/run/secrets/tokens/oidc-token
+        - name: VAULT_PATH
+          value: jwt
   restartPolicy: OnFailure
   serviceAccountName: default
   volumes:
-  - name: oidc-token
-    projected:
-      sources:
-      - serviceAccountToken:
-          path: oidc-token
-          expirationSeconds: 7200
-          audience: vault
+    - name: oidc-token
+      projected:
+        sources:
+          - serviceAccountToken:
+              path: oidc-token
+              expirationSeconds: 7200
+              audience: vault
