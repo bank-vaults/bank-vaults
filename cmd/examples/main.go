@@ -20,10 +20,25 @@ import (
 
 	database "github.com/banzaicloud/bank-vaults/pkg/sdk/db"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
+	"github.com/hashicorp/vault/api"
 )
 
 func vaultExample() {
-	client, err := vault.NewClient("default")
+	vaultPath := "kubernetes"
+	if path := os.Getenv("VAULT_PATH"); path != "" {
+		vaultPath = path
+	}
+
+	vaultRole := ""
+	if role := os.Getenv("VAULT_ROLE"); role != "" {
+		vaultRole = role
+	}
+
+	client, err := vault.NewClientFromConfig(
+		api.DefaultConfig(),
+		vault.ClientAuthPath(vaultPath),
+		vault.ClientRole(vaultRole),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,7 +72,7 @@ func gormExample() {
 	log.Printf("use this with GORM:\ndb, err := gorm.Open(\"mysql\", \"%s\")", secretSource)
 }
 
-// REQUIRED to start a Vault 0.9 dev server with:
+// REQUIRED to start a Vault dev server with:
 // vault server -dev &
 func main() {
 	os.Setenv("VAULT_ADDR", "https://vault.default:8200")

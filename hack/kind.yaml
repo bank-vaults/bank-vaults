@@ -11,8 +11,8 @@ kubeadmConfigPatches:
   apiServer:
     # https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
     extraArgs:
-      service-account-issuer: https://localhost:6443
-      service-account-jwks-uri: https://localhost:6443/openid/v1/jwks
+      service-account-issuer: https://kubernetes
+      service-account-jwks-uri: https://kubernetes/openid/v1/jwks
       service-account-signing-key-file: /etc/kubernetes/pki/sa.key
       service-account-key-file: /etc/kubernetes/pki/sa.pub
 
@@ -26,12 +26,12 @@ vault server -dev
 vault auth enable jwt
 vault write auth/jwt/config \
         oidc_discovery_url=https://localhost:6443 \
-        oidc_discovery_ca_pem="$OIDC_DISCOVERY_CA_PEM"
+        oidc_discovery_ca_pem="$OIDC_DISCOVERY_CA_PEM" \
+        bound_issuer=https://localhost:6443
 
 vault write auth/jwt/role/demo \
         role_type=jwt \
         bound_audiences=vault \
-        bound_issuer=https://localhost:6443 \
         bound_subject="system:serviceaccount:default:default" \
         user_claim=sub \
         policies=default
