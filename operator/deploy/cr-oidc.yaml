@@ -7,54 +7,6 @@ spec:
   image: vault:1.4.2
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
-  vaultPodSpec:
-    priorityClassName: high-priority
-
-  vaultConfigurerPodSpec:
-    priorityClassName: high-priority
-
-  # Common annotations for all created resources
-  annotations:
-    common/annotation: "true"
-  
-  # Vault Pods , Services and TLS Secret annotations
-  vaultAnnotations:
-    type/instance: "vault"
-  
-  # Vault Configurer Pods and Services annotations
-  vaultConfigurerAnnotations:
-    type/instance: "vaultconfigurer"
-
-  # Vault Pods , Services and TLS Secret labels
-  vaultLabels:
-    example.com/log-format: "json"
-
-  # Vault Configurer Pods and Services labels
-  vaultConfigurerLabels:
-    example.com/log-format: "string"
-
-  # Support for nodeAffinity Rules
-  # nodeAffinity:
-  #   requiredDuringSchedulingIgnoredDuringExecution:
-  #     nodeSelectorTerms:
-  #     - matchExpressions:
-  #       - key : "node-role.kubernetes.io/your_role"
-  #         operator: In
-  #         values: ["true"]
-
-  # Support for pod nodeSelector rules to control which nodes can be chosen to run
-  # the given pods
-  # nodeSelector:
-  #   "node-role.kubernetes.io/your_role": "true"
-
-  # Support for node tolerations that work together with node taints to control
-  # the pods that can like on a node
-  # tolerations:
-  # - effect: NoSchedule
-  #   key: node-role.kubernetes.io/your_role
-  #   operator: Equal
-  #   value: "true"
-
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault
 
@@ -121,6 +73,7 @@ spec:
         rules: path "secret/*" {
           capabilities = ["create", "read", "update", "delete", "list"]
           }
+
     auth:
       - type: kubernetes
         roles:
@@ -128,6 +81,21 @@ spec:
           - name: default
             bound_service_account_names: ["default", "vault-secrets-webhook"]
             bound_service_account_namespaces: ["default", "vswh"]
+            policies: allow_secrets
+            ttl: 1h
+
+      - type: jwt
+        config:
+          oidc_discovery_url: https://kubernetes
+          oidc_discovery_ca_pem: ${ file `/var/run/secrets/kubernetes.io/serviceaccount/ca.crt` }
+          bound_issuer: https://kubernetes
+          default_role: default
+        roles:
+          - name: default
+            role_type: jwt
+            bound_audiences: vault
+            bound_subject: system:serviceaccount:default:default
+            user_claim: sub
             policies: allow_secrets
             ttl: 1h
 
@@ -176,16 +144,16 @@ spec:
     requests:
       storage: 1Gi
 
-# ---
-# apiVersion: v1
-# kind: PersistentVolume
-# metadata:
-#   name: vault-file
-# spec:
-#   capacity:
-#     storage: 1Gi
-#   accessModes:
-#   - ReadWriteOnce
-#   persistentVolumeReclaimPolicy: Recycle
-#   hostPath:
-#     path: /vault/file
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oidc-reviewer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:service-account-issuer-discovery
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:unauthenticated

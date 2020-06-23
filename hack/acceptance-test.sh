@@ -123,10 +123,19 @@ sleep 20
 # Run an internal client which tries to read from Vault with the configured Kubernetes auth backend
 kurun run cmd/examples/main.go
 
+kubectl delete -f operator/deploy/cr-priority.yaml
+kubectl delete -f operator/deploy/priorityclass.yaml
+kubectl wait --for=delete pod/vault-0 --timeout=120s || true
+kubectl delete secret vault-unseal-keys
+
 # Only kind is configured to be able to run this test
 if [ "${GITHUB_ACTIONS}" == "true" ]
 then
-    # Run the OIDC authenticated client test
+    # Sixth test: Run the OIDC authenticated client test
+    kubectl apply -f operator/deploy/cr-oidc.yaml
+    waitfor kubectl get pod/vault-0
+    kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
+
     kurun apply -f hack/oidc-pod.yaml
     waitfor "kubectl get pod/oidc -o json | jq -e '.status.phase == \"Succeeded\"'"
 fi
