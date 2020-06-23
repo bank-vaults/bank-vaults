@@ -84,7 +84,7 @@ jobs:
         kind load docker-image banzaicloud/vault-secrets-webhook:latest
         kind load docker-image banzaicloud/vault-env:latest
 
-    - name: Install socat kubectl, helm and kurun
+    - name: Install socat and kurun
       run: |
         # socat
         sudo apt install socat
