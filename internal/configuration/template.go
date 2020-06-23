@@ -183,7 +183,7 @@ func fileContent(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(r), nil
+	return strings.ReplaceAll(string(r), "\n", "\\n"), nil
 }
 
 func convertContextMap(encryptionContext []string) map[string]*string {

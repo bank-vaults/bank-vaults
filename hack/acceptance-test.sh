@@ -3,7 +3,7 @@ set -xeo pipefail
 
 function waitfor {
     WAIT_MAX=0
-    until $@ &> /dev/null || [ $WAIT_MAX -eq 45 ]; do
+    until sh -c "$*" &> /dev/null || [ $WAIT_MAX -eq 45 ]; do
         sleep 1
         (( WAIT_MAX = WAIT_MAX + 1 ))
     done
@@ -107,6 +107,7 @@ kubectl wait --for=delete pod/vault-0 --timeout=120s || true
 kubectl delete secret vault-unseal-keys
 
 # Fifth test: single node cluster with defined PriorityClass via vaultPodSpec and vaultConfigurerPodSpec
+kubectl create clusterrolebinding oidc-reviewer --clusterrole=system:service-account-issuer-discovery --group=system:unauthenticated
 kubectl apply -f operator/deploy/priorityclass.yaml
 kubectl apply -f operator/deploy/cr-priority.yaml
 waitfor kubectl get pod/vault-0
@@ -114,7 +115,7 @@ kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
 
 # Leave this instance for further tests
 
-# Run a client test
+# Run a client tests
 
 # Give bank-vaults some time to let the Kubernetes auth backend configuration happen
 sleep 20
@@ -122,6 +123,22 @@ sleep 20
 # Run an internal client which tries to read from Vault with the configured Kubernetes auth backend
 kurun run cmd/examples/main.go
 
+# Only kind is configured to be able to run this test
+if [ "${GITHUB_ACTIONS}" == "true" ]
+then
+    kubectl delete -f operator/deploy/cr-priority.yaml
+    kubectl delete -f operator/deploy/priorityclass.yaml
+    kubectl wait --for=delete pod/vault-0 --timeout=120s || true
+    kubectl delete secret vault-unseal-keys
+
+    # Sixth test: Run the OIDC authenticated client test
+    kubectl apply -f operator/deploy/cr-oidc.yaml
+    waitfor kubectl get pod/vault-0
+    kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
+
+    kurun apply -f hack/oidc-pod.yaml
+    waitfor "kubectl get pod/oidc -o json | jq -e '.status.phase == \"Succeeded\"'"
+fi
 
 # Run the webhook test, the hello-secrets deployment should be successfully mutated
 kubectl create namespace vswh
