@@ -413,3 +413,16 @@ func NewRawClient() (*api.Client, error) {
 
 	return vaultapi.NewClient(config)
 }
+
+// NewInsecureRawClient creates a new raw Vault client with insecure TLS.
+func NewInsecureRawClient() (*api.Client, error) {
+	config := vaultapi.DefaultConfig()
+	if config.Error != nil {
+		return nil, config.Error
+	}
+
+	config.HttpClient.Transport.(*http.Transport).TLSHandshakeTimeout = 5 * time.Second
+	config.HttpClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
+
+	return vaultapi.NewClient(config)
+}
