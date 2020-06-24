@@ -38,7 +38,7 @@ helm delete vault
 kubectl delete secret bank-vaults
 
 # Create a resource quota in the default namespace
-kubectl create quota bank-vaults --hard=cpu=2,memory=4G,pods=10,services=10,replicationcontrollers=10,secrets=15,persistentvolumeclaims=10
+kubectl create quota bank-vaults --hard=cpu=4,memory=8G,pods=10,services=10,replicationcontrollers=10,secrets=15,persistentvolumeclaims=10
 
 # Install the operators and companion
 helm dependency build ./charts/vault-operator
@@ -56,62 +56,47 @@ kubectl apply -f operator/deploy/rbac.yaml
 # First test: HA setup with etcd
 kubectl apply -f operator/deploy/cr-etcd-ha.yaml
 waitfor kubectl get etcdclusters.etcd.database.coreos.com/etcd-cluster
-kubectl wait --for=condition=available etcdclusters.etcd.database.coreos.com/etcd-cluster --timeout=120s
-waitfor kubectl get pod/vault-0
-waitfor kubectl get pod/vault-1
-kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
+kubectl wait --for=condition=available --timeout=120s etcdclusters.etcd.database.coreos.com/etcd-cluster
+kubectl wait --for=condition=healthy --timeout=180s vault/vault
 kubectl delete -f operator/deploy/cr-etcd-ha.yaml
 kubectl delete secret vault-unseal-keys
-kubectl wait --for=delete pod/vault-0 --timeout=120s || true
-kubectl wait --for=delete pod/vault-1 --timeout=120s || true
-kubectl delete pvc --all # persitentVolumeClaims has to be cleared
-
+kubectl delete pvc --all
 kubectl delete deployment vault-operator-etcd-operator-etcd-operator # the etcd operator is also unused from this point
 
 # Second test: test the external secrets watcher work and match as expected
 kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
-waitfor kubectl get pod/vault-0
-kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
+kubectl wait --for=condition=healthy --timeout=120s vault/vault
 test x`kubectl get pod vault-0 -o jsonpath='{.metadata.annotations.vault\.banzaicloud\.io/watched-secrets-sum}'` = "x"
 kubectl delete -f deploy/test-external-secrets-watch-deployment.yaml
 kubectl delete secret vault-unseal-keys
-kubectl wait --for=delete pod/vault-0 --timeout=120s || true
 
 kubectl apply -f deploy/test-external-secrets-watch-secrets.yaml
 kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
-waitfor kubectl get pod/vault-0
-kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
-
+kubectl wait --for=condition=healthy --timeout=120s vault/vault
 test x`kubectl get pod vault-0 -o jsonpath='{.metadata.annotations.vault\.banzaicloud\.io/watched-secrets-sum}'` = "xbac8dfa8bdf03009f89303c8eb4a6c8f2fd80eb03fa658f53d6d65eec14666d4"
 kubectl delete -f deploy/test-external-secrets-watch-deployment.yaml
 kubectl delete -f deploy/test-external-secrets-watch-secrets.yaml
 kubectl delete secret vault-unseal-keys
-kubectl wait --for=delete pod/vault-0 --timeout=120s || true
 
 # Third test: Raft HA setup
 kubectl apply -f operator/deploy/cr-raft.yaml
-waitfor kubectl get pod/vault-2
-kubectl wait --for=condition=ready pod/vault-2 --timeout=120s
+kubectl wait --for=condition=healthy --timeout=120s vault/vault
 kubectl delete -f operator/deploy/cr-raft.yaml
-kubectl wait --for=delete pod/vault-0 --timeout=120s || true
-kubectl wait --for=delete pod/vault-1 --timeout=120s || true
-kubectl wait --for=delete pod/vault-2 --timeout=120s || true
 kubectl delete secret vault-unseal-keys
+kubectl delete pvc --all
 
 # Fourth test: HSM setup with SoftHSM
 kubectl apply -f operator/deploy/cr-hsm-softhsm.yaml
-waitfor kubectl get pod/vault-0
-kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
+kubectl wait --for=condition=healthy --timeout=120s vault/vault
 kubectl delete -f operator/deploy/cr-hsm-softhsm.yaml
-kubectl wait --for=delete pod/vault-0 --timeout=120s || true
 kubectl delete secret vault-unseal-keys
+kubectl delete pvc --all
 
 # Fifth test: single node cluster with defined PriorityClass via vaultPodSpec and vaultConfigurerPodSpec
 kubectl create clusterrolebinding oidc-reviewer --clusterrole=system:service-account-issuer-discovery --group=system:unauthenticated
 kubectl apply -f operator/deploy/priorityclass.yaml
 kubectl apply -f operator/deploy/cr-priority.yaml
-waitfor kubectl get pod/vault-0
-kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
+kubectl wait --for=condition=healthy --timeout=120s vault/vault
 
 # Leave this instance for further tests
 
@@ -128,13 +113,12 @@ if [ "${GITHUB_ACTIONS}" == "true" ]
 then
     kubectl delete -f operator/deploy/cr-priority.yaml
     kubectl delete -f operator/deploy/priorityclass.yaml
-    kubectl wait --for=delete pod/vault-0 --timeout=120s || true
     kubectl delete secret vault-unseal-keys
+    kubectl delete pvc --all
 
     # Sixth test: Run the OIDC authenticated client test
     kubectl apply -f operator/deploy/cr-oidc.yaml
-    waitfor kubectl get pod/vault-0
-    kubectl wait --for=condition=ready pod/vault-0 --timeout=120s
+    kubectl wait --for=condition=healthy --timeout=120s vault/vault
 
     kurun apply -f hack/oidc-pod.yaml
     waitfor "kubectl get pod/oidc -o json | jq -e '.status.phase == \"Succeeded\"'"

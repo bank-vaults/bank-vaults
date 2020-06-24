@@ -4,8 +4,6 @@ FROM golang:${GO_VERSION}-alpine AS builder
 
 RUN apk add --update --no-cache ca-certificates make git build-base curl mercurial
 
-ARG GOPROXY
-
 RUN mkdir -p /build
 WORKDIR /build
 

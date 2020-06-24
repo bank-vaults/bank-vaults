@@ -90,7 +90,6 @@ jobs:
       MINIKUBE_HOME: /home/circleci
       CHANGE_MINIKUBE_NONE_USER: true
       GOPATH: /go
-      GOPROXY: https://proxy.golang.org
       DOCKER_LATEST: 1
       GIN_MODE: release
 

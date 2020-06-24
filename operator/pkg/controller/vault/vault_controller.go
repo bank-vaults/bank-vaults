@@ -572,17 +572,22 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	podNames := getPodNames(podList.Items)
 
 	var leader string
-	for _, podName := range podNames {
-		url := fmt.Sprintf("%s://%s.%s:8200/v1/sys/health", strings.ToLower(string(getVaultURIScheme(v))), podName, v.Namespace)
-		resp, err := r.httpClient.Get(url)
-		if err == nil {
-			defer resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				leader = podName
-				break
-			}
-		} else {
-			log.WithName("health").Error(err, "failed to query vault health")
+	var statusError string
+	for i := 0; i < int(v.Spec.Size); i++ {
+		client, err := vault.NewInsecureRawClient()
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		podName := fmt.Sprintf("%s-%d", v.Name, i)
+		client.SetAddress(fmt.Sprintf("%s://%s.%s:8200", strings.ToLower(string(getVaultURIScheme(v))), podName, v.Namespace))
+
+		health, err := client.Sys().Health()
+		if err != nil {
+			statusError = err.Error()
+			break
+		} else if !health.Standby {
+			leader = podName
 		}
 	}
 
@@ -605,12 +610,13 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		v.Status.Nodes = podNames
 		v.Status.Leader = leader
 		conditionStatus := v1.ConditionFalse
-		if leader != "" {
+		if leader != "" && statusError == "" {
 			conditionStatus = v1.ConditionTrue
 		}
 		v.Status.Conditions = []v1.ComponentCondition{{
 			Type:   v1.ComponentHealthy,
 			Status: conditionStatus,
+			Error:  statusError,
 		}}
 		log.V(1).Info("Updating vault status", "status", v.Status, "resourceVersion", v.ResourceVersion)
 		err := r.client.Update(context.TODO(), v)

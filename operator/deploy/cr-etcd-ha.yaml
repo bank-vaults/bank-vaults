@@ -14,6 +14,17 @@ spec:
   # NOTE: -1 disables automatic etcd provisioning
   etcdSize: 1
 
+  resources:
+    # A YAML representation of resource ResourceRequirements for vault container
+    # Detail can reference: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container
+    vault:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "250m"
+
   # Specify the PersistentVolumeClaim Spec which will be used as a storage for etcd
   # if it is not specified emptydir will be used
   etcdPVCSpec:
