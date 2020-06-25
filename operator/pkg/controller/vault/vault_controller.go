@@ -2135,8 +2135,10 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 	} else {
 		delete(currentSecret.StringData, "server.crt")
 		delete(currentSecret.StringData, "server.key")
+		delete(currentSecret.StringData, "ca.key")
 		delete(currentSecret.Data, "server.crt")
 		delete(currentSecret.Data, "server.key")
+		delete(currentSecret.Data, "ca.key")
 	}
 
 	var namespaces []string
