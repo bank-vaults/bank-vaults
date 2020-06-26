@@ -9,7 +9,13 @@ spec:
   - name: {{ .Release.Name }}-vault-status-test
     image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
     env:
+      - name: VAULT_SKIP_VERIFY
+        value: "true"
       - name: VAULT_ADDR
+      {{ if .Values.vault.config.listener.tcp.tls_disable }}
         value: http://{{ template "vault.fullname" . }}:8200
+      {{ else }}
+        value: https://{{ template "vault.fullname" . }}:8200
+      {{ end }}
     command: ["sh", "-c", "vault status"]
   restartPolicy: Never
