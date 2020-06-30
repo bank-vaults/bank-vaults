@@ -2161,6 +2161,7 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 			currentSecret.SetNamespace(namespace)
 			currentSecret.SetResourceVersion("")
 			currentSecret.GetObjectMeta().SetUID("")
+			currentSecret.SetOwnerReferences(nil)
 
 			err = createOrUpdateObjectWithClient(r.nonNamespacedClient, &currentSecret)
 			if apierrors.IsNotFound(err) {
