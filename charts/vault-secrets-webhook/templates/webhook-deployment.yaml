@@ -51,16 +51,18 @@ spec:
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}:{{ include "bank-vaults.version" . }}"
           env:
             - name: TLS_CERT_FILE
               value: /var/serving-cert/tls.crt
             - name: TLS_PRIVATE_KEY_FILE
               value: /var/serving-cert/tls.key
             - name: LISTEN_ADDRESS
-              value: ":{{ .Values.service.internalPort}}"
+              value: ":{{ .Values.service.internalPort }}"
             - name: DEBUG
               value: {{ .Values.debug | quote }}
+            - name: VAULT_ENV_IMAGE
+              value: "banzaicloud/vault-env:{{ include "bank-vaults.version" . }}"
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}

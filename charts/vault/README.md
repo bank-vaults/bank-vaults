@@ -133,7 +133,7 @@ The following tables lists the configurable parameters of the vault chart and th
 | `resources.limits.cpu`  | Container requested CPU             | `nil`                                               |
 | `resources.limits.memory` | Container requested memory        | `nil`                                               |
 | `unsealer.args`         | Bank Vaults args                    | `["--mode", "k8s", "--k8s-secret-namespace", "default", "--k8s-secret-name", "bank-vaults"]` |
-| `unsealer.image.tag`    | Bank Vaults image tag               | `1.3.2`                                             |
+| `unsealer.image.tag`    | Bank Vaults image tag               | `1.3.3`                                             |
 | `rbac.enabled`          | Use rbac                            | `true`                                              |
 | `rbac.psp.enabled`      | Use pod security policy             | `false`                                             |
 | `nodeSelector`          | Node labels for pod assignment. https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector                                                   | `{}`                                                |
@@ -159,11 +159,11 @@ Tested with
 * Helm 3
 
 First create a new project named "vault"
-```
+```bash
 oc new-app vault
 ```
 Then create a new `scc` based on the `scc` restricted and add the capability "IPC_LOCK". Now add the new scc to the ServiceAccount vault of the new vault project:
-```
+```bash
 oc adm policy add-scc-to-user <new_scc> system:serviceaccount:vault:vault
 ```
 
