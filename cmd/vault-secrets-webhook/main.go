@@ -75,6 +75,7 @@ type VaultConfig struct {
 	AgentMemory                 resource.Quantity
 	AgentImage                  string
 	AgentImagePullPolicy        corev1.PullPolicy
+	Skip                        bool
 }
 
 func init() {
@@ -113,6 +114,11 @@ func init() {
 func parseVaultConfig(obj metav1.Object) VaultConfig {
 	var vaultConfig VaultConfig
 	annotations := obj.GetAnnotations()
+
+	if val := annotations["vault.security.banzaicloud.io/mutate"]; val == "skip" {
+		vaultConfig.Skip = true
+		return vaultConfig
+	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-addr"]; ok {
 		vaultConfig.Addr = val
@@ -312,6 +318,11 @@ type mutatingWebhook struct {
 
 func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
 	vaultConfig := parseVaultConfig(obj)
+
+	if vaultConfig.Skip {
+		return false, nil
+	}
+
 	switch v := obj.(type) {
 	case *corev1.Pod:
 		return false, mw.mutatePod(v, vaultConfig, whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.IsAdmissionRequestDryRun(ctx))
@@ -320,10 +331,7 @@ func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.O
 		return false, mw.mutateSecret(v, vaultConfig)
 
 	case *corev1.ConfigMap:
-		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/mutate-configmap"]; ok {
-			return false, mw.mutateConfigMap(v, vaultConfig)
-		}
-		return false, nil
+		return false, mw.mutateConfigMap(v, vaultConfig)
 
 	case *unstructured.Unstructured:
 		return false, mw.mutateObject(v, vaultConfig)
