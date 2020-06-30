@@ -114,7 +114,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | rbac.enabled                     | use rbac                                                                     | `true`                              |
 | rbac.psp.enabled                 | use pod security policy                                                      | `false`                             |
 | env.VAULT_IMAGE                  | vault image                                                                  | `vault:1.4.2`                      |
-| env.VAULT_ENV_IMAGE              | vault-env image                                                           | `banzaicloud/vault-env:1.3.2`      |
+| env.VAULT_ENV_IMAGE              | vault-env image                                                           | `banzaicloud/vault-env:1.3.3`      |
 | volumes                          | extra volume definitions                                                     | `[]`                                |
 | volumeMounts                     | extra volume mounts                                                          | `[]`                                |
 | configMapMutation                | enable injecting values from Vault to ConfigMaps                             | `false`                             |

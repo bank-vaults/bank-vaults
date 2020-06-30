@@ -46,3 +46,10 @@ Create chart name and version as used by the chart label.
 {{- define "vault-secrets-webhook.servingCertificate" -}}
 {{ printf "%s-webhook-tls" (include "vault-secrets-webhook.fullname" .) }}
 {{- end -}}
+
+{{/*
+Overrideable version for container image tags.
+*/}}
+{{- define "bank-vaults.version" -}}
+{{- .Values.image.tag | default (printf "v%s" .Chart.AppVersion) -}}
+{{- end -}}
