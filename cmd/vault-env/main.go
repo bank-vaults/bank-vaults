@@ -63,6 +63,7 @@ var (
 		"VAULT_IGNORE_MISSING_SECRETS": true,
 		"VAULT_ENV_PASSTHROUGH":        true,
 		"VAULT_JSON_LOG":               true,
+		"VAULT_LOG_LEVEL":              true,
 		"VAULT_REVOKE_TOKEN":           true,
 		"VAULT_ENV_DAEMON":             true,
 	}
@@ -115,10 +116,15 @@ func (r daemonSecretRenewer) Renew(path string, secret *vaultapi.Secret) error {
 
 func main() {
 	enableJSONLog := cast.ToBool(os.Getenv("VAULT_JSON_LOG"))
+	lvl, err := logrus.ParseLevel(os.Getenv("VAULT_LOG_LEVEL"))
+	if err != nil {
+		lvl = logrus.InfoLevel
+	}
 
 	var logger logrus.FieldLogger
 	{
 		log := logrus.New()
+		log.SetLevel(lvl)
 		if enableJSONLog {
 			log.SetFormatter(&logrus.JSONFormatter{})
 		}
