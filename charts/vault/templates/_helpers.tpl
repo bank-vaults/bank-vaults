@@ -35,5 +35,5 @@ Create chart name and version as used by the chart label.
 Overrideable version for container image tags.
 */}}
 {{- define "bank-vaults.version" -}}
-{{- .Values.unsealer.image.tag | default (printf "v%s" .Chart.AppVersion) -}}
+{{- .Values.unsealer.image.tag | default (printf "%s" .Chart.AppVersion) -}}
 {{- end -}}
