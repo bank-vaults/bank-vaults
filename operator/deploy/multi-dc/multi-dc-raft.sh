@@ -88,7 +88,7 @@ if [ $COMMAND = "install" ]; then
 
         local REGION=$(get_region)
 
-        helm upgrade --install vault-operator banzaicloud-stable/vault-operator --set image.tag=multi-dc --wait
+        helm upgrade --install vault-operator banzaicloud-stable/vault-operator --wait
 
         create_aws_secret
 
