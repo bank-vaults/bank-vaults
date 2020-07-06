@@ -8,6 +8,7 @@ image:
   repository: banzaicloud/vault-operator
   # tag: ""
   pullPolicy: IfNotPresent
+  imagePullSecrets: []  # global.imagePullSecrets is also supported
 
 service:
   type: ClusterIP

@@ -89,3 +89,4 @@ spec:
 {{- end }}
       serviceAccountName: {{ include "vault-operator.fullname" . }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+{{- include "vault-operator.imagePullSecrets" . | indent 6 }}
