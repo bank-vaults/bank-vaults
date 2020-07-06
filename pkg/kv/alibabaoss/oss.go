@@ -19,7 +19,9 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"emperror.dev/errors"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 
@@ -48,7 +50,7 @@ func (o *ossStorage) Set(key string, val []byte) error {
 	}
 
 	if err := bucket.PutObject(objectKey, bytes.NewReader(val)); err != nil {
-		return fmt.Errorf("error writing key '%s' to OSS bucket '%s': '%s'", objectKey, o.bucket, err.Error())
+		return errors.Wrapf(err, "error writing key '%s' to OSS bucket '%s'", objectKey, o.bucket)
 	}
 
 	return nil
@@ -71,14 +73,14 @@ func (o *ossStorage) Get(key string) ([]byte, error) {
 				return nil, kv.NewNotFoundError("error getting object for key '%s': %s", objectKey, err.Error())
 			}
 		}
-		return nil, fmt.Errorf("error getting object for key '%s': %s", objectKey, err.Error())
+		return nil, errors.Wrapf(err, "error getting object for key '%s'", objectKey)
 	}
 
 	b, err := ioutil.ReadAll(body)
 	defer body.Close()
 
 	if err != nil {
-		return nil, fmt.Errorf("error reading object with key '%s': %s", objectKey, err.Error())
+		return nil, errors.Wrapf(err, "error reading object with key '%s'", objectKey)
 	}
 
 	return b, nil

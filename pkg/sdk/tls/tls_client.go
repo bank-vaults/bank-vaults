@@ -20,10 +20,9 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"math/big"
 	"time"
 
-	"github.com/pkg/errors"
+	"emperror.dev/errors"
 )
 
 // ClientCertificateRequest contains a set of options configurable for client certificate generation
@@ -44,7 +43,7 @@ type ClientCertificate struct {
 func GenerateClientCertificate(req ClientCertificateRequest, signerCert *x509.Certificate, signerKey crypto.Signer) (*ClientCertificate, error) {
 	key, err := rsa.GenerateKey(rand.Reader, defaultKeyBits)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "failed to generate rsa key")
 	}
 
 	keyBytes, err := keyToBytes(key)
@@ -52,8 +51,10 @@ func GenerateClientCertificate(req ClientCertificateRequest, signerCert *x509.Ce
 		return nil, err
 	}
 
-	// TODO: is it correct?
-	serialNumber := new(big.Int).SetInt64(4)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate serial number")
+	}
 
 	validity := req.Validity
 	if validity < 1 {
@@ -78,7 +79,7 @@ func GenerateClientCertificate(req ClientCertificateRequest, signerCert *x509.Ce
 
 	cert, err := x509.CreateCertificate(rand.Reader, certTemplate, signerCert, key.Public(), signerKey)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "failed to create x509 certificate")
 	}
 
 	certBytes, err := certToBytes(cert)

@@ -18,9 +18,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
+	"emperror.dev/errors"
 	vaultapi "github.com/hashicorp/vault/api"
-	"github.com/pkg/errors"
+
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 // DynamicSecretDataSource creates a SQL data source but instead of passing username:password
@@ -32,7 +33,6 @@ import (
 // The underlying Vault client will make sure that the credential is renewed when it
 // is close to the time of expiry.
 func DynamicSecretDataSource(dialect string, source string) (dynamicSecretDataSource string, err error) {
-
 	postgresql := false
 	if strings.HasPrefix(source, "postgresql://") {
 		source = strings.TrimPrefix(source, "postgresql://")
@@ -41,8 +41,8 @@ func DynamicSecretDataSource(dialect string, source string) (dynamicSecretDataSo
 
 	sourceParts := strings.Split(source, "@")
 	if len(sourceParts) != 2 {
-		err = errors.New("invalid database source")
-		return "", err
+		err = errors.New("invalid database source") // nolint:goerr113
+		return
 	}
 
 	vaultRole := sourceParts[0]
@@ -52,18 +52,18 @@ func DynamicSecretDataSource(dialect string, source string) (dynamicSecretDataSo
 
 	if err != nil {
 		err = errors.Wrap(err, "failed to establish vault connection")
-		return "", err
+		return
 	}
 
 	secret, err := vaultClient.RawClient().Logical().Read(vaultCredsEndpoint)
 	if err != nil {
 		err = errors.Wrap(err, "failed to read db credentials")
-		return "", err
+		return
 	}
 
 	if secret == nil {
-		err = errors.New("failed to find '" + vaultCredsEndpoint + "' secret in vault")
-		return "", err
+		err = errors.Errorf("failed to find '%s' secret in vault", vaultCredsEndpoint)
+		return
 	}
 
 	secretRenewer, err := vaultClient.RawClient().NewRenewer(&vaultapi.RenewerInput{Secret: secret})
@@ -71,7 +71,7 @@ func DynamicSecretDataSource(dialect string, source string) (dynamicSecretDataSo
 	if err != nil {
 		vaultClient.Close()
 		err = errors.Wrap(err, "failed to start db credential renewer")
-		return "", err
+		return
 	}
 
 	go secretRenewer.Renew()

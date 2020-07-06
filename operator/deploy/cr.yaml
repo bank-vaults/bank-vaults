@@ -4,17 +4,17 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: vault:1.2.3
+  image: vault:1.4.2
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Common annotations for all created resources
   annotations:
     common/annotation: "true"
-  
+
   # Vault Pods , Services and TLS Secret annotations
   vaultAnnotations:
     type/instance: "vault"
-  
+
   # Vault Configurer Pods and Services annotations
   vaultConfigurerAnnotations:
     type/instance: "vaultconfigurer"
@@ -56,6 +56,13 @@ spec:
   # Please note that some Ingress controllers like https://github.com/kubernetes/ingress-gce
   # forces you to expose your Service on a NodePort
   serviceType: ClusterIP
+
+  # Specify existing secret contains TLS certificate (accepted secret type: kubernetes.io/tls)
+  # If it is set, generating certificate will be disabled
+  # existingTlsSecretName: selfsigned-cert-tls
+
+  # Specify threshold for renewing certificates. Valid time units are "ns", "us", "ms", "s", "m", "h".
+  # tlsExpiryThreshold: 168h
 
   # Request an Ingress controller with the default configuration
   ingress:

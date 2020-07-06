@@ -2,9 +2,12 @@ apiVersion: "vault.banzaicloud.com/v1alpha1"
 kind: "Vault"
 metadata:
   name: "vault"
+  labels:
+    app.kubernetes.io/name: vault
+    vault_cr: vault
 spec:
   size: 3
-  image: vault:1.2.3
+  image: vault:1.4.2
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Common annotations for all created resources
@@ -77,10 +80,10 @@ spec:
   #       - /bin/sh
   #       - -c
   #       - |
-  #         chown -R 100:1000 /vault/raft
+  #         chown -R 100:1000 /vault/file
   #     volumeMounts:
   #       - name: vault-raft
-  #         mountPath: /vault/raft
+  #         mountPath: /vault/file
 
   # Use local disk to store Vault raft data, see config section.
   volumeClaimTemplates:
@@ -98,7 +101,11 @@ spec:
 
   volumeMounts:
     - name: vault-raft
-      mountPath: /vault/raft
+      mountPath: /vault/file
+
+  # Add Velero fsfreeze sidecar container and supporting hook annotations to Vault Pods:
+  # https://velero.io/docs/v1.2.0/hooks/
+  veleroEnabled: true
 
   # Support for distributing the generated CA certificate Secret to other namespaces.
   # Define a list of namespaces or use ["*"] for all namespaces.
@@ -119,7 +126,7 @@ spec:
   config:
     storage:
       raft:
-        path: "/vault/raft"
+        path: "/vault/file"
     listener:
       tcp:
         address: "0.0.0.0:8200"
@@ -127,9 +134,20 @@ spec:
         tls_key_file: /vault/tls/server.key
     api_addr: https://vault.default:8200
     cluster_addr: "https://${.Env.POD_NAME}:8201"
-    telemetry:
-      statsd_address: localhost:9125
     ui: true
+  
+  statsdDisabled: true
+
+  resources:
+    # A YAML representation of resource ResourceRequirements for vault container
+    # Detail can reference: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container
+    vault:
+      limits:
+        memory: "512Mi"
+        cpu: "200m"
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
 
   # See: https://github.com/banzaicloud/bank-vaults#example-external-vault-configuration for more details.
   externalConfig:
@@ -179,5 +197,3 @@ spec:
   vaultEnvsConfig:
     - name: VAULT_LOG_LEVEL
       value: debug
-    - name: VAULT_STORAGE_FILE
-      value: "/vault/file"

@@ -25,7 +25,7 @@ import (
 var (
 	// Example: vault:v1:8SDd3WHDOjf7mq69CyCqYjBXAiQQAVZRkFM13ok481zoCmHnSeDX9vyf7w==
 	// ref: https://www.vaultproject.io/docs/secrets/transit/index.html#usage
-	transitEncryptedVariable = regexp.MustCompile(`vault:v\d+:.+`)
+	transitEncryptedVariable = regexp.MustCompile(`^vault:v\d+:.+$`)
 )
 
 // Transit is a wrapper for Transit Secret Engine

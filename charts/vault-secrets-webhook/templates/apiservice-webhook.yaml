@@ -11,28 +11,36 @@
 {{- $tlsCrt = b64enc $server.Cert }}
 {{- $tlsKey = b64enc $server.Key }}
 {{- $caCrt =  b64enc $ca.Cert }}
+{{- else if .Values.certificate.useCertManager }}
+{{/* do nothing with certs here. Cert-manager will handle it all */}}
+{{/* all clientConfig.caBundle will be overridden by cert-manager */}}
 {{- else }}
 {{- $tlsCrt = required "Required when certificate.generate is false" .Values.certificate.server.tls.crt }}
 {{- $tlsKey = required "Required when certificate.generate is false" .Values.certificate.server.tls.key }}
 {{- $caCrt = required "Required when certificate.generate is false" .Values.certificate.ca.crt }}
 {{- end }}
-{{- $major := .Capabilities.KubeVersion.Major -}}
-{{- $minor := .Capabilities.KubeVersion.Minor -}}
+
+{{- if (eq .Values.certificate.useCertManager false) }}
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ template "vault-secrets-webhook.fullname" . }}
+  name: {{ include "vault-secrets-webhook.servingCertificate" . }}
   namespace: {{ .Release.Namespace }}
 data:
   tls.crt: {{ $tlsCrt }}
   tls.key: {{ $tlsKey }}
   ca.crt:  {{ $caCrt }}
+{{- end }}
 ---
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: MutatingWebhookConfiguration
 metadata:
   name: {{ template "vault-secrets-webhook.fullname" . }}
   namespace: {{ .Release.Namespace }}
+{{- if .Values.certificate.useCertManager }}
+  annotations:
+    cert-manager.io/inject-ca-from: "{{ .Release.Namespace }}/{{ include "vault-secrets-webhook.servingCertificate" . }}"
+{{- end }}
 webhooks:
 - name: pods.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
   clientConfig:
@@ -64,7 +72,7 @@ webhooks:
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
-{{- if and (eq (int $major) 1) (ge (int $minor) 15) }}
+{{- if semverCompare ">=1.15-0" .Capabilities.KubeVersion.GitVersion }}
   objectSelector:
     matchExpressions:
     {{- if .Values.objectSelector.matchExpressions }}
@@ -124,7 +132,7 @@ webhooks:
         - "*"
       resources:
         - configmaps
-  failurePolicy: {{ .Values.configmapFailurePolicy }}
+  failurePolicy: {{ .Values.configmapFailurePolicy | default .Values.configMapFailurePolicy }}
   namespaceSelector:
   {{- if .Values.namespaceSelector.matchLabels }}
     matchLabels:
@@ -139,6 +147,50 @@ webhooks:
       values:
       - {{ .Release.Namespace }}
 {{- end }}
-{{- if and (ge (int $major) 1) (ge (int $minor) 12) }}
+{{- if .Values.customResourceMutations }}
+- name: objects.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+  clientConfig:
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: {{ template "vault-secrets-webhook.fullname" . }}
+      path: /objects
+    caBundle: {{ $caCrt }}
+  rules:
+  - operations:
+    - CREATE
+    - UPDATE
+    apiGroups:
+    - "*"
+    apiVersions:
+    - "*"
+    resources:
+{{ toYaml .Values.customResourceMutations | indent 6 }}
+  failurePolicy: {{ .Values.customResourcesFailurePolicy }}
+  namespaceSelector:
+  {{- if .Values.namespaceSelector.matchLabels }}
+    matchLabels:
+{{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
+  {{- end }}
+    matchExpressions:
+    {{- if .Values.namespaceSelector.matchExpressions }}
+{{ toYaml .Values.namespaceSelector.matchExpressions | indent 4 }}
+    {{- end }}
+    - key: name
+      operator: NotIn
+      values:
+      - {{ .Release.Namespace }}
+{{- if semverCompare ">=1.15-0" .Capabilities.KubeVersion.GitVersion }}
+  objectSelector:
+    matchExpressions:
+    {{- if .Values.objectSelector.matchExpressions }}
+{{ toYaml .Values.objectSelector.matchExpressions | indent 4 }}
+    {{- end }}
+    - key: security.banzaicloud.io/mutate
+      operator: NotIn
+      values:
+      - skip
+{{- end }}
+{{- end }}
+{{- if semverCompare ">=1.12-0" .Capabilities.KubeVersion.GitVersion }}
   sideEffects: {{ .Values.apiSideEffectValue }}
 {{- end }}

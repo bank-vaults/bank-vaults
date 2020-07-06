@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 2
-  image: vault:1.2.3
+  image: vault:1.4.2
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
@@ -13,6 +13,17 @@ spec:
   # Specify how many nodes you would like to have in your etcd cluster
   # NOTE: -1 disables automatic etcd provisioning
   etcdSize: 1
+
+  resources:
+    # A YAML representation of resource ResourceRequirements for vault container
+    # Detail can reference: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container
+    vault:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "250m"
 
   # Specify the PersistentVolumeClaim Spec which will be used as a storage for etcd
   # if it is not specified emptydir will be used

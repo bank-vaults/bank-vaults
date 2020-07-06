@@ -18,7 +18,7 @@ VERSION ?= $(shell echo `git symbolic-ref -q --short HEAD || git describe --tags
 COMMIT_HASH ?= $(shell git rev-parse --short HEAD 2>/dev/null)
 BUILD_DATE ?= $(shell date +%FT%T%z)
 LDFLAGS += -X main.version=${VERSION} -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${BUILD_DATE}
-export CGO_ENABLED ?= 0
+export CGO_ENABLED ?= 1
 export GOOS = $(shell go env GOOS)
 ifeq (${VERBOSE}, 1)
 	GOARGS += -v
@@ -28,12 +28,12 @@ endif
 DOCKER_TAG ?= ${VERSION}
 
 # Dependency versions
-GOTESTSUM_VERSION = 0.3.2
-GOLANGCI_VERSION = 1.12.2
+GOTESTSUM_VERSION = 0.4.0
+GOLANGCI_VERSION = 1.27.0
 LICENSEI_VERSION = 0.2.0
-CODE_GENERATOR_VERSION = 0.17.0
+CODE_GENERATOR_VERSION = 0.17.2
 
-GOLANG_VERSION = 1.13
+GOLANG_VERSION = 1.14
 
 ## include "generic" targets
 include main-targets.mk
@@ -142,7 +142,7 @@ operator-down:
 webhook-forward: ## Install the webhook chart and kurun to port-forward the local webhook into Kubernetes
 	kubectl create namespace vault-infra --dry-run -o yaml | kubectl apply -f -
 	kubectl label namespaces vault-infra name=vault-infra --overwrite
-	helm upgrade --wait --install vault-secrets-webhook charts/vault-secrets-webhook --namespace vault-infra --set replicaCount=0 --set podsFailurePolicy=Fail --set secretsFailurePolicy=Fail
+	helm upgrade --install vault-secrets-webhook charts/vault-secrets-webhook --namespace vault-infra --set replicaCount=0 --set podsFailurePolicy=Fail --set secretsFailurePolicy=Fail
 	kurun port-forward localhost:8443 --namespace vault-infra --servicename vault-secrets-webhook --tlssecret vault-secrets-webhook
 
 .PHONY: webhook-run ## Run run the webhook locally

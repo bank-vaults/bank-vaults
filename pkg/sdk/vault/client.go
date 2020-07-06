@@ -20,22 +20,33 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
+	"emperror.dev/errors"
 	"github.com/fsnotify/fsnotify"
 	"github.com/hashicorp/vault/api"
 	vaultapi "github.com/hashicorp/vault/api"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 )
 
 const (
-	serviceAccountFile  = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-	initialTokenTimeout = 10 * time.Second
+	defaultServiceAccountFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
-var logger *log.Logger
+var logger *logrus.Logger
+
+func init() {
+	enableJSONLog, _ := strconv.ParseBool(os.Getenv("VAULT_JSON_LOG"))
+
+	logger = logrus.New()
+
+	if enableJSONLog {
+		logger.SetFormatter(&logrus.JSONFormatter{})
+	}
+}
 
 // NewData is a helper function for Vault KV Version two secret data creation
 func NewData(cas int, data map[string]interface{}) map[string]interface{} {
@@ -51,6 +62,7 @@ type clientOptions struct {
 	authPath  string
 	tokenPath string
 	token     string
+	timeout   time.Duration
 }
 
 // ClientOption configures a Vault client using the functional options paradigm popularized by Rob Pike and Dave Cheney.
@@ -96,6 +108,13 @@ func (co ClientToken) apply(o *clientOptions) {
 	o.token = string(co)
 }
 
+// ClientTimeout after which the client fails.
+type ClientTimeout time.Duration
+
+func (co ClientTimeout) apply(o *clientOptions) {
+	o.timeout = time.Duration(co)
+}
+
 // Client is a Vault client with Kubernetes support, token automatic renewing and
 // access to Transit Secret Engine wrapper
 type Client struct {
@@ -128,13 +147,6 @@ func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, e
 
 // NewClientFromConfig creates a new Vault client from custom configuration.
 func NewClientFromConfig(config *vaultapi.Config, opts ...ClientOption) (*Client, error) {
-	enableJSONLog := os.Getenv("VAULT_JSON_LOG")
-
-	logger = log.New()
-	if enableJSONLog == "true" {
-		logger.SetFormatter(&log.JSONFormatter{})
-	}
-
 	rawClient, err := vaultapi.NewClient(config)
 	if err != nil {
 		return nil, err
@@ -236,10 +248,20 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		}
 	}
 
+	// Default timeout
+	if o.timeout == 0 {
+		o.timeout = 10 * time.Second
+		if env, ok := os.LookupEnv("VAULT_CLIENT_TIMEOUT"); ok {
+			var err error
+			if o.timeout, err = time.ParseDuration(env); err != nil {
+				return nil, errors.Wrap(err, "could not parse timeout duration")
+			}
+		}
+	}
+
 	// Add token if set
 	if o.token != "" {
 		rawClient.SetToken(o.token)
-
 	} else if rawClient.Token() == "" {
 		token, err := ioutil.ReadFile(o.tokenPath)
 		if err == nil {
@@ -254,9 +276,9 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 				return nil, err
 			}
 
-			jwt, err := ioutil.ReadFile(serviceAccountFile)
-			if err != nil {
-				return nil, err
+			serviceAccountFile := defaultServiceAccountFile
+			if file := os.Getenv("KUBERNETES_SERVICE_ACCOUNT_TOKEN"); file != "" {
+				serviceAccountFile = file
 			}
 
 			initialTokenArrived := make(chan string, 1)
@@ -271,22 +293,32 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					}
 					client.mu.Unlock()
 
-					data := map[string]interface{}{"jwt": string(jwt), "role": o.role}
+					// Projected SA tokens do expire, so we need to move the reading logic into the loop
+					jwt, err := ioutil.ReadFile(serviceAccountFile)
+					if err != nil {
+						logger.Errorf("failed to read SA token %s: %v", serviceAccountFile, err.Error())
+						continue
+					}
+
+					data := map[string]interface{}{
+						"jwt":  string(jwt),
+						"role": o.role,
+					}
 
 					secret, err := logical.Write(fmt.Sprintf("auth/%s/login", o.authPath), data)
 					if err != nil {
-						logger.Println("Failed to request new Vault token", err.Error())
+						logger.Println("failed to request new Vault token", err.Error())
 						time.Sleep(1 * time.Second)
 						continue
 					}
 
 					if secret == nil {
-						logger.Println("Received empty answer from Vault, retrying")
+						logger.Println("received empty answer from Vault, retrying")
 						time.Sleep(1 * time.Second)
 						continue
 					}
 
-					logger.Println("Received new Vault token")
+					logger.Println("received new Vault token")
 
 					// Set the first token from the response
 					rawClient.SetToken(secret.Auth.ClientToken)
@@ -299,7 +331,7 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					// Start the renewing process
 					tokenRenewer, err = rawClient.NewRenewer(&vaultapi.RenewerInput{Secret: secret})
 					if err != nil {
-						logger.Println("Failed to renew Vault token", err.Error())
+						logger.Println("failed to renew Vault token", err.Error())
 						continue
 					}
 
@@ -316,11 +348,11 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 
 			select {
 			case <-initialTokenArrived:
-				logger.Println("Initial Vault token arrived")
+				logger.Println("initial Vault token arrived")
 
-			case <-time.After(initialTokenTimeout):
+			case <-time.After(o.timeout):
 				client.Close()
-				return nil, fmt.Errorf("timeout [%s] during waiting for Vault token", initialTokenTimeout)
+				return nil, errors.Errorf("timeout [%s] during waiting for Vault token", o.timeout)
 			}
 		}
 	}
@@ -333,11 +365,12 @@ func runRenewChecker(tokenRenewer *vaultapi.Renewer) {
 		select {
 		case err := <-tokenRenewer.DoneCh():
 			if err != nil {
-				logger.Println("Vault token renewal error:", err.Error())
+				logger.Println("error in Vault token renewal:", err.Error())
 			}
 			return
-		case <-tokenRenewer.RenewCh():
-			logger.Printf("Renewed Vault Token")
+		case o := <-tokenRenewer.RenewCh():
+			ttl, _ := o.Secret.TokenTTL()
+			logger.Println("renewed Vault token ttl =", ttl)
 		}
 	}
 }
@@ -377,6 +410,19 @@ func NewRawClient() (*api.Client, error) {
 	}
 
 	config.HttpClient.Transport.(*http.Transport).TLSHandshakeTimeout = 5 * time.Second
+
+	return vaultapi.NewClient(config)
+}
+
+// NewInsecureRawClient creates a new raw Vault client with insecure TLS.
+func NewInsecureRawClient() (*api.Client, error) {
+	config := vaultapi.DefaultConfig()
+	if config.Error != nil {
+		return nil, config.Error
+	}
+
+	config.HttpClient.Transport.(*http.Transport).TLSHandshakeTimeout = 5 * time.Second
+	config.HttpClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
 
 	return vaultapi.NewClient(config)
 }

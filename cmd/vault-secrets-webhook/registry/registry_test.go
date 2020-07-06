@@ -1,4 +1,4 @@
-// Copyright © 2019 Banzai Cloud
+// Copyright © 2020 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -133,5 +133,40 @@ func TestParsingRegistryAddress(t *testing.T) {
 		}
 
 		assert.Equal(t, test.registryAddress, containerInfo.RegistryAddress)
+	}
+}
+
+func TestParseContainerImage(t *testing.T) {
+	tests := []struct {
+		image string
+		repo  string
+		tag   string
+	}{
+		{
+			image: "docker-repo.banana.xyz/testing/skaffold-python-example:508954f-dirty@sha256:96b77fc06c9cbd5227eb8538020c6e458a259d17ccb2ec1aea5fe8261a61fff7",
+			repo:  "docker-repo.banana.xyz/testing/skaffold-python-example",
+			tag:   "sha256:96b77fc06c9cbd5227eb8538020c6e458a259d17ccb2ec1aea5fe8261a61fff7",
+		},
+		{
+			image: "docker-repo.banana.xyz/testing/skaffold-python-example@sha256:96b77fc06c9cbd5227eb8538020c6e458a259d17ccb2ec1aea5fe8261a61fff7",
+			repo:  "docker-repo.banana.xyz/testing/skaffold-python-example",
+			tag:   "sha256:96b77fc06c9cbd5227eb8538020c6e458a259d17ccb2ec1aea5fe8261a61fff7",
+		},
+		{
+			image: "alpine:latest",
+			repo:  "alpine",
+			tag:   "latest",
+		},
+		{
+			image: "alpine",
+			repo:  "alpine",
+			tag:   "latest",
+		},
+	}
+
+	for _, test := range tests {
+		repo, tag := parseContainerImage(test.image)
+		assert.Equal(t, test.repo, repo, test.image)
+		assert.Equal(t, test.tag, tag, test.image)
 	}
 }

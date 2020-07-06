@@ -1,15 +1,25 @@
 version: 2.1
 
 orbs:
-  helm: banzaicloud/helm@0.0.5
+  helm: banzaicloud/helm@0.0.7
+  snyk: snyk/snyk@0.0.10
 
 jobs:
+  snyk:
+    docker:
+      - image: 'circleci/golang'
+    steps:
+      - checkout
+      - snyk/scan:
+          additional-arguments: "--prune-repeated-subdependencies"
+          monitor-on-build: true
+          fail-on-issues: false
   check:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.14
         environment:
           GOFLAG: -mod=readonly
-      - image: vault:1.2.3
+      - image: vault:1.4.2
         environment:
           SKIP_SETCAP: true
           VAULT_DEV_ROOT_TOKEN_ID: 227e1cce-6bf7-30bb-2d2a-acc854318caf
@@ -23,25 +33,36 @@ jobs:
           name: Install dependencies
           command: go mod download
 
-      - restore_cache:
-          name: Restore license cache
-          keys:
-              - licensei-v3-{{ checksum "go.sum" }}
-              - licensei-v3
+      # NOTE: Disable license check for now, because we don't wan't to leak a GITHUB_TOKEN in external PRs.
+      # It is enabled in the GitHub Actions build as a backup.
+      #
+      # - restore_cache:
+      #     name: Restore license cache
+      #     keys:
+      #         - licensei-v3-{{ checksum "go.sum" }}
+      #         - licensei-v3
+
+      # - run:
+      #     name: Download license information for dependencies
+      #     command: make license-cache
+
+      # - save_cache:
+      #     name: Save license cache
+      #     key: licensei-v3-{{ checksum "go.sum" }}
+      #     paths:
+      #         - .licensei.cache
+
+      # - run:
+      #     name: Check dependency licenses
+      #     command: make license-check
 
       - run:
-          name: Download license information for dependencies
-          command: make license-cache
-
-      - save_cache:
-          name: Save license cache
-          key: licensei-v3-{{ checksum "go.sum" }}
-          paths:
-              - .licensei.cache
-
-      - run:
-          name: Check dependency licenses
-          command: make license-check
+          name: Setup test dependencies
+          command: |
+            sudo apt install opensc softhsm
+            sudo softhsm2-util --init-token --free --label bank-vaults --so-pin banzai --pin banzai
+            sudo pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin banzai --token-label bank-vaults --label bank-vaults
+            sudo chown -R circleci:circleci /etc/softhsm /var/lib/softhsm
 
       - run:
           name: Run verification
@@ -55,19 +76,20 @@ jobs:
       image: circleci/classic:201808-01
       docker_layer_caching: true
 
+    resource_class: large
+
     environment:
-      GO_VERSION: "1.13.1"
+      GO_VERSION: "1.14.2"
       K8S_VERSION: v1.15.3
-      VAULT_VERSION: "1.2.3"
+      VAULT_VERSION: "1.4.2"
       KUBECONFIG: /home/circleci/.kube/config
-      KURUN_VERSION: "0.2.5"
-      MINIKUBE_VERSION: v1.4.0
+      KURUN_VERSION: "0.4.1"
+      MINIKUBE_VERSION: v1.9.2
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       MINIKUBE_HOME: /home/circleci
       CHANGE_MINIKUBE_NONE_USER: true
       GOPATH: /go
-      GOPROXY: https://proxy.golang.org
       DOCKER_LATEST: 1
       GIN_MODE: release
 
@@ -136,7 +158,6 @@ jobs:
             # helm
             curl -L https://git.io/get_helm.sh | bash
             helm init --wait
-            helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com/
             # kurun
             curl -Lo kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-linux-amd64 && chmod +x kurun && sudo mv kurun /usr/local/bin/
 
@@ -146,11 +167,49 @@ jobs:
           command:
             hack/acceptance-test.sh
 
+  publish-chart:
+    executor: helm/helm3
+    resource_class: small
+    parameters:
+      charts-dir:
+        default: charts
+        description: Path of helm chart(s)
+        type: string
+    steps:
+      - checkout
+      - helm/setup-repositories:
+          chartmuseum-url: 'https://kubernetes-charts.banzaicloud.com'
+      - helm/check-parameters:
+          charts-dir: charts
+      - helm/update-dependencies:
+          charts-dir: charts
+      - helm/build:
+          charts-dir: charts
+      - run:
+          name: Helm push
+          command: |
+            cd /workspace/tgz
+            tgz="$(find . -name '*.tgz')"
+            curl \
+              --silent \
+              --show-error \
+              --fail \
+              -X POST \
+              -u "${HELM_REPO_USERNAME}:${HELM_REPO_PASSWORD}" \
+              --data-binary "@${tgz}" \
+              "https://kubernetes-charts.banzaicloud.com/api/charts"
+
 workflows:
   version: 2
   ci:
     jobs:
       - check
+      - snyk:
+          context: snyk
+          filters:
+            branches:
+              only:
+                - master
       - acceptance-test:
           requires:
             - check
@@ -158,12 +217,13 @@ workflows:
   helm-chart:
     jobs:
       - helm/lint-chart:
+          executor: helm/helm2
           charts-dir: charts
           filters:
             tags:
               ignore: /.*/
 
-      - helm/publish-chart:
+      - publish-chart:
           context: helm
           charts-dir: charts
           filters:

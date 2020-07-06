@@ -20,6 +20,8 @@ import (
 	"io/ioutil"
 
 	"cloud.google.com/go/storage"
+	"emperror.dev/errors"
+
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 
@@ -32,9 +34,8 @@ type gcsStorage struct {
 // New creates a new kv.Service backed by Google GCS
 func New(bucket, prefix string) (kv.Service, error) {
 	cl, err := storage.NewClient(context.Background())
-
 	if err != nil {
-		return nil, fmt.Errorf("error creating gcs client: %s", err.Error())
+		return nil, errors.Wrap(err, "error creating gcs client")
 	}
 
 	return &gcsStorage{cl, bucket, prefix}, nil
@@ -44,11 +45,13 @@ func (g *gcsStorage) Set(key string, val []byte) error {
 	ctx := context.Background()
 	n := objectNameWithPrefix(g.prefix, key)
 	w := g.cl.Bucket(g.bucket).Object(n).NewWriter(ctx)
+	defer w.Close()
+
 	if _, err := w.Write(val); err != nil {
-		return fmt.Errorf("error writing key '%s' to gcs bucket '%s'", n, g.bucket)
+		return errors.Wrapf(err, "error writing key '%s' to gcs bucket '%s'", n, g.bucket)
 	}
 
-	return w.Close()
+	return nil
 }
 
 func (g *gcsStorage) Get(key string) ([]byte, error) {
@@ -56,19 +59,18 @@ func (g *gcsStorage) Get(key string) ([]byte, error) {
 	n := objectNameWithPrefix(g.prefix, key)
 
 	r, err := g.cl.Bucket(g.bucket).Object(n).NewReader(ctx)
-
 	if err != nil {
-		if err == storage.ErrObjectNotExist {
+		if err == storage.ErrObjectNotExist { // nolint:goerr113
 			return nil, kv.NewNotFoundError("error getting object for key '%s': %s", n, err.Error())
 		}
-		return nil, fmt.Errorf("error getting object for key '%s': %s", n, err.Error())
+		return nil, errors.Wrapf(err, "error getting object for key '%s'", n)
 	}
 
-	b, err := ioutil.ReadAll(r)
 	defer r.Close()
 
+	b, err := ioutil.ReadAll(r)
 	if err != nil {
-		return nil, fmt.Errorf("error reading object with key '%s': %s", n, err.Error())
+		return nil, errors.Wrapf(err, "error reading object with key '%s'", n)
 	}
 
 	return b, nil

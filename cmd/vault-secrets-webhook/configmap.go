@@ -1,4 +1,4 @@
-// Copyright © 2019 Banzai Cloud
+// Copyright © 2020 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,30 +16,28 @@ package main
 
 import (
 	"encoding/base64"
-	"fmt"
-	"strings"
 
-	internal "github.com/banzaicloud/bank-vaults/internal/configuration"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
+	"emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 func configMapNeedsMutation(configMap *corev1.ConfigMap) bool {
 	for _, value := range configMap.Data {
-		if strings.HasPrefix(value, "vault:") {
+		if hasVaultPrefix(value) {
 			return true
 		}
 	}
 	for _, value := range configMap.BinaryData {
-		if strings.HasPrefix(string(value), "vault:") {
+		if hasVaultPrefix(string(value)) {
 			return true
 		}
 	}
 	return false
 }
 
-func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConfig, ns string) error {
-
+func (mw *mutatingWebhook) mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig VaultConfig) error {
 	// do an early exit and don't construct the Vault client if not needed
 	if !configMapNeedsMutation(configMap) {
 		return nil
@@ -47,17 +45,17 @@ func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConf
 
 	vaultClient, err := newVaultClient(vaultConfig)
 	if err != nil {
-		return fmt.Errorf("failed to create vault client: %v", err)
+		return errors.Wrap(err, "failed to create vault client")
 	}
 
 	defer vaultClient.Close()
 
 	for key, value := range configMap.Data {
-		if strings.HasPrefix(value, "vault:") {
+		if hasVaultPrefix(value) {
 			data := map[string]string{
-				key: string(value),
+				key: value,
 			}
-			err := mutateConfigMapData(configMap, data, vaultClient)
+			err := mw.mutateConfigMapData(configMap, data, vaultClient, vaultConfig)
 			if err != nil {
 				return err
 			}
@@ -65,11 +63,11 @@ func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConf
 	}
 
 	for key, value := range configMap.BinaryData {
-		if strings.HasPrefix(string(value), "vault:") {
+		if hasVaultPrefix(string(value)) {
 			binaryData := map[string]string{
 				key: string(value),
 			}
-			err := mutateConfigMapBinaryData(configMap, binaryData, vaultClient)
+			err := mw.mutateConfigMapBinaryData(configMap, binaryData, vaultClient, vaultConfig)
 			if err != nil {
 				return err
 			}
@@ -79,8 +77,8 @@ func mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig internal.VaultConf
 	return nil
 }
 
-func mutateConfigMapData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client) error {
-	mapData, err := getDataFromVault(data, vaultClient)
+func (mw *mutatingWebhook) mutateConfigMapData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+	mapData, err := getDataFromVault(data, vaultClient, vaultConfig, mw.logger)
 	if err != nil {
 		return err
 	}
@@ -90,8 +88,8 @@ func mutateConfigMapData(configMap *corev1.ConfigMap, data map[string]string, va
 	return nil
 }
 
-func mutateConfigMapBinaryData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client) error {
-	mapData, err := getDataFromVault(data, vaultClient)
+func (mw *mutatingWebhook) mutateConfigMapBinaryData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+	mapData, err := getDataFromVault(data, vaultClient, vaultConfig, mw.logger)
 	if err != nil {
 		return err
 	}

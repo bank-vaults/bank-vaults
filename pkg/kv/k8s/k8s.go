@@ -16,33 +16,37 @@ package k8s
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
+	"emperror.dev/errors"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 
 // EnvK8SOwnerReference holds the environment variable name for passing in K8S owner refs
+// TODO: remove this in the next release.
 const EnvK8SOwnerReference = "K8S_OWNER_REFERENCE"
 
 type k8sStorage struct {
-	cl             *kubernetes.Clientset
+	client         *kubernetes.Clientset
 	namespace      string
 	secret         string
+	labels         map[string]string
 	ownerReference *metav1.OwnerReference
 }
 
 // New creates a new kv.Service backed by K8S Secrets
-func New(namespace, secret string) (service kv.Service, err error) {
+func New(namespace, secret string, labels map[string]string) (kv.Service, error) {
 	kubeconfig := os.Getenv(clientcmd.RecommendedConfigPathEnvVar)
 	var config *rest.Config
 
+	var err error
 	if kubeconfig != "" {
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 	} else {
@@ -50,12 +54,12 @@ func New(namespace, secret string) (service kv.Service, err error) {
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("error creating k8s config: %s", err.Error())
+		return nil, errors.Wrap(err, "error creating k8s config")
 	}
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("error creating k8s client: %s", err.Error())
+		return nil, errors.Wrap(err, "error creating k8s client")
 	}
 
 	var ownerReference *metav1.OwnerReference
@@ -64,52 +68,56 @@ func New(namespace, secret string) (service kv.Service, err error) {
 		ownerReference = &metav1.OwnerReference{}
 		err := json.Unmarshal([]byte(ownerReferenceJSON), ownerReference)
 		if err != nil {
-			return nil, fmt.Errorf("error unmarhsaling OwnerReference: %s", err.Error())
+			return nil, errors.Wrap(err, "error unmarhsaling OwnerReference")
 		}
 	}
 
-	service = &k8sStorage{client, namespace, secret, ownerReference}
-
-	return
+	return &k8sStorage{
+		client:         client,
+		namespace:      namespace,
+		secret:         secret,
+		labels:         labels,
+		ownerReference: ownerReference,
+	}, nil
 }
 
 func (k *k8sStorage) Set(key string, val []byte) error {
-	secret, err := k.cl.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
+	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
 
-	if errors.IsNotFound(err) {
+	if k8serrors.IsNotFound(err) {
 		secret := &v1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: k.namespace,
 				Name:      k.secret,
+				Labels:    k.labels,
 			},
 			Data: map[string][]byte{key: val},
 		}
 		if k.ownerReference != nil {
 			secret.ObjectMeta.SetOwnerReferences([]metav1.OwnerReference{*k.ownerReference})
 		}
-		secret, err = k.cl.CoreV1().Secrets(k.namespace).Create(secret)
+		_, err = k.client.CoreV1().Secrets(k.namespace).Create(secret)
 	} else if err == nil {
 		secret.Data[key] = val
-		secret, err = k.cl.CoreV1().Secrets(k.namespace).Update(secret)
-		//reflect.DeepEqual()
+		_, err = k.client.CoreV1().Secrets(k.namespace).Update(secret)
 	} else {
-		return fmt.Errorf("error checking if '%s' secret exists: '%s'", k.secret, err.Error())
+		return errors.Wrapf(err, "error checking if '%s' secret exists", k.secret)
 	}
 
 	if err != nil {
-		return fmt.Errorf("error writing secret key '%s' into secret '%s': '%s'", key, k.secret, err.Error())
+		return errors.Wrapf(err, "error writing secret key '%s' into secret '%s'", key, k.secret)
 	}
 	return nil
 }
 
 func (k *k8sStorage) Get(key string) ([]byte, error) {
-	secret, err := k.cl.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
+	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
 
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			return nil, kv.NewNotFoundError("error getting secret for key '%s': %s", key, err.Error())
 		}
-		return nil, fmt.Errorf("error getting secret for key '%s': %s", key, err.Error())
+		return nil, errors.Wrapf(err, "error getting secret for key '%s'", key)
 	}
 
 	val := secret.Data[key]

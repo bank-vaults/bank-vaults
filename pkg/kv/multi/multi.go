@@ -16,8 +16,9 @@ package multi
 
 import (
 	"emperror.dev/errors"
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/sirupsen/logrus"
+
+	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 
 type multi struct {
@@ -46,7 +47,7 @@ func (f *multi) Get(key string) ([]byte, error) {
 		val, err := service.Get(key)
 		if err != nil {
 			// Not found error means that they given object is not present, that is a hard error.
-			if notFoundError, ok := err.(*kv.NotFoundError); ok && notFoundError.NotFound() {
+			if kv.IsNotFoundError(err) {
 				return nil, err
 			}
 			logrus.Infof("error finding key %q in key/value Service, trying next one: %s", key, err)

@@ -19,17 +19,23 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
+
+var log = logf.Log.WithName("controller_vault")
 
 // Vault is the Schema for the vaults API
 
@@ -244,6 +250,11 @@ type VaultSpec struct {
 	// default:
 	EtcdPVCSpec *v1.PersistentVolumeClaimSpec `json:"etcdPVCSpec,omitempty"`
 
+	// EtcdAffinity is a Kubernetes Affinity that will be used by the ETCD Pods.
+	// If not defined PodAntiAffinity will be use.  If both are empty no Affinity is used
+	// default:
+	EtcdAffinity *v1.Affinity `json:"etcdAffinity,omitempty"`
+
 	// ServiceType is a Kuberrnetes Service type of the Vault Service.
 	// default: ClusterIP
 	ServiceType string `json:"serviceType"`
@@ -309,9 +320,19 @@ type VaultSpec struct {
 	// default: false
 	ServiceMonitorEnabled bool `json:"serviceMonitorEnabled,omitempty"`
 
+	// ExistingTLSSecretName is name of the secret that contains a TLS server certificate and key and the corresponding CA certificate.
+	// Required secret format kubernetes.io/tls type secret keys + ca.crt key
+	// If it is set, generating certificate will be disabled
+	// default: ""
+	ExistingTLSSecretName string `json:"existingTlsSecretName,omitempty"`
+
 	// TLSExpiryThreshold is the Vault TLS certificate expiration threshold in Go's Duration format.
 	// default: 168h
-	TLSExpiryThreshold *time.Duration `json:"tlsExpiryThreshold,omitempty"`
+	TLSExpiryThreshold string `json:"tlsExpiryThreshold,omitempty"`
+
+	// TLSAdditionalHosts is a list of additional hostnames or IP addresses to add to the SAN on the automatically generated TLS certificate.
+	// default:
+	TLSAdditionalHosts []string `json:"tlsAdditionalHosts,omitempty"`
 
 	// CANamespaces define a list of namespaces where the generated CA certificate for Vault should be distributed,
 	// use ["*"] for all namespaces.
@@ -321,6 +342,14 @@ type VaultSpec struct {
 	// IstioEnabled describes if the cluster has a Istio running and enabled.
 	// default: false
 	IstioEnabled bool `json:"istioEnabled,omitempty"`
+
+	// VeleroEnabled describes if the cluster has a Velero running and enabled.
+	// default: false
+	VeleroEnabled bool `json:"veleroEnabled,omitempty"`
+
+	// VeleroFsfreezeImage specifices the Velero Fsrfeeze image to use in Velero backup hooks
+	// default: velero/fsfreeze-pause:latest
+	VeleroFsfreezeImage string `json:"veleroFsfreezeImage"`
 
 	// InitContainers add extra initContainers
 	VaultInitContainers []v1.Container `json:"vaultInitContainers,omitempty"`
@@ -346,10 +375,22 @@ func (spec *VaultSpec) HasHAStorage() bool {
 	if _, ok := HAStorageTypes[storageType]; ok {
 		return spec.HasStorageHAEnabled()
 	}
-	if len(spec.getHAStorage()) != 0 {
+	if spec.hasHAStorageStanza() {
 		return true
 	}
 	return false
+}
+
+func (spec *VaultSpec) hasHAStorageStanza() bool {
+	return len(spec.getHAStorage()) != 0
+}
+
+// HasEtcdStorage detects if Vault is configured to use etcd as storage or ha_storage backend
+func (spec *VaultSpec) HasEtcdStorage() bool {
+	if spec.hasHAStorageStanza() && spec.GetHAStorageType() == "etcd" {
+		return true
+	}
+	return spec.GetStorageType() == "etcd"
 }
 
 // GetStorage returns Vault's storage stanza
@@ -362,14 +403,37 @@ func (spec *VaultSpec) getStorage() map[string]interface{} {
 	return cast.ToStringMap(spec.Config["storage"])
 }
 
+// GetHAStorage returns Vault's ha_storage stanza
+func (spec *VaultSpec) GetHAStorage() map[string]interface{} {
+	haStorage := spec.getHAStorage()
+	return cast.ToStringMap(haStorage[spec.GetHAStorageType()])
+}
+
 func (spec *VaultSpec) getHAStorage() map[string]interface{} {
 	return cast.ToStringMap(spec.Config["ha_storage"])
+}
+
+// GetEtcdStorage returns the etcd storage if configured or nil
+func (spec *VaultSpec) GetEtcdStorage() map[string]interface{} {
+	if spec.hasHAStorageStanza() && spec.GetHAStorageType() == "etcd" {
+		return spec.GetHAStorage()
+	}
+	if spec.GetStorageType() == "etcd" {
+		return spec.GetStorage()
+	}
+	return nil
 }
 
 // GetStorageType returns the type of Vault's storage stanza
 func (spec *VaultSpec) GetStorageType() string {
 	storage := spec.getStorage()
 	return reflect.ValueOf(storage).MapKeys()[0].String()
+}
+
+// GetHAStorageType returns the type of Vault's ha_storage stanza
+func (spec *VaultSpec) GetHAStorageType() string {
+	haStorage := spec.getHAStorage()
+	return reflect.ValueOf(haStorage).MapKeys()[0].String()
 }
 
 // GetVersion returns the version of Vault
@@ -432,12 +496,25 @@ func (spec *VaultSpec) GetTLSDisable() bool {
 	return cast.ToBool(tcpSpecs["tls_disable"])
 }
 
+// GetAPIScheme returns if Vault's API address should be called on http or https
+func (spec *VaultSpec) GetAPIScheme() string {
+	if spec.GetTLSDisable() {
+		return "http"
+	}
+	return "https"
+}
+
 // GetTLSExpiryThreshold returns the Vault TLS certificate expiration threshold
 func (spec *VaultSpec) GetTLSExpiryThreshold() time.Duration {
-	if spec.TLSExpiryThreshold == nil {
+	if spec.TLSExpiryThreshold == "" {
 		return time.Hour * 168
 	}
-	return *spec.TLSExpiryThreshold
+	duration, err := time.ParseDuration(spec.TLSExpiryThreshold)
+	if err != nil {
+		log.Error(err, "using default treshold due to parse error", "tlsExpiryThreshold", spec.TLSExpiryThreshold)
+		return time.Hour * 168
+	}
+	return duration
 }
 
 func (spec *VaultSpec) getListener() map[string]interface{} {
@@ -466,6 +543,14 @@ func (spec *VaultSpec) GetStatsDImage() string {
 		return "prom/statsd-exporter:latest"
 	}
 	return spec.StatsDImage
+}
+
+// GetVeleroFsfreezeImage returns the Velero Fsreeze image to use
+func (spec *VaultSpec) GetVeleroFsfreezeImage() string {
+	if spec.VeleroFsfreezeImage == "" {
+		return "velero/fsfreeze-pause:latest"
+	}
+	return spec.VeleroFsfreezeImage
 }
 
 // GetVolumeClaimTemplates fixes the "status diff" in PVC templates
@@ -630,11 +715,35 @@ func (vault *Vault) GetIngress() *Ingress {
 	return nil
 }
 
+// LabelsForVault returns the labels for selecting the resources
+// belonging to the given vault CR name.
+func (vault *Vault) LabelsForVault() map[string]string {
+	return map[string]string{"app.kubernetes.io/name": "vault", "vault_cr": vault.Name}
+}
+
+// LabelsForVaultConfigurer returns the labels for selecting the resources
+// belonging to the given vault CR name.
+func (vault *Vault) LabelsForVaultConfigurer() map[string]string {
+	return map[string]string{"app.kubernetes.io/name": "vault-configurator", "vault_cr": vault.Name}
+}
+
+// AsOwnerReference returns this Vault instance as an OwnerReference
+func (vault *Vault) AsOwnerReference() metav1.OwnerReference {
+	return metav1.OwnerReference{
+		APIVersion: vault.APIVersion,
+		Kind:       vault.Kind,
+		Name:       vault.Name,
+		UID:        vault.UID,
+		Controller: pointer.BoolPtr(true),
+	}
+}
+
 // VaultStatus defines the observed state of Vault
 type VaultStatus struct {
 	// Important: Run "make generate-code" to regenerate code after modifying this file
-	Nodes  []string `json:"nodes"`
-	Leader string   `json:"leader"`
+	Nodes      []string                `json:"nodes"`
+	Leader     string                  `json:"leader"`
+	Conditions []v1.ComponentCondition `json:"conditions,omitempty"`
 }
 
 // UnsealConfig represents the UnsealConfig field of a VaultSpec Kubernetes object
@@ -646,6 +755,7 @@ type UnsealConfig struct {
 	Azure      *AzureUnsealConfig     `json:"azure,omitempty"`
 	AWS        *AWSUnsealConfig       `json:"aws,omitempty"`
 	Vault      *VaultUnsealConfig     `json:"vault,omitempty"`
+	HSM        *HSMUnsealConfig       `json:"hsm,omitempty"`
 }
 
 // UnsealOptions represents the common options to all unsealing backends
@@ -755,16 +865,70 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			)
 		}
 
+	} else if usc.HSM != nil {
+
+		mode := "hsm"
+		if usc.Kubernetes.SecretNamespace != "" && usc.Kubernetes.SecretName != "" {
+			mode = "hsm-k8s"
+		}
+
+		args = append(args,
+			"--mode",
+			mode,
+			"--hsm-module-path",
+			usc.HSM.ModulePath,
+			"--hsm-slot-id",
+			fmt.Sprint(usc.HSM.SlotID),
+			"--hsm-key-label",
+			usc.HSM.KeyLabel,
+			"--hsm-pin",
+			usc.HSM.Pin,
+		)
+
+		if usc.HSM.TokenLabel != "" {
+			args = append(args,
+				"--hsm-token-label",
+				usc.HSM.TokenLabel,
+			)
+		}
+
+		if mode == "hsm-k8s" {
+			var secretLabels []string
+			for k, v := range vault.LabelsForVault() {
+				secretLabels = append(secretLabels, k+"="+v)
+			}
+
+			sort.Strings(secretLabels)
+
+			args = append(args,
+				"--k8s-secret-namespace",
+				usc.Kubernetes.SecretNamespace,
+				"--k8s-secret-name",
+				usc.Kubernetes.SecretName,
+				"--k8s-secret-labels",
+				strings.Join(secretLabels, ","),
+			)
+		}
+
 	} else {
 
 		secretNamespace := vault.Namespace
 		if usc.Kubernetes.SecretNamespace != "" {
 			secretNamespace = usc.Kubernetes.SecretNamespace
 		}
+
 		secretName := vault.Name + "-unseal-keys"
 		if usc.Kubernetes.SecretName != "" {
 			secretName = usc.Kubernetes.SecretName
 		}
+
+		var secretLabels []string
+		for k, v := range vault.LabelsForVault() {
+			secretLabels = append(secretLabels, k+"="+v)
+		}
+
+		sort.Strings(secretLabels)
+
 		args = append(args,
 			"--mode",
 			"k8s",
@@ -772,11 +936,18 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			secretNamespace,
 			"--k8s-secret-name",
 			secretName,
+			"--k8s-secret-labels",
+			strings.Join(secretLabels, ","),
 		)
 
 	}
 
 	return args
+}
+
+// HSMDaemonNeeded returns if the unsealing mechanims needs a HSM Daemon present
+func (usc *UnsealConfig) HSMDaemonNeeded() bool {
+	return usc.HSM != nil && usc.HSM.Daemon
 }
 
 // KubernetesUnsealConfig holds the parameters for Kubernetes based unsealing
@@ -828,6 +999,16 @@ type VaultUnsealConfig struct {
 	Token          string `json:"token"`
 }
 
+// HSMUnsealConfig holds the parameters for remote HSM based unsealing
+type HSMUnsealConfig struct {
+	Daemon     bool   `json:"daemon"`
+	ModulePath string `json:"modulePath"`
+	SlotID     uint   `json:"slotId"`
+	TokenLabel string `json:"tokenLabel"`
+	Pin        string `json:"pin"`
+	KeyLabel   string `json:"keyLabel"`
+}
+
 // CredentialsConfig configuration for a credentials file provided as a secret
 type CredentialsConfig struct {
 	Env        string `json:"env"`
@@ -839,6 +1020,7 @@ type CredentialsConfig struct {
 type Resources struct {
 	Vault              *v1.ResourceRequirements `json:"vault,omitempty"`
 	BankVaults         *v1.ResourceRequirements `json:"bankVaults,omitempty"`
+	HSMDaemon          *v1.ResourceRequirements `json:"hsmDaemon,omitempty"`
 	Etcd               *v1.ResourceRequirements `json:"etcd,omitempty"`
 	PrometheusExporter *v1.ResourceRequirements `json:"prometheusExporter,omitempty"`
 }

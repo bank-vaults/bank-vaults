@@ -3,8 +3,8 @@ kind: "Vault"
 metadata:
   name: "vault"
 spec:
-  size: 2
-  image: vault:1.2.3
+  size: 1
+  image: vault:1.4.2
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Describe where you would like to store the Vault unseal keys and root token

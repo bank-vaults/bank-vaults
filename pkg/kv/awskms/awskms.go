@@ -15,11 +15,11 @@
 package awskms
 
 import (
-	"fmt"
-
+	"emperror.dev/errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
+
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 
@@ -35,7 +35,7 @@ var _ kv.Service = &awsKMS{}
 // NewWithSession creates a new kv.Service encrypted by AWS KMS with and existing AWS Session
 func NewWithSession(sess *session.Session, store kv.Service, kmsID string) (kv.Service, error) {
 	if kmsID == "" {
-		return nil, fmt.Errorf("invalid kmsID specified: '%s'", kmsID)
+		return nil, errors.Errorf("invalid kmsID specified: '%s'", kmsID)
 	}
 
 	return &awsKMS{
@@ -47,7 +47,6 @@ func NewWithSession(sess *session.Session, store kv.Service, kmsID string) (kv.S
 
 // New creates a new kv.Service encrypted by AWS KMS
 func New(store kv.Service, region string, kmsID string) (kv.Service, error) {
-
 	sess := session.Must(session.NewSession(aws.NewConfig().WithRegion(region)))
 
 	return NewWithSession(sess, store, kmsID)
@@ -74,7 +73,6 @@ func (a *awsKMS) Get(key string) ([]byte, error) {
 }
 
 func (a *awsKMS) encrypt(plainText []byte) ([]byte, error) {
-
 	out, err := a.kmsService.Encrypt(&kms.EncryptInput{
 		KeyId:     aws.String(a.kmsID),
 		Plaintext: plainText,
@@ -88,7 +86,6 @@ func (a *awsKMS) encrypt(plainText []byte) ([]byte, error) {
 
 func (a *awsKMS) Set(key string, val []byte) error {
 	cipherText, err := a.encrypt(val)
-
 	if err != nil {
 		return err
 	}

@@ -19,9 +19,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
+	"emperror.dev/errors"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/spf13/cast"
+
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 // Verify tokenstores satisfy the correct interface
@@ -57,7 +59,6 @@ func parseToken(secret *vaultapi.Secret, showExpired bool) (*Token, error) {
 	metadata := cast.ToStringMap(secret.Data["metadata"])
 
 	if tokenData, ok := data["token"]; ok {
-
 		tokenData := tokenData.(map[string]interface{})
 		token := Token{}
 
@@ -76,13 +77,13 @@ func parseToken(secret *vaultapi.Secret, showExpired bool) (*Token, error) {
 
 		tokenID := tokenData["id"]
 		if tokenID == nil {
-			return nil, fmt.Errorf("Can't find \"token.id\" in Secret")
+			return nil, errors.Errorf("Can't find \"token.id\" in Secret")
 		}
 		token.ID = tokenID.(string)
 
 		tokenName := tokenData["name"]
 		if tokenName == nil {
-			return nil, fmt.Errorf("Can't find \"token.name\" in Secret")
+			return nil, errors.Errorf("Can't find \"token.name\" in Secret")
 		}
 		token.Name = tokenName.(string)
 
@@ -99,7 +100,7 @@ func parseToken(secret *vaultapi.Secret, showExpired bool) (*Token, error) {
 
 		return &token, nil
 	}
-	return nil, fmt.Errorf("Can't find \"token\" in Secret")
+	return nil, errors.Errorf("Can't find \"token\" in Secret")
 }
 
 // In-memory implementation
@@ -136,7 +137,7 @@ func (tokenStore *inMemoryTokenStore) Lookup(userID, tokenID string) (*Token, er
 	tokenStore.RLock()
 	defer tokenStore.RUnlock()
 	if userTokens, ok := tokenStore.store[userID]; ok {
-		token, _ := userTokens[tokenID]
+		token := userTokens[tokenID]
 		return token, nil
 	}
 	return nil, nil

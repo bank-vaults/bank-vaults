@@ -1,5 +1,3 @@
-
-
 <p align="center"><img src="docs/images/logo.svg" width="260"></p>
 
 <p align="center">
@@ -24,6 +22,9 @@
     <img src="https://goreportcard.com/badge/github.com/banzaicloud/bank-vaults" alt="Go Report Card">
   </a>
 
+  <a href="https://gitpod.io/#https://github.com/banzaicloud/bank-vaults">
+    <img src="https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod" alt="Gitpod Ready-to-Code">
+  </a>
 
 </p>
 
@@ -46,6 +47,8 @@
 - [Vault unseal flow with KMS](https://banzaicloud.com/blog/vault-unsealing/)
 - [Monitoring Vault on Kubernetes using Cloud Native technologies](https://banzaicloud.com/blog/monitoring-vault-grafana/)
 - [Inject secrets directly into pods from Vault](https://banzaicloud.com/blog/inject-secrets-into-pods-vault-revisited/)
+- [Backing up Vault with Velero](https://banzaicloud.com/blog/vault-backup-velero/)
+- [Vault replication across multiple datacenters on Kubernetes](https://banzaicloud.com/blog/vault-multi-datacenter/)
 
 We use Vault across our large Kubernetes deployments and all the projects were `reinventing` the wheel. We have externalized all the codebase into this project and removed all the [Pipeline](https://github.com/banzaicloud/pipeline) and [Hollowtrees](https://github.com/banzaicloud/hollowtrees) dependencies thus this project can be used independently as a CLI tool to manage Vault, a Golang library to build upon (OAuth2 tokens, K8s auth, Vault operator, dynamic secrets, cloud credential storage, etc), Helm chart for a HA cluster, operator, mutating webhook and a collection of scripts to support some advanced features (dynamic SSH, etc).
 
@@ -59,27 +62,38 @@ Bank-Vaults is a core part of [Banzai Cloud Pipeline](https://banzaicloud.com/),
 </p>
 
 
-## Installing:
+## Installing
+
+You usually don't need to use the CLI directly, rather you should install the charts and create Vault instances with the operator and use the webhook inside Kubernetes.
+
+To grab the CLI binary go to the [releases](https://github.com/banzaicloud/bank-vaults/releases) page and download it.
+
+On macOs, you can directly Homebrew the CLI:
+
+```
+$ brew install banzaicloud/tap/bank-vaults
+```
+
+Alternatively, fetch the source and compile it using `go get`:
+
 ```shell
 go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
 go get github.com/banzaicloud/bank-vaults/cmd/vault-env
 ```
 
-If compilation is failed, you should try to enable go modules:
-```shell
-GOPATH=/tmp/gopath-for-bank-vaults GO111MODULE=on go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
-GOPATH=/tmp/gopath-for-bank-vaults GO111MODULE=on go get github.com/banzaicloud/bank-vaults/cmd/vault-env
-```
+## Documentation
 
-Read more about usage of bank-vaults in [detailed documentation](docs/README.md)
+Read more about usage of bank-vaults in the [detailed
+documentation](https://banzaicloud.com/docs/bank-vaults/).
 
 ## Development
 
-If you want to hack with bank-vaults please follow the [development documentation](docs/contributing/README.md).
+If you want to hack with bank-vaults please follow the [development
+documentation](https://banzaicloud.com/docs/bank-vaults/contributing/).
 
 ## Community
 
-If you have any questions about Bank-Vaults, and would like to talk to us and the other members of the Banzai Cloud community, please join our **#bank-vaults** channel on [Slack](https://slack.banzaicloud.io/).
+If you have any questions about Bank-Vaults, and would like to talk to us and the other members of the Banzai Cloud community, please join our **#bank-vaults** channel on [Slack](https://pages.banzaicloud.com/invite-slack).
 
 If you find this project useful, help us:
 

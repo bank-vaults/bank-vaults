@@ -1,3 +1,4 @@
+
 # The CLI tool
 
 The `bank-vaults` CLI tool is to help automate the setup and management of HashiCorp Vault.
@@ -403,3 +404,6 @@ startupSecrets:
         AWS_ACCESS_KEY_ID: secretId
         AWS_SECRET_ACCESS_KEY: s3cr3t
 ```
+
+The documentation of the Bank-Vaults project is available at the [Banzai Cloud Documentation Page](https://banzaicloud.com/docs/bank-vaults/).
+

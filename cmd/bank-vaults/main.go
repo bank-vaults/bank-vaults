@@ -36,6 +36,8 @@ const cfgModeValueAzureKeyVault = "azure-key-vault"
 const cfgModeValueAlibabaKMSOSS = "alibaba-kms-oss"
 const cfgModeValueVault = "vault"
 const cfgModeValueK8S = "k8s"
+const cfgModeValueHSMK8S = "hsm-k8s"
+const cfgModeValueHSM = "hsm"
 const cfgModeValueDev = "dev"
 const cfgModeValueFile = "file"
 const cfgModeValueK8SWithRestAPI = "k8s-with-restapi"
@@ -74,6 +76,13 @@ const cfgVaultToken = "vault-token"
 
 const cfgK8SNamespace = "k8s-secret-namespace"
 const cfgK8SSecret = "k8s-secret-name"
+const cfgK8SLabels = "k8s-secret-labels"
+
+const cfgHSMModulePath = "hsm-module-path"
+const cfgHSMSlotID = "hsm-slot-id"
+const cfgHSMTokenLabel = "hsm-token-label" // nolint:gosec
+const cfgHSMPin = "hsm-pin"
+const cfgHSMKeyLabel = "hsm-key-label"
 
 const cfgFilePath = "file-path"
 
@@ -82,6 +91,10 @@ const cfgK8SWithRestAPISecret = "k8s-with-restapi-secret-name"
 const cfgK8SWithRestAPIKeyIdentifier = "k8s-with-restapi-keyidname"
 const cfgK8SWithRestAPIEncryptionUrl = "k8s-with-restapi-encryption-url"
 const cfgK8SWithRestAPIDecryptionUrl = "k8s-with-restapi-decryption-url"
+
+// We need to pre-create a value and bind the the flag to this until
+// https://github.com/spf13/viper/issues/608 gets fixed.
+var k8sSecretLabels map[string]string
 
 var rootCmd = &cobra.Command{
 	Use:   "bank-vaults",
@@ -113,6 +126,11 @@ func configStringSliceVar(key string, defaultValue []string, description string)
 	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key))
 }
 
+func configStringMapVar(key string, value *map[string]string, description string) {
+	rootCmd.PersistentFlags().StringToStringVar(value, key, nil, description)
+	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key))
+}
+
 func init() {
 	appConfig = viper.New()
 	appConfig.SetEnvPrefix("bank_vaults")
@@ -131,6 +149,8 @@ func init() {
 						'%s' => Alibaba OSS with KMS encryption;
 						'%s' => Remote Vault;
 						'%s' => Kubernetes Secrets;
+						'%s' => Kubernetes Secrets encrypted with HSM;
+						'%s' => HSM object on device, using HSM encryption;
 						'%s' => Dev (vault server -dev) mode
 						'%s' => File mode
 						'%s' => K8s Secret with REST API Call for Encryption/Decryption`,
@@ -140,6 +160,8 @@ func init() {
 			cfgModeValueAlibabaKMSOSS,
 			cfgModeValueVault,
 			cfgModeValueK8S,
+			cfgModeValueHSMK8S,
+			cfgModeValueHSM,
 			cfgModeValueDev,
 			cfgModeValueFile,
 			cfgModeValueK8SWithRestAPI,
@@ -196,6 +218,14 @@ func init() {
 	// K8S Secret Storage flags
 	configStringVar(cfgK8SNamespace, "", "The namespace of the K8S Secret to store values in")
 	configStringVar(cfgK8SSecret, "", "The name of the K8S Secret to store values in")
+	configStringMapVar(cfgK8SLabels, &k8sSecretLabels, "The labels of the K8S Secret to store values in")
+
+	// HSM flags
+	configStringVar(cfgHSMModulePath, "", "The library path of the HSM device")
+	configIntVar(cfgHSMSlotID, 0, "The ID of the HSM slot")
+	configStringVar(cfgHSMTokenLabel, "", "The label of the token in a HSM slot")
+	configStringVar(cfgHSMPin, "", "The pin of the HSM token to login with")
+	configStringVar(cfgHSMKeyLabel, "bank-vaults", "The label of the HSM private key")
 
 	// File flags
 	configStringVar(cfgFilePath, "", "The path prefix of the files where to store values in")

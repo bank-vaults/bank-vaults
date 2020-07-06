@@ -2,7 +2,34 @@ run:
     skip-dirs:
         - operator
 
+linters-settings:
+    golint:
+        min-confidence: 0.1
+    goimports:
+        local-prefixes: github.com/banzaicloud/bank-vaults
+
 linters:
+    enable-all: true
     disable:
+        - maligned
+        - funlen
+        - dupl
+        - nestif
+        - wsl
+        - lll
+
+        # TODO: fixme
+        - godox
+        - godot
+        - gomnd
+        - gochecknoglobals
+        - gochecknoinits
+        - goconst
+        - gocognit
         - errcheck
-        - megacheck
+        - golint
+        - scopelint
+        - gocritic
+        - stylecheck
+        - gocyclo
+        - testpackage

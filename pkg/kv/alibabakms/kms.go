@@ -17,6 +17,7 @@ package alibabakms
 import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/kms"
+
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 
