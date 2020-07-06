@@ -204,7 +204,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		)
 
 		if err != nil {
-			return nil, errors.Wrap(err, "error creating K8SIBMDP Secret kv store)
+			return nil, errors.Wrap(err, "error creating K8SIBMDP Secret kv store")
 		}
 
 		return k8srest, nil
