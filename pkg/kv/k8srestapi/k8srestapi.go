@@ -18,17 +18,17 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-
-	"emperror.dev/errors"	
 	"io/ioutil"
+	"net/http"
+	"os"
+
+	"emperror.dev/errors"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"net/http"
-	"os"
 
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
@@ -69,12 +69,12 @@ func New(namespace, secret, keyidName, encryptionUrl, decryptionUrl string) (ser
 	}
 
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating k8s config") 
+		return nil, errors.Wrap(err, "error creating k8s config")
 	}
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating k8s client") 
+		return nil, errors.Wrap(err, "error creating k8s client")
 	}
 
 	var ownerReference *metav1.OwnerReference
@@ -83,13 +83,13 @@ func New(namespace, secret, keyidName, encryptionUrl, decryptionUrl string) (ser
 		ownerReference = &metav1.OwnerReference{}
 		err := json.Unmarshal([]byte(ownerReferenceJSON), ownerReference)
 		if err != nil {
-			return nil, errors.Wrap(err, "error unmarhsaling OwnerReference") 
+			return nil, errors.Wrap(err, "error unmarhsaling OwnerReference")
 		}
 	}
 
 	service = &k8srestapiStore{client, namespace, secret, keyidName, encryptionUrl, decryptionUrl, ownerReference}
 
-	return
+	return service, nil
 }
 
 func (k *k8srestapiStore) encrypt(plainText []byte) ([]byte, error) {
@@ -112,6 +112,7 @@ func (k *k8srestapiStore) encrypt(plainText []byte) ([]byte, error) {
 			return nil, err
 		}
 	}
+	defer response.Body.Close()
 	return ([]byte(ep.EncryptedB64)), nil
 }
 
@@ -135,6 +136,7 @@ func (k *k8srestapiStore) decrypt(cipherText []byte) ([]byte, error) {
 			return nil, err
 		}
 	}
+	defer response.Body.Close()
 	decoded, err := base64.StdEncoding.DecodeString(pp.PlaintextB64)
 	if err != nil {
 		return nil, err
@@ -166,14 +168,14 @@ func (k *k8srestapiStore) Set(key string, val []byte) error {
 		_, err = k.cl.CoreV1().Secrets(k.namespace).Update(secret)
 		//reflect.DeepEqual()
 		if err != nil {
-			return errors.Wrapf(err, "error updating secret key '%s' into secret '%s': '%s'", key, k.secret)
+			return errors.Wrapf(err, "error updating secret key '%s' into secret '%s'", key, k.secret)
 		}
 	} else {
-		return errors.Wrapf(err, "error checking if '%s' secret exists", k.secret)	
+		return errors.Wrapf(err, "error checking if '%s' secret exists", k.secret)
 	}
 
 	if err != nil {
-		return errors.Wrapf(err, "error writing secret key '%s' into secret '%s'", key, k.secret)	
+		return errors.Wrapf(err, "error writing secret key '%s' into secret '%s'", key, k.secret)
 	}
 	return nil
 }
@@ -185,7 +187,7 @@ func (k *k8srestapiStore) Get(key string) ([]byte, error) {
 		if k8serrors.IsNotFound(err) {
 			return nil, kv.NewNotFoundError("error getting secret for key '%s': %s", key, err.Error())
 		}
-		return nil, errors.Wrapf(err, "error getting secret for key '%s'", key)	
+		return nil, errors.Wrapf(err, "error getting secret for key '%s'", key)
 	}
 	val := secret.Data[key]
 	if val == nil {
