@@ -87,7 +87,7 @@ const cfgHSMKeyLabel = "hsm-key-label"
 const cfgFilePath = "file-path"
 
 const cfgK8SWithRestAPINamespace = "k8s-with-restapi-secret-namespace"
-const cfgK8SWithRestAPISecret = "k8s-with-restapi-secret-name"
+const cfgK8SWithRestAPISecret = "k8s-with-restapi-secret-name" // nolint:gosec
 const cfgK8SWithRestAPIKeyIdentifier = "k8s-with-restapi-keyidname"
 const cfgK8SWithRestAPIEncryptionUrl = "k8s-with-restapi-encryption-url"
 const cfgK8SWithRestAPIDecryptionUrl = "k8s-with-restapi-decryption-url"

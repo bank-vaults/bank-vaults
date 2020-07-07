@@ -18,17 +18,19 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
+
+	"emperror.dev/errors"	
 	"io/ioutil"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"net/http"
 	"os"
+
+	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 
 // EnvK8SOwnerReference holds the environment variable name for passing in K8S owner refs
@@ -67,12 +69,12 @@ func New(namespace, secret, keyidName, encryptionUrl, decryptionUrl string) (ser
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("error creating k8s config: %s", err.Error())
+		return nil, errors.Wrap(err, "error creating k8s config") 
 	}
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("error creating k8s client: %s", err.Error())
+		return nil, errors.Wrap(err, "error creating k8s client") 
 	}
 
 	var ownerReference *metav1.OwnerReference
@@ -81,7 +83,7 @@ func New(namespace, secret, keyidName, encryptionUrl, decryptionUrl string) (ser
 		ownerReference = &metav1.OwnerReference{}
 		err := json.Unmarshal([]byte(ownerReferenceJSON), ownerReference)
 		if err != nil {
-			return nil, fmt.Errorf("error unmarhsaling OwnerReference: %s", err.Error())
+			return nil, errors.Wrap(err, "error unmarhsaling OwnerReference") 
 		}
 	}
 
@@ -91,7 +93,6 @@ func New(namespace, secret, keyidName, encryptionUrl, decryptionUrl string) (ser
 }
 
 func (k *k8srestapiStore) encrypt(plainText []byte) ([]byte, error) {
-
 	var ep encrypted_payload
 	jsonData := &plaintext_payload{
 		Application:  k.keyidName,
@@ -103,7 +104,7 @@ func (k *k8srestapiStore) encrypt(plainText []byte) ([]byte, error) {
 	client := &http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
-		fmt.Printf("The http request failed %s\n", err)
+		errors.Wrap(err, "The http request failed")
 	} else {
 		cipherTextTemp, _ := ioutil.ReadAll(response.Body)
 		err := json.Unmarshal(cipherTextTemp, &ep)
@@ -115,7 +116,6 @@ func (k *k8srestapiStore) encrypt(plainText []byte) ([]byte, error) {
 }
 
 func (k *k8srestapiStore) decrypt(cipherText []byte) ([]byte, error) {
-
 	var pp plaintext_payload
 	jsonData := &encrypted_payload{
 		Application:  k.keyidName,
@@ -127,7 +127,7 @@ func (k *k8srestapiStore) decrypt(cipherText []byte) ([]byte, error) {
 	client := &http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
-		fmt.Printf("The http request failed %s\n", err)
+		errors.Wrap(err, "The http request failed")
 	} else {
 		plainTextTemp, _ := ioutil.ReadAll(response.Body)
 		err := json.Unmarshal(plainTextTemp, &pp)
@@ -143,14 +143,13 @@ func (k *k8srestapiStore) decrypt(cipherText []byte) ([]byte, error) {
 }
 
 func (k *k8srestapiStore) Set(key string, val []byte) error {
-
 	cipherText, err := k.encrypt(val)
 	if err != nil {
-		return fmt.Errorf("Encrytion Method returned error: '%s'", err.Error())
+		return errors.Wrap(err, "Encrytion Method returned error")
 	}
 	secret, err := k.cl.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
 
-	if errors.IsNotFound(err) {
+	if k8serrors.IsNotFound(err) {
 		secret := &v1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: k.namespace,
@@ -161,21 +160,20 @@ func (k *k8srestapiStore) Set(key string, val []byte) error {
 		if k.ownerReference != nil {
 			secret.ObjectMeta.SetOwnerReferences([]metav1.OwnerReference{*k.ownerReference})
 		}
-		secret, err = k.cl.CoreV1().Secrets(k.namespace).Create(secret)
-
+		_, err = k.cl.CoreV1().Secrets(k.namespace).Create(secret)
 	} else if err == nil {
 		secret.Data[key] = cipherText
-		secret, err = k.cl.CoreV1().Secrets(k.namespace).Update(secret)
+		_, err = k.cl.CoreV1().Secrets(k.namespace).Update(secret)
 		//reflect.DeepEqual()
 		if err != nil {
-			return fmt.Errorf("error updating secret key '%s' into secret '%s': '%s'", key, k.secret, err.Error())
+			return errors.Wrapf(err, "error updating secret key '%s' into secret '%s': '%s'", key, k.secret)
 		}
 	} else {
-		return fmt.Errorf("error checking if '%s' secret exists: '%s'", k.secret, err.Error())
+		return errors.Wrapf(err, "error checking if '%s' secret exists", k.secret)	
 	}
 
 	if err != nil {
-		return fmt.Errorf("error writing secret key '%s' into secret '%s': '%s'", key, k.secret, err.Error())
+		return errors.Wrapf(err, "error writing secret key '%s' into secret '%s'", key, k.secret)	
 	}
 	return nil
 }
@@ -184,10 +182,10 @@ func (k *k8srestapiStore) Get(key string) ([]byte, error) {
 	secret, err := k.cl.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
 
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			return nil, kv.NewNotFoundError("error getting secret for key '%s': %s", key, err.Error())
 		}
-		return nil, fmt.Errorf("error getting secret for key '%s': %s", key, err.Error())
+		return nil, errors.Wrapf(err, "error getting secret for key '%s'", key)	
 	}
 	val := secret.Data[key]
 	if val == nil {
@@ -196,7 +194,7 @@ func (k *k8srestapiStore) Get(key string) ([]byte, error) {
 
 	plainText, err := k.decrypt(val)
 	if err != nil {
-		return nil, fmt.Errorf("Decrytion Method returned error: '%s'", err.Error())
+		return nil, errors.Wrapf(err, "Decrytion Method returned error")
 	}
 	return plainText, nil
 }

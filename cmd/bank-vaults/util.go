@@ -193,7 +193,6 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 
 		return k8s, nil
 
-
 	case cfgModeValueK8SWithRestAPI:
 		k8srest, err := k8srestapi.New(
 			cfg.GetString(cfgK8SWithRestAPINamespace),
