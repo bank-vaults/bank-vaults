@@ -6,8 +6,9 @@ replicaCount: 1
 
 image:
   repository: banzaicloud/vault-operator
-  tag: 1.3.1
+  # tag: ""
   pullPolicy: IfNotPresent
+  imagePullSecrets: []  # global.imagePullSecrets is also supported
 
 service:
   type: ClusterIP

@@ -42,3 +42,34 @@ If yes, it returns the string "helm3", otherwise it returns "".
 {{- "" -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Overrideable version for container image tags.
+*/}}
+{{- define "bank-vaults.version" -}}
+{{- .Values.image.tag | default (printf "%s" .Chart.AppVersion) -}}
+{{- end -}}
+
+{{/*
+Image pull secrets
+*/}}
+{{- define "vault-operator.imagePullSecrets" -}}
+{{- if .Values.global }}
+    {{- if .Values.global.imagePullSecrets }}
+imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+  - name: {{ . }}
+        {{- end }}
+    {{- else if .Values.image.imagePullSecrets }}
+imagePullSecrets:
+        {{- range .Values.image.imagePullSecrets }}
+  - name: {{ . }}
+        {{- end }}
+    {{- end -}}
+{{- else if .Values.image.imagePullSecrets }}
+imagePullSecrets:
+    {{- range .Values.image.imagePullSecrets }}
+  - name: {{ . }}
+    {{- end }}
+{{- end -}}
+{{- end -}}

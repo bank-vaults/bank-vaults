@@ -572,17 +572,22 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	podNames := getPodNames(podList.Items)
 
 	var leader string
-	for _, podName := range podNames {
-		url := fmt.Sprintf("%s://%s.%s:8200/v1/sys/health", strings.ToLower(string(getVaultURIScheme(v))), podName, v.Namespace)
-		resp, err := r.httpClient.Get(url)
-		if err == nil {
-			defer resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				leader = podName
-				break
-			}
-		} else {
-			log.WithName("health").Error(err, "failed to query vault health")
+	var statusError string
+	for i := 0; i < int(v.Spec.Size); i++ {
+		client, err := vault.NewInsecureRawClient()
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		podName := fmt.Sprintf("%s-%d", v.Name, i)
+		client.SetAddress(fmt.Sprintf("%s://%s.%s:8200", strings.ToLower(string(getVaultURIScheme(v))), podName, v.Namespace))
+
+		health, err := client.Sys().Health()
+		if err != nil {
+			statusError = err.Error()
+			break
+		} else if !health.Standby {
+			leader = podName
 		}
 	}
 
@@ -605,12 +610,13 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		v.Status.Nodes = podNames
 		v.Status.Leader = leader
 		conditionStatus := v1.ConditionFalse
-		if leader != "" {
+		if leader != "" && statusError == "" {
 			conditionStatus = v1.ConditionTrue
 		}
 		v.Status.Conditions = []v1.ComponentCondition{{
 			Type:   v1.ComponentHealthy,
 			Status: conditionStatus,
+			Error:  statusError,
 		}}
 		log.V(1).Info("Updating vault status", "status", v.Status, "resourceVersion", v.ResourceVersion)
 		err := r.client.Update(context.TODO(), v)
@@ -1243,7 +1249,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			raftLeaderAddress = v.Spec.RaftLeaderAddress
 		}
 
-		unsealCommand = append(unsealCommand, "--raft", "--raft-leader-address", "https://"+raftLeaderAddress+":8200")
+		unsealCommand = append(unsealCommand, "--raft", "--raft-leader-address", v.Spec.GetAPIScheme()+"://"+raftLeaderAddress+":8200")
 
 		if v.Spec.RaftLeaderAddress != "" {
 			unsealCommand = append(unsealCommand, "--raft-secondary")
@@ -1294,7 +1300,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			Name:            "bank-vaults",
 			Command:         unsealCommand,
 			Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
-			Env: withTLSEnv(v, true, withCredentialsEnv(v, withCommonEnv(v, []corev1.EnvVar{
+			Env: withSidecarEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, withCommonEnv(v, []corev1.EnvVar{
 				{
 					Name: "POD_NAME",
 					ValueFrom: &corev1.EnvVarSource{
@@ -1303,7 +1309,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						},
 					},
 				},
-			}))),
+			})))),
 			Ports: []corev1.ContainerPort{{
 				Name:          "metrics",
 				ContainerPort: 9091,
@@ -1636,7 +1642,7 @@ func withClusterAddr(v *vaultv1alpha1.Vault, service *corev1.Service, envs []cor
 	if value != "" {
 		envs = append(envs, corev1.EnvVar{
 			Name:  "VAULT_CLUSTER_ADDR",
-			Value: "https://" + value + ":8201",
+			Value: v.Spec.GetAPIScheme() + "://" + value + ":8201",
 		})
 		// envs = append(envs, corev1.EnvVar{
 		// 	Name:  "VAULT_API_ADDR",
@@ -1942,6 +1948,14 @@ func withCommonEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar
 	return envs
 }
 
+func withSidecarEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
+	for _, env := range v.Spec.SidecarEnvsConfig {
+		envs = append(envs, env)
+	}
+
+	return envs
+}
+
 func withNamespaceEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
 	return append(envs, []corev1.EnvVar{
 		{
@@ -2129,8 +2143,10 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 	} else {
 		delete(currentSecret.StringData, "server.crt")
 		delete(currentSecret.StringData, "server.key")
+		delete(currentSecret.StringData, "ca.key")
 		delete(currentSecret.Data, "server.crt")
 		delete(currentSecret.Data, "server.key")
+		delete(currentSecret.Data, "ca.key")
 	}
 
 	var namespaces []string
@@ -2153,6 +2169,7 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 			currentSecret.SetNamespace(namespace)
 			currentSecret.SetResourceVersion("")
 			currentSecret.GetObjectMeta().SetUID("")
+			currentSecret.SetOwnerReferences(nil)
 
 			err = createOrUpdateObjectWithClient(r.nonNamespacedClient, &currentSecret)
 			if apierrors.IsNotFound(err) {

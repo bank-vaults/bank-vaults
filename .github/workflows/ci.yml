@@ -53,8 +53,7 @@ jobs:
     name: Acceptance test
     runs-on: ubuntu-latest
     env:
-      KURUN_VERSION: "0.3.3"
-      GIN_MODE: release
+      KURUN_VERSION: "0.4.1"
       DOCKER_LATEST: 1
       VERSION: latest
 
@@ -69,7 +68,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Start kind cluster
-      run: kind create cluster
+      run: kind create cluster --config hack/kind.yaml
 
     - name: Build Docker images
       run: |
@@ -85,18 +84,13 @@ jobs:
         kind load docker-image banzaicloud/vault-secrets-webhook:latest
         kind load docker-image banzaicloud/vault-env:latest
 
-    - name: Install socat kubectl, helm and kurun
+    - name: Install socat and kurun
       run: |
         # socat
         sudo apt install socat
-        # helm
-        export KUBECONFIG="$(kind get kubeconfig-path --name="kind")"
-        curl -L https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
-        helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com/
         # kurun
         curl -Lo kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-linux-amd64 && chmod +x kurun && sudo mv kurun /usr/local/bin/
 
     - name: Operator and webhook acceptance test
       run: |
-        export KUBECONFIG="$(kind get kubeconfig-path --name="kind")"
         hack/acceptance-test.sh

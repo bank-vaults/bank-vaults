@@ -507,6 +507,13 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.SidecarEnvsConfig != nil {
+		in, out := &in.SidecarEnvsConfig, &out.SidecarEnvsConfig
+		*out = make([]v1.EnvVar, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Resources != nil {
 		in, out := &in.Resources, &out.Resources
 		*out = new(Resources)

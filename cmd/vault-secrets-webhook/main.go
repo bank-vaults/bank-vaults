@@ -67,6 +67,7 @@ type VaultConfig struct {
 	ConfigfilePath              string
 	MutateConfigMap             bool
 	EnableJSONLog               string
+	LogLevel                    string
 	AgentConfigMap              string
 	AgentOnce                   bool
 	AgentShareProcess           bool
@@ -75,6 +76,7 @@ type VaultConfig struct {
 	AgentMemory                 resource.Quantity
 	AgentImage                  string
 	AgentImagePullPolicy        corev1.PullPolicy
+	Skip                        bool
 }
 
 func init() {
@@ -104,8 +106,8 @@ func init() {
 	viper.SetDefault("default_image_pull_secret_namespace", "")
 	viper.SetDefault("default_image_pull_docker_config_json_key", corev1.DockerConfigJsonKey)
 	viper.SetDefault("registry_skip_verify", "false")
-	viper.SetDefault("debug", "false")
 	viper.SetDefault("enable_json_log", "false")
+	viper.SetDefault("log_level", "info")
 	viper.SetDefault("vault_agent_share_process_namespace", "")
 	viper.AutomaticEnv()
 }
@@ -113,6 +115,11 @@ func init() {
 func parseVaultConfig(obj metav1.Object) VaultConfig {
 	var vaultConfig VaultConfig
 	annotations := obj.GetAnnotations()
+
+	if val := annotations["vault.security.banzaicloud.io/mutate"]; val == "skip" {
+		vaultConfig.Skip = true
+		return vaultConfig
+	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-addr"]; ok {
 		vaultConfig.Addr = val
@@ -252,6 +259,12 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.MutateConfigMap, _ = strconv.ParseBool(viper.GetString("mutate_configmap"))
 	}
 
+	if val, ok := annotations["vault.security.banzaicloud.io/log-level"]; ok {
+		vaultConfig.LogLevel = val
+	} else {
+		vaultConfig.LogLevel = viper.GetString("log_level")
+	}
+
 	if val, ok := annotations["vault.security.banzaicloud.io/enable-json-log"]; ok {
 		vaultConfig.EnableJSONLog = val
 	} else {
@@ -312,6 +325,11 @@ type mutatingWebhook struct {
 
 func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
 	vaultConfig := parseVaultConfig(obj)
+
+	if vaultConfig.Skip {
+		return false, nil
+	}
+
 	switch v := obj.(type) {
 	case *corev1.Pod:
 		return false, mw.mutatePod(v, vaultConfig, whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.IsAdmissionRequestDryRun(ctx))
@@ -320,10 +338,7 @@ func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.O
 		return false, mw.mutateSecret(v, vaultConfig)
 
 	case *corev1.ConfigMap:
-		if _, ok := obj.GetAnnotations()["vault.security.banzaicloud.io/mutate-configmap"]; ok {
-			return false, mw.mutateConfigMap(v, vaultConfig)
-		}
-		return false, nil
+		return false, mw.mutateConfigMap(v, vaultConfig)
 
 	case *unstructured.Unstructured:
 		return false, mw.mutateObject(v, vaultConfig)
@@ -488,10 +503,11 @@ func main() {
 			log.SetFormatter(&logrus.JSONFormatter{})
 		}
 
-		if viper.GetBool("debug") {
-			log.SetLevel(logrus.DebugLevel)
-			log.Debug("Debug mode enabled")
+		lvl, err := logrus.ParseLevel(viper.GetString("log_level"))
+		if err != nil {
+			lvl = logrus.InfoLevel
 		}
+		log.SetLevel(lvl)
 
 		logger = log.WithField("app", "vault-secrets-webhook")
 	}

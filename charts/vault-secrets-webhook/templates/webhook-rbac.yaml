@@ -3,6 +3,14 @@ kind: ServiceAccount
 metadata:
   namespace: {{ .Release.Namespace }}
   name: {{ template "vault-secrets-webhook.fullname" . }}
+  {{- if .Values.serviceAccount.annotations }}
+  annotations:
+{{ toYaml .Values.serviceAccount.annotations | indent 4 }}
+  {{- end }}  
+  {{- if .Values.serviceAccount.labels }}
+  labels:
+{{ toYaml .Values.serviceAccount.labels | indent 4 }}
+  {{- end }}
 ---
 {{- if .Values.rbac.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1

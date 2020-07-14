@@ -88,7 +88,7 @@ if [ $COMMAND = "install" ]; then
 
         local REGION=$(get_region)
 
-        helm upgrade --install vault-operator banzaicloud-stable/vault-operator --set image.tag=multi-dc --wait
+        helm upgrade --install vault-operator banzaicloud-stable/vault-operator --wait
 
         create_aws_secret
 
@@ -96,7 +96,7 @@ if [ $COMMAND = "install" ]; then
         cat operator/deploy/multi-dc/cr-${INSTANCE}.yaml | envtpl | kubectl apply -f -
 
         echo "Waiting for for ${INSTANCE} vault instance..."
-        waitfor waitfor kubectl get pod/vault-${INSTANCE}-0
+        waitfor kubectl get pod/vault-${INSTANCE}-0
         kubectl wait --for=condition=ready pod/vault-${INSTANCE}-0 --timeout=120s
 
         fix_elb_healthcheck vault-${INSTANCE} $REGION
