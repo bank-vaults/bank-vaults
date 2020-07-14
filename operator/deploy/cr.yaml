@@ -192,6 +192,18 @@ spec:
     - name: VAULT_STORAGE_FILE
       value: "/vault/file"
 
+  # If you are using a custom certificate and are setting the hostname in a custom way
+  # sidecarEnvsConfig:
+  #   - name: VAULT_ADDR
+  #     value: https://vault.local:8200
+
+  # # https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+  # vaultPodSpec:
+  #   hostAliases:
+  #   - ip: "127.0.0.1"
+  #     hostnames:
+  #     - "vault.local"
+
   # Marks presence of Istio, which influences things like port namings
   istioEnabled: false
 
