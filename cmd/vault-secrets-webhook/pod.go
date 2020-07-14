@@ -294,6 +294,15 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			},
 		}...)
 
+		if vaultConfig.LogLevel != "" {
+			container.Env = append(container.Env, []corev1.EnvVar{
+				{
+					Name:  "VAULT_LOG_LEVEL",
+					Value: vaultConfig.LogLevel,
+				},
+			}...)
+		}
+
 		if len(vaultConfig.TransitKeyID) > 0 {
 			container.Env = append(container.Env, []corev1.EnvVar{
 				{
