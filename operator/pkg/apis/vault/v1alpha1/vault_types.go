@@ -301,9 +301,13 @@ type VaultSpec struct {
 	// default:
 	VolumeClaimTemplates []v1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
 
-	// VaultEnvsConfig is a list of Kubernetes environment variable definitions that will be passed to Vault Pods.
+	// VaultEnvsConfig is a list of Kubernetes environment variable definitions that will be passed to the Vault container.
 	// default:
 	VaultEnvsConfig []v1.EnvVar `json:"vaultEnvsConfig"`
+
+	// SidecarEnvsConfig is a list of Kubernetes environment variable definitions that will be passed to Vault sidecar containers.
+	// default:
+	SidecarEnvsConfig []v1.EnvVar `json:"sidecarEnvsConfig"`
 
 	// Resources defines the resource limits for all the resources created by the operator.
 	// See the type for more details.

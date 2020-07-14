@@ -1300,7 +1300,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			Name:            "bank-vaults",
 			Command:         unsealCommand,
 			Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
-			Env: withTLSEnv(v, true, withCredentialsEnv(v, withCommonEnv(v, []corev1.EnvVar{
+			Env: withSidecarEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, withCommonEnv(v, []corev1.EnvVar{
 				{
 					Name: "POD_NAME",
 					ValueFrom: &corev1.EnvVarSource{
@@ -1309,7 +1309,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						},
 					},
 				},
-			}))),
+			})))),
 			Ports: []corev1.ContainerPort{{
 				Name:          "metrics",
 				ContainerPort: 9091,
@@ -1942,6 +1942,14 @@ func withVaultEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar 
 
 func withCommonEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
 	for _, env := range v.Spec.EnvsConfig {
+		envs = append(envs, env)
+	}
+
+	return envs
+}
+
+func withSidecarEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
+	for _, env := range v.Spec.SidecarEnvsConfig {
 		envs = append(envs, env)
 	}
 
