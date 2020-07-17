@@ -73,32 +73,18 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		return kms, nil
 
 	case cfgModeValueAWSKMS3:
+		var services []kv.Service
 
 		s3Regions := cfg.GetStringSlice(cfgAWSS3Region)
 		s3Buckets := cfg.GetStringSlice(cfgAWSS3Bucket)
 		s3Prefix := cfg.GetString(cfgAWSS3Prefix)
+		s3SSEAlgos := cfg.GetStringSlice(cfgAWS3SSEAlgo)
+		kmsRegions := cfg.GetStringSlice(cfgAWSKMSRegion)
+		kmsKeyIDs := cfg.GetStringSlice(cfgAWSKMSKeyID)
 
 		if len(s3Regions) != len(s3Buckets) {
 			return nil, errors.Errorf("specify the same number of regions and buckets for AWS S3 kv store [%d != %d]", len(s3Regions), len(s3Buckets))
 		}
-
-		var s3Services []kv.Service
-
-		for i := range s3Regions {
-			s3Service, err := s3.New(
-				s3Regions[i],
-				s3Buckets[i],
-				s3Prefix,
-			)
-			if err != nil {
-				return nil, errors.Wrap(err, "error creating AWS S3 kv store")
-			}
-
-			s3Services = append(s3Services, s3Service)
-		}
-
-		kmsRegions := cfg.GetStringSlice(cfgAWSKMSRegion)
-		kmsKeyIDs := cfg.GetStringSlice(cfgAWSKMSKeyID)
 
 		if len(kmsRegions) != len(kmsKeyIDs) {
 			return nil, errors.Errorf("specify the same number of regions and key IDs for AWS KMS kv store")
@@ -108,18 +94,33 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			return nil, errors.Errorf("specify the same number of S3 buckets and KMS keys for AWS kv store")
 		}
 
-		var kmsServices []kv.Service
-
-		for i := range kmsRegions {
-			kmsService, err := awskms.New(s3Services[i], kmsRegions[i], kmsKeyIDs[i])
-			if err != nil {
-				return nil, errors.Wrap(err, "error creating AWS KMS kv store")
-			}
-
-			kmsServices = append(kmsServices, kmsService)
+		if len(s3SSEAlgos) != len(s3Buckets) {
+			return nil, errors.Errorf("specify the same number of S3 buckets and SSE algorithms. if a bucket has no SSE set it to an empty string")
 		}
 
-		return multi.New(kmsServices), nil
+		for i := 0; i < len(s3Buckets); i++ {
+			s3Service, err := s3.New(
+				s3Regions[i],
+				s3Buckets[i],
+				s3Prefix,
+				s3SSEAlgos[i],
+				kmsKeyIDs[i],
+			)
+			if err != nil {
+				return nil, errors.Wrap(err, "error creating AWS S3 kv store")
+			}
+			if s3SSEAlgos[i] == "" {
+				kmsService, err := awskms.New(s3Service, kmsRegions[i], kmsKeyIDs[i])
+				if err != nil {
+					return nil, errors.Wrap(err, "error creating AWS KMS kv store")
+				}
+				services = append(services, kmsService)
+			} else {
+				services = append(services, s3Service)
+			}
+		}
+
+		return multi.New(services), nil
 
 	case cfgModeValueAzureKeyVault:
 		akv, err := azurekv.New(cfg.GetString(cfgAzureKeyVaultName))
