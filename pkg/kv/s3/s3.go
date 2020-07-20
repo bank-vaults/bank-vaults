@@ -26,6 +26,7 @@ import (
 	awss3 "github.com/aws/aws-sdk-go/service/s3"
 
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
+	"github.com/banzaicloud/bank-vaults/pkg/kv/awskms"
 )
 
 type s3Storage struct {
@@ -46,11 +47,11 @@ func New(region, bucket, prefix, sseAlgo, sseKeyID string) (kv.Service, error) {
 		return nil, errors.New("bucket must be specified") // nolint:goerr113
 	}
 
-	if sseAlgo == "AES256" && sseKeyID != "" {
-		return nil, errors.New("can't seta a keyID when using AES256 as the encryption algorithm")
+	if sseAlgo == awskms.SseAES256 && sseKeyID != "" {
+		return nil, errors.New("can't set a keyID when using AES256 as the encryption algorithm")
 	}
 
-	if sseAlgo == "aws:kms" && sseKeyID == "" {
+	if sseAlgo == awskms.SseKMS && sseKeyID == "" {
 		return nil, errors.New("you need to provide a CMK KeyID when using aws:kms for SSE")
 	}
 
@@ -70,7 +71,9 @@ func (s3 *s3Storage) Set(key string, val []byte) error {
 	}
 	if s3.sseAlgo != "" {
 		input.ServerSideEncryption = &s3.sseAlgo
-		input.SSEKMSKeyId = &s3.sseKeyID
+		if s3.sseAlgo == awskms.SseKMS {
+			input.SSEKMSKeyId = &s3.sseKeyID
+		}
 	}
 
 	if _, err := s3.client.PutObject(&input); err != nil {
