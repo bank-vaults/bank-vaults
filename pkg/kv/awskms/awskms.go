@@ -23,6 +23,11 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 
+const (
+	SseAES256 string = "AES256"
+	SseKMS           = "aws:kms"
+)
+
 type awsKMS struct {
 	store      kv.Service
 	kmsService *kms.KMS
