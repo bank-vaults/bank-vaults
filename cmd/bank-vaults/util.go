@@ -95,7 +95,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		}
 
 		if len(s3SSEAlgos) != 0 && len(s3SSEAlgos) != len(s3Buckets) {
-			return nil, errors.Errorf("specify the same number of S3 buckets and SSE algorithms. if a bucket has no SSE set it to an empty string")
+			return nil, errors.Errorf("specify an SSE algorithm for every S3 bucket. if a bucket has no SSE set it to an empty string")
 		} else if len(s3SSEAlgos) == 0 {
 			// if no SSE algorithms have been specified create an empty list. this helps ensure backwards compatibility
 			s3SSEAlgos = make([]string, len(s3Buckets))
