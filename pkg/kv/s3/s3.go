@@ -47,7 +47,7 @@ func New(region, bucket, prefix, sseAlgo, sseKeyID string) (kv.Service, error) {
 	}
 
 	if sseAlgo == "AES256" && sseKeyID != "" {
-		return nil, errors.New("can't seta a keyID or an encryption context when using AES256 as the encryption algorithm")
+		return nil, errors.New("can't seta a keyID when using AES256 as the encryption algorithm")
 	}
 
 	if sseAlgo == "aws:kms" && sseKeyID == "" {
@@ -71,7 +71,6 @@ func (s3 *s3Storage) Set(key string, val []byte) error {
 	if s3.sseAlgo != "" {
 		input.ServerSideEncryption = &s3.sseAlgo
 		input.SSEKMSKeyId = &s3.sseKeyID
-		input.SSEKMSEncryptionContext = &s3.sseKMSContext
 	}
 
 	if _, err := s3.client.PutObject(&input); err != nil {
