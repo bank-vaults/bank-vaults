@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/banzaicloud/bank-vaults/pkg/kv/awskms"
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
@@ -807,20 +808,56 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 
 	} else if usc.AWS != nil {
 
-		args = append(args,
-			"--mode",
-			"aws-kms-s3",
-			"--aws-kms-key-id",
-			usc.AWS.KMSKeyID,
-			"--aws-kms-region",
-			usc.AWS.KMSRegion,
-			"--aws-s3-bucket",
-			usc.AWS.S3Bucket,
-			"--aws-s3-prefix",
-			usc.AWS.S3Prefix,
-			"--aws-s3-region",
-			usc.AWS.S3Region,
-		)
+		if usc.AWS.S3SSE == awskms.SseAES256 {
+			args = append(args,
+				"--mode",
+				"aws-kms-s3",
+				"--aws-kms-key-id",
+				"",
+				"--aws-kms-region",
+				"",
+				"--aws-s3-bucket",
+				usc.AWS.S3Bucket,
+				"--aws-s3-prefix",
+				usc.AWS.S3Prefix,
+				"--aws-s3-region",
+				usc.AWS.S3Region,
+				"--aws-s3-sse-algo",
+				awskms.SseAES256,
+			)
+		} else if usc.AWS.S3SSE == awskms.SseKMS {
+			args = append(args,
+				"--mode",
+				"aws-kms-s3",
+				"--aws-kms-key-id",
+				usc.AWS.KMSKeyID,
+				"--aws-kms-region",
+				usc.AWS.KMSRegion,
+				"--aws-s3-bucket",
+				usc.AWS.S3Bucket,
+				"--aws-s3-prefix",
+				usc.AWS.S3Prefix,
+				"--aws-s3-region",
+				usc.AWS.S3Region,
+				"--aws-s3-sse-algo",
+				awskms.SseKMS,
+			)
+		} else {
+			args = append(args,
+				"--mode",
+				"aws-kms-s3",
+				"--aws-kms-key-id",
+				usc.AWS.KMSKeyID,
+				"--aws-kms-region",
+				usc.AWS.KMSRegion,
+				"--aws-s3-bucket",
+				usc.AWS.S3Bucket,
+				"--aws-s3-prefix",
+				usc.AWS.S3Prefix,
+				"--aws-s3-region",
+				usc.AWS.S3Region,
+			)
+		}
 
 	} else if usc.Alibaba != nil {
 
@@ -986,13 +1023,12 @@ type AzureUnsealConfig struct {
 
 // AWSUnsealConfig holds the parameters for AWS KMS based unsealing
 type AWSUnsealConfig struct {
-	KMSKeyID     string `json:"kmsKeyId"`
-	KMSRegion    string `json:"kmsRegion"`
-	S3Bucket     string `json:"s3Bucket"`
-	S3Prefix     string `json:"s3Prefix"`
-	S3Region     string `json:"s3Region"`
-	S3SSE        string `json:"s3SSE"`
-	S3EncContext string `json:"s3SSEEncContext"`
+	KMSKeyID  string `json:"kmsKeyId"`
+	KMSRegion string `json:"kmsRegion"`
+	S3Bucket  string `json:"s3Bucket"`
+	S3Prefix  string `json:"s3Prefix"`
+	S3Region  string `json:"s3Region"`
+	S3SSE     string `json:"s3SSE"`
 }
 
 // VaultUnsealConfig holds the parameters for remote Vault based unsealing
