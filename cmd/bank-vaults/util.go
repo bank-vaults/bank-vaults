@@ -94,7 +94,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			return nil, errors.Errorf("specify the same number of S3 buckets and KMS keys for AWS kv store")
 		}
 
-		if len(s3SSEAlgos) != len(s3Buckets) {
+		if len(s3SSEAlgos) != 0 && len(s3SSEAlgos) != len(s3Buckets) {
 			return nil, errors.Errorf("specify the same number of S3 buckets and SSE algorithms. if a bucket has no SSE set it to an empty string")
 		}
 
