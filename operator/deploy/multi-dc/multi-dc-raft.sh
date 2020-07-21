@@ -51,8 +51,7 @@ function waitfor {
 }
 
 function get_elb_dns {
-    local INSTANCE=$1
-    kubectl get service $INSTANCE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+    kubectl get service -l app.kubernetes.io/name=vault -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}'
 }
 
 function get_region {
@@ -100,9 +99,10 @@ if [ $COMMAND = "install" ]; then
 
         echo "Waiting for for ${INSTANCE} vault instance..."
         waitfor kubectl get pod/vault-${INSTANCE}-0
-        kubectl wait --for=condition=ready pod/vault-${INSTANCE}-0 --timeout=120s
 
         fix_elb_healthcheck vault-${INSTANCE} $REGION
+
+        kubectl wait --for=condition=ready pod/vault-${INSTANCE}-0 --timeout=120s
     }
 
 
@@ -137,18 +137,19 @@ elif [ $COMMAND = "status" ]; then
     PRIMARY_KUBECONFIG=$2
     export KUBECONFIG=$PRIMARY_KUBECONFIG
 
-    REGION=$(get_region)
+    BUCKET=bank-vaults
+    REGION=eu-west-1
 
-    aws s3api get-object --bucket bank-vaults-0 --key raft-vault-root raft-vault-root > /dev/null
+    aws s3api get-object --bucket ${BUCKET} --key raft-vault-root raft-vault-root > /dev/null
     export VAULT_TOKEN=$(aws --region $REGION kms decrypt --ciphertext-blob fileb://raft-vault-root --query Plaintext --output text --encryption-context Tool=bank-vaults | base64 -D)
     
     rm raft-vault-root
 
     export VAULT_SKIP_VERIFY="true"
 
-    export VAULT_ADDR=https://`get_elb_dns "vault-primary"`:8200
+    export VAULT_ADDR=https://$(get_elb_dns):8200
     
-    vault operator raft configuration -format json | jq
+    vault operator raft list-peers -format json | jq
 
 elif [ $COMMAND = "uninstall" ]; then
 
