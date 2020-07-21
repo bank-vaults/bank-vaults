@@ -1647,12 +1647,12 @@ func withClusterAddr(v *vaultv1alpha1.Vault, service *corev1.Service, envs []cor
 	if value != "" {
 		envs = append(envs, corev1.EnvVar{
 			Name:  "VAULT_CLUSTER_ADDR",
-			Value: v.Spec.GetAPIScheme() + "://" + value + ":8201",
+			Value: "https://" + value + ":8201",
 		})
-		// envs = append(envs, corev1.EnvVar{
-		// 	Name:  "VAULT_API_ADDR",
-		// 	Value: "https://" + value + ":8200",
-		// })
+		envs = append(envs, corev1.EnvVar{
+			Name:  "VAULT_API_ADDR",
+			Value: v.Spec.GetAPIScheme() + "://" + value + ":8200",
+		})
 	}
 
 	return envs
