@@ -56,9 +56,8 @@ spec:
               name: {{ .secretName }}
               key: {{ .secretKey }}
         {{- end }}
-        {{- range .Values.vault.envs }}
-        - name: {{ .name }}
-          value: {{ .value}}
+        {{- if .Values.vault.envs }}
+{{ toYaml .Values.vault.envs | indent 8 }}
         {{- end }}
         volumeMounts:
         - name: vault-raw-config
@@ -84,10 +83,9 @@ spec:
           {{ else }}
           value: https://127.0.0.1:{{ .Values.service.port }}
           {{ end }}
-        {{- range .Values.vault.envs }}
-        - name: {{ .name }}
-          value: {{ .value}}
-        {{- end }}
+          {{- if .Values.vault.envs }}
+{{ toYaml .Values.vault.envs | indent 8 }}
+          {{- end }}
         envFrom:
         {{- range .Values.vault.customSecrets }}
         - secretRef:
@@ -161,9 +159,8 @@ spec:
               name: {{ .secretName }}
               key: {{ .secretKey }}
         {{- end }}
-        {{- range .Values.vault.envs }}
-        - name: {{ .name }}
-          value: {{ .value}}
+        {{- if .Values.vault.envs }}
+{{ toYaml .Values.vault.envs | indent 8 }}
         {{- end }}
         envFrom:
         {{- range .Values.vault.customSecrets }}
@@ -203,9 +200,8 @@ spec:
               name: {{ .secretName }}
               key: {{ .secretKey }}
         {{- end }}
-        {{- range .Values.vault.envs }}
-        - name: {{ .name }}
-          value: {{ .value}}
+        {{- if .Values.vault.envs }}
+{{ toYaml .Values.vault.envs | indent 8 }}
         {{- end }}
         envFrom:
         {{- range .Values.vault.customSecrets }}
