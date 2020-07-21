@@ -48,11 +48,11 @@ func New(region, bucket, prefix, sseAlgo, sseKeyID string) (kv.Service, error) {
 	}
 
 	if sseAlgo == awskms.SseAES256 && sseKeyID != "" {
-		return nil, errors.New("can't set a keyID when using AES256 as the encryption algorithm")
+		return nil, errors.New("can't set a keyID when using AES256 as the encryption algorithm") // nolint:goerr113
 	}
 
 	if sseAlgo == awskms.SseKMS && sseKeyID == "" {
-		return nil, errors.New("you need to provide a CMK KeyID when using aws:kms for SSE")
+		return nil, errors.New("you need to provide a CMK KeyID when using aws:kms for SSE") // nolint:goerr113
 	}
 
 	sess := session.Must(session.NewSession(aws.NewConfig().WithRegion(region)))
