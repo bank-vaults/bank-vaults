@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euo pipefail
+set -euox pipefail
 
 # REQUIREMENTS:
 # - kubectl
@@ -10,6 +10,9 @@ set -euo pipefail
 # - aws
 #
 # - 3 Kubernetes clusters
+# - AWS credentials in:
+#   - AWS_ACCESS_KEY_ID
+#   - AWS_SECRET_ACCESS_KEY
 
 # GET the root token:
 # aws s3api get-object --bucket bank-vaults --key raft-vault-root raft-vault-root
@@ -21,8 +24,8 @@ set -euo pipefail
 # Check the Raft leader:
 # ./mult-dc-raft.sh status primary-kubeconfig.yaml
 
-# Remove
-# ./mult-dc-raft.sh remove primary-kubeconfig.yaml secondary-kubeconfig.yaml tertiary-kubeconfig.yaml
+# Uninstall
+# ./mult-dc-raft.sh uninstall primary-kubeconfig.yaml secondary-kubeconfig.yaml tertiary-kubeconfig.yaml
 
 if [ $# = 0 ]; then
     echo "The Bank-Vaults Multi-DC CLI"
@@ -32,7 +35,7 @@ if [ $# = 0 ]; then
     echo
     echo "Available Commands:"
     echo "  install    Installs a Vault cluster to one or more Kubernetes clusters"
-    echo "  remove     Removes a Vault cluster from one or more Kubernetes clusters"
+    echo "  uninstall  Uninstalls a Vault cluster from one or more Kubernetes clusters"
     echo "  status     Displays the status a cluster to one or more Kubernetes clusters"
     exit 0
 fi
@@ -88,7 +91,7 @@ if [ $COMMAND = "install" ]; then
 
         local REGION=$(get_region)
 
-        helm upgrade --install vault-operator banzaicloud-stable/vault-operator --wait
+        helm upgrade --install vault-operator banzaicloud-stable/vault-operator --wait --set image.tag=raft-fixes --set image.pullPolicy=Always
 
         create_aws_secret
 
@@ -147,7 +150,7 @@ elif [ $COMMAND = "status" ]; then
     
     vault operator raft configuration -format json | jq
 
-elif [ $COMMAND = "remove" ]; then
+elif [ $COMMAND = "uninstall" ]; then
 
     PRIMARY_KUBECONFIG=$2
     SECONDARY_KUBECONFIG=$3
@@ -157,6 +160,7 @@ elif [ $COMMAND = "remove" ]; then
         local KUBECONFIG=$1
         export KUBECONFIG=$KUBECONFIG
         helm delete vault-operator
+        kubectl delete vault --all
         kubectl delete pvc --all
         kubectl delete secret aws
     }
@@ -165,8 +169,8 @@ elif [ $COMMAND = "remove" ]; then
     delete_instance $SECONDARY_KUBECONFIG
     delete_instance $TERTIARY_KUBECONFIG
 
+    aws s3 rm s3://bank-vaults --recursive
     aws s3 rm s3://bank-vaults-0 --recursive
-    aws s3 rm s3://bank-vaults-1 --recursive
 
 else
 
