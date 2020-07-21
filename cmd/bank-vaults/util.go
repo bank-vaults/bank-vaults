@@ -118,7 +118,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "error creating AWS S3 kv store")
 			}
-			if s3SSEAlgos[i] != awskms.SseKMS {
+			if s3SSEAlgos[i] == "" {
 				kmsService, err := awskms.New(s3Service, kmsRegions[i], kmsKeyIDs[i])
 				if err != nil {
 					return nil, errors.Wrap(err, "error creating AWS KMS kv store")
