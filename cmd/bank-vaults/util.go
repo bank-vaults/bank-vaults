@@ -49,6 +49,30 @@ func vaultConfigForConfig(_ *viper.Viper) (vault.Config, error) {
 	}, nil
 }
 
+// all returns true if all values of a string slice are equal to target value
+func all(flags []string, target string) bool {
+	for _, value := range flags {
+		if value != target {
+			return false
+		}
+	}
+	return true
+}
+
+// correctValues checks whether or not all values of a slice are present in the choices slice
+func correctValues(flags, choices []string) bool {
+	choicesMap := make(map[string]string)
+	for _, value := range choices {
+		choicesMap[value] = ""
+	}
+	for _, value := range flags {
+		if _, exists := choicesMap[value]; !exists {
+			return false
+		}
+	}
+	return true
+}
+
 func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 	switch mode := cfg.GetString(cfgMode); mode {
 	case cfgModeValueGoogleCloudKMSGCS:
@@ -90,8 +114,10 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			return nil, errors.Errorf("specify the same number of regions and key IDs for AWS KMS kv store")
 		}
 
-		if len(kmsRegions) != len(s3Regions) {
-			return nil, errors.Errorf("specify the same number of S3 buckets and KMS keys for AWS kv store")
+		// if all the S3 buckets are using AES256 SSE then it's fine for no KMS keys to be defined
+		if !all(s3SSEAlgos, awskms.SseAES256) && len(kmsRegions) != len(s3Regions) {
+			return nil, errors.Errorf("specify the same number of S3 buckets and KMS keys/regions for AWS kv store."+
+				"if any bucket uses AES256 SSE set its key/region to empty strings %v %v %v", kmsKeyIDs, kmsRegions, s3Buckets)
 		}
 
 		if len(s3SSEAlgos) != 0 && len(s3SSEAlgos) != len(s3Buckets) {
@@ -99,6 +125,10 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		} else if len(s3SSEAlgos) == 0 {
 			// if no SSE algorithms have been specified create an empty list. this helps ensure backwards compatibility
 			s3SSEAlgos = make([]string, len(s3Buckets))
+		}
+
+		if !correctValues(s3SSEAlgos, []string{awskms.SseAES256, awskms.SseKMS, ""}) {
+			return nil, errors.Errorf("you have specified one or more incorrect SSE algorithms: %v", s3SSEAlgos)
 		}
 
 		for i := 0; i < len(s3Buckets); i++ {
