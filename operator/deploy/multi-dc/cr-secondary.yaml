@@ -38,10 +38,10 @@ spec:
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
     aws:
-      kmsRegion: "eu-central-1,eu-west-1"
-      kmsKeyId: "02a2ba49-42ce-487f-b006-34c64f4b760e,9f054126-2a98-470c-9f10-9b3b0cad94a1"
-      s3Region: "eu-central-1,eu-west-1"
-      s3Bucket: "bank-vaults-0,bank-vaults-1"
+      kmsRegion: "eu-west-1,eu-central-1"
+      kmsKeyId: "9f054126-2a98-470c-9f10-9b3b0cad94a1,02a2ba49-42ce-487f-b006-34c64f4b760e"
+      s3Region: "eu-west-1,eu-central-1"
+      s3Bucket: "bank-vaults,bank-vaults-0"
       s3Prefix: "raft-" 
   
   raftLeaderAddress: {{.RAFT_LEADER_ADDRESS}}
