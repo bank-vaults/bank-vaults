@@ -282,6 +282,8 @@ spec:
           secret:
             {{- if .Values.tls.secretName }}
             secretName: "{{ .Values.tls.secretName }}"
+            {{- else if .Values.certManager.certificate.enabled }}
+            secretName: "{{ template "vault.fullname" . }}-server-tls"
             {{- else }}
             secretName: "{{ template "vault.fullname" . }}-tls"
             {{- end }}
