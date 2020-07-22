@@ -17,6 +17,14 @@ service:
   # loadBalancerIP: 1.2.3.4
   # annotations:
   #   cloud.google.com/load-balancer-type: "Internal"
+
+headlessService:
+  enabled: false
+  name: vault
+  port: 8200
+  # annotations:
+  #   external-dns.alpha.kubernetes.io/hostname: vault.mydomain.com
+
 ingress:
   enabled: false
   # Used to create Ingress record (should used with service.type: ClusterIP).
