@@ -156,6 +156,10 @@ vault:
         # tls_disable: true
         tls_cert_file: /vault/tls/server.crt
         tls_key_file: /vault/tls/server.key
+        # If certManager.certificate is enabled use these parameters intead
+        # tls_client_ca_file: /vault/tls/ca.crt
+        # tls_cert_file: /vault/tls/tls.crt
+        # tls_key_file: /vault/tls/tls.key
 
     telemetry:
       statsd_address: localhost:9125
@@ -269,3 +273,14 @@ prometheusStatsdExporter:
     requests:
       cpu: 50m
       memory: 128Mi
+
+# Please see necessary changes to vault.config.listener.tcp above if enabled
+# Either issuerRef must be set to your Issuer or issuer must be enabled to generate a SelfSigned one
+certManager:
+  issuer:
+    enabled: false
+  certificate:
+    enabled: false
+    # issuerRef:
+    # additionalDomains:
+    #   - vault.mydomain.com
