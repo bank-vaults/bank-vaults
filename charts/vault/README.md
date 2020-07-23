@@ -139,6 +139,7 @@ The following tables lists the configurable parameters of the vault chart and th
 | `rbac.psp.enabled`      | Use pod security policy             | `false`                                             |
 | `nodeSelector`          | Node labels for pod assignment. https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector                                                   | `{}`                                                |
 | `tolerations`           | List of node tolerations for the pods. https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                                           | `[]`                                |
+| `affinity`           | Node affinity settings for the pods. https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/                                                          |  If not set it defaults to`podAntiAffinity` to `preferredDuringSchedulingIgnoredDuringExecution` |
 | `labels`                | Additonal labels to be applied to the Vault StatefulSet and Pods | `{}`                   |
 | `tls.secretName`        | Custom TLS certifcate secret name    | `""`                                               |
 
