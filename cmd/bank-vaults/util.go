@@ -49,6 +49,30 @@ func vaultConfigForConfig(_ *viper.Viper) (vault.Config, error) {
 	}, nil
 }
 
+// all returns true if all values of a string slice are equal to target value
+func all(flags []string, target string) bool {
+	for _, value := range flags {
+		if value != target {
+			return false
+		}
+	}
+	return true
+}
+
+// correctValues checks whether or not all values of a slice are present in the choices slice
+func correctValues(flags, choices []string) bool {
+	choicesMap := make(map[string]string)
+	for _, value := range choices {
+		choicesMap[value] = ""
+	}
+	for _, value := range flags {
+		if _, exists := choicesMap[value]; !exists {
+			return false
+		}
+	}
+	return true
+}
+
 func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 	switch mode := cfg.GetString(cfgMode); mode {
 	case cfgModeValueGoogleCloudKMSGCS:
@@ -73,53 +97,69 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		return kms, nil
 
 	case cfgModeValueAWSKMS3:
+		var services []kv.Service
 
 		s3Regions := cfg.GetStringSlice(cfgAWSS3Region)
 		s3Buckets := cfg.GetStringSlice(cfgAWSS3Bucket)
 		s3Prefix := cfg.GetString(cfgAWSS3Prefix)
+		s3SSEAlgos := cfg.GetStringSlice(cfgAWS3SSEAlgo)
+		kmsRegions := cfg.GetStringSlice(cfgAWSKMSRegion)
+		kmsKeyIDs := cfg.GetStringSlice(cfgAWSKMSKeyID)
 
 		if len(s3Regions) != len(s3Buckets) {
 			return nil, errors.Errorf("specify the same number of regions and buckets for AWS S3 kv store [%d != %d]", len(s3Regions), len(s3Buckets))
 		}
 
-		var s3Services []kv.Service
-
-		for i := range s3Regions {
-			s3Service, err := s3.New(
-				s3Regions[i],
-				s3Buckets[i],
-				s3Prefix,
-			)
-			if err != nil {
-				return nil, errors.Wrap(err, "error creating AWS S3 kv store")
-			}
-
-			s3Services = append(s3Services, s3Service)
-		}
-
-		kmsRegions := cfg.GetStringSlice(cfgAWSKMSRegion)
-		kmsKeyIDs := cfg.GetStringSlice(cfgAWSKMSKeyID)
-
 		if len(kmsRegions) != len(kmsKeyIDs) {
 			return nil, errors.Errorf("specify the same number of regions and key IDs for AWS KMS kv store")
 		}
 
-		if len(kmsRegions) != len(s3Regions) {
-			return nil, errors.Errorf("specify the same number of S3 buckets and KMS keys for AWS kv store")
+		// if all the S3 buckets are using AES256 SSE then it's fine for no KMS keys to be defined
+		if !all(s3SSEAlgos, awskms.SseAES256) && len(kmsRegions) != len(s3Regions) {
+			return nil, errors.Errorf("specify the same number of S3 buckets and KMS keys/regions for AWS kv store."+
+				"if any bucket uses AES256 SSE set its key/region to empty strings %v %v %v", kmsKeyIDs, kmsRegions, s3Buckets)
 		}
 
-		var kmsServices []kv.Service
+		if len(s3SSEAlgos) != 0 && len(s3SSEAlgos) != len(s3Buckets) {
+			return nil, errors.Errorf("specify an SSE algorithm for every S3 bucket. if a bucket has no SSE set it to an empty string")
+		} else if len(s3SSEAlgos) == 0 {
+			// if no SSE algorithms have been specified create an empty list. this helps ensure backwards compatibility
+			s3SSEAlgos = make([]string, len(s3Buckets))
+		}
 
-		for i := range kmsRegions {
-			kmsService, err := awskms.New(s3Services[i], kmsRegions[i], kmsKeyIDs[i])
-			if err != nil {
-				return nil, errors.Wrap(err, "error creating AWS KMS kv store")
+		if !correctValues(s3SSEAlgos, []string{awskms.SseAES256, awskms.SseKMS, ""}) {
+			return nil, errors.Errorf("you have specified one or more incorrect SSE algorithms: %v", s3SSEAlgos)
+		}
+
+		for i := 0; i < len(s3Buckets); i++ {
+			var kmsKeyID string
+			if s3SSEAlgos[i] == awskms.SseKMS {
+				kmsKeyID = kmsKeyIDs[i]
+			} else {
+				kmsKeyID = ""
 			}
-
-			kmsServices = append(kmsServices, kmsService)
+			s3Service, err := s3.New(
+				s3Regions[i],
+				s3Buckets[i],
+				s3Prefix,
+				s3SSEAlgos[i],
+				kmsKeyID,
+			)
+			if err != nil {
+				return nil, errors.Wrap(err, "error creating AWS S3 kv store")
+			}
+			if s3SSEAlgos[i] == "" {
+				kmsService, err := awskms.New(s3Service, kmsRegions[i], kmsKeyIDs[i])
+				if err != nil {
+					return nil, errors.Wrap(err, "error creating AWS KMS kv store")
+				}
+				services = append(services, kmsService)
+			} else {
+				services = append(services, s3Service)
+			}
 		}
 
-		return multi.New(kmsServices), nil
+		return multi.New(services), nil
 
 	case cfgModeValueAzureKeyVault:
 		akv, err := azurekv.New(cfg.GetString(cfgAzureKeyVaultName))

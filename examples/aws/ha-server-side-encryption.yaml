@@ -1,0 +1,116 @@
+apiVersion: vault.banzaicloud.com/v1alpha1
+kind: Vault
+metadata:
+  name: vault
+  namespace: vault-namespace
+spec:
+  # Common annotations for all created resources
+  annotations:
+    common/annotation: "true"
+  bankVaultsImage: banzaicloud/bank-vaults:master
+
+  # Create a statefulset with 3 nodes
+  size: 3
+
+  config:
+    api_addr: https://vault.vault-namespace:8200
+    # Make sure to set this to false when using more than one instances of Vault
+    disable_clustering: false
+    listener:
+      tcp:
+        address: 0.0.0.0:8200
+        tls_cert_file: /vault/tls/server.crt
+        tls_key_file: /vault/tls/server.key
+    storage:
+      file:
+        path: /vault/file
+    telemetry:
+      statsd_address: localhost:9125
+    ui: true
+
+  # Configure the AWS credentials to be mounted to the pods so that the
+  # processes can access the bucket and the keys. The secret must contain
+  # a subpath called credentials, in order for it to be mounted correctly.
+  credentialsConfig:
+    env: AWS_SHARED_CREDENTIALS_FILE
+    path: /etc/aws/credentials
+    secretName: vault-aws-credentials
+
+  envsConfig: []
+
+  externalConfig:
+    policies:
+      - name: allow_secrets
+        rules: path "secret/*" {
+          capabilities = ["create", "read", "update", "delete", "list"]
+          }
+      - name: allow_pki
+        rules: path "pki/*" {
+          capabilities = ["create", "read", "update", "delete", "list"]
+          }
+    auth:
+      - type: kubernetes
+        roles:
+          # Allow every pod in the default namespace to use the secret kv store
+          - name: default
+            bound_service_account_names: ["vault-secrets-webhook", "vault", "default"]
+            bound_service_account_namespaces: ["vault-infra", "app"]
+            policies: ["allow_secrets", "allow_pki"]
+            ttl: 1h
+
+  image: vault:1.4.2
+
+  # It's always a good idea to specify
+  resources:
+    bankVaults:
+      limits:
+        cpu: 500m
+        memory: 128Mi
+      requests:
+        cpu: 10m
+        memory: 50Mi
+    vault:
+      limits:
+        cpu: "1"
+        memory: 4Gi
+      requests:
+        cpu: 10m
+        memory: 256Mi
+
+  # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
+  serviceAccount: vault
+
+  # Specify the Service's type where the Vault Service is exposed
+  # Please note that some Ingress controllers like https://github.com/kubernetes/ingress-gce
+  # forces you to expose your Service on a NodePort
+  serviceType: ClusterIP
+
+  statsdImage: prom/statsd-exporter:v0.9.0
+
+  unsealConfig:
+    aws:
+      # With this configuration you will setup Server Side Encryption with a CMK
+      # If you want to use
+      kmsKeyId: some-kms-key-id
+      kmsRegion: west-of-somewhere
+      s3Bucket: some-aws-bucket
+      s3Prefix: ""
+      s3Region: west-of-somewhere
+      s3SSE: aws:kms
+      # if you want to use just AES256 as a server side encryption then use the following
+      # configuration:
+      # kmsKeyId: ""
+      # kmsRegion: ""
+      # s3Bucket: some-aws-bucket
+      # s3Prefix: ""
+      # s3Region: west-of-somewhere
+      # s3SSE: AES256
+
+  # Inject environment variables to all the Vault pods
+  vaultEnvsConfig:
+  - name: SOME_ENV_VAR_NAME
+    value: SOME_ENV_VAR_VALUE
+
+  vaultInitContainers: []
+  volumeMounts: []
+  volumes: []

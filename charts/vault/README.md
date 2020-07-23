@@ -125,6 +125,7 @@ The following tables lists the configurable parameters of the vault chart and th
 | `ingress.annotations`   | Ingress annotations                 | `{}`                                                |
 | `ingress.hosts`         | Ingress accepted hostnames with path| `[]`                                                |
 | `ingress.tls`           | Ingress TLS configuration           | `[]`                                                |
+| `vault.envs`            | Custom environment variables available to Vault | `[]`                                    |
 | `vault.customSecrets`   | Custom secrets available to Vault   | `[]`                                                |
 | `vault.envSecrets`      | Custom secrets available to Vault as env vars | `[]`                                      |
 | `vault.config`          | Vault configuration                 | No default backend                                  |

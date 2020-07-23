@@ -820,6 +820,8 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			usc.AWS.S3Prefix,
 			"--aws-s3-region",
 			usc.AWS.S3Region,
+			"--aws-s3-sse-algo",
+			usc.AWS.S3SSE,
 		)
 
 	} else if usc.Alibaba != nil {
@@ -991,6 +993,7 @@ type AWSUnsealConfig struct {
 	S3Bucket  string `json:"s3Bucket"`
 	S3Prefix  string `json:"s3Prefix"`
 	S3Region  string `json:"s3Region"`
+	S3SSE     string `json:"s3SSE"`
 }
 
 // VaultUnsealConfig holds the parameters for remote Vault based unsealing
