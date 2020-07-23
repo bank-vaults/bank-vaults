@@ -241,6 +241,9 @@ spec:
 {{ toYaml .Values.tolerations | indent 8 }}
 {{- end }}
       affinity:
+{{- if .Values.affinity }}
+{{ toYaml .Values.affinity | indent 8 }}
+{{- else }}
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 100
@@ -250,6 +253,7 @@ spec:
                 matchLabels:
                   app.kubernetes.io/name: {{ template "vault.fullname" . }}
                   app.kubernetes.io/instance: {{ .Release.Name | quote }}
+{{- end }}
       serviceAccountName: {{ template "vault.fullname" . }}
       securityContext:
         fsGroup: 65534

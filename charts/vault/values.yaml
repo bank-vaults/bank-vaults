@@ -91,6 +91,9 @@ tolerations: []
 #   operator: Equal
 #   value: "value"
 
+## Add affinity (defaults sets podAntiAffinity to preferredDuringSchedulingIgnoredDuringExecution)
+affinity: {}
+
 # Specify a secret which holds your custom TLS certificate.
 # If not specified Helm will generate one for you.
 # See templates/secret.yaml for the exact format.
