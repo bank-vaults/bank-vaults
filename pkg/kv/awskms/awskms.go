@@ -23,6 +23,13 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 
+const (
+	// SseAES256 is an algorithm that can be used for Server-Side Encryption in AWS S3 buckets
+	SseAES256 string = "AES256"
+	// SseKMS is an algorithm that can be used for Server-Side Encryption in AWS S3 buckets
+	SseKMS string = "aws:kms"
+)
+
 type awsKMS struct {
 	store      kv.Service
 	kmsService *kms.KMS
