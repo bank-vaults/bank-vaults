@@ -493,8 +493,8 @@ func (spec *VaultSpec) HasStorageHAEnabled() bool {
 	return storageType == "consul" || storageType == "raft" || cast.ToBool(storageSpecs["ha_enabled"])
 }
 
-// GetTLSDisable returns if Vault's TLS should be disabled
-func (spec *VaultSpec) GetTLSDisable() bool {
+// IsTLSDisabled returns if Vault's TLS should be disabled
+func (spec *VaultSpec) IsTLSDisabled() bool {
 	listener := spec.getListener()
 	tcpSpecs := cast.ToStringMap(listener["tcp"])
 	return cast.ToBool(tcpSpecs["tls_disable"])
@@ -502,7 +502,7 @@ func (spec *VaultSpec) GetTLSDisable() bool {
 
 // GetAPIScheme returns if Vault's API address should be called on http or https
 func (spec *VaultSpec) GetAPIScheme() string {
-	if spec.GetTLSDisable() {
+	if spec.IsTLSDisabled() {
 		return "http"
 	}
 	return "https"
@@ -598,7 +598,7 @@ func (spec *VaultSpec) GetAnnotations() map[string]string {
 func (spec *VaultSpec) GetAPIPortName() string {
 	portName := "api-port"
 	if spec.IstioEnabled {
-		if spec.GetTLSDisable() {
+		if spec.IsTLSDisabled() {
 			return "http-" + portName
 		}
 		return "https-" + portName
@@ -699,7 +699,7 @@ func (vault *Vault) GetIngress() *Ingress {
 		}
 
 		// If TLS is enabled add the Ingress TLS backend annotations
-		if !vault.Spec.GetTLSDisable() {
+		if !vault.Spec.IsTLSDisabled() {
 			// Supporting the NGINX ingress controller with TLS backends
 			// https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#backend-protocol
 			vault.Spec.Ingress.Annotations["nginx.ingress.kubernetes.io/backend-protocol"] = "HTTPS"
