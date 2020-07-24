@@ -38,10 +38,10 @@ spec:
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
     aws:
-      kmsRegion: "eu-central-1,eu-west-1"
-      kmsKeyId: "02a2ba49-42ce-487f-b006-34c64f4b760e,9f054126-2a98-470c-9f10-9b3b0cad94a1"
-      s3Region: "eu-central-1,eu-west-1"
-      s3Bucket: "bank-vaults-0,bank-vaults-1"
+      kmsRegion: "eu-west-1,eu-central-1"
+      kmsKeyId: "9f054126-2a98-470c-9f10-9b3b0cad94a1,02a2ba49-42ce-487f-b006-34c64f4b760e"
+      s3Region: "eu-west-1,eu-central-1"
+      s3Bucket: "bank-vaults,bank-vaults-0"
       s3Prefix: "raft-" 
 
   # A YAML representation of a final vault config file.
@@ -108,7 +108,28 @@ spec:
             allow_subdomains: true
             generate_lease: true
             ttl: 1m
-
+      
+    # Allows writing some secrets to Vault (useful for development purposes).
+    # See https://www.vaultproject.io/docs/secrets/kv/index.html for more information.
+    startupSecrets:
+      - type: kv
+        path: secret/data/accounts/aws
+        data:
+          data:
+            AWS_ACCESS_KEY_ID: secretId
+            AWS_SECRET_ACCESS_KEY: s3cr3t
+      - type: kv
+        path: secret/data/dockerrepo
+        data:
+          data:
+            DOCKER_REPO_USER: dockerrepouser
+            DOCKER_REPO_PASSWORD: dockerrepopassword
+      - type: kv
+        path: secret/data/mysql
+        data:
+          data:
+            MYSQL_ROOT_PASSWORD: s3cr3t
+            MYSQL_PASSWORD: 3xtr3ms3cr3t
 
   vaultEnvsConfig:
     - name: VAULT_LOG_LEVEL

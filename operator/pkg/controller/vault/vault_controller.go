@@ -349,7 +349,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}, sec)
 		if apierrors.IsNotFound(err) && v.Spec.ExistingTLSSecretName == "" {
 			// If tls secret doesn't exist generate tls
-			tlsExpiration, err = populateTLSSecret(v, ser, sec)
+			tlsExpiration, err = populateTLSSecret(r.client, v, ser, sec)
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
 			}
@@ -362,7 +362,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to get certificate expiration: %v", err)
 			}
-			tlsHostsChanged, err := certHostsAndIPsChanged(certPEM, v, ser)
+			tlsHostsChanged, err := certHostsAndIPsChanged(r.client, certPEM, v, ser)
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to get certificate hosts: %v", err)
 			}
@@ -371,11 +371,11 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 			if time.Until(tlsExpiration) < v.Spec.GetTLSExpiryThreshold() {
 				// Generate new TLS server certificate if expiration date is too close
 				reqLogger.Info("cert expiration date too close", "date", tlsExpiration.UTC().Format(time.RFC3339))
-				tlsExpiration, err = populateTLSSecret(v, ser, sec)
+				tlsExpiration, err = populateTLSSecret(r.client, v, ser, sec)
 			} else if tlsHostsChanged {
 				// Generate new TLS server certificate if the TLS hosts have changed
 				reqLogger.Info("TLS server hosts have changed")
-				tlsExpiration, err = populateTLSSecret(v, ser, sec)
+				tlsExpiration, err = populateTLSSecret(r.client, v, ser, sec)
 			}
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
@@ -1078,12 +1078,17 @@ func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	return cm
 }
 
-func hostsAndIPsForVault(om *vaultv1alpha1.Vault, service *corev1.Service) []string {
+func hostsAndIPsForVault(c client.Client, om *vaultv1alpha1.Vault, service *corev1.Service) []string {
 	hostsAndIPs := []string{
 		om.Name,
 		om.Name + "." + om.Namespace,
 		om.Name + "." + om.Namespace + ".svc.cluster.local",
 		"127.0.0.1",
+	}
+
+	err := c.Get(context.Background(), client.ObjectKey{Name: service.Name, Namespace: service.Namespace}, service)
+	if err != nil {
+		panic(err)
 	}
 
 	for _, ingress := range service.Status.LoadBalancer.Ingress {
@@ -1106,8 +1111,8 @@ func hostsAndIPsForVault(om *vaultv1alpha1.Vault, service *corev1.Service) []str
 }
 
 // populateTLSSecret will populate a secret containing a TLS chain
-func populateTLSSecret(v *vaultv1alpha1.Vault, service *corev1.Service, secret *corev1.Secret) (time.Time, error) {
-	hostsAndIPs := hostsAndIPsForVault(v, service)
+func populateTLSSecret(client client.Client, v *vaultv1alpha1.Vault, service *corev1.Service, secret *corev1.Secret) (time.Time, error) {
+	hostsAndIPs := hostsAndIPsForVault(client, v, service)
 
 	certMgr, err := bvtls.NewCertificateManager(strings.Join(hostsAndIPs, ","), "8760h")
 	if err != nil {
@@ -1642,12 +1647,12 @@ func withClusterAddr(v *vaultv1alpha1.Vault, service *corev1.Service, envs []cor
 	if value != "" {
 		envs = append(envs, corev1.EnvVar{
 			Name:  "VAULT_CLUSTER_ADDR",
-			Value: v.Spec.GetAPIScheme() + "://" + value + ":8201",
+			Value: "https://" + value + ":8201",
 		})
-		// envs = append(envs, corev1.EnvVar{
-		// 	Name:  "VAULT_API_ADDR",
-		// 	Value: "https://" + value + ":8200",
-		// })
+		envs = append(envs, corev1.EnvVar{
+			Name:  "VAULT_API_ADDR",
+			Value: v.Spec.GetAPIScheme() + "://" + value + ":8200",
+		})
 	}
 
 	return envs
@@ -2183,7 +2188,7 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 	return nil
 }
 
-func certHostsAndIPsChanged(certPEM string, v *vaultv1alpha1.Vault, service *corev1.Service) (bool, error) {
+func certHostsAndIPsChanged(client client.Client, certPEM string, v *vaultv1alpha1.Vault, service *corev1.Service) (bool, error) {
 	block, _ := pem.Decode([]byte(certPEM))
 	if block == nil {
 		return false, fmt.Errorf("failed to parse certificate PEM")
@@ -2194,5 +2199,5 @@ func certHostsAndIPsChanged(certPEM string, v *vaultv1alpha1.Vault, service *cor
 	}
 
 	// TODO very weak check for now
-	return len(cert.DNSNames)+len(cert.IPAddresses) != len(hostsAndIPsForVault(v, service)), nil
+	return len(cert.DNSNames)+len(cert.IPAddresses) != len(hostsAndIPsForVault(client, v, service)), nil
 }
