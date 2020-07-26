@@ -151,7 +151,7 @@ func (sh *SeparatedCertHosts) Validate() error {
 func GetCertExpirationDate(certPEM []byte) (time.Time, error) {
 	cert, err := PEMToCertificate(certPEM)
 	if err != nil {
-		return time.Time{}, nil
+		return time.Time{}, err
 	}
 
 	return cert.NotAfter, nil
