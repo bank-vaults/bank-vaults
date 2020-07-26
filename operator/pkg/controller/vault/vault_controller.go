@@ -1656,7 +1656,9 @@ func withClusterAddr(v *vaultv1alpha1.Vault, service *corev1.Service, envs []cor
 
 	if len(ingressPoints) > 0 {
 		value = ingressPoints[len(ingressPoints)-1]
-	} else {
+	}
+
+	if value != "" {
 		envs = append(envs, corev1.EnvVar{
 			Name:  "VAULT_CLUSTER_ADDR",
 			Value: "https://" + value + ":8201",
