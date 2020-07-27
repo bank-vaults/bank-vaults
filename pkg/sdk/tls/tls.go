@@ -149,16 +149,24 @@ func (sh *SeparatedCertHosts) Validate() error {
 
 // GetCertExpirationDate will return a PEM encoded certificate's expiration date
 func GetCertExpirationDate(certPEM []byte) (time.Time, error) {
-	block, _ := pem.Decode(certPEM)
-	if block == nil {
-		return time.Time{}, errors.Errorf("failed to parse certificate PEM")
-	}
-	cert, err := x509.ParseCertificate(block.Bytes)
+	cert, err := PEMToCertificate(certPEM)
 	if err != nil {
-		return time.Time{}, errors.Wrap(err, "failed to parse certificate")
+		return time.Time{}, err
 	}
 
 	return cert.NotAfter, nil
+}
+
+func PEMToCertificate(certPEM []byte) (*x509.Certificate, error) {
+	block, _ := pem.Decode(certPEM)
+	if block == nil {
+		return nil, errors.Errorf("failed to parse certificate PEM")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse certificate")
+	}
+	return cert, nil
 }
 
 func getTimes(validity string) (notBefore time.Time, validityDuration time.Duration, notAfter time.Time, err error) {
