@@ -136,7 +136,11 @@ func NewClient(role string) (*Client, error) {
 
 // NewClientWithOptions creates a new Vault client with custom options.
 func NewClientWithOptions(opts ...ClientOption) (*Client, error) {
-	return NewClientFromConfig(vaultapi.DefaultConfig(), opts...)
+	config := vaultapi.DefaultConfig()
+	if config.Error != nil {
+		return nil, config.Error
+	}
+	return NewClientFromConfig(config, opts...)
 }
 
 // NewClientWithConfig creates a new Vault client with custom configuration.
@@ -227,7 +231,10 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 
 	// Set URL if defined
 	if o.url != "" {
-		rawClient.SetAddress(o.url)
+		err := rawClient.SetAddress(o.url)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Default role

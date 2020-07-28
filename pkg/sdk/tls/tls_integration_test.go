@@ -83,7 +83,10 @@ func TestGenerateTLS(t *testing.T) {
 
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("This is an example TLS server.\n"))
+		_, err := w.Write([]byte("This is an example TLS server.\n"))
+		if err != nil {
+			t.Fatal(err)
+		}
 	}))
 
 	server.Listener = tls.NewListener(server.Listener, tlsConfig)
@@ -186,7 +189,10 @@ func TestLoadAndRegenerateTLS(t *testing.T) {
 
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("This is an example TLS server.\n"))
+		_, err := w.Write([]byte("This is an example TLS server.\n"))
+		if err != nil {
+			t.Fatal(err)
+		}
 	}))
 
 	server.Listener = tls.NewListener(server.Listener, tlsConfig)

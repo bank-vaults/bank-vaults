@@ -31,7 +31,12 @@ import (
 func TestSecretInjector(t *testing.T) {
 	os.Setenv("VAULT_ADDR", "http://localhost:8200")
 
-	client, err := vault.NewClientFromConfig(vaultapi.DefaultConfig())
+	config := vaultapi.DefaultConfig()
+	if config.Error != nil {
+		assert.NoError(t, config.Error)
+	}
+
+	client, err := vault.NewClientFromConfig(config)
 	assert.NoError(t, err)
 
 	err = client.RawClient().Sys().Mount("transit", &vaultapi.MountInput{Type: "transit"})

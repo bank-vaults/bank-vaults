@@ -51,7 +51,7 @@ func (f *multi) Get(key string) ([]byte, error) {
 				return nil, err
 			}
 			logrus.Infof("error finding key %q in key/value Service, trying next one: %s", key, err)
-			errors.Append(multiErr, err)
+			multiErr = errors.Append(multiErr, err)
 		} else {
 			return val, nil
 		}

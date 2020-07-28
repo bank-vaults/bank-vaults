@@ -441,8 +441,11 @@ func (v *vault) StepDownActive(address string) error {
 		return errors.Wrap(err, "unable to create temporary client")
 	}
 
-	tmpClient.SetAddress(address)
 	tmpClient.SetToken(string(rootToken))
+	err = tmpClient.SetAddress(address)
+	if err != nil {
+		return errors.Wrap(err, "unable to set address of client")
+	}
 
 	return tmpClient.Sys().StepDown()
 }
