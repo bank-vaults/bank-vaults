@@ -183,7 +183,7 @@ spec:
         image: "{{ .Values.unsealer.image.repository }}:{{ include "vault.bank-vaults.version" . }}"
         imagePullPolicy: {{ .Values.unsealer.image.pullPolicy }}
         command: ["bank-vaults", "configure"]
-        args: {{ toJson .Values.unsealer.args }}
+        args: {{ toJson (append .Values.unsealer.args "--disable-metrics") }}
         env:
         - name: VAULT_CACERT
           value: /vault/tls/ca.crt
