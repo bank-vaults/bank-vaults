@@ -51,7 +51,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ include "bank-vaults.version" . }}"
+          image: "{{ .Values.image.repository }}:{{ include "vault-secrets-webhook.bank-vaults.version" . }}"
           env:
             - name: TLS_CERT_FILE
               value: /var/serving-cert/tls.crt
@@ -64,7 +64,7 @@ spec:
               value: "debug"
             {{- end }}
             - name: VAULT_ENV_IMAGE
-              value: "banzaicloud/vault-env:{{ include "bank-vaults.version" . }}"
+              value: "banzaicloud/vault-env:{{ include "vault-secrets-webhook.bank-vaults.version" . }}"
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}

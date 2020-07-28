@@ -46,7 +46,7 @@ If yes, it returns the string "helm3", otherwise it returns "".
 {{/*
 Overrideable version for container image tags.
 */}}
-{{- define "bank-vaults.version" -}}
+{{- define "vault-operator.bank-vaults.version" -}}
 {{- .Values.image.tag | default (printf "%s" .Chart.AppVersion) -}}
 {{- end -}}
 
