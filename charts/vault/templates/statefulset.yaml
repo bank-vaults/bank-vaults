@@ -33,7 +33,7 @@ spec:
     spec:
       initContainers:
       - name: vault-config
-        image: "{{ .Values.unsealer.image.repository }}:{{ include "bank-vaults.version" . }}"
+        image: "{{ .Values.unsealer.image.repository }}:{{ include "vault.bank-vaults.version" . }}"
         imagePullPolicy: {{ .Values.unsealer.image.pullPolicy }}
         command: ["template"]
         args:
@@ -139,7 +139,7 @@ spec:
         resources:
 {{ toYaml .Values.resources | indent 10 }}
       - name: vault-unsealer
-        image: "{{ .Values.unsealer.image.repository }}:{{ include "bank-vaults.version" . }}"
+        image: "{{ .Values.unsealer.image.repository }}:{{ include "vault.bank-vaults.version" . }}"
         imagePullPolicy: {{ .Values.unsealer.image.pullPolicy }}
         command: ["bank-vaults", "unseal", "--init"]
         args: {{ toJson .Values.unsealer.args }}
@@ -180,7 +180,7 @@ spec:
         resources:
 {{ toYaml .Values.vaultUnsealer.resources | indent 10 }}
       - name: vault-configurer
-        image: "{{ .Values.unsealer.image.repository }}:{{ include "bank-vaults.version" . }}"
+        image: "{{ .Values.unsealer.image.repository }}:{{ include "vault.bank-vaults.version" . }}"
         imagePullPolicy: {{ .Values.unsealer.image.pullPolicy }}
         command: ["bank-vaults", "configure"]
         args: {{ toJson .Values.unsealer.args }}
