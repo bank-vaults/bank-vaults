@@ -53,16 +53,16 @@ from one of the followings:
 - Alibaba KMS (backed by OSS)
 - Kubernetes Secrets (should be used only for development purposes)`,
 	Run: func(cmd *cobra.Command, args []string) {
-		appConfig.BindPFlag(cfgUnsealPeriod, cmd.PersistentFlags().Lookup(cfgUnsealPeriod))
-		appConfig.BindPFlag(cfgInit, cmd.PersistentFlags().Lookup(cfgInit))
-		appConfig.BindPFlag(cfgRaft, cmd.PersistentFlags().Lookup(cfgRaft))
-		appConfig.BindPFlag(cfgRaftLeaderAddress, cmd.PersistentFlags().Lookup(cfgRaftLeaderAddress))
-		appConfig.BindPFlag(cfgRaftSecondary, cmd.PersistentFlags().Lookup(cfgRaftSecondary))
-		appConfig.BindPFlag(cfgOnce, cmd.PersistentFlags().Lookup(cfgOnce))
-		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))
-		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))
-		appConfig.BindPFlag(cfgPreFlightChecks, cmd.PersistentFlags().Lookup(cfgPreFlightChecks))
-		appConfig.BindPFlag(cfgAuto, cmd.PersistentFlags().Lookup(cfgAuto))
+		appConfig.BindPFlag(cfgUnsealPeriod, cmd.PersistentFlags().Lookup(cfgUnsealPeriod))           // nolint
+		appConfig.BindPFlag(cfgInit, cmd.PersistentFlags().Lookup(cfgInit))                           // nolint
+		appConfig.BindPFlag(cfgRaft, cmd.PersistentFlags().Lookup(cfgRaft))                           // nolint
+		appConfig.BindPFlag(cfgRaftLeaderAddress, cmd.PersistentFlags().Lookup(cfgRaftLeaderAddress)) // nolint
+		appConfig.BindPFlag(cfgRaftSecondary, cmd.PersistentFlags().Lookup(cfgRaftSecondary))         // nolint
+		appConfig.BindPFlag(cfgOnce, cmd.PersistentFlags().Lookup(cfgOnce))                           // nolint
+		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))         // nolint
+		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))       // nolint
+		appConfig.BindPFlag(cfgPreFlightChecks, cmd.PersistentFlags().Lookup(cfgPreFlightChecks))     // nolint
+		appConfig.BindPFlag(cfgAuto, cmd.PersistentFlags().Lookup(cfgAuto))                           // nolint
 
 		var unsealConfig unsealCfg
 
@@ -95,7 +95,12 @@ from one of the followings:
 		}
 
 		metrics := prometheusExporter{Vault: v, Mode: "unseal"}
-		go metrics.Run()
+		go func() {
+			err := metrics.Run()
+			if err != nil {
+				logrus.Fatalf("error creating prometheus exporter: %s", err.Error())
+			}
+		}()
 
 		if unsealConfig.proceedInit && unsealConfig.raft {
 			logrus.Info("joining leader vault...")

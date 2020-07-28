@@ -448,11 +448,18 @@ func (mw *mutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*core
 
 func newVaultClient(vaultConfig VaultConfig) (*vault.Client, error) {
 	clientConfig := vaultapi.DefaultConfig()
+	if clientConfig.Error != nil {
+		return nil, clientConfig.Error
+	}
+
 	clientConfig.Address = vaultConfig.Addr
 
 	tlsConfig := vaultapi.TLSConfig{Insecure: vaultConfig.SkipVerify}
 
-	clientConfig.ConfigureTLS(&tlsConfig)
+	err := clientConfig.ConfigureTLS(&tlsConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	return vault.NewClientFromConfig(
 		clientConfig,

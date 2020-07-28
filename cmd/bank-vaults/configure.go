@@ -43,10 +43,10 @@ var configureCmd = &cobra.Command{
 			https://www.vaultproject.io/docs/configuration/index.html. With this it is possible to
 			configure secret engines, auth methods, etc...`,
 	Run: func(cmd *cobra.Command, args []string) {
-		appConfig.BindPFlag(cfgOnce, cmd.PersistentFlags().Lookup(cfgOnce))
-		appConfig.BindPFlag(cfgFatal, cmd.PersistentFlags().Lookup(cfgFatal))
-		appConfig.BindPFlag(cfgUnsealPeriod, cmd.PersistentFlags().Lookup(cfgUnsealPeriod))
-		appConfig.BindPFlag(cfgVaultConfigFile, cmd.PersistentFlags().Lookup(cfgVaultConfigFile))
+		appConfig.BindPFlag(cfgOnce, cmd.PersistentFlags().Lookup(cfgOnce))                       // nolint
+		appConfig.BindPFlag(cfgFatal, cmd.PersistentFlags().Lookup(cfgFatal))                     // nolint
+		appConfig.BindPFlag(cfgUnsealPeriod, cmd.PersistentFlags().Lookup(cfgUnsealPeriod))       // nolint
+		appConfig.BindPFlag(cfgVaultConfigFile, cmd.PersistentFlags().Lookup(cfgVaultConfigFile)) // nolint
 
 		var unsealConfig unsealCfg
 
@@ -80,7 +80,12 @@ var configureCmd = &cobra.Command{
 		}
 
 		metrics := prometheusExporter{Vault: v, Mode: "configure"}
-		go metrics.Run()
+		go func() {
+			err := metrics.Run()
+			if err != nil {
+				logrus.Fatalf("error creating prometheus exporter: %s", err.Error())
+			}
+		}()
 
 		configurations := make(chan *viper.Viper, len(vaultConfigFiles))
 
@@ -160,13 +165,14 @@ func handleConfigurationError(vaultConfigFile string, configurations chan *viper
 
 func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.Viper) {
 	watcher, err := fsnotify.NewWatcher()
-	// Map used to match on kubernetes ..data to files inside of directory
-	configFileDirs := make(map[string][]string)
-
 	if err != nil {
 		logrus.Fatal(err)
 	}
+
 	defer watcher.Close()
+
+	// Map used to match on kubernetes ..data to files inside of directory
+	configFileDirs := make(map[string][]string)
 
 	for _, vaultConfigFile := range vaultConfigFiles {
 		// we have to watch the entire directory to pick up renames/atomic saves in a cross-platform way
@@ -183,7 +189,10 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.V
 		configFileDirs[configDirTrimmed] = files
 
 		logrus.Infof("watching directory for changes: %s", configDir)
-		watcher.Add(configDir)
+		err := watcher.Add(configDir)
+		if err != nil {
+			logrus.Fatal(err)
+		}
 	}
 
 	for {

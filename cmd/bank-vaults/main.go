@@ -107,22 +107,22 @@ func execute() {
 
 func configIntVar(key string, defaultValue int, description string) {
 	rootCmd.PersistentFlags().Int(key, defaultValue, description)
-	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key))
+	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key)) // nolint
 }
 
 func configStringVar(key, defaultValue, description string) {
 	rootCmd.PersistentFlags().String(key, defaultValue, description)
-	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key))
+	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key)) // nolint
 }
 
 func configStringSliceVar(key string, defaultValue []string, description string) {
 	rootCmd.PersistentFlags().StringSlice(key, defaultValue, description)
-	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key))
+	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key)) // nolint
 }
 
 func configStringMapVar(key string, value *map[string]string, description string) {
 	rootCmd.PersistentFlags().StringToStringVar(value, key, nil, description)
-	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key))
+	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key)) // nolint
 }
 
 func init() {
