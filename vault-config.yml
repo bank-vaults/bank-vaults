@@ -177,7 +177,7 @@ auth:
   - type: userpass
     users:
       - username: admin
-        password: adminka
+        password: admin
         token_policies: allow_secrets
 
 # Allows configuring Secrets Engines in Vault (KV, Database and SSH is tested,
