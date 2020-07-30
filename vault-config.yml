@@ -76,8 +76,8 @@ auth:
     options:
       listing_visibility: "unauth"
     config:
-      access_key: "${env "AWS_ACCESS_KEY_ID"}" # or you can put the credential literals directly here
-      secret_key: "${env "AWS_SECRET_ACCESS_KEY"}"
+      access_key: ${env "AWS_ACCESS_KEY_ID"} # or you can put the credential literals directly here
+      secret_key: ${env "AWS_SECRET_ACCESS_KEY"}
       iam_server_id_header_value: vault-dev.example.com # consider setting this to the Vault server's DNS name 
     crossaccountrole:
     # Add cross account number and role to assume in the cross account
@@ -172,6 +172,14 @@ auth:
         bound_service_principal_ids: 
           - "00000000-0000-0000-0000-000000000000"
 
+  # The userpass auth method allows authentication against Vault using Vault username/password credentials. 
+  # See https://www.vaultproject.io/docs/auth/userpass.html for more information.
+  - type: userpass
+    users:
+      - username: admin
+        password: admin
+        token_policies: allow_secrets
+
 # Allows configuring Secrets Engines in Vault (KV, Database and SSH is tested,
 # but the config is free form so probably more is supported).
 # See https://www.vaultproject.io/docs/secrets/index.html for more information.
@@ -214,8 +222,8 @@ secrets:
           plugin_name: "mysql-database-plugin"
           connection_url: "{{username}}:{{password}}@tcp(127.0.0.1:3306)/"
           allowed_roles: [pipeline]
-          username: "${env "ROOT_USERNAME"}" # Example how to read environment variables
-          password: "${env "ROOT_PASSWORD"}"
+          username: ${env "ROOT_USERNAME"} # Example how to read environment variables
+          password: ${env "ROOT_PASSWORD"}
           rotate: true # Ask bank-vaults to ask Vault to rotate the root credentials
       roles:
         - name: pipeline
@@ -270,8 +278,8 @@ secrets:
     description: AWS secret engine.
     configuration:
       config/root:
-        - access_key: "${env "AWS_ACCESS_KEY_ID"}" # or you can put the credential literals directly here
-          secret_key: "${env "AWS_SECRET_ACCESS_KEY"}"
+        - access_key: ${env "AWS_ACCESS_KEY_ID"} # or you can put the credential literals directly here
+          secret_key: ${env "AWS_SECRET_ACCESS_KEY"}
           # Uncomment for root credential rotation
           # see: https://www.vaultproject.io/api/secret/aws/index.html#rotate-root-iam-credentials
           # rotate: true

@@ -544,7 +544,6 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 	}
 
 	existingAuths, err := v.cl.Sys().ListAuth()
-
 	if err != nil {
 		return errors.Wrap(err, "error listing auth backends vault")
 	}
@@ -788,6 +787,15 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 					}
 				}
 			}
+		case "userpass":
+			users, err := cast.ToSliceE(authMethod["users"])
+			if err != nil {
+				return errors.Wrapf(err, "error finding users block for %s", authMethodType)
+			}
+			err = v.configureUserpassUsers(path, users)
+			if err != nil {
+				return errors.Wrapf(err, "error configuring users for userpass in vault")
+			}
 		case "azure":
 			config, err := cast.ToStringMapE(authMethod["config"])
 			if err != nil {
@@ -888,6 +896,21 @@ func (v *vault) configureGenericAuthRoles(method, path, roleSubPath string, role
 		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/%s/%s", path, roleSubPath, role["name"]), role)
 		if err != nil {
 			return errors.Wrapf(err, "error putting %s %s role into vault", role["name"], method)
+		}
+	}
+	return nil
+}
+
+func (v *vault) configureUserpassUsers(path string, users []interface{}) error {
+	for _, userRaw := range users {
+		user, err := cast.ToStringMapE(userRaw)
+		if err != nil {
+			return errors.Wrapf(err, "error converting user for userpass")
+		}
+
+		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/%s/%s", path, "users", user["username"]), user)
+		if err != nil {
+			return errors.Wrapf(err, "error putting userpass %s user into vault", user["username"])
 		}
 	}
 	return nil
