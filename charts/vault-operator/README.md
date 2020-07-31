@@ -45,7 +45,7 @@ The following table lists the configurable parameters of the vault chart and the
 |-----------------------------|---------------------------------------------|-----------------------------------------------------|
 | `image.pullPolicy`          | Container pull policy                       | `IfNotPresent`                                      |
 | `image.repository`          | Container image to use                      | `banzaicloud/vault-operator`                        |
-| `image.tag`                 | Container image tag to deploy               | `1.3.3`                                             |
+| `image.tag`                 | Container image tag to deploy               | `1.4.0`                                             |
 | `image.imagePullSecrets`    | Image pull secrets for private repositories | `[]`                                                |
 | `replicaCount`              | k8s replicas                                | `1`                                                 |
 | `resources.requests.cpu`    | Container requested CPU                     | `100m`                                              |
