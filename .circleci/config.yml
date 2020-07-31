@@ -19,7 +19,7 @@ jobs:
       - image: circleci/golang:1.14
         environment:
           GOFLAG: -mod=readonly
-      - image: vault:1.4.2
+      - image: vault:1.5.0
         environment:
           SKIP_SETCAP: true
           VAULT_DEV_ROOT_TOKEN_ID: 227e1cce-6bf7-30bb-2d2a-acc854318caf
@@ -79,9 +79,9 @@ jobs:
     resource_class: large
 
     environment:
-      GO_VERSION: "1.14.2"
+      GO_VERSION: "1.14.6"
       K8S_VERSION: v1.15.3
-      VAULT_VERSION: "1.4.2"
+      VAULT_VERSION: "1.5.0"
       KUBECONFIG: /home/circleci/.kube/config
       KURUN_VERSION: "0.4.1"
       MINIKUBE_VERSION: v1.9.2

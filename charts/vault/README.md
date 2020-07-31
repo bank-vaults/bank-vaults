@@ -120,7 +120,7 @@ The following tables lists the configurable parameters of the vault chart and th
 |-------------------------|-------------------------------------|-----------------------------------------------------|
 | `image.pullPolicy`      | Container pull policy               | `IfNotPresent`                                      |
 | `image.repository`      | Container image to use              | `vault`                                             |
-| `image.tag`             | Container image tag to deploy       | `1.4.2`                                             |
+| `image.tag`             | Container image tag to deploy       | `1.5.0`                                             |
 | `ingress.enabled`       | Enables Ingress                     | `false`                                             |
 | `ingress.annotations`   | Ingress annotations                 | `{}`                                                |
 | `ingress.hosts`         | Ingress accepted hostnames with path| `[]`                                                |

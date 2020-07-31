@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: vault:1.4.2
+  image: vault:1.5.0
   bankVaultsImage: banzaicloud/bank-vaults:latest
 
   # Insted of credentialsConfig one can use IAM instance profiles, or kube2iam for example:
