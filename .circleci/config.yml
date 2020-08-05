@@ -84,7 +84,7 @@ jobs:
       VAULT_VERSION: "1.4.2"
       KUBECONFIG: /home/circleci/.kube/config
       KURUN_VERSION: "0.4.1"
-      MINIKUBE_VERSION: v1.12.0
+      MINIKUBE_VERSION: v1.12.2
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       MINIKUBE_HOME: /home/circleci
