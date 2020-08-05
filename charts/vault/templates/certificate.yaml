@@ -1,0 +1,30 @@
+{{- if .Values.certManager.issuer.enabled -}}
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: {{ template "vault.fullname" . }}-server-tls
+spec:
+  selfSigned: {}
+{{- end }}
+---
+{{- if .Values.certManager.certificate.enabled -}}
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: {{ template "vault.fullname" . }}-server-tls
+spec:
+  dnsNames: 
+    - {{ template "vault.fullname" . }}
+  {{- with .Values.certManager.certificate.additionalDomains }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  ipAddresses:
+    - 127.0.0.1
+  secretName: {{ template "vault.fullname" . }}-server-tls
+  issuerRef:
+    {{- if .Values.certManager.certificate.issuerRef }}
+    name: {{ .Values.certManager.certificate.issuerRef }}
+    {{- else }}
+    name: {{ template "vault.fullname" . }}-server-tls
+    {{- end }}
+{{- end }}

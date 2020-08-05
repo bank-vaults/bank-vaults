@@ -35,11 +35,6 @@ metadata:
     app.kubernetes.io/name: vault-agent-pki
 data:
   config.hcl: |
-    vault {
-      // This is needed until https://github.com/hashicorp/vault/issues/7889
-      // gets fixed, otherwise it is automated by the webhook.
-      ca_cert = "/vault/tls/ca.crt"
-    }
     auto_auth {
       method "kubernetes" {
         mount_path = "auth/kubernetes"

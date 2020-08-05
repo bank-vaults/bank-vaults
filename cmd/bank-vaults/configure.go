@@ -34,6 +34,7 @@ import (
 const (
 	cfgVaultConfigFile = "vault-config-file"
 	cfgFatal           = "fatal"
+	cfgDisableMetrics  = "disable-metrics"
 )
 
 var configureCmd = &cobra.Command{
@@ -43,10 +44,11 @@ var configureCmd = &cobra.Command{
 			https://www.vaultproject.io/docs/configuration/index.html. With this it is possible to
 			configure secret engines, auth methods, etc...`,
 	Run: func(cmd *cobra.Command, args []string) {
-		appConfig.BindPFlag(cfgOnce, cmd.PersistentFlags().Lookup(cfgOnce))
-		appConfig.BindPFlag(cfgFatal, cmd.PersistentFlags().Lookup(cfgFatal))
-		appConfig.BindPFlag(cfgUnsealPeriod, cmd.PersistentFlags().Lookup(cfgUnsealPeriod))
-		appConfig.BindPFlag(cfgVaultConfigFile, cmd.PersistentFlags().Lookup(cfgVaultConfigFile))
+		appConfig.BindPFlag(cfgOnce, cmd.PersistentFlags().Lookup(cfgOnce))                       // nolint
+		appConfig.BindPFlag(cfgFatal, cmd.PersistentFlags().Lookup(cfgFatal))                     // nolint
+		appConfig.BindPFlag(cfgUnsealPeriod, cmd.PersistentFlags().Lookup(cfgUnsealPeriod))       // nolint
+		appConfig.BindPFlag(cfgVaultConfigFile, cmd.PersistentFlags().Lookup(cfgVaultConfigFile)) // nolint
+		appConfig.BindPFlag(cfgDisableMetrics, cmd.PersistentFlags().Lookup(cfgDisableMetrics))   // nolint
 
 		var unsealConfig unsealCfg
 
@@ -54,33 +56,37 @@ var configureCmd = &cobra.Command{
 		errorFatal := appConfig.GetBool(cfgFatal)
 		unsealConfig.unsealPeriod = appConfig.GetDuration(cfgUnsealPeriod)
 		vaultConfigFiles := appConfig.GetStringSlice(cfgVaultConfigFile)
+		disableMetrics := appConfig.GetBool(cfgDisableMetrics)
 
 		store, err := kvStoreForConfig(appConfig)
-
 		if err != nil {
 			logrus.Fatalf("error creating kv store: %s", err.Error())
 		}
 
 		cl, err := vault.NewRawClient()
-
 		if err != nil {
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
 		}
 
 		vaultConfig, err := vaultConfigForConfig(appConfig)
-
 		if err != nil {
 			logrus.Fatalf("error building vault config: %s", err.Error())
 		}
 
 		v, err := vault.New(store, cl, vaultConfig)
-
 		if err != nil {
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
 
-		metrics := prometheusExporter{Vault: v, Mode: "configure"}
-		go metrics.Run()
+		if !disableMetrics {
+			metrics := prometheusExporter{Vault: v, Mode: "configure"}
+			go func() {
+				err := metrics.Run()
+				if err != nil {
+					logrus.Fatalf("error creating prometheus exporter: %s", err.Error())
+				}
+			}()
+		}
 
 		configurations := make(chan *viper.Viper, len(vaultConfigFiles))
 
@@ -160,13 +166,14 @@ func handleConfigurationError(vaultConfigFile string, configurations chan *viper
 
 func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.Viper) {
 	watcher, err := fsnotify.NewWatcher()
-	// Map used to match on kubernetes ..data to files inside of directory
-	configFileDirs := make(map[string][]string)
-
 	if err != nil {
 		logrus.Fatal(err)
 	}
+
 	defer watcher.Close()
+
+	// Map used to match on kubernetes ..data to files inside of directory
+	configFileDirs := make(map[string][]string)
 
 	for _, vaultConfigFile := range vaultConfigFiles {
 		// we have to watch the entire directory to pick up renames/atomic saves in a cross-platform way
@@ -183,7 +190,10 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.V
 		configFileDirs[configDirTrimmed] = files
 
 		logrus.Infof("watching directory for changes: %s", configDir)
-		watcher.Add(configDir)
+		err := watcher.Add(configDir)
+		if err != nil {
+			logrus.Fatal(err)
+		}
 	}
 
 	for {
@@ -246,6 +256,7 @@ func init() {
 	configureCmd.PersistentFlags().Bool(cfgFatal, false, "Make configuration errors fatal to the configurator")
 	configureCmd.PersistentFlags().Duration(cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the Vault instance")
 	configureCmd.PersistentFlags().StringSlice(cfgVaultConfigFile, []string{vault.DefaultConfigFile}, "The filename of the YAML/JSON Vault configuration")
+	configureCmd.PersistentFlags().Bool(cfgDisableMetrics, false, "Disable configurer metrics")
 
 	rootCmd.AddCommand(configureCmd)
 }

@@ -29,8 +29,13 @@ func vaultExample() {
 		vaultPath = path
 	}
 
+	config := api.DefaultConfig()
+	if config.Error != nil {
+		log.Fatal(config.Error)
+	}
+
 	client, err := vault.NewClientFromConfig(
-		api.DefaultConfig(),
+		config,
 		vault.ClientAuthPath(vaultPath),
 	)
 	if err != nil {

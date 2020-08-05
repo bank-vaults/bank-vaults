@@ -111,7 +111,7 @@ func (e *prometheusExporter) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func (e prometheusExporter) Run() {
+func (e prometheusExporter) Run() error {
 	var defaultMetricsPath = "/metrics"
 	var defaultMetricsPort = ":9091"
 	logrus.Infof("vault metrics exporter enabled: %s%s", defaultMetricsPort, defaultMetricsPath)
@@ -119,5 +119,5 @@ func (e prometheusExporter) Run() {
 	server := gin.New()
 	server.Use(gin.Logger(), gin.ErrorLogger())
 	server.GET(defaultMetricsPath, gin.WrapH(promhttp.Handler()))
-	server.Run(defaultMetricsPort)
+	return server.Run(defaultMetricsPort)
 }

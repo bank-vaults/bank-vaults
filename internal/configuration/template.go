@@ -41,16 +41,22 @@ import (
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
-const DefaultLeftDelimiter = "${"
-const DefaultRightDelimiter = "}"
+const (
+	// DefaultLeftDelimiter is the default left-hand delimeter that will be used for the templates
+	DefaultLeftDelimiter = "${"
+	// DefaultRightDelimiter is the default right-hand delimeter that will be used for the templates
+	DefaultRightDelimiter = "}"
+)
 
 const templateName = "config"
 
+// Templater is used to hold the delimeters used to configure the template engine
 type Templater struct {
 	leftDelimiter  string
 	rightDelimiter string
 }
 
+// NewTemplater initializes a new templater object
 func NewTemplater(leftDelimiter, rightDelimiter string) Templater {
 	return Templater{
 		leftDelimiter:  leftDelimiter,

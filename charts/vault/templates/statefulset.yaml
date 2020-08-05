@@ -33,7 +33,7 @@ spec:
     spec:
       initContainers:
       - name: vault-config
-        image: "{{ .Values.unsealer.image.repository }}:{{ include "bank-vaults.version" . }}"
+        image: "{{ .Values.unsealer.image.repository }}:{{ include "vault.bank-vaults.version" . }}"
         imagePullPolicy: {{ .Values.unsealer.image.pullPolicy }}
         command: ["template"]
         args:
@@ -56,9 +56,8 @@ spec:
               name: {{ .secretName }}
               key: {{ .secretKey }}
         {{- end }}
-        {{- range .Values.vault.envs }}
-        - name: {{ .name }}
-          value: {{ .value}}
+        {{- if .Values.vault.envs }}
+{{ toYaml .Values.vault.envs | indent 8 }}
         {{- end }}
         volumeMounts:
         - name: vault-raw-config
@@ -84,10 +83,9 @@ spec:
           {{ else }}
           value: https://127.0.0.1:{{ .Values.service.port }}
           {{ end }}
-        {{- range .Values.vault.envs }}
-        - name: {{ .name }}
-          value: {{ .value}}
-        {{- end }}
+          {{- if .Values.vault.envs }}
+{{ toYaml .Values.vault.envs | indent 8 }}
+          {{- end }}
         envFrom:
         {{- range .Values.vault.customSecrets }}
         - secretRef:
@@ -141,7 +139,7 @@ spec:
         resources:
 {{ toYaml .Values.resources | indent 10 }}
       - name: vault-unsealer
-        image: "{{ .Values.unsealer.image.repository }}:{{ include "bank-vaults.version" . }}"
+        image: "{{ .Values.unsealer.image.repository }}:{{ include "vault.bank-vaults.version" . }}"
         imagePullPolicy: {{ .Values.unsealer.image.pullPolicy }}
         command: ["bank-vaults", "unseal", "--init"]
         args: {{ toJson .Values.unsealer.args }}
@@ -161,9 +159,8 @@ spec:
               name: {{ .secretName }}
               key: {{ .secretKey }}
         {{- end }}
-        {{- range .Values.vault.envs }}
-        - name: {{ .name }}
-          value: {{ .value}}
+        {{- if .Values.vault.envs }}
+{{ toYaml .Values.vault.envs | indent 8 }}
         {{- end }}
         envFrom:
         {{- range .Values.vault.customSecrets }}
@@ -183,10 +180,10 @@ spec:
         resources:
 {{ toYaml .Values.vaultUnsealer.resources | indent 10 }}
       - name: vault-configurer
-        image: "{{ .Values.unsealer.image.repository }}:{{ include "bank-vaults.version" . }}"
+        image: "{{ .Values.unsealer.image.repository }}:{{ include "vault.bank-vaults.version" . }}"
         imagePullPolicy: {{ .Values.unsealer.image.pullPolicy }}
         command: ["bank-vaults", "configure"]
-        args: {{ toJson .Values.unsealer.args }}
+        args: {{ toJson (append .Values.unsealer.args "--disable-metrics") }}
         env:
         - name: VAULT_CACERT
           value: /vault/tls/ca.crt
@@ -203,9 +200,8 @@ spec:
               name: {{ .secretName }}
               key: {{ .secretKey }}
         {{- end }}
-        {{- range .Values.vault.envs }}
-        - name: {{ .name }}
-          value: {{ .value}}
+        {{- if .Values.vault.envs }}
+{{ toYaml .Values.vault.envs | indent 8 }}
         {{- end }}
         envFrom:
         {{- range .Values.vault.customSecrets }}
@@ -245,6 +241,9 @@ spec:
 {{ toYaml .Values.tolerations | indent 8 }}
 {{- end }}
       affinity:
+{{- if .Values.affinity }}
+{{ toYaml .Values.affinity | indent 8 }}
+{{- else }}
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 100
@@ -254,6 +253,7 @@ spec:
                 matchLabels:
                   app.kubernetes.io/name: {{ template "vault.fullname" . }}
                   app.kubernetes.io/instance: {{ .Release.Name | quote }}
+{{- end }}
       serviceAccountName: {{ template "vault.fullname" . }}
       securityContext:
         fsGroup: 65534
@@ -286,6 +286,8 @@ spec:
           secret:
             {{- if .Values.tls.secretName }}
             secretName: "{{ .Values.tls.secretName }}"
+            {{- else if .Values.certManager.certificate.enabled }}
+            secretName: "{{ template "vault.fullname" . }}-server-tls"
             {{- else }}
             secretName: "{{ template "vault.fullname" . }}-tls"
             {{- end }}

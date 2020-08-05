@@ -20,7 +20,6 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/http"
@@ -309,14 +308,33 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Create the service if it doesn't exist
-	ser := serviceForVault(v)
+	service := serviceForVault(v)
 	// Set Vault instance as the owner and controller
-	if err := controllerutil.SetControllerReference(v, ser, r.scheme); err != nil {
+	if err := controllerutil.SetControllerReference(v, service, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
-	err = r.createOrUpdateObject(ser)
+	err = r.createOrUpdateObject(service)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to create/update service: %v", err)
+	}
+
+	// If we are using a LoadBalancer let the cloud-provider code fill in the hostname or IP of it,
+	// so we have a more stable certificate generation process.
+	if service.Spec.Type == corev1.ServiceTypeLoadBalancer && !v.Spec.IsTLSDisabled() && v.Spec.ExistingTLSSecretName == "" {
+		key, err := client.ObjectKeyFromObject(service)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to get objecy key for service: %v", err)
+		}
+
+		err = r.client.Get(context.Background(), key, service)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to get Vault LB service: %v", err)
+		}
+
+		if len(loadBalancerIngressPoints(service)) == 0 {
+			reqLogger.Info("The Vault LB Service has no Ingress points yet, waiting 5 seconds...")
+			return reconcile.Result{Requeue: true, RequeueAfter: 5 * time.Second}, nil
+		}
 	}
 
 	// Create the service if it doesn't exist
@@ -335,7 +353,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	tlsExpiration := time.Time{}
-	if !v.Spec.GetTLSDisable() {
+	if !v.Spec.IsTLSDisabled() {
 		// Check if we have an existing TLS Secret for Vault
 		secretName := v.Name + "-tls"
 		if v.Spec.ExistingTLSSecretName != "" {
@@ -349,33 +367,31 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}, sec)
 		if apierrors.IsNotFound(err) && v.Spec.ExistingTLSSecretName == "" {
 			// If tls secret doesn't exist generate tls
-			tlsExpiration, err = populateTLSSecret(v, ser, sec)
+			tlsExpiration, err = populateTLSSecret(v, service, sec)
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
 			}
 		} else if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to get tls secret for vault: %v", err)
 		} else if v.Spec.ExistingTLSSecretName == "" && len(sec.Data) > 0 {
-			// If tls secret exists check expiration date
-			certPEM := string(sec.Data["server.crt"])
-			tlsExpiration, err = bvtls.GetCertExpirationDate([]byte(certPEM))
+			// If tls secret exists check expiration date and if hosts have changed
+			certificate, err := bvtls.PEMToCertificate(sec.Data["server.crt"])
 			if err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to get certificate expiration: %v", err)
+				return reconcile.Result{}, fmt.Errorf("failed to get certificate from secret: %v", err)
 			}
-			tlsHostsChanged, err := certHostsAndIPsChanged(certPEM, v, ser)
-			if err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to get certificate hosts: %v", err)
-			}
+
+			tlsExpiration = certificate.NotAfter
+			tlsHostsChanged := certHostsAndIPsChanged(v, service, certificate)
 
 			// Do we need to regenerate the TLS certificate and possibly even the CA?
 			if time.Until(tlsExpiration) < v.Spec.GetTLSExpiryThreshold() {
 				// Generate new TLS server certificate if expiration date is too close
 				reqLogger.Info("cert expiration date too close", "date", tlsExpiration.UTC().Format(time.RFC3339))
-				tlsExpiration, err = populateTLSSecret(v, ser, sec)
+				tlsExpiration, err = populateTLSSecret(v, service, sec)
 			} else if tlsHostsChanged {
 				// Generate new TLS server certificate if the TLS hosts have changed
 				reqLogger.Info("TLS server hosts have changed")
-				tlsExpiration, err = populateTLSSecret(v, ser, sec)
+				tlsExpiration, err = populateTLSSecret(v, service, sec)
 			}
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for vault: %v", err)
@@ -459,7 +475,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	// Create the StatefulSet if it doesn't exist
 	tlsAnnotations := map[string]string{}
 	tlsAnnotations["vault.banzaicloud.io/tls-expiration-date"] = tlsExpiration.UTC().Format(time.RFC3339)
-	statefulSet, err := statefulSetForVault(v, externalSecretsToWatchItems, tlsAnnotations, ser)
+	statefulSet, err := statefulSetForVault(v, externalSecretsToWatchItems, tlsAnnotations, service)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to fabricate StatefulSet: %v", err)
 	}
@@ -727,7 +743,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 	annotations := withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{}))
 
 	// On GKE we need to specifiy the backend protocol on the service if TLS is enabled
-	if ingress := v.GetIngress(); ingress != nil && !v.Spec.GetTLSDisable() {
+	if ingress := v.GetIngress(); ingress != nil && !v.Spec.IsTLSDisabled() {
 		annotations["cloud.google.com/app-protocols"] = fmt.Sprintf("{\"%s\":\"HTTPS\"}", v.Spec.GetAPIPortName())
 	}
 
@@ -1078,14 +1094,28 @@ func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	return cm
 }
 
-func hostsAndIPsForVault(om *vaultv1alpha1.Vault, service *corev1.Service) []string {
+func hostsAndIPsForVault(v *vaultv1alpha1.Vault, service *corev1.Service) []string {
 	hostsAndIPs := []string{
-		om.Name,
-		om.Name + "." + om.Namespace,
-		om.Name + "." + om.Namespace + ".svc.cluster.local",
+		v.Name,
+		v.Name + "." + v.Namespace,
+		v.Name + "." + v.Namespace + ".svc.cluster.local",
 		"127.0.0.1",
 	}
 
+	hostsAndIPs = append(hostsAndIPs, loadBalancerIngressPoints(service)...)
+
+	// Add additional TLS hosts from the Vault Spec
+	for _, additionalHost := range v.Spec.TLSAdditionalHosts {
+		if additionalHost != "" {
+			hostsAndIPs = append(hostsAndIPs, additionalHost)
+		}
+	}
+
+	return hostsAndIPs
+}
+
+func loadBalancerIngressPoints(service *corev1.Service) []string {
+	var hostsAndIPs []string
 	for _, ingress := range service.Status.LoadBalancer.Ingress {
 		if ingress.IP != "" {
 			hostsAndIPs = append(hostsAndIPs, ingress.IP)
@@ -1094,14 +1124,6 @@ func hostsAndIPsForVault(om *vaultv1alpha1.Vault, service *corev1.Service) []str
 			hostsAndIPs = append(hostsAndIPs, ingress.Hostname)
 		}
 	}
-
-	// Add additional TLS hosts from the Vault Spec
-	for _, additionalHost := range om.Spec.TLSAdditionalHosts {
-		if additionalHost != "" {
-			hostsAndIPs = append(hostsAndIPs, additionalHost)
-		}
-	}
-
 	return hostsAndIPs
 }
 
@@ -1513,7 +1535,7 @@ func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool, envs []corev1.EnvVar) []
 	if localhost {
 		host = "127.0.0.1"
 	}
-	if !v.Spec.GetTLSDisable() {
+	if !v.Spec.IsTLSDisabled() {
 		envs = append(envs, []corev1.EnvVar{
 			{
 				Name:  api.EnvVaultAddress,
@@ -1535,7 +1557,7 @@ func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool, envs []corev1.EnvVar) []
 }
 
 func withTLSVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
-	if !v.Spec.GetTLSDisable() {
+	if !v.Spec.IsTLSDisabled() {
 		if v.Spec.ExistingTLSSecretName != "" {
 			volumes = append(volumes, corev1.Volume{
 				Name: "vault-tls",
@@ -1574,7 +1596,7 @@ func withTLSVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Vol
 }
 
 func withTLSVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
-	if !v.Spec.GetTLSDisable() {
+	if !v.Spec.IsTLSDisabled() {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "vault-tls",
 			MountPath: "/vault/tls",
@@ -1630,24 +1652,21 @@ func withCredentialsEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.E
 func withClusterAddr(v *vaultv1alpha1.Vault, service *corev1.Service, envs []corev1.EnvVar) []corev1.EnvVar {
 	value := ""
 
-	for _, ingress := range service.Status.LoadBalancer.Ingress {
-		if ingress.IP != "" {
-			value = ingress.IP
-		}
-		if ingress.Hostname != "" {
-			value = ingress.Hostname
-		}
+	ingressPoints := loadBalancerIngressPoints(service)
+
+	if len(ingressPoints) > 0 {
+		value = ingressPoints[len(ingressPoints)-1]
 	}
 
 	if value != "" {
 		envs = append(envs, corev1.EnvVar{
 			Name:  "VAULT_CLUSTER_ADDR",
-			Value: v.Spec.GetAPIScheme() + "://" + value + ":8201",
+			Value: "https://" + value + ":8201",
 		})
-		// envs = append(envs, corev1.EnvVar{
-		// 	Name:  "VAULT_API_ADDR",
-		// 	Value: "https://" + value + ":8200",
-		// })
+		envs = append(envs, corev1.EnvVar{
+			Name:  "VAULT_API_ADDR",
+			Value: v.Spec.GetAPIScheme() + "://" + value + ":8200",
+		})
 	}
 
 	return envs
@@ -1881,7 +1900,7 @@ func getNodeAffinity(v *vaultv1alpha1.Vault) *corev1.NodeAffinity {
 }
 
 func getVaultURIScheme(v *vaultv1alpha1.Vault) corev1.URIScheme {
-	if v.Spec.GetTLSDisable() {
+	if v.Spec.IsTLSDisabled() {
 		return corev1.URISchemeHTTP
 	}
 	return corev1.URISchemeHTTPS
@@ -2183,16 +2202,7 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 	return nil
 }
 
-func certHostsAndIPsChanged(certPEM string, v *vaultv1alpha1.Vault, service *corev1.Service) (bool, error) {
-	block, _ := pem.Decode([]byte(certPEM))
-	if block == nil {
-		return false, fmt.Errorf("failed to parse certificate PEM")
-	}
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return false, fmt.Errorf("failed to parse certificate: %v", err)
-	}
-
+func certHostsAndIPsChanged(v *vaultv1alpha1.Vault, service *corev1.Service, cert *x509.Certificate) bool {
 	// TODO very weak check for now
-	return len(cert.DNSNames)+len(cert.IPAddresses) != len(hostsAndIPsForVault(v, service)), nil
+	return len(cert.DNSNames)+len(cert.IPAddresses) != len(hostsAndIPsForVault(v, service))
 }

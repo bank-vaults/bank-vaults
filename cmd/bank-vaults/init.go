@@ -34,9 +34,9 @@ storing the keys in the Cloud KMS keyring.
 
 It will not unseal the Vault instance after initialising.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))
-		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))
-		appConfig.BindPFlag(cfgPreFlightChecks, cmd.PersistentFlags().Lookup(cfgPreFlightChecks))
+		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))     // nolint
+		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))   // nolint
+		appConfig.BindPFlag(cfgPreFlightChecks, cmd.PersistentFlags().Lookup(cfgPreFlightChecks)) // nolint
 
 		store, err := kvStoreForConfig(appConfig)
 		if err != nil {

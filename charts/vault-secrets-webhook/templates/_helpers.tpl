@@ -50,6 +50,6 @@ Create chart name and version as used by the chart label.
 {{/*
 Overrideable version for container image tags.
 */}}
-{{- define "bank-vaults.version" -}}
+{{- define "vault-secrets-webhook.bank-vaults.version" -}}
 {{- .Values.image.tag | default (printf "%s" .Chart.AppVersion) -}}
 {{- end -}}

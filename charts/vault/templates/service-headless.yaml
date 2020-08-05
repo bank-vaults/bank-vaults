@@ -1,28 +1,27 @@
+{{- if .Values.headlessService.enabled -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ template "vault.fullname" . }}
+  name: {{ template "vault.fullname" . }}-headless
   labels:
     helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     app.kubernetes.io/name: {{ template "vault.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
   annotations:
-    {{- range $key, $value := .Values.service.annotations }}
+    {{- range $key, $value := .Values.headlessService.annotations }}
     {{ $key }}: {{ $value | quote }}
     {{- end }}
 spec:
-  type: {{ .Values.service.type }}
-  {{- if .Values.service.loadBalancerIP }}
-  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
-  {{- end }}
+  clusterIP: None
   ports:
-  - port: {{ .Values.service.port }}
+  - port: {{ .Values.headlessService.port }}
     protocol: TCP
-    name: {{ .Values.service.name }}
-  - port: {{ add .Values.service.port 1 }}
+    name: {{ .Values.headlessService.name }}
+  - port: {{ add .Values.headlessService.port 1 }}
     protocol: TCP
-    name: {{ .Values.service.name }}-cluster
+    name: {{ .Values.headlessService.name }}-cluster
   selector:
     app.kubernetes.io/name: {{ template "vault.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

@@ -120,11 +120,12 @@ The following tables lists the configurable parameters of the vault chart and th
 |-------------------------|-------------------------------------|-----------------------------------------------------|
 | `image.pullPolicy`      | Container pull policy               | `IfNotPresent`                                      |
 | `image.repository`      | Container image to use              | `vault`                                             |
-| `image.tag`             | Container image tag to deploy       | `1.4.2`                                             |
+| `image.tag`             | Container image tag to deploy       | `1.5.0`                                             |
 | `ingress.enabled`       | Enables Ingress                     | `false`                                             |
 | `ingress.annotations`   | Ingress annotations                 | `{}`                                                |
 | `ingress.hosts`         | Ingress accepted hostnames with path| `[]`                                                |
 | `ingress.tls`           | Ingress TLS configuration           | `[]`                                                |
+| `vault.envs`            | Custom environment variables available to Vault | `[]`                                    |
 | `vault.customSecrets`   | Custom secrets available to Vault   | `[]`                                                |
 | `vault.envSecrets`      | Custom secrets available to Vault as env vars | `[]`                                      |
 | `vault.config`          | Vault configuration                 | No default backend                                  |
@@ -133,11 +134,12 @@ The following tables lists the configurable parameters of the vault chart and th
 | `resources.limits.cpu`  | Container requested CPU             | `nil`                                               |
 | `resources.limits.memory` | Container requested memory        | `nil`                                               |
 | `unsealer.args`         | Bank Vaults args                    | `["--mode", "k8s", "--k8s-secret-namespace", "default", "--k8s-secret-name", "bank-vaults"]` |
-| `unsealer.image.tag`    | Bank Vaults image tag               | `1.3.3`                                             |
+| `unsealer.image.tag`    | Bank Vaults image tag               | `1.4.0`                                             |
 | `rbac.enabled`          | Use rbac                            | `true`                                              |
 | `rbac.psp.enabled`      | Use pod security policy             | `false`                                             |
 | `nodeSelector`          | Node labels for pod assignment. https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector                                                   | `{}`                                                |
 | `tolerations`           | List of node tolerations for the pods. https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                                           | `[]`                                |
+| `affinity`           | Node affinity settings for the pods. https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/                                                          |  If not set it defaults to`podAntiAffinity` to `preferredDuringSchedulingIgnoredDuringExecution` |
 | `labels`                | Additonal labels to be applied to the Vault StatefulSet and Pods | `{}`                   |
 | `tls.secretName`        | Custom TLS certifcate secret name    | `""`                                               |
 
