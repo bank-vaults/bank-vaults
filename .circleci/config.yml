@@ -73,18 +73,18 @@ jobs:
 
   acceptance-test:
     machine:
-      image: circleci/classic:201808-01
+      image: ubuntu-1604:202004-01
       docker_layer_caching: true
 
     resource_class: large
 
     environment:
       GO_VERSION: "1.14.6"
-      K8S_VERSION: v1.15.3
+      K8S_VERSION: v1.18.3
       VAULT_VERSION: "1.5.0"
       KUBECONFIG: /home/circleci/.kube/config
       KURUN_VERSION: "0.4.1"
-      MINIKUBE_VERSION: v1.9.2
+      MINIKUBE_VERSION: v1.12.2
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       MINIKUBE_HOME: /home/circleci
@@ -103,7 +103,8 @@ jobs:
           name: Start minikube
           background: true
           command: |
-            sudo -E minikube start --vm-driver=none --cpus 2 --memory 4096 --kubernetes-version=${K8S_VERSION}
+            sudo apt-get update && sudo apt-get install conntrack
+            sudo -E minikube start --vm-driver=none --kubernetes-version=${K8S_VERSION}
 
       - run:
           name: Setup kubectl
