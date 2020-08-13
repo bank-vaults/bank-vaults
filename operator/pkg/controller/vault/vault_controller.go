@@ -858,6 +858,10 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 	return servicePorts, containerPorts
 }
 
+func perInstanceVaultServiceName(svc string, i int) string {
+	return fmt.Sprintf("%s-%d", svc, i)
+}
+
 func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 	var services []*corev1.Service
 	servicePorts, _ := getServicePorts(v)
@@ -865,7 +869,7 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 
 	for i := 0; i < int(v.Spec.Size); i++ {
 
-		podName := fmt.Sprintf("%s-%d", v.Name, i)
+		podName := perInstanceVaultServiceName(v.Name, i)
 
 		ls := v.LabelsForVault()
 		ls[appsv1.StatefulSetPodNameLabel] = podName
@@ -1094,20 +1098,31 @@ func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	return cm
 }
 
-func hostsAndIPsForVault(v *vaultv1alpha1.Vault, service *corev1.Service) []string {
-	hostsAndIPs := []string{
-		v.Name,
-		v.Name + "." + v.Namespace,
-		v.Name + "." + v.Namespace + ".svc.cluster.local",
-		"127.0.0.1",
+func hostsForService(svc, namespace string) []string {
+	return []string{
+		svc,
+		svc + "." + namespace,
+		svc + "." + namespace + ".svc.cluster.local",
 	}
+}
 
+func hostsAndIPsForVault(v *vaultv1alpha1.Vault, service *corev1.Service) []string {
+	hostsAndIPs := []string{"127.0.0.1"}
+
+	hostsAndIPs = append(hostsAndIPs, hostsForService(v.Name, v.Namespace)...)
 	hostsAndIPs = append(hostsAndIPs, loadBalancerIngressPoints(service)...)
 
 	// Add additional TLS hosts from the Vault Spec
 	for _, additionalHost := range v.Spec.TLSAdditionalHosts {
 		if additionalHost != "" {
 			hostsAndIPs = append(hostsAndIPs, additionalHost)
+		}
+	}
+
+	if v.Spec.Size > 1 {
+		for i := 0; i < int(v.Spec.Size); i++ {
+			hostsAndIPs = append(hostsAndIPs,
+				hostsForService(perInstanceVaultServiceName(v.Name, i), v.Namespace)...)
 		}
 	}
 
