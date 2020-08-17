@@ -32,7 +32,11 @@ data:
   ca.crt:  {{ $caCrt }}
 {{- end }}
 ---
+{{- if semverCompare ">=1.16-0" .Capabilities.KubeVersion.GitVersion }}
+apiVersion: admissionregistration.k8s.io/v1
+{{- else }}
 apiVersion: admissionregistration.k8s.io/v1beta1
+{{- end }}
 kind: MutatingWebhookConfiguration
 metadata:
   name: {{ template "vault-secrets-webhook.fullname" . }}
@@ -43,6 +47,7 @@ metadata:
 {{- end }}
 webhooks:
 - name: pods.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+  admissionReviewVersions: ["v1beta1"]
   clientConfig:
     service:
       namespace: {{ .Release.Namespace }}
@@ -83,7 +88,11 @@ webhooks:
       values:
       - skip
 {{- end }}
+{{- if semverCompare ">=1.12-0" .Capabilities.KubeVersion.GitVersion }}
+  sideEffects: {{ .Values.apiSideEffectValue }}
+{{- end }}
 - name: secrets.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+  admissionReviewVersions: ["v1beta1"]
   clientConfig:
     service:
       namespace: {{ .Release.Namespace }}
@@ -114,8 +123,12 @@ webhooks:
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
+{{- if semverCompare ">=1.12-0" .Capabilities.KubeVersion.GitVersion }}
+  sideEffects: {{ .Values.apiSideEffectValue }}
+{{- end }}
 {{- if .Values.configMapMutation }}
 - name: configmaps.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+  admissionReviewVersions: ["v1beta1"]
   clientConfig:
     service:
       namespace: {{ .Release.Namespace }}
@@ -146,9 +159,13 @@ webhooks:
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
+{{- if semverCompare ">=1.12-0" .Capabilities.KubeVersion.GitVersion }}
+  sideEffects: {{ .Values.apiSideEffectValue }}
+{{- end }}
 {{- end }}
 {{- if .Values.customResourceMutations }}
 - name: objects.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+  admissionReviewVersions: ["v1beta1"]
   clientConfig:
     service:
       namespace: {{ .Release.Namespace }}
@@ -190,7 +207,7 @@ webhooks:
       values:
       - skip
 {{- end }}
-{{- end }}
 {{- if semverCompare ">=1.12-0" .Capabilities.KubeVersion.GitVersion }}
   sideEffects: {{ .Values.apiSideEffectValue }}
+{{- end }}
 {{- end }}
