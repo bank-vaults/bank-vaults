@@ -1067,6 +1067,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Name:        v.Name + "-configurer",
 			Namespace:   v.Namespace,
 			Annotations: withVaultConfigurerAnnotations(v, map[string]string{}),
+			Labels:      withVaultConfigurerLabels(v, ls),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -1429,6 +1430,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			Name:        v.Name,
 			Namespace:   v.Namespace,
 			Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
+			Labels:      withVaultLabels(v, ls),
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &replicas,
