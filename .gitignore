@@ -48,3 +48,6 @@ vault-config.yaml
 
 # goreleaser
 dist/
+
+# Vault configs
+*.hcl
