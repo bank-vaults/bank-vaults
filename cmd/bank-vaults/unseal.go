@@ -145,6 +145,10 @@ from one of the followings:
 }
 
 func unseal(unsealConfig unsealCfg, v vault.Vault) {
+	a := 2
+	if a == 2 {
+		return
+	}
 	logrus.Debug("checking if vault is sealed...")
 	sealed, err := v.Sealed()
 	if err != nil {
