@@ -57,6 +57,8 @@ spec:
               value: {{ include "vault-operator.name" . }}
             - name: OPERATOR_LOG_LEVEL
               value: debug
+            - name: BANK_VAULTS_IMAGE
+              value: "{{ .Values.image.bankVaultsRepository }}:{{ include "vault-operator.bank-vaults.version" . }}"
           ports:
           - containerPort: {{ .Values.service.internalPort }}
           - containerPort: 8383

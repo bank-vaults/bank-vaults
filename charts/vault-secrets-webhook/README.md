@@ -98,7 +98,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | debug                            | debug logs for webhook                                                       | `false`                             |
 | image.pullPolicy                 | image pull policy                                                            | `IfNotPresent`                      |
 | image.repository                 | image repo that contains the admission server                                | `banzaicloud/vault-secrets-webhook` |
-| image.tag                        | image tag                                                                    | `1.4.0`                             |
+| image.tag                        | image tag                                                                    | `1.4.1`                             |
 | image.imagePullSecrets           | image pull secrets for private repositories                                  | `[]`                                |
 | namespaceSelector                | namespace selector to use, will limit webhook scope                          | `{}`                                |
 | objectSelector                | object selector to use, will limit webhook scope (K8s version 1.15+)            | `{}`                                |

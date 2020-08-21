@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -36,6 +37,14 @@ import (
 )
 
 var log = logf.Log.WithName("controller_vault")
+
+var bankVaultsImage string
+
+func init() {
+	if bankVaultsImage = os.Getenv("BANK_VAULTS_IMAGE"); bankVaultsImage == "" {
+		bankVaultsImage = "banzaicloud/bank-vaults:latest"
+	}
+}
 
 // Vault is the Schema for the vaults API
 
@@ -536,7 +545,7 @@ func (spec *VaultSpec) GetVaultImage() string {
 // GetBankVaultsImage returns the bank-vaults image to use
 func (spec *VaultSpec) GetBankVaultsImage() string {
 	if spec.BankVaultsImage == "" {
-		return "banzaicloud/bank-vaults:latest"
+		return bankVaultsImage
 	}
 	return spec.BankVaultsImage
 }

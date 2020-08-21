@@ -5,6 +5,7 @@
 replicaCount: 1
 
 image:
+  bankVaultsRepository: banzaicloud/bank-vaults
   repository: banzaicloud/vault-operator
   # tag: ""
   pullPolicy: IfNotPresent
