@@ -6,8 +6,7 @@ metadata:
 spec:
   size: 1
   image: vault:1.5.0
-  bankVaultsImage: banzaicloud/bank-vaults:latest
-
+  
   # Describe where you would like to store the Vault unseal keys and root token
   # in seperate remote Vault instance. 
   unsealConfig:

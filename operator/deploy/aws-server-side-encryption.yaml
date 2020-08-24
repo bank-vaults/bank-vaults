@@ -7,7 +7,6 @@ spec:
   # Common annotations for all created resources
   annotations:
     common/annotation: "true"
-  bankVaultsImage: banzaicloud/bank-vaults:master
 
   # Create a statefulset with 3 nodes
   size: 3
