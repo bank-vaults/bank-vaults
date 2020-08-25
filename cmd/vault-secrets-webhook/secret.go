@@ -133,10 +133,3 @@ func (mw *mutatingWebhook) mutateSecretData(secret *corev1.Secret, sc map[string
 	}
 	return nil
 }
-
-func removePunctuation(r rune) rune {
-	if strings.ContainsRune(";<>=\"'", r) {
-		return -1
-	}
-	return r
-}

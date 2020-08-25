@@ -26,11 +26,6 @@ import (
 func getDataFromVault(data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig, logger logrus.FieldLogger) (map[string]string, error) {
 	vaultData := make(map[string]string, len(data))
 
-	for key, value := range data {
-		value = strings.Map(removePunctuation, value)
-		data[key] = value
-	}
-
 	inject := func(key, value string) {
 		vaultData[key] = value
 	}
