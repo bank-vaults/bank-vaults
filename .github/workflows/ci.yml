@@ -17,6 +17,16 @@ jobs:
 
     steps:
 
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v1
+      with:
+        version: latest
+    - name: Builder instance name
+      run: echo ${{ steps.buildx.outputs.name }}
+    - name: Available platforms
+      run: echo ${{ steps.buildx.outputs.platforms }}
+        
     - name: Set up Go 1.14
       uses: actions/setup-go@v1
       with:

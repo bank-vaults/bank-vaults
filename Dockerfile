@@ -2,7 +2,7 @@ ARG GO_VERSION=1.14
 
 FROM golang:${GO_VERSION}-alpine AS builder
 
-RUN apk add --update --no-cache ca-certificates make git build-base curl mercurial
+RUN apk add --update --no-cache ca-certificates make git build-base mercurial
 
 RUN mkdir -p /build
 WORKDIR /build
