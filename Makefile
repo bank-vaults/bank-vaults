@@ -26,7 +26,6 @@ endif
 
 # Docker variables
 DOCKER_TAG ?= ${VERSION}
-PLATFORM ?= linux/amd64,linux/arm64,linux/arm/v7
 
 # Dependency versions
 GOTESTSUM_VERSION = 0.4.0
@@ -61,28 +60,28 @@ build-debug: build ## Build a binary with remote debugging capabilities
 
 .PHONY: docker
 docker: ## Build a Docker image
-	docker buildx build --platform ${PLATFORM} -t ${DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile .
+	docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile .
 ifeq (${DOCKER_LATEST}, 1)
 	docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
 endif
 
 .PHONY: docker-webhook
 docker-webhook: ## Build a Docker-webhook image
-	docker buildx build --platform ${PLATFORM} -t ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.webhook .
+	docker build -t ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.webhook .
 ifeq (${DOCKER_LATEST}, 1)
 	docker tag ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} ${WEBHOOK_DOCKER_IMAGE}:latest
 endif
 
 .PHONY: docker-vault-env
 docker-vault-env: ## Build a Docker-vault-env image
-	docker buildx build --platform ${PLATFORM} -t ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.vault-env .
+	docker build -t ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.vault-env .
 ifeq (${DOCKER_LATEST}, 1)
 	docker tag ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} ${VAULT_ENV_DOCKER_IMAGE}:latest
 endif
 
 .PHONY: docker-operator
 docker-operator: ## Build a Docker image for the Operator
-	docker buildx build --platform ${PLATFORM} -t ${OPERATOR_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.operator .
+	docker build -t ${OPERATOR_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.operator .
 ifeq (${DOCKER_LATEST}, 1)
 	docker tag ${OPERATOR_DOCKER_IMAGE}:${DOCKER_TAG} ${OPERATOR_DOCKER_IMAGE}:latest
 endif
