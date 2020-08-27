@@ -16,16 +16,6 @@ jobs:
           - 8200:8200
 
     steps:
-
-    - name: Set up Docker Buildx
-      id: buildx
-      uses: docker/setup-buildx-action@v1
-      with:
-        version: latest
-    - name: Builder instance name
-      run: echo ${{ steps.buildx.outputs.name }}
-    - name: Available platforms
-      run: echo ${{ steps.buildx.outputs.platforms }}
         
     - name: Set up Go 1.14
       uses: actions/setup-go@v1
@@ -104,3 +94,31 @@ jobs:
     - name: Operator and webhook acceptance test
       run: |
         hack/acceptance-test.sh
+
+  docker-build:
+    name: Docker build
+    runs-on: ubuntu-latest
+    env:
+      VERSION: master
+
+    steps:
+
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v1
+      with:
+        version: latest
+    - name: Builder instance name
+      run: echo ${{ steps.buildx.outputs.name }}
+    - name: Available platforms
+      run: echo ${{ steps.buildx.outputs.platforms }}
+
+    - name: Build Docker images
+      run: |
+        make docker
+        make docker-operator
+        make docker-vault-env
+        make docker-webhook
