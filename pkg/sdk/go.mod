@@ -1,6 +1,6 @@
 module github.com/banzaicloud/bank-vaults/pkg/sdk
 
-go 1.12
+go 1.13
 
 require (
 	emperror.dev/errors v0.7.0

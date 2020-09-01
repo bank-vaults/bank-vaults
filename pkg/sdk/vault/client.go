@@ -1,4 +1,4 @@
-// Copyright © 2018 Banzai Cloud
+// Copyright © 2020 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
 	"time"
 
@@ -28,25 +27,12 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/hashicorp/vault/api"
 	vaultapi "github.com/hashicorp/vault/api"
-	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 )
 
 const (
 	defaultServiceAccountFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
-
-var logger *logrus.Logger
-
-func init() {
-	enableJSONLog, _ := strconv.ParseBool(os.Getenv("VAULT_JSON_LOG"))
-
-	logger = logrus.New()
-
-	if enableJSONLog {
-		logger.SetFormatter(&logrus.JSONFormatter{})
-	}
-}
 
 // NewData is a helper function for Vault KV Version two secret data creation
 func NewData(cas int, data map[string]interface{}) map[string]interface{} {
@@ -63,6 +49,7 @@ type clientOptions struct {
 	tokenPath string
 	token     string
 	timeout   time.Duration
+	logger    Logger
 }
 
 // ClientOption configures a Vault client using the functional options paradigm popularized by Rob Pike and Dave Cheney.
@@ -115,6 +102,19 @@ func (co ClientTimeout) apply(o *clientOptions) {
 	o.timeout = time.Duration(co)
 }
 
+// ClientLogger wraps a logur.Logger compatible logger to be used in the client.
+func ClientLogger(logger Logger) clientLogger {
+	return clientLogger{logger: logger}
+}
+
+type clientLogger struct {
+	logger Logger
+}
+
+func (co clientLogger) apply(o *clientOptions) {
+	o.logger = co.logger
+}
+
 // Client is a Vault client with Kubernetes support, token automatic renewing and
 // access to Transit Secret Engine wrapper
 type Client struct {
@@ -127,6 +127,7 @@ type Client struct {
 	closed       bool
 	watch        *fsnotify.Watcher
 	mu           sync.Mutex
+	logger       Logger
 }
 
 // NewClient creates a new Vault client.
@@ -191,14 +192,14 @@ func NewClientFromConfig(config *vaultapi.Config, opts ...ClientOption) (*Client
 						if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
 							err := config.ReadEnvironment()
 							if err != nil {
-								logger.Println("failed to reload Vault config:", err)
+								client.logger.Error("failed to reload Vault config", map[string]interface{}{"err": err})
 							} else {
-								logger.Println("CA certificate reloaded")
+								client.logger.Info("CA certificate reloaded")
 							}
 						}
 					}
 				case err := <-watch.Errors:
-					logger.Println("watcher error:", err)
+					client.logger.Error("watcher error", map[string]interface{}{"err": err})
 				}
 			}
 		}()
@@ -219,6 +220,7 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		Transit: transit,
 		client:  rawClient,
 		logical: logical,
+		logger:  noopLogger{},
 	}
 
 	var tokenRenewer *vaultapi.Renewer
@@ -227,6 +229,11 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 
 	for _, opt := range opts {
 		opt.apply(o)
+	}
+
+	// Set logger
+	if o.logger != nil {
+		client.logger = o.logger
 	}
 
 	// Set URL if defined
@@ -303,7 +310,10 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					// Projected SA tokens do expire, so we need to move the reading logic into the loop
 					jwt, err := ioutil.ReadFile(serviceAccountFile)
 					if err != nil {
-						logger.Errorf("failed to read SA token %s: %v", serviceAccountFile, err.Error())
+						client.logger.Error("failed to read SA token", map[string]interface{}{
+							"serviceAccount": serviceAccountFile,
+							"err":            err,
+						})
 						continue
 					}
 
@@ -314,18 +324,18 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 
 					secret, err := logical.Write(fmt.Sprintf("auth/%s/login", o.authPath), data)
 					if err != nil {
-						logger.Println("failed to request new Vault token", err.Error())
+						client.logger.Error("failed to request new Vault token", map[string]interface{}{"err": err})
 						time.Sleep(1 * time.Second)
 						continue
 					}
 
 					if secret == nil {
-						logger.Println("received empty answer from Vault, retrying")
+						client.logger.Debug("received empty answer from Vault, retrying")
 						time.Sleep(1 * time.Second)
 						continue
 					}
 
-					logger.Println("received new Vault token")
+					client.logger.Info("received new Vault token")
 
 					// Set the first token from the response
 					rawClient.SetToken(secret.Auth.ClientToken)
@@ -338,7 +348,7 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					// Start the renewing process
 					tokenRenewer, err = rawClient.NewRenewer(&vaultapi.RenewerInput{Secret: secret})
 					if err != nil {
-						logger.Println("failed to renew Vault token", err.Error())
+						client.logger.Error("failed to renew Vault token", map[string]interface{}{"err": err})
 						continue
 					}
 
@@ -348,14 +358,15 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 
 					go tokenRenewer.Renew()
 
-					runRenewChecker(tokenRenewer)
+					client.runRenewChecker(tokenRenewer)
 				}
-				logger.Println("Vault token renewal closed")
+
+				client.logger.Info("Vault token renewal closed")
 			}()
 
 			select {
 			case <-initialTokenArrived:
-				logger.Println("initial Vault token arrived")
+				client.logger.Info("initial Vault token arrived")
 
 			case <-time.After(o.timeout):
 				client.Close()
@@ -367,17 +378,17 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 	return client, nil
 }
 
-func runRenewChecker(tokenRenewer *vaultapi.Renewer) {
+func (client *Client) runRenewChecker(tokenRenewer *vaultapi.Renewer) {
 	for {
 		select {
 		case err := <-tokenRenewer.DoneCh():
 			if err != nil {
-				logger.Println("error in Vault token renewal:", err.Error())
+				client.logger.Error("error in Vault token renewal", map[string]interface{}{"err": err})
 			}
 			return
 		case o := <-tokenRenewer.RenewCh():
 			ttl, _ := o.Secret.TokenTTL()
-			logger.Println("renewed Vault token ttl =", ttl)
+			client.logger.Info("renewed Vault token", map[string]interface{}{"ttl": ttl})
 		}
 	}
 }

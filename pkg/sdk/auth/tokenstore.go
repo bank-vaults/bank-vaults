@@ -183,12 +183,16 @@ type vaultTokenStore struct {
 	logical *vaultapi.Logical
 }
 
-//NewVaultTokenStore creates a new Vault backed token store
+// NewVaultTokenStore creates a new Vault backed token store
 func NewVaultTokenStore(role string) TokenStore {
 	client, err := vault.NewClient(role)
 	if err != nil {
 		panic(err)
 	}
+	return NewVaultTokenStoreFromClient(client)
+}
+
+func NewVaultTokenStoreFromClient(client *vault.Client) TokenStore {
 	logical := client.RawClient().Logical()
 	return vaultTokenStore{client: client, logical: logical}
 }

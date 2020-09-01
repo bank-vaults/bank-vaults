@@ -53,6 +53,7 @@ require (
 	k8s.io/code-generator v0.17.4
 	k8s.io/kube-openapi v0.0.0-20200121204235-bf4fb3bd569c
 	k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89
+	logur.dev/adapter/logrus v0.5.0
 	sigs.k8s.io/controller-runtime v0.5.2
 )
 
