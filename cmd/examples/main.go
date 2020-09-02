@@ -21,6 +21,8 @@ import (
 	database "github.com/banzaicloud/bank-vaults/pkg/sdk/db"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	"github.com/hashicorp/vault/api"
+	"github.com/sirupsen/logrus"
+	logrusadapter "logur.dev/adapter/logrus"
 )
 
 func vaultExample() {
@@ -37,6 +39,7 @@ func vaultExample() {
 	client, err := vault.NewClientFromConfig(
 		config,
 		vault.ClientAuthPath(vaultPath),
+		vault.ClientLogger(logrusadapter.New(logrus.New())),
 	)
 	if err != nil {
 		log.Fatal(err)

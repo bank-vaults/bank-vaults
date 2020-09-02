@@ -293,7 +293,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			mw := &mutatingWebhook{
 				k8sClient: tt.fields.k8sClient,
 				registry:  tt.fields.registry,
-				logger:    logrus.New(),
+				logger:    logrus.NewEntry(logrus.New()),
 			}
 			got, err := mw.mutateContainers(tt.args.containers, tt.args.podSpec, tt.args.vaultConfig, tt.args.ns)
 			if (err != nil) != tt.wantErr {
@@ -670,7 +670,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 			mw := &mutatingWebhook{
 				k8sClient: tt.fields.k8sClient,
 				registry:  tt.fields.registry,
-				logger:    logrus.New(),
+				logger:    logrus.NewEntry(logrus.New()),
 			}
 			err := mw.mutatePod(tt.args.pod, tt.args.vaultConfig, tt.args.ns, false)
 			if (err != nil) != tt.wantErr {

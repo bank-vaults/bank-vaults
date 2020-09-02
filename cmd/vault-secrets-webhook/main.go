@@ -35,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
+	logrusadapter "logur.dev/adapter/logrus"
 	kubernetesConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
@@ -320,7 +321,7 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 type mutatingWebhook struct {
 	k8sClient kubernetes.Interface
 	registry  registry.ImageRegistry
-	logger    logrus.FieldLogger
+	logger    *logrus.Entry
 }
 
 func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
@@ -446,7 +447,7 @@ func (mw *mutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*core
 	return nil, nil
 }
 
-func newVaultClient(vaultConfig VaultConfig) (*vault.Client, error) {
+func (mw *mutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Client, error) {
 	clientConfig := vaultapi.DefaultConfig()
 	if clientConfig.Error != nil {
 		return nil, clientConfig.Error
@@ -465,6 +466,7 @@ func newVaultClient(vaultConfig VaultConfig) (*vault.Client, error) {
 		clientConfig,
 		vault.ClientRole(vaultConfig.Role),
 		vault.ClientAuthPath(vaultConfig.Path),
+		vault.ClientLogger(logrusadapter.NewFromEntry(mw.logger)),
 	)
 }
 
@@ -502,7 +504,7 @@ func (mw *mutatingWebhook) serveMetrics(addr string) {
 }
 
 func main() {
-	var logger logrus.FieldLogger
+	var logger *logrus.Entry
 	{
 		log := logrus.New()
 

@@ -110,7 +110,7 @@ func traverseObject(o interface{}, vaultClient *vault.Client, vaultConfig VaultC
 func (mw *mutatingWebhook) mutateObject(object *unstructured.Unstructured, vaultConfig VaultConfig) error {
 	mw.logger.Debugf("mutating object: %s.%s", object.GetNamespace(), object.GetName())
 
-	vaultClient, err := newVaultClient(vaultConfig)
+	vaultClient, err := mw.newVaultClient(vaultConfig)
 	if err != nil {
 		return errors.Wrap(err, "failed to create vault client")
 	}
