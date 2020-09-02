@@ -1,6 +1,7 @@
 run:
     skip-dirs:
         - operator
+    timeout: 5m
 
 linters-settings:
     golint:
