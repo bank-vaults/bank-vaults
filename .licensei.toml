@@ -18,6 +18,7 @@ ignored = [
   "google.golang.org/grpc",
   "google.golang.org/genproto",
   "google.golang.org/api",
+  "google.golang.org/protobuf",
   "cloud.google.com/go",
   "cloud.google.com/go/storage",
 ]
