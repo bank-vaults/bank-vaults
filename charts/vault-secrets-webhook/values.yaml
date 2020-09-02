@@ -34,7 +34,7 @@ serviceAccount:
   # Enables GKE workload identity
   #  iam.gke.io/gcp-service-account: gsa@project.iam.gserviceaccount.com
 
-vault_env:
+vaultEnv:
   repository: banzaicloud/vault-env
 
 env:
