@@ -23,13 +23,12 @@ require (
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/frankban/quicktest v1.4.0 // indirect
-	github.com/fsnotify/fsnotify v1.4.7
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gin-gonic/gin v1.6.3
 	github.com/google/go-cmp v0.4.0
-	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/heroku/docker-registry-client v0.0.0-20181004091502-47ecf50fd8d4
-	github.com/imdario/mergo v0.3.8
+	github.com/imdario/mergo v0.3.9
 	github.com/jpillora/backoff v0.0.0-20180909062703-3050d21c67d7
 	github.com/miekg/pkcs11 v1.0.3
 	github.com/opencontainers/image-spec v1.0.1
@@ -47,24 +46,20 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	google.golang.org/api v0.13.0
 	google.golang.org/genproto v0.0.0-20191108220845-16a3f7862a1a
-	k8s.io/api v0.18.0
-	k8s.io/apimachinery v0.18.1-beta.0
-	k8s.io/client-go v0.18.0
-	k8s.io/code-generator v0.17.4
-	k8s.io/kube-openapi v0.0.0-20200121204235-bf4fb3bd569c
-	k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89
+	k8s.io/api v0.18.6
+	k8s.io/apimachinery v0.18.6
+	k8s.io/client-go v0.18.6
+	k8s.io/code-generator v0.18.6
+	k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
+	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
 	logur.dev/adapter/logrus v0.5.0
-	sigs.k8s.io/controller-runtime v0.5.2
+	sigs.k8s.io/controller-runtime v0.6.2
 )
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.1+incompatible
 	github.com/banzaicloud/bank-vaults/pkg/sdk => ./pkg/sdk
 	github.com/heroku/docker-registry-client => github.com/banzaicloud/docker-registry-client v0.0.0-20191118103116-f48ee8de5b3b
-
-	k8s.io/api => k8s.io/api v0.17.2
-	k8s.io/apimachinery => k8s.io/apimachinery v0.17.2
-	k8s.io/client-go => k8s.io/client-go v0.17.2
 )
 
 go 1.13

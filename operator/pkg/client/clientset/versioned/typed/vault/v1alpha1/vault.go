@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	"context"
 	"time"
 
 	v1alpha1 "github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
@@ -35,14 +36,14 @@ type VaultsGetter interface {
 
 // VaultInterface has methods to work with Vault resources.
 type VaultInterface interface {
-	Create(*v1alpha1.Vault) (*v1alpha1.Vault, error)
-	Update(*v1alpha1.Vault) (*v1alpha1.Vault, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v1alpha1.Vault, error)
-	List(opts v1.ListOptions) (*v1alpha1.VaultList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Vault, err error)
+	Create(ctx context.Context, vault *v1alpha1.Vault, opts v1.CreateOptions) (*v1alpha1.Vault, error)
+	Update(ctx context.Context, vault *v1alpha1.Vault, opts v1.UpdateOptions) (*v1alpha1.Vault, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.Vault, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.VaultList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Vault, err error)
 	VaultExpansion
 }
 
@@ -61,20 +62,20 @@ func newVaults(c *VaultV1alpha1Client, namespace string) *vaults {
 }
 
 // Get takes name of the vault, and returns the corresponding vault object, and an error if there is any.
-func (c *vaults) Get(name string, options v1.GetOptions) (result *v1alpha1.Vault, err error) {
+func (c *vaults) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Vault, err error) {
 	result = &v1alpha1.Vault{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("vaults").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of Vaults that match those selectors.
-func (c *vaults) List(opts v1.ListOptions) (result *v1alpha1.VaultList, err error) {
+func (c *vaults) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.VaultList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -85,13 +86,13 @@ func (c *vaults) List(opts v1.ListOptions) (result *v1alpha1.VaultList, err erro
 		Resource("vaults").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested vaults.
-func (c *vaults) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *vaults) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -102,71 +103,74 @@ func (c *vaults) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("vaults").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a vault and creates it.  Returns the server's representation of the vault, and an error, if there is any.
-func (c *vaults) Create(vault *v1alpha1.Vault) (result *v1alpha1.Vault, err error) {
+func (c *vaults) Create(ctx context.Context, vault *v1alpha1.Vault, opts v1.CreateOptions) (result *v1alpha1.Vault, err error) {
 	result = &v1alpha1.Vault{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("vaults").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(vault).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a vault and updates it. Returns the server's representation of the vault, and an error, if there is any.
-func (c *vaults) Update(vault *v1alpha1.Vault) (result *v1alpha1.Vault, err error) {
+func (c *vaults) Update(ctx context.Context, vault *v1alpha1.Vault, opts v1.UpdateOptions) (result *v1alpha1.Vault, err error) {
 	result = &v1alpha1.Vault{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("vaults").
 		Name(vault.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(vault).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the vault and deletes it. Returns an error if one occurs.
-func (c *vaults) Delete(name string, options *v1.DeleteOptions) error {
+func (c *vaults) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("vaults").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *vaults) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *vaults) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("vaults").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched vault.
-func (c *vaults) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Vault, err error) {
+func (c *vaults) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Vault, err error) {
 	result = &v1alpha1.Vault{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("vaults").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
