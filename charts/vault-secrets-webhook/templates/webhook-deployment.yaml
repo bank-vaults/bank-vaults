@@ -64,7 +64,7 @@ spec:
               value: "debug"
             {{- end }}
             - name: VAULT_ENV_IMAGE
-              value: "banzaicloud/vault-env:{{ include "vault-secrets-webhook.bank-vaults.version" . }}"
+              value: "{{ .Values.vaultEnv.repository }}:{{ include "vault-secrets-webhook.bank-vaults.version" . }}"
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}

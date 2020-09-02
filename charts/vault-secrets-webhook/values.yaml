@@ -34,9 +34,11 @@ serviceAccount:
   # Enables GKE workload identity
   #  iam.gke.io/gcp-service-account: gsa@project.iam.gserviceaccount.com
 
+vaultEnv:
+  repository: banzaicloud/vault-env
+
 env:
   VAULT_IMAGE: vault:1.5.0
-  # VAULT_ENV_IMAGE: banzaicloud/vault-env:1.4.0
   # VAULT_CAPATH: /vault/tls
   # used when the pod that should get secret injected does not specify
   # an imagePullSecret
