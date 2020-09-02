@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -114,10 +115,10 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 			agentConfigMapName = configMap.Name
 
 			if !dryRun {
-				_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(configMap)
+				_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(context.Background(), configMap, metav1.CreateOptions{})
 				if err != nil {
 					if errors.IsAlreadyExists(err) {
-						_, err = mw.k8sClient.CoreV1().ConfigMaps(ns).Update(configMap)
+						_, err = mw.k8sClient.CoreV1().ConfigMaps(ns).Update(context.Background(), configMap, metav1.UpdateOptions{})
 						if err != nil {
 							return err
 						}

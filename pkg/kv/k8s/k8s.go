@@ -15,6 +15,7 @@
 package k8s
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 
@@ -82,7 +83,7 @@ func New(namespace, secret string, labels map[string]string) (kv.Service, error)
 }
 
 func (k *k8sStorage) Set(key string, val []byte) error {
-	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
+	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(context.Background(), k.secret, metav1.GetOptions{})
 
 	if k8serrors.IsNotFound(err) {
 		secret := &v1.Secret{
@@ -96,10 +97,10 @@ func (k *k8sStorage) Set(key string, val []byte) error {
 		if k.ownerReference != nil {
 			secret.ObjectMeta.SetOwnerReferences([]metav1.OwnerReference{*k.ownerReference})
 		}
-		_, err = k.client.CoreV1().Secrets(k.namespace).Create(secret)
+		_, err = k.client.CoreV1().Secrets(k.namespace).Create(context.Background(), secret, metav1.CreateOptions{})
 	} else if err == nil {
 		secret.Data[key] = val
-		_, err = k.client.CoreV1().Secrets(k.namespace).Update(secret)
+		_, err = k.client.CoreV1().Secrets(k.namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
 	} else {
 		return errors.Wrapf(err, "error checking if '%s' secret exists", k.secret)
 	}
@@ -111,7 +112,7 @@ func (k *k8sStorage) Set(key string, val []byte) error {
 }
 
 func (k *k8sStorage) Get(key string) ([]byte, error) {
-	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(k.secret, metav1.GetOptions{})
+	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(context.Background(), k.secret, metav1.GetOptions{})
 
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
