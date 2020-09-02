@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	"context"
 	time "time"
 
 	vaultv1alpha1 "github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
@@ -59,13 +60,13 @@ func NewFilteredVaultInformer(client versioned.Interface, namespace string, resy
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.VaultV1alpha1().Vaults(namespace).List(options)
+				return client.VaultV1alpha1().Vaults(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.VaultV1alpha1().Vaults(namespace).Watch(options)
+				return client.VaultV1alpha1().Vaults(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&vaultv1alpha1.Vault{},

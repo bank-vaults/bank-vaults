@@ -350,7 +350,7 @@ func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.O
 }
 
 func (mw *mutatingWebhook) getDataFromConfigmap(cmName string, ns string) (map[string]string, error) {
-	configMap, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Get(cmName, metav1.GetOptions{})
+	configMap, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Get(context.Background(), cmName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -358,7 +358,7 @@ func (mw *mutatingWebhook) getDataFromConfigmap(cmName string, ns string) (map[s
 }
 
 func (mw *mutatingWebhook) getDataFromSecret(secretName string, ns string) (map[string][]byte, error) {
-	secret, err := mw.k8sClient.CoreV1().Secrets(ns).Get(secretName, metav1.GetOptions{})
+	secret, err := mw.k8sClient.CoreV1().Secrets(ns).Get(context.Background(), secretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
