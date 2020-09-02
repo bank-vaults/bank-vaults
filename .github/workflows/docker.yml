@@ -1,0 +1,55 @@
+name: Docker
+on:
+  push:
+    branches:
+      - master
+  release:
+    types:
+      - created
+jobs:
+  docker:
+    name: Docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build bank-vaults
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.CR_PAT }}
+          registry: ghcr.io
+          repository: banzaicloud/bank-vaults
+          dockerfile: Dockerfile
+          tag_with_ref: true
+          add_git_labels: true
+      - name: Build vault-env
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.CR_PAT }}
+          registry: ghcr.io
+          repository: banzaicloud/vault-env
+          dockerfile: Dockerfile.vault-env
+          tag_with_ref: true
+          add_git_labels: true
+      - name: Build vault-operator
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.CR_PAT }}
+          registry: ghcr.io
+          repository: banzaicloud/vault-operator
+          dockerfile: Dockerfile.operator
+          tag_with_ref: true
+          add_git_labels: true
+      - name: Build vault-secrets-webhook
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.CR_PAT }}
+          registry: ghcr.io
+          repository: banzaicloud/vault-secrets-webhook
+          dockerfile: Dockerfile.webhook
+          tag_with_ref: true
+          add_git_labels: true
