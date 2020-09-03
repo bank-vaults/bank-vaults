@@ -21,6 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
@@ -89,7 +90,7 @@ from one of the followings:
 			logrus.Fatalf("error building vault config: %s", err.Error())
 		}
 
-		v, err := vault.New(store, cl, vaultConfig)
+		v, err := internalVault.New(store, cl, vaultConfig)
 		if err != nil {
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
@@ -144,7 +145,7 @@ from one of the followings:
 	},
 }
 
-func unseal(unsealConfig unsealCfg, v vault.Vault) {
+func unseal(unsealConfig unsealCfg, v internalVault.Vault) {
 	logrus.Debug("checking if vault is sealed...")
 	sealed, err := v.Sealed()
 	if err != nil {

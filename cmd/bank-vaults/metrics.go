@@ -20,7 +20,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
+	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
 )
 
 const prometheusNS = "vault"
@@ -56,7 +56,7 @@ var (
 )
 
 type prometheusExporter struct {
-	Vault vault.Vault
+	Vault internalVault.Vault
 	Mode  string
 }
 

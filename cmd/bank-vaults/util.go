@@ -18,6 +18,7 @@ import (
 	"emperror.dev/errors"
 	"github.com/spf13/viper"
 
+	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/alibabakms"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/alibabaoss"
@@ -32,13 +33,12 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/kv/multi"
 	"github.com/banzaicloud/bank-vaults/pkg/kv/s3"
 	kvvault "github.com/banzaicloud/bank-vaults/pkg/kv/vault"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 // TODO review this function's returned error
 // nolint: unparam
-func vaultConfigForConfig(_ *viper.Viper) (vault.Config, error) {
-	return vault.Config{
+func vaultConfigForConfig(_ *viper.Viper) (internalVault.Config, error) {
+	return internalVault.Config{
 		SecretShares:    appConfig.GetInt(cfgSecretShares),
 		SecretThreshold: appConfig.GetInt(cfgSecretThreshold),
 

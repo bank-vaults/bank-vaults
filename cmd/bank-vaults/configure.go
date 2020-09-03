@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/banzaicloud/bank-vaults/internal/configuration"
+	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 
 	"github.com/fsnotify/fsnotify"
@@ -73,7 +74,7 @@ var configureCmd = &cobra.Command{
 			logrus.Fatalf("error building vault config: %s", err.Error())
 		}
 
-		v, err := vault.New(store, cl, vaultConfig)
+		v, err := internalVault.New(store, cl, vaultConfig)
 		if err != nil {
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
@@ -255,7 +256,7 @@ func init() {
 	configureCmd.PersistentFlags().Bool(cfgOnce, false, "Run configure only once")
 	configureCmd.PersistentFlags().Bool(cfgFatal, false, "Make configuration errors fatal to the configurator")
 	configureCmd.PersistentFlags().Duration(cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the Vault instance")
-	configureCmd.PersistentFlags().StringSlice(cfgVaultConfigFile, []string{vault.DefaultConfigFile}, "The filename of the YAML/JSON Vault configuration")
+	configureCmd.PersistentFlags().StringSlice(cfgVaultConfigFile, []string{internalVault.DefaultConfigFile}, "The filename of the YAML/JSON Vault configuration")
 	configureCmd.PersistentFlags().Bool(cfgDisableMetrics, false, "Disable configurer metrics")
 
 	rootCmd.AddCommand(configureCmd)
