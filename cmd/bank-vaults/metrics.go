@@ -15,11 +15,12 @@
 package main
 
 import (
-	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
+
+	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
 )
 
 const prometheusNS = "vault"
