@@ -151,8 +151,8 @@ func main() {
 	ignoreMissingSecrets := cast.ToBool(os.Getenv("VAULT_IGNORE_MISSING_SECRETS"))
 
 	// The login procedure takes the token from a file (if using Vault Agent)
-	// or requests one for itself (Kubernetes Auth), so if we got a VAULT_TOKEN
-	// for the special value with "vault:login"
+	// or requests one for itself (Kubernetes Auth, or GCP, etc...),
+	// so if we got a VAULT_TOKEN for the special value with "vault:login"
 	originalVaultTokenEnvVar := os.Getenv("VAULT_TOKEN")
 	if originalVaultTokenEnvVar == vaultLogin {
 		os.Unsetenv("VAULT_TOKEN")

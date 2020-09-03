@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	defaultServiceAccountFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	defaultJWTFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
 // NewData is a helper function for Vault KV Version two secret data creation
@@ -282,7 +282,10 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 			rawClient.SetToken(string(token))
 		} else {
 			// If VAULT_TOKEN, VAULT_TOKEN_PATH or ~/.vault-token wasn't provided let's
-			// suppose we are in Kubernetes and try to get one with the ServiceAccount token.
+			// suppose we are in Kubernetes and try to get one with the Kubernetes ServiceAccount JWT.
+			//
+			// This logic works for for Vault GCP authentication as well, see:
+			// https://www.vaultproject.io/api/auth/gcp#login
 
 			// Check that we are in Kubernetes
 			_, err := rest.InClusterConfig()
@@ -290,9 +293,11 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 				return nil, err
 			}
 
-			serviceAccountFile := defaultServiceAccountFile
+			jwtFile := defaultJWTFile
 			if file := os.Getenv("KUBERNETES_SERVICE_ACCOUNT_TOKEN"); file != "" {
-				serviceAccountFile = file
+				jwtFile = file
+			} else if file := os.Getenv("VAULT_JWT_FILE"); file != "" {
+				jwtFile = file
 			}
 
 			initialTokenArrived := make(chan string, 1)
@@ -307,12 +312,12 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					}
 					client.mu.Unlock()
 
-					// Projected SA tokens do expire, so we need to move the reading logic into the loop
-					jwt, err := ioutil.ReadFile(serviceAccountFile)
+					// Projected SA JWTs do expire, so we need to move the reading logic into the loop
+					jwt, err := ioutil.ReadFile(jwtFile)
 					if err != nil {
-						client.logger.Error("failed to read SA token", map[string]interface{}{
-							"serviceAccount": serviceAccountFile,
-							"err":            err,
+						client.logger.Error("failed to read JWT token", map[string]interface{}{
+							"jwt": jwtFile,
+							"err": err,
 						})
 						continue
 					}

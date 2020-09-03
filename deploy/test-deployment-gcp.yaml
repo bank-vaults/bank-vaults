@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault-env-gcp-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vault-env-gcp-auth
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vault-env-gcp-auth
+      annotations:
+        # These annotations enable Vault GCP Auth, see:
+        # https://www.vaultproject.io/api/auth/gcp#login
+        vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
+        vault.security.banzaicloud.io/vault-tls-secret: vault-tls
+        vault.security.banzaicloud.io/vault-role: "my-role"
+        vault.security.banzaicloud.io/vault-path: "gcp"
+    spec:
+      containers:
+        - name: alpine
+          image: alpine
+          command:
+            [
+              "sh",
+              "-c",
+              "echo $MYSQL_PASSWORD && echo going to sleep... && sleep 10000",
+            ]
+          env:
+            - name: VAULT_JWT_FILE
+              value: /etc/gcp/credentials.json
+            - name: MYSQL_PASSWORD
+              value: vault:secret/data/mysql#MYSQL_PASSWORD
+          resources:
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+          volumeMounts:
+            - name: gcp-secret
+              mountPath: "/etc/gcp/"
+              readOnly: true
+      volumes:
+        - name: gcp-secret
+          secret:
+            secretName: gcp-secret
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gcp-secret
+type: Opaque
+data:
+  credentials.json: "YOUR_SERVICE_ACCOUNT_JWT_IN_BASE64"
