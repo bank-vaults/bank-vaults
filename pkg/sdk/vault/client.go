@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 )
 
 const (
+	awsEC2PKCS7Url = "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7"
 	defaultJWTFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
@@ -50,6 +52,7 @@ type clientOptions struct {
 	token     string
 	timeout   time.Duration
 	logger    Logger
+	authType  ClientAuthType
 }
 
 // ClientOption configures a Vault client using the functional options paradigm popularized by Rob Pike and Dave Cheney.
@@ -114,6 +117,18 @@ type clientLogger struct {
 func (co clientLogger) apply(o *clientOptions) {
 	o.logger = co.logger
 }
+
+// ClientAuthType file where the Vault token can be found.
+type ClientAuthType string
+
+func (co ClientAuthType) apply(o *clientOptions) {
+	o.authType = co
+}
+
+const (
+	AWSAuthType ClientAuthType = "aws"
+	JWTAuthType ClientAuthType = "jwt"
+)
 
 // Client is a Vault client with Kubernetes support, token automatic renewing and
 // access to Transit Secret Engine wrapper
@@ -254,6 +269,10 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		o.authPath = "kubernetes"
 	}
 
+	if o.authType == "" {
+		o.authType = JWTAuthType
+	}
+
 	// Default token path
 	if o.tokenPath == "" {
 		o.tokenPath = os.Getenv("HOME") + "/.vault-token"
@@ -293,11 +312,47 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 				return nil, err
 			}
 
-			jwtFile := defaultJWTFile
-			if file := os.Getenv("KUBERNETES_SERVICE_ACCOUNT_TOKEN"); file != "" {
-				jwtFile = file
-			} else if file := os.Getenv("VAULT_JWT_FILE"); file != "" {
-				jwtFile = file
+			var loginDataFunc func() (map[string]interface{}, error)
+
+			if o.authType == AWSAuthType {
+				loginDataFunc = func() (map[string]interface{}, error) {
+					resp, err := http.Get(awsEC2PKCS7Url)
+					if err != nil {
+						return nil, err
+					}
+					defer resp.Body.Close()
+
+					pkcs7Data, err := ioutil.ReadAll(resp.Body)
+					if err != nil {
+						return nil, err
+					}
+
+					return map[string]interface{}{
+						"pkcs7": strings.ReplaceAll(string(pkcs7Data), "\n", ""),
+						"nonce": "TODO",
+						"role":  o.role,
+					}, nil
+				}
+			} else {
+				jwtFile := defaultJWTFile
+				if file := os.Getenv("KUBERNETES_SERVICE_ACCOUNT_TOKEN"); file != "" {
+					jwtFile = file
+				} else if file := os.Getenv("VAULT_JWT_FILE"); file != "" {
+					jwtFile = file
+				}
+
+				loginDataFunc = func() (map[string]interface{}, error) {
+					// Projected SA JWTs do expire, so we need to move the reading logic into the loop
+					jwt, err := ioutil.ReadFile(jwtFile)
+					if err != nil {
+						return nil, err
+					}
+
+					return map[string]interface{}{
+						"jwt":  string(jwt),
+						"role": o.role,
+					}, nil
+				}
 			}
 
 			initialTokenArrived := make(chan string, 1)
@@ -313,21 +368,16 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					client.mu.Unlock()
 
 					// Projected SA JWTs do expire, so we need to move the reading logic into the loop
-					jwt, err := ioutil.ReadFile(jwtFile)
+					loginData, err := loginDataFunc()
 					if err != nil {
-						client.logger.Error("failed to read JWT token", map[string]interface{}{
-							"jwt": jwtFile,
-							"err": err,
+						client.logger.Error("failed to read login data", map[string]interface{}{
+							"err":  err,
+							"type": o.authType,
 						})
 						continue
 					}
 
-					data := map[string]interface{}{
-						"jwt":  string(jwt),
-						"role": o.role,
-					}
-
-					secret, err := logical.Write(fmt.Sprintf("auth/%s/login", o.authPath), data)
+					secret, err := logical.Write(fmt.Sprintf("auth/%s/login", o.authPath), loginData)
 					if err != nil {
 						client.logger.Error("failed to request new Vault token", map[string]interface{}{"err": err})
 						time.Sleep(1 * time.Second)
