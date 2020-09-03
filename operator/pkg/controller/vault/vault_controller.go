@@ -59,6 +59,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
 	vaultv1alpha1 "github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
 	bvtls "github.com/banzaicloud/bank-vaults/pkg/sdk/tls"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
@@ -1094,7 +1095,7 @@ func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 			Namespace: v.Namespace,
 			Labels:    withVaultConfigurerLabels(v, ls),
 		},
-		Data: map[string]string{vault.DefaultConfigFile: v.Spec.ExternalConfigJSON()},
+		Data: map[string]string{internalVault.DefaultConfigFile: v.Spec.ExternalConfigJSON()},
 	}
 	return cm
 }

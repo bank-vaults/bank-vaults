@@ -26,11 +26,15 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gin-gonic/gin v1.6.3
 	github.com/google/go-cmp v0.4.0
+	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/api v1.0.4
+	github.com/hashicorp/vault/sdk v0.1.13
 	github.com/heroku/docker-registry-client v0.0.0-20181004091502-47ecf50fd8d4
 	github.com/imdario/mergo v0.3.9
 	github.com/jpillora/backoff v0.0.0-20180909062703-3050d21c67d7
+	github.com/json-iterator/go v1.1.10
 	github.com/miekg/pkcs11 v1.0.3
+	github.com/mitchellh/mapstructure v1.1.2
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pierrec/lz4 v2.2.5+incompatible // indirect
