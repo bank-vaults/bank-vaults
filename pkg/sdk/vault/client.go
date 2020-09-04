@@ -15,6 +15,7 @@
 package vault
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -126,8 +127,8 @@ func (co ClientAuthType) apply(o *clientOptions) {
 }
 
 const (
-	AWSAuthType ClientAuthType = "aws"
-	JWTAuthType ClientAuthType = "jwt"
+	AWSEC2AuthType ClientAuthType = "aws-ec2"
+	JWTAuthType    ClientAuthType = "jwt"
 )
 
 // Client is a Vault client with Kubernetes support, token automatic renewing and
@@ -312,9 +313,27 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 				return nil, err
 			}
 
-			var loginDataFunc func() (map[string]interface{}, error)
+			jwtFile := defaultJWTFile
+			if file := os.Getenv("KUBERNETES_SERVICE_ACCOUNT_TOKEN"); file != "" {
+				jwtFile = file
+			} else if file := os.Getenv("VAULT_JWT_FILE"); file != "" {
+				jwtFile = file
+			}
 
-			if o.authType == AWSAuthType {
+			loginDataFunc := func() (map[string]interface{}, error) {
+				// Projected SA JWTs do expire, so we need to move the reading logic into the loop
+				jwt, err := ioutil.ReadFile(jwtFile)
+				if err != nil {
+					return nil, err
+				}
+
+				return map[string]interface{}{
+					"jwt":  string(jwt),
+					"role": o.role,
+				}, nil
+			}
+
+			if o.authType == AWSEC2AuthType {
 				loginDataFunc = func() (map[string]interface{}, error) {
 					resp, err := http.Get(awsEC2PKCS7Url)
 					if err != nil {
@@ -331,20 +350,22 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 						return nil, err
 					}
 
+					pkcs7 := strings.ReplaceAll(string(pkcs7Data), "\n", "")
+
+					jwt, err := ioutil.ReadFile(jwtFile)
+					if err != nil {
+						return nil, err
+					}
+
+					nonce := fmt.Sprintf("%x", sha256.Sum256(jwt))
+
 					return map[string]interface{}{
-						"pkcs7": strings.ReplaceAll(string(pkcs7Data), "\n", ""),
-						"nonce": "TODO",
+						"pkcs7": pkcs7,
+						"nonce": nonce,
 						"role":  o.role,
 					}, nil
 				}
 			} else {
-				jwtFile := defaultJWTFile
-				if file := os.Getenv("KUBERNETES_SERVICE_ACCOUNT_TOKEN"); file != "" {
-					jwtFile = file
-				} else if file := os.Getenv("VAULT_JWT_FILE"); file != "" {
-					jwtFile = file
-				}
-
 				loginDataFunc = func() (map[string]interface{}, error) {
 					// Projected SA JWTs do expire, so we need to move the reading logic into the loop
 					jwt, err := ioutil.ReadFile(jwtFile)
