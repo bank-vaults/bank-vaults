@@ -322,6 +322,10 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					}
 					defer resp.Body.Close()
 
+					if resp.StatusCode != http.StatusOK {
+						return nil, errors.Errorf("failed to get EC2 instance metadata: %s", resp.Status)
+					}
+
 					pkcs7Data, err := ioutil.ReadAll(resp.Body)
 					if err != nil {
 						return nil, err
