@@ -113,3 +113,79 @@ func TestSecretInjector(t *testing.T) {
 		assert.EqualError(t, err, "key 'data' not found under path: secret/get/data")
 	})
 }
+
+func TestSecretInjectorFromPath(t *testing.T) {
+	os.Setenv("VAULT_ADDR", "http://localhost:8200")
+
+	config := vaultapi.DefaultConfig()
+	if config.Error != nil {
+		assert.NoError(t, config.Error)
+	}
+
+	client, err := vault.NewClientFromConfig(config)
+	assert.NoError(t, err)
+
+	_, err = client.RawClient().Logical().Write("secret/data/account", vault.NewData(0, map[string]interface{}{"password": "secret", "password2": "secret2"}))
+	assert.NoError(t, err)
+
+	_, err = client.RawClient().Logical().Write("secret/data/account2", vault.NewData(0, map[string]interface{}{"password3": "secret", "password4": "secret2"}))
+	assert.NoError(t, err)
+
+	defer func() {
+		_, err = client.RawClient().Logical().Delete("secret/data/account")
+		assert.NoError(t, err)
+		_, err = client.RawClient().Logical().Delete("secret/data/account2")
+		assert.NoError(t, err)
+	}()
+
+	injector := NewSecretInjector(Config{}, client, nil, logrus.New())
+
+	t.Run("success", func(t *testing.T) {
+		paths := "secret/data/account"
+
+		results := map[string]string{}
+
+		injectFunc := func(key, value string) {
+			results[key] = value
+		}
+
+		err = injector.InjectSecretsFromVaultPath(paths, injectFunc)
+		assert.NoError(t, err)
+
+		assert.Equal(t, map[string]string{
+			"password":  "secret",
+			"password2": "secret2",
+		}, results)
+	})
+
+	t.Run("success multiple paths", func(t *testing.T) {
+		paths := "secret/data/account,secret/data/account2"
+		results := map[string]string{}
+
+		injectFunc := func(key, value string) {
+			results[key] = value
+		}
+
+		err = injector.InjectSecretsFromVaultPath(paths, injectFunc)
+		assert.NoError(t, err)
+
+		assert.Equal(t, map[string]string{
+			"password":  "secret",
+			"password2": "secret2",
+			"password3": "secret",
+			"password4": "secret2",
+		}, results)
+	})
+
+	t.Run("incorrect kv2 path", func(t *testing.T) {
+		paths := "secret/data/doesnotexist"
+
+		results := map[string]string{}
+		injectFunc := func(key, value string) {
+			results[key] = value
+		}
+
+		err = injector.InjectSecretsFromVaultPath(paths, injectFunc)
+		assert.Equal(t, map[string]string{}, results)
+	})
+}
