@@ -663,6 +663,155 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{name: "Will mutate pod with vault-env-from-path annotations",
+			fields: fields{
+				k8sClient: fake.NewSimpleClientset(),
+				registry: &MockRegistry{
+					Image: imagev1.ImageConfig{},
+				},
+			},
+			args: args{
+				pod: &corev1.Pod{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:    "MyContainer",
+								Image:   "myimage",
+								Command: []string{"/bin/bash"},
+								Args:    nil,
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+									},
+								},
+							},
+						},
+					},
+				},
+				vaultConfig: VaultConfig{
+					AgentConfigMap:       "config-map-test",
+					ConfigfilePath:       "/vault/secrets",
+					Addr:                 "test",
+					SkipVerify:           false,
+					AgentCPU:             resource.MustParse("50m"),
+					AgentMemory:          resource.MustParse("128Mi"),
+					AgentImage:           "vault:latest",
+					AgentImagePullPolicy: "IfNotPresent",
+					VaultEnvFromPath:     "secret/data/account",
+				},
+			},
+			wantedPod: &corev1.Pod{
+				Spec: corev1.PodSpec{
+					InitContainers: []corev1.Container{},
+					Containers: []corev1.Container{
+						{
+							Name:            "vault-agent",
+							Image:           "vault:latest",
+							ImagePullPolicy: "IfNotPresent",
+							Args:            []string{"agent", "-config", "/vault/config/config.hcl"},
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("50m"),
+									corev1.ResourceMemory: resource.MustParse("128Mi"),
+								},
+							},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "VAULT_ADDR",
+									Value: "test",
+								},
+								{
+									Name:  "VAULT_SKIP_VERIFY",
+									Value: "false",
+								},
+								{
+									Name:  "VAULT_ENV_FROM_PATH",
+									Value: "secret/data/account",
+								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
+								Capabilities: &corev1.Capabilities{
+									Add: []corev1.Capability{
+										"IPC_LOCK",
+									},
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "vault-env",
+									MountPath: "/vault/",
+								},
+								{
+									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+								},
+								{
+									Name:      "agent-secrets",
+									MountPath: "/vault/secrets",
+								},
+								{
+									Name:      "agent-configmap",
+									ReadOnly:  true,
+									MountPath: "/vault/config/config.hcl",
+									SubPath:   "config.hcl",
+								},
+							},
+						},
+						{
+							Name:    "MyContainer",
+							Image:   "myimage",
+							Command: []string{"/bin/bash"},
+							Args:    nil,
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+								},
+								{
+									Name:      "agent-secrets",
+									MountPath: "/vault/secrets",
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "vault-env",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{
+									Medium: corev1.StorageMediumMemory,
+								},
+							},
+						},
+						{
+							Name: "agent-secrets",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{
+									Medium: corev1.StorageMediumMemory,
+								},
+							},
+						},
+						{
+							Name: "agent-configmap",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "config-map-test",
+									},
+									Items: []corev1.KeyToPath{
+										{
+											Key:  "config.hcl",
+											Path: "config.hcl",
+										},
+									},
+									DefaultMode: &defaultMode,
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

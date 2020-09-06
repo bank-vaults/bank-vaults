@@ -107,6 +107,13 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 		})
 	}
 
+	if vaultConfig.VaultEnvFromPath != "" {
+		containerEnvVars = append(containerEnvVars, corev1.EnvVar{
+			Name:  "VAULT_ENV_FROM_PATH",
+			Value: vaultConfig.VaultEnvFromPath,
+		})
+	}
+
 	if initContainersMutated || containersMutated || vaultConfig.CtConfigMap != "" || vaultConfig.AgentConfigMap != "" {
 		var agentConfigMapName string
 

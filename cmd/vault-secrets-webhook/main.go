@@ -78,6 +78,7 @@ type VaultConfig struct {
 	AgentImage                  string
 	AgentImagePullPolicy        corev1.PullPolicy
 	Skip                        bool
+	VaultEnvFromPath            string
 }
 
 func init() {
@@ -310,6 +311,10 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 	} else {
 		vaultConfig.AgentShareProcessDefault = "empty"
 		vaultConfig.AgentShareProcess = false
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-env-from-path"]; ok {
+		vaultConfig.VaultEnvFromPath = val
 	}
 
 	vaultConfig.AgentImage = viper.GetString("vault_image")

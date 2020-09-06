@@ -67,6 +67,7 @@ var (
 		"VAULT_LOG_LEVEL":              true,
 		"VAULT_REVOKE_TOKEN":           true,
 		"VAULT_ENV_DAEMON":             true,
+		"VAULT_ENV_FROM_PATH":          true,
 	}
 )
 
@@ -213,6 +214,13 @@ func main() {
 	err = secretInjector.InjectSecretsFromVault(environ, inject)
 	if err != nil {
 		logger.Fatalln("failed to inject secrets from vault:", err)
+	}
+
+	if paths := os.Getenv("VAULT_ENV_FROM_PATH"); paths != "" {
+		err = secretInjector.InjectSecretsFromVaultPath(paths, inject)
+	}
+	if err != nil {
+		logger.Fatalln("failed to inject secrets from vault path:", err)
 	}
 
 	if cast.ToBool(os.Getenv("VAULT_REVOKE_TOKEN")) {
