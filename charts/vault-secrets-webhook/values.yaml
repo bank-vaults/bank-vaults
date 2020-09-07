@@ -87,6 +87,8 @@ rbac:
   enabled: true
   psp:
     enabled: false
+  authDelegatorRole:
+    enabled: false
 
 # A list of Kubernetes resource types to mutate as well:
 # Example: ["ingresses", "servicemonitors"]
