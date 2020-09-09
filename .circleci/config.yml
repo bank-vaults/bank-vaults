@@ -189,16 +189,16 @@ workflows:
   version: 2
   ci:
     jobs:
-      - check
+      # - check
       - snyk:
           context: snyk
           filters:
             branches:
               only:
                 - master
-      - acceptance-test:
-          requires:
-            - check
+      - acceptance-test
+          # requires:
+          #   - check
 
   helm-chart:
     jobs:
