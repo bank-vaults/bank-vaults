@@ -5,9 +5,8 @@ set -euo pipefail
 # REQUIREMENTS:
 # - kubectl
 # - helm3
-# - https://github.com/arschles/envtpl
+# - https://github.com/subfuzion/envtpl
 # - jq
-# - aws
 #
 # - 3 Kubernetes clusters
 #
