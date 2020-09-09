@@ -81,6 +81,7 @@ jobs:
     environment:
       GO_VERSION: "1.14.6"
       K8S_VERSION: v1.18.3
+      HELM_VERSION: v3.3.1
       VAULT_VERSION: "1.5.0"
       KUBECONFIG: /home/circleci/.kube/config
       KURUN_VERSION: "0.4.1"
@@ -145,8 +146,7 @@ jobs:
           name: Install helm
           command: |
             # helm
-            curl -L https://git.io/get_helm.sh | bash
-            helm init --wait
+            curl -L https://git.io/get_helm.sh | DESIRED_VERSION=${HELM_VERSION} bash
 
       - run:
           name: Operator Multi-DC Raft test
