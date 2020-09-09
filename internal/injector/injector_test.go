@@ -125,23 +125,23 @@ func TestSecretInjectorFromPath(t *testing.T) {
 	client, err := vault.NewClientFromConfig(config)
 	assert.NoError(t, err)
 
-	_, err = client.RawClient().Logical().Write("secret/data/account", vault.NewData(0, map[string]interface{}{"password": "secret", "password2": "secret2"}))
+	_, err = client.RawClient().Logical().Write("secret/data/account1", vault.NewData(0, map[string]interface{}{"password": "secret", "password2": "secret2"}))
 	assert.NoError(t, err)
 
 	_, err = client.RawClient().Logical().Write("secret/data/account2", vault.NewData(0, map[string]interface{}{"password3": "secret", "password4": "secret2"}))
 	assert.NoError(t, err)
 
 	defer func() {
-		_, err = client.RawClient().Logical().Delete("secret/data/account")
+		_, err = client.RawClient().Logical().Delete("secret/metadata/account1")
 		assert.NoError(t, err)
-		_, err = client.RawClient().Logical().Delete("secret/data/account2")
+		_, err = client.RawClient().Logical().Delete("secret/metadata/account2")
 		assert.NoError(t, err)
 	}()
 
 	injector := NewSecretInjector(Config{}, client, nil, logrus.New())
 
 	t.Run("success", func(t *testing.T) {
-		paths := "secret/data/account"
+		paths := "secret/data/account1"
 
 		results := map[string]string{}
 
@@ -159,7 +159,7 @@ func TestSecretInjectorFromPath(t *testing.T) {
 	})
 
 	t.Run("success multiple paths", func(t *testing.T) {
-		paths := "secret/data/account,secret/data/account2"
+		paths := "secret/data/account1,secret/data/account2"
 		results := map[string]string{}
 
 		injectFunc := func(key, value string) {
