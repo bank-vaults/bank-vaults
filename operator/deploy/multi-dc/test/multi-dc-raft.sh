@@ -35,6 +35,8 @@ fi
 
 COMMAND=$1
 
+export KIND_EXPERIMENTAL_DOCKER_NETWORK=bridge
+
 function waitfor {
     WAIT_MAX=0
     until $@ &> /dev/null || [ $WAIT_MAX -eq 45 ]; do
@@ -52,13 +54,13 @@ function metallb_setup {
 
 function infra_setup {
     kind create cluster --name primary
-    metallb_setup 172.18.1.1-172.18.1.10
+    metallb_setup 172.17.1.1-172.17.1.10
 
     kind create cluster --name secondary
-    metallb_setup 172.18.1.11-172.18.1.20
+    metallb_setup 172.17.1.11-172.17.1.20
 
     kind create cluster --name tertiary
-    metallb_setup 172.18.1.21-172.18.1.30
+    metallb_setup 172.17.1.21-172.17.1.30
 
     docker run -d --rm --network kind -e VAULT_DEV_ROOT_TOKEN_ID=227e1cce-6bf7-30bb-2d2a-acc854318caf --name central-vault vault
     export CENTRAL_VAULT_ADDRESS=$(docker inspect central-vault --format '{{.NetworkSettings.Networks.kind.IPAddress}}')
