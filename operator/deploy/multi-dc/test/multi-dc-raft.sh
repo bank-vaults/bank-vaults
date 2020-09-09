@@ -81,7 +81,7 @@ function install_instance {
 
 if [ $COMMAND = "install" ]; then
 
-    # infra_setup
+    infra_setup
 
     export CENTRAL_VAULT_ADDRESS=$(docker inspect central-vault --format '{{.NetworkSettings.Networks.kind.IPAddress}}')
 
