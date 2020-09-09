@@ -14,9 +14,6 @@ spec:
   # forces you to expose your Service on a NodePort
   serviceType: LoadBalancer
 
-  vaultAnnotations:
-    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
-
   # Use local disk to store Vault raft data, see config section.
   volumeClaimTemplates:
     - metadata:
