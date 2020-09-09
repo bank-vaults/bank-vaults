@@ -132,6 +132,11 @@ jobs:
             sudo mv /go/bin/envtpl /usr/local/bin/envtpl
 
       - run:
+          name: Build the Helm charts
+          command: |
+            helm dep build ./charts/vault-operator
+
+      - run:
           name: Operator Multi-DC Raft test
           command:
             ./operator/deploy/multi-dc/test/multi-dc-raft.sh install
