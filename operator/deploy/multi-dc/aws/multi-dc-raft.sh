@@ -5,7 +5,7 @@ set -euo pipefail
 # REQUIREMENTS:
 # - kubectl
 # - helm3
-# - https://github.com/arschles/envtpl
+# - https://github.com/subfuzion/envtpl
 # - jq
 # - aws
 #
@@ -90,12 +90,12 @@ if [ $COMMAND = "install" ]; then
 
         local REGION=$(get_region)
 
-        helm upgrade --install vault-operator banzaicloud-stable/vault-operator --wait --set image.tag=master --set image.pullPolicy=Always
+        helm upgrade --install vault-operator charts/vault-operator --wait --set image.tag=master --set image.pullPolicy=Always
 
         create_aws_secret
 
         kubectl apply -f operator/deploy/rbac.yaml
-        cat operator/deploy/multi-dc/cr-${INSTANCE}.yaml | envtpl | kubectl apply -f -
+        cat operator/deploy/multi-dc/aws/cr-${INSTANCE}.yaml | envtpl | kubectl apply -f -
 
         echo "Waiting for for ${INSTANCE} vault instance..."
         waitfor kubectl get pod/vault-${INSTANCE}-0

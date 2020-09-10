@@ -1,0 +1,99 @@
+apiVersion: "vault.banzaicloud.com/v1alpha1"
+kind: "Vault"
+metadata:
+  name: "vault-tertiary"
+spec:
+  size: 1
+  image: vault:1.5.0
+  
+  # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
+  serviceAccount: vault
+
+  # Specify the Service's type where the Vault Service is exposed
+  # Please note that some Ingress controllers like https://github.com/kubernetes/ingress-gce
+  # forces you to expose your Service on a NodePort
+  serviceType: LoadBalancer
+
+  # Use local disk to store Vault raft data, see config section.
+  volumeClaimTemplates:
+    - metadata:
+        name: vault-raft
+      spec:
+        # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class-1
+        # storageClassName: ""
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+
+  volumeMounts:
+    - name: vault-raft
+      mountPath: /vault/file
+
+  # Describe where you would like to store the Vault unseal keys and root token.
+  unsealConfig:
+    vault:
+      address: "http://{{.CENTRAL_VAULT_ADDRESS}}:8200"
+      token: "227e1cce-6bf7-30bb-2d2a-acc854318caf"
+      unsealKeysPath: "secret/data/vault-unseal-keys"
+  
+  raftLeaderAddress: {{.RAFT_LEADER_ADDRESS}}
+
+  # A YAML representation of a final vault config file.
+  # See https://www.vaultproject.io/docs/configuration/ for more information.
+  config:
+    storage:
+      raft:
+        path: "/vault/file"
+    listener:
+      tcp:
+        address: "0.0.0.0:8200"
+        tls_cert_file: /vault/tls/server.crt
+        tls_key_file: /vault/tls/server.key
+    api_addr: https://vault-tertiary.default:8200
+    cluster_addr: "https://${.Env.POD_NAME}:8201"
+    telemetry:
+      statsd_address: localhost:9125
+    ui: true
+
+  # See: https://github.com/banzaicloud/bank-vaults#example-external-vault-configuration for more details.
+  externalConfig:
+    policies:
+      - name: allow_secrets
+        rules: path "secret/*" {
+          capabilities = ["create", "read", "update", "delete", "list"]
+          }
+    auth:
+      - type: kubernetes
+        roles:
+          # Allow every pod in the default namespace to use the secret kv store
+          - name: default
+            bound_service_account_names: ["default", "vault-secrets-webhook"]
+            bound_service_account_namespaces: ["default", "vswh"]
+            policies: allow_secrets
+            ttl: 1h
+
+    secrets:
+      - path: secret
+        type: kv
+        description: General secrets.
+        options:
+          version: 2
+
+  vaultEnvsConfig:
+    - name: VAULT_LOG_LEVEL
+      value: info
+
+  envsConfig:
+    - name: VAULT_RAFT_CACERT
+      value: /vault/raft-tls/ca.crt
+
+  volumes:
+    - name: vault-primary-tls
+      secret:
+        secretName: vault-primary-tls
+
+  bankVaultsVolumeMounts:
+    - name: vault-primary-tls
+      mountPath: /vault/raft-tls/
