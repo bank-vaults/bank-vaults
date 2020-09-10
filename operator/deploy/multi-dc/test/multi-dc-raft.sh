@@ -11,6 +11,7 @@ set -euo pipefail
 # - https://github.com/hankjacobs/cidr
 # - jq
 # - kind
+# - vault
 #
 
 if [ $# = 0 ]; then
@@ -122,20 +123,11 @@ if [ $COMMAND = "install" ]; then
 
 elif [ $COMMAND = "status" ]; then
 
-    PRIMARY_KUBECONFIG=$2
-    export KUBECONFIG=$PRIMARY_KUBECONFIG
-
-    BUCKET=bank-vaults
-    REGION=eu-west-1
-
-    aws s3api get-object --bucket ${BUCKET} --key raft-vault-root raft-vault-root > /dev/null
-    export VAULT_TOKEN=$(aws --region $REGION kms decrypt --ciphertext-blob fileb://raft-vault-root --query Plaintext --output text --encryption-context Tool=bank-vaults | base64 -D)
+    export VAULT_TOKEN=227e1cce-6bf7-30bb-2d2a-acc854318caf
     
-    rm raft-vault-root
-
     export VAULT_SKIP_VERIFY="true"
 
-    export VAULT_ADDR=https://$(get_elb_dns):8200
+    export VAULT_ADDR=https://$(implement_me):8200
     
     vault operator raft list-peers -format json | jq
 
