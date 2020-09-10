@@ -57,6 +57,8 @@ spec:
   # create the "azure-cred" secret manually, it has to have a key called "credentials" holding
   # the configuration in the following format:
   # https://docs.microsoft.com/en-us/go/azure/azure-sdk-go-authorization#use-file-based-authentication
+  # Then run:
+  # kubectl create secret generic azure-cred --from-file=credentials=azure.auth
   credentialsConfig:
     env: AZURE_AUTH_LOCATION
     path: /etc/azure/credentials
