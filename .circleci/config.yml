@@ -120,7 +120,7 @@ jobs:
             curl -Lo go.linux-amd64.tar.gz https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && sudo tar -C /usr/local -xzf go.linux-amd64.tar.gz && rm go.linux-amd64.tar.gz
 
       - run:
-          name: Install helm and kind and envtpl
+          name: Install helm and kind and envtpl, cidr
           command: |
             # helm
             curl -L https://git.io/get_helm.sh | DESIRED_VERSION=${HELM_VERSION} bash
@@ -130,6 +130,9 @@ jobs:
             # envtpl
             go get github.com/subfuzion/envtpl/...
             sudo mv /go/bin/envtpl /usr/local/bin/envtpl
+            # cidr
+            go get github.com/hankjacobs/cidr
+            sudo mv /go/bin/cidr /usr/local/bin/cidr
 
       - run:
           name: Build the Helm charts

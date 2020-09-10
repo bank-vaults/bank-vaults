@@ -2,25 +2,16 @@
 
 set -euo pipefail
 
-set -x
+# set -x
 
 # REQUIREMENTS:
 # - kubectl
 # - helm3
 # - https://github.com/subfuzion/envtpl
+# - https://github.com/hankjacobs/cidr
 # - jq
+# - kind
 #
-# - 3 Kubernetes clusters
-#
-
-# Install:
-# ./mult-dc-raft.sh install primary-kubeconfig.yaml secondary-kubeconfig.yaml tertiary-kubeconfig.yaml
-
-# Check the Raft leader:
-# ./mult-dc-raft.sh status primary-kubeconfig.yaml
-
-# Uninstall
-# ./mult-dc-raft.sh uninstall primary-kubeconfig.yaml secondary-kubeconfig.yaml tertiary-kubeconfig.yaml
 
 if [ $# = 0 ]; then
     echo "The Bank-Vaults Multi-DC CLI"
@@ -35,8 +26,6 @@ if [ $# = 0 ]; then
     exit 0
 fi
 
-COMMAND=$1
-
 function waitfor {
     WAIT_MAX=0
     until $@ &> /dev/null || [ $WAIT_MAX -eq 45 ]; do
@@ -49,43 +38,32 @@ function metallb_setup {
     export METALLB_ADDRESS_RANGE=$1
     kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml
     kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/metallb.yaml
+    kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
     cat operator/deploy/multi-dc/test/metallb-config.yaml | envtpl | kubectl apply -f -
 }
 
-function node_ip {
-    local INSTANCE=$1
-
-    docker inspect ${INSTANCE}-control-plane --format '{{.NetworkSettings.Networks.kind.IPAddress}}'
+function cidr_range {
+    local cidr=$1
+    cidr ${cidr} | tr -d ' '
 }
 
-function add_routes {
-    local INSTANCE=$1
-    local CIDR=$2
-    local GATEWAY=$3
+function node_setup {
+    local instance=$1
+    local lb_subnet=$2
 
-    local GATEWAY_IP=$(node_ip ${GATEWAY})
-
-    docker exec ${INSTANCE}-control-plane ip route add ${CIDR} via ${GATEWAY_IP}
+    kind create cluster --name ${instance}
+    metallb_setup $(cidr_range ${lb_subnet})
 }
 
 function infra_setup {
-    kind create cluster --name primary
-    metallb_setup 172.18.1.0-172.18.1.255 # 172.18.1.0/24
+    # get the kind Docker network subnet
+    # SUBNET=$(docker network inspect kind --format '{{(index .IPAM.Config 0).Subnet}}')
 
-    kind create cluster --name secondary
-    metallb_setup 172.18.2.0-172.18.2.255 # 172.18.2.0/24
+    node_setup primary 172.18.1.0/24
 
-    kind create cluster --name tertiary
-    metallb_setup 172.18.3.0-172.18.3.255 # 172.18.3.0/24
+    node_setup secondary 172.18.2.0/24
 
-    add_routes primary 172.18.2.0/24 secondary
-    add_routes primary 172.18.3.0/24 tertiary
-
-    add_routes secondary 172.18.1.0/24 primary
-    add_routes secondary 172.18.3.0/24 tertiary
-
-    add_routes tertiary 172.18.1.0/24 primary
-    add_routes tertiary 172.18.2.0/24 secondary
+    node_setup tertiary 172.18.3.0/24
 
     docker run -d --rm --network kind -e VAULT_DEV_ROOT_TOKEN_ID=227e1cce-6bf7-30bb-2d2a-acc854318caf --name central-vault vault
     export CENTRAL_VAULT_ADDRESS=$(docker inspect central-vault --format '{{.NetworkSettings.Networks.kind.IPAddress}}')
@@ -104,6 +82,8 @@ function install_instance {
 
     kubectl wait --for=condition=ready pod/vault-${INSTANCE}-0 --timeout=120s
 }
+
+COMMAND=$1
 
 if [ $COMMAND = "install" ]; then
 
