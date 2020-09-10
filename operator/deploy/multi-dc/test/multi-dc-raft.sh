@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+set -x
+
 # REQUIREMENTS:
 # - kubectl
 # - helm3
@@ -50,15 +52,40 @@ function metallb_setup {
     cat operator/deploy/multi-dc/test/metallb-config.yaml | envtpl | kubectl apply -f -
 }
 
+function node_ip {
+    local INSTANCE=$1
+
+    docker inspect ${INSTANCE}-control-plane --format '{{.NetworkSettings.Networks.kind.IPAddress}}'
+}
+
+function add_routes {
+    local INSTANCE=$1
+    local CIDR=$2
+    local GATEWAY=$3
+
+    local GATEWAY_IP=$(node_ip ${GATEWAY})
+
+    docker exec ${INSTANCE}-control-plane ip route add ${CIDR} via ${GATEWAY_IP}
+}
+
 function infra_setup {
     kind create cluster --name primary
-    metallb_setup 172.18.1.1-172.18.1.10
+    metallb_setup 172.18.1.0-172.18.1.255 # 172.18.1.0/24
 
     kind create cluster --name secondary
-    metallb_setup 172.18.1.11-172.18.1.20
+    metallb_setup 172.18.2.0-172.18.2.255 # 172.18.2.0/24
 
     kind create cluster --name tertiary
-    metallb_setup 172.18.1.21-172.18.1.30
+    metallb_setup 172.18.3.0-172.18.3.255 # 172.18.3.0/24
+
+    add_routes primary 172.18.2.0/24 secondary
+    add_routes primary 172.18.3.0/24 tertiary
+
+    add_routes secondary 172.18.1.0/24 primary
+    add_routes secondary 172.18.3.0/24 tertiary
+
+    add_routes tertiary 172.18.1.0/24 primary
+    add_routes tertiary 172.18.2.0/24 secondary
 
     docker run -d --rm --network kind -e VAULT_DEV_ROOT_TOKEN_ID=227e1cce-6bf7-30bb-2d2a-acc854318caf --name central-vault vault
     export CENTRAL_VAULT_ADDRESS=$(docker inspect central-vault --format '{{.NetworkSettings.Networks.kind.IPAddress}}')
