@@ -181,6 +181,16 @@ func (i SecretInjector) InjectSecretsFromVaultPath(paths string, inject SecretIn
 		}
 
 		data, err := i.readVaultPath(valuePath, version, false)
+
+		if data == nil && err != nil {
+			if !i.config.IgnoreMissingSecrets {
+				return errors.Errorf("path not found: %s", valuePath)
+			}
+
+			i.logger.Errorln("path not found:", valuePath)
+			continue
+		}
+
 		if err != nil {
 			return errors.Wrapf(err, "failed to read secret from path: %s", valuePath)
 		}

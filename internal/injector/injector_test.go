@@ -187,5 +187,6 @@ func TestSecretInjectorFromPath(t *testing.T) {
 
 		err = injector.InjectSecretsFromVaultPath(paths, injectFunc)
 		assert.Equal(t, map[string]string{}, results)
+		assert.EqualError(t, err, "path not found: secret/data/doesnotexist")
 	})
 }
