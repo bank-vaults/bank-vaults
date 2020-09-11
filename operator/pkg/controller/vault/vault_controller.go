@@ -1676,7 +1676,11 @@ func withClusterAddr(v *vaultv1alpha1.Vault, service *corev1.Service, envs []cor
 		value = ingressPoints[len(ingressPoints)-1]
 	}
 
-	if value != "" {
+	// Only applies to multi-cluster setups:
+	// This currently allows only one instance per cluster,
+	// since the cluster_addr is bound to the LB address.
+	// Possible workaround: 1 LB/Vault member instance.
+	if value != "" && v.Spec.RaftLeaderAddress != "" {
 		envs = append(envs, corev1.EnvVar{
 			Name:  "VAULT_CLUSTER_ADDR",
 			Value: "https://" + value + ":8201",
