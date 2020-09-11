@@ -54,7 +54,7 @@ func NewSecretInjector(config Config, client *vault.Client, renewer SecretRenewe
 
 func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inject SecretInjectorFunc) error {
 	transitCache := map[string][]byte{}
-	secretCache := map[string]*vaultapi.Secret{}
+	secretData := map[string]map[string]interface{}{}
 
 	templater := configuration.NewTemplater(configuration.DefaultLeftDelimiter, configuration.DefaultRightDelimiter)
 
@@ -125,40 +125,14 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 		}
 
 		secretCacheKey := valuePath + "#" + versionOrData
-
-		var secret *vaultapi.Secret
+		var data map[string]interface{}
 		var err error
 
-		if secret = secretCache[secretCacheKey]; secret == nil {
-			if update {
-				var data map[string]interface{}
-				err = json.Unmarshal([]byte(versionOrData), &data)
-				if err != nil {
-					return errors.Wrap(err, "failed to unmarshal data for writing")
-				}
-
-				secret, err = i.client.RawClient().Logical().Write(valuePath, data)
-				if err != nil {
-					return errors.Wrapf(err, "failed to write secret to path: %s", valuePath)
-				}
-			} else {
-				secret, err = i.client.RawClient().Logical().ReadWithData(valuePath, map[string][]string{"version": {versionOrData}})
-				if err != nil {
-					return errors.Wrapf(err, "failed to read secret from path: %s", valuePath)
-				}
-			}
-
-			if i.config.DaemonMode && secret != nil && secret.Renewable && secret.LeaseDuration > 0 {
-				i.logger.Infof("secret %s has a lease duration of %ds, starting renewal", valuePath, secret.LeaseDuration)
-
-				err = i.renewer.Renew(valuePath, secret)
-				if err != nil {
-					return errors.Wrap(err, "secret renewal can't be established")
-				}
-			}
+		if data = secretData[secretCacheKey]; data == nil {
+			data, err = i.readVaultPath(valuePath, versionOrData, update)
 		}
 
-		if secret == nil {
+		if data == nil && err != nil {
 			if !i.config.IgnoreMissingSecrets {
 				return errors.Errorf("path not found: %s", valuePath)
 			}
@@ -167,31 +141,8 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 			continue
 		}
 
-		for _, warning := range secret.Warnings {
-			i.logger.Warnf("%s: %s", valuePath, warning)
-		}
-
-		secretCache[secretCacheKey] = secret
-
-		var data map[string]interface{}
-		v2Data, ok := secret.Data["data"]
-		if ok {
-			data = cast.ToStringMap(v2Data)
-
-			// Check if a given version of a path is destroyed
-			metadata := secret.Data["metadata"].(map[string]interface{})
-			if metadata["destroyed"].(bool) {
-				i.logger.Warnln("version of secret has been permanently destroyed version:", versionOrData, "path:", valuePath)
-			}
-
-			// Check if a given version of a path still exists
-			if deletionTime, ok := metadata["deletion_time"].(string); ok && deletionTime != "" {
-				i.logger.Warnln("cannot find data for path, given version has been deleted",
-					"path:", valuePath, "version:", versionOrData,
-					"deletion_time", deletionTime)
-			}
-		} else {
-			data = cast.ToStringMap(secret.Data)
+		if err != nil {
+			return err
 		}
 
 		if templater.IsGoTemplate(key) {
@@ -214,4 +165,108 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 	}
 
 	return nil
+}
+
+func (i SecretInjector) InjectSecretsFromVaultPath(paths string, inject SecretInjectorFunc) error {
+	vaultPaths := strings.Split(paths, ",")
+
+	for _, path := range vaultPaths {
+		split := strings.SplitN(path, "#", 2)
+		valuePath := split[0]
+
+		version := "-1"
+
+		if len(split) == 2 {
+			version = split[2]
+		}
+
+		data, err := i.readVaultPath(valuePath, version, false)
+
+		if data == nil && err != nil {
+			if !i.config.IgnoreMissingSecrets {
+				return errors.Errorf("path not found: %s", valuePath)
+			}
+
+			i.logger.Errorln("path not found:", valuePath)
+			continue
+		}
+
+		if err != nil {
+			return errors.Wrapf(err, "failed to read secret from path: %s", valuePath)
+		}
+
+		for key, value := range data {
+			value, err := cast.ToStringE(value)
+			if err != nil {
+				return errors.Wrap(err, "value can't be cast to a string for key: "+key)
+			}
+			inject(key, value)
+		}
+	}
+
+	return nil
+}
+
+func (i SecretInjector) readVaultPath(path, versionOrData string, update bool) (map[string]interface{}, error) {
+	var secretData map[string]interface{}
+
+	var secret *vaultapi.Secret
+	var err error
+
+	if update {
+		var data map[string]interface{}
+		err = json.Unmarshal([]byte(versionOrData), &data)
+		if err != nil {
+			return secretData, errors.Wrap(err, "failed to unmarshal data for writing")
+		}
+
+		secret, err = i.client.RawClient().Logical().Write(path, data)
+		if err != nil {
+			return secretData, errors.Wrapf(err, "failed to write secret to path: %s", path)
+		}
+	} else {
+		secret, err = i.client.RawClient().Logical().ReadWithData(path, map[string][]string{"version": {versionOrData}})
+		if err != nil {
+			return secretData, errors.Wrapf(err, "failed to read secret from path: %s", path)
+		}
+	}
+
+	if i.config.DaemonMode && secret != nil && secret.Renewable && secret.LeaseDuration > 0 {
+		i.logger.Infof("secret %s has a lease duration of %ds, starting renewal", path, secret.LeaseDuration)
+
+		err = i.renewer.Renew(path, secret)
+		if err != nil {
+			return secretData, errors.Wrap(err, "secret renewal can't be established")
+		}
+	}
+
+	if secret == nil {
+		return nil, errors.Errorf("path not found: %s", path)
+	}
+
+	for _, warning := range secret.Warnings {
+		i.logger.Warnf("%s: %s", path, warning)
+	}
+
+	v2Data, ok := secret.Data["data"]
+	if ok {
+		secretData = cast.ToStringMap(v2Data)
+
+		// Check if a given version of a path is destroyed
+		metadata := secret.Data["metadata"].(map[string]interface{})
+		if metadata["destroyed"].(bool) {
+			i.logger.Warnln("version of secret has been permanently destroyed version:", versionOrData, "path:", path)
+		}
+
+		// Check if a given version of a path still exists
+		if deletionTime, ok := metadata["deletion_time"].(string); ok && deletionTime != "" {
+			i.logger.Warnln("cannot find data for path, given version has been deleted",
+				"path:", path, "version:", versionOrData,
+				"deletion_time", deletionTime)
+		}
+	} else {
+		secretData = cast.ToStringMap(secret.Data)
+	}
+
+	return secretData, nil
 }
