@@ -7,7 +7,7 @@ policies:
              capabilities = ["create", "read", "update", "delete", "list"]
            }
 
-# Allows configuring Auth Methods in Vault (Kubernetes and GitHub is supported now).
+# The auth block allows configuring Auth Methods in Vault.
 # See https://www.vaultproject.io/docs/auth/index.html for more information.
 auth:
   - type: kubernetes
