@@ -1,8 +1,8 @@
-ARG GO_VERSION=1.14
+ARG GO_VERSION=1.15
 
 FROM golang:${GO_VERSION}-alpine AS builder
 
-RUN apk add --update --no-cache ca-certificates make git curl mercurial
+RUN apk add --update --no-cache build-base git mercurial
 
 RUN mkdir -p /build
 WORKDIR /build
@@ -12,12 +12,10 @@ COPY pkg/sdk/go.* /build/pkg/sdk/
 RUN go mod download
 
 COPY . /build
-RUN go mod download
-
-COPY . /go/src/${PACKAGE}
 RUN CGO_ENABLED=0 go build ./cmd/vault-env
 
-FROM alpine:3.11
+
+FROM alpine:3.12
 
 RUN apk add --update --no-cache ca-certificates
 COPY --from=builder /build/vault-env /usr/local/bin/vault-env
