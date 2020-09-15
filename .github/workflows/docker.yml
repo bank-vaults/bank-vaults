@@ -5,6 +5,8 @@ on:
       - master
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
+env:
+  PLATFORMS: linux/amd64,linux/arm64,linux/arm/v7
 jobs:
   docker:
     name: Docker
@@ -12,43 +14,72 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.ref }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Determine tag or commit
+        uses: haya14busa/action-cond@v1
+        id: refortag
+        with:
+          cond: ${{ startsWith(github.ref, 'refs/tags/') }}
+          if_true: ${{ github.ref }}
+          if_false: latest
+      - name: Determine image tag
+        id: imagetag
+        run: echo "::set-output name=value::${GITHUB_REF##*/}"
+        env:
+          TAG: ${{ steps.refortag.outputs.value }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1 
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
       - name: Build bank-vaults
-        uses: docker/build-push-action@v1
+        uses: docker/build-push-action@v2
         with:
-          username: ${{ github.actor }}
-          password: ${{ secrets.CR_PAT }}
-          registry: ghcr.io
-          repository: banzaicloud/bank-vaults
-          dockerfile: Dockerfile
-          tag_with_ref: true
-          add_git_labels: true
+          tags: ghcr.io/banzaicloud/bank-vaults:${{ steps.imagetag.outputs.value }}
+          file: Dockerfile
+          platforms: ${{ env.PLATFORMS }}
+          push: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
       - name: Build vault-env
-        uses: docker/build-push-action@v1
+        uses: docker/build-push-action@v2
         with:
-          username: ${{ github.actor }}
-          password: ${{ secrets.CR_PAT }}
-          registry: ghcr.io
-          repository: banzaicloud/vault-env
-          dockerfile: Dockerfile.vault-env
-          tag_with_ref: true
-          add_git_labels: true
+          tags: ghcr.io/banzaicloud/vault-env:${{ steps.imagetag.outputs.value }}
+          file: Dockerfile.vault-env
+          platforms: ${{ env.PLATFORMS }}
+          push: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
       - name: Build vault-operator
-        uses: docker/build-push-action@v1
+        uses: docker/build-push-action@v2
         with:
-          username: ${{ github.actor }}
-          password: ${{ secrets.CR_PAT }}
-          registry: ghcr.io
-          repository: banzaicloud/vault-operator
-          dockerfile: Dockerfile.operator
-          tag_with_ref: true
-          add_git_labels: true
+          tags: ghcr.io/banzaicloud/vault-operator:${{ steps.imagetag.outputs.value }}
+          file: Dockerfile.operator
+          platforms: ${{ env.PLATFORMS }}
+          push: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
       - name: Build vault-secrets-webhook
-        uses: docker/build-push-action@v1
+        uses: docker/build-push-action@v2
         with:
-          username: ${{ github.actor }}
-          password: ${{ secrets.CR_PAT }}
-          registry: ghcr.io
-          repository: banzaicloud/vault-secrets-webhook
-          dockerfile: Dockerfile.webhook
-          tag_with_ref: true
-          add_git_labels: true
+          tags: ghcr.io/banzaicloud/vault-secrets-webhook:${{ steps.imagetag.outputs.value }}
+          file: Dockerfile.webhook
+          platforms: ${{ env.PLATFORMS }}
+          push: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
