@@ -36,9 +36,9 @@ jobs:
           if_false: latest
       - name: Determine image tag
         id: imagetag
-        run: echo "::set-output name=value::${GITHUB_REF##*/}"
+        run: echo "::set-output name=value::${TAG_OR_BRANCH##*/}"
         env:
-          TAG: ${{ steps.refortag.outputs.value }}
+          TAG_OR_BRANCH: ${{ steps.refortag.outputs.value }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1 
