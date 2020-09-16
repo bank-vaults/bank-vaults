@@ -43,6 +43,10 @@ spec:
       s3Bucket: "bank-vaults,bank-vaults-0"
       s3Prefix: "raft-" 
 
+  # "self" is a special value which means that this
+  # instance should be the bootstrap leader instance.
+  raftLeaderAddress: self
+
   # A YAML representation of a final vault config file.
   # See https://www.vaultproject.io/docs/configuration/ for more information.
   config:

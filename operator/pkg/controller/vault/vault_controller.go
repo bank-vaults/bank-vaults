@@ -1284,7 +1284,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 
 	if v.Spec.IsRaftStorage() {
 		raftLeaderAddress := v.Name
-		if v.Spec.RaftLeaderAddress != "" {
+		if v.Spec.RaftLeaderAddress != "" && v.Spec.RaftLeaderAddress != "self" {
 			raftLeaderAddress = v.Spec.RaftLeaderAddress
 		}
 

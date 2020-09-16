@@ -270,6 +270,7 @@ type VaultSpec struct {
 
 	// RaftLeaderAddress defines the leader address of the raft cluster in multi-cluster deployments.
 	// (In single cluster (namespace) deployments it is automatically detected).
+	// "self" is a special value which means that this instance should be the bootstrap leader instance.
 	// default: ""
 	RaftLeaderAddress string `json:"raftLeaderAddress"`
 
