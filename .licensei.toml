@@ -21,6 +21,10 @@ ignored = [
   "google.golang.org/protobuf",
   "cloud.google.com/go",
   "cloud.google.com/go/storage",
+
+  "gomodules.xyz/orderedmap",
+  "gomodules.xyz/jsonpatch/v2",
+  "gomodules.xyz/jsonpatch/v3",
 ]
 
 [header]
