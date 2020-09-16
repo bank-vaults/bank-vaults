@@ -77,3 +77,33 @@ rules:
   - get
   - create
   - watch
+{{- if .Values.psp.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: psp:{{ include "vault-operator.fullname" . }}
+rules:
+- apiGroups:
+  - policy
+  resourceNames:
+  - {{ include "vault-operator.fullname" . }}
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: psp:{{ .Values.psp.vaultSA | default "vault" }}
+rules:
+- apiGroups:
+  - policy
+  resourceNames:
+  - {{ .Values.psp.vaultSA | default "vault" }}
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+{{- end }}

@@ -55,6 +55,8 @@ The following table lists the configurable parameters of the vault chart and the
 | `resources.limits.memory`   | Container memory limit                      | `256Mi`                                             |
 | `crdAnnotations`            | Annotations for the Vault CRD               | `{}`                                                |
 | `etcd-operator.enabled`     | Install etcd operator as well               | `false`                                             |
+| `psp.enabled`               | Deploy PSP resources                        | `false`                                             |
+| `psp.vaultSA`               | Used service account for vault              | `vault`                                             |
 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.

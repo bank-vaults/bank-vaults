@@ -71,3 +71,7 @@ etcd-operator:
     commandArgs:
       cluster-wide: true
       create-crd: false
+
+psp:
+  enable: false
+  vaultSA: ""
