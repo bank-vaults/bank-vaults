@@ -693,6 +693,11 @@ func (spec *VaultSpec) IsRaftStorage() bool {
 	return spec.GetStorageType() == "raft"
 }
 
+// IsRaftBootstrapFollower checks if this cluster should be considered the bootstrap follower.
+func (spec *VaultSpec) IsRaftBootstrapFollower() bool {
+	return spec.RaftLeaderAddress != "" && spec.RaftLeaderAddress != "self"
+}
+
 // GetIngress the Ingress configuration for Vault if any
 func (vault *Vault) GetIngress() *Ingress {
 	if vault.Spec.Ingress != nil {

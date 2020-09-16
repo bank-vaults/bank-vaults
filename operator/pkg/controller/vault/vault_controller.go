@@ -764,7 +764,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 			// In case of multi-cluster deployments we need to publish the port
 			// before being considered ready, otherwise the LoadBalancer won't
 			// be able to direct traffic from the leader to the joining instance.
-			PublishNotReadyAddresses: v.Spec.RaftLeaderAddress != "",
+			PublishNotReadyAddresses: v.Spec.IsRaftBootstrapFollower(),
 		},
 	}
 	return service
@@ -1284,13 +1284,13 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 
 	if v.Spec.IsRaftStorage() {
 		raftLeaderAddress := v.Name
-		if v.Spec.RaftLeaderAddress != "" && v.Spec.RaftLeaderAddress != "self" {
+		if v.Spec.IsRaftBootstrapFollower() {
 			raftLeaderAddress = v.Spec.RaftLeaderAddress
 		}
 
 		unsealCommand = append(unsealCommand, "--raft", "--raft-leader-address", v.Spec.GetAPIScheme()+"://"+raftLeaderAddress+":8200")
 
-		if v.Spec.RaftLeaderAddress != "" {
+		if v.Spec.IsRaftBootstrapFollower() {
 			unsealCommand = append(unsealCommand, "--raft-secondary")
 		}
 	}
