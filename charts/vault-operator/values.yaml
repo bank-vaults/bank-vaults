@@ -74,4 +74,4 @@ etcd-operator:
 
 psp:
   enable: false
-  vaultSA: ""
+  vaultSA: "vault"
