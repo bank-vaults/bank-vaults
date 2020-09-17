@@ -1,5 +1,7 @@
 name: CI
 on: [pull_request]
+env:
+  GO_VERSION: 1.15
 jobs:
 
   build:
@@ -17,10 +19,10 @@ jobs:
 
     steps:
 
-    - name: Set up Go 1.14
+    - name: Set up Go
       uses: actions/setup-go@v1
       with:
-        go-version: 1.14
+        go-version: ${{ env.GO_VERSION }}
 
     - name: Check out code
       uses: actions/checkout@v1
@@ -59,10 +61,10 @@ jobs:
 
     steps:
 
-    - name: Set up Go 1.14
+    - name: Set up Go
       uses: actions/setup-go@v1
       with:
-        go-version: 1.14
+        go-version: ${{ env.GO_VERSION }}
 
     - name: Checkout code
       uses: actions/checkout@v2
