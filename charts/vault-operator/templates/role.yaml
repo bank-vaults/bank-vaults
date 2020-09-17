@@ -96,12 +96,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: psp:{{ .Values.psp.vaultSA | default "vault" }}
+  name: psp:{{ .Values.psp.vaultSA }}
 rules:
 - apiGroups:
   - policy
   resourceNames:
-  - {{ .Values.psp.vaultSA | default "vault" }}
+  - {{ .Values.psp.vaultSA }}
   resources:
   - podsecuritypolicies
   verbs:
