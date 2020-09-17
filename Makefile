@@ -33,7 +33,7 @@ GOLANGCI_VERSION = 1.27.0
 LICENSEI_VERSION = 0.2.0
 CODE_GENERATOR_VERSION = 0.18.6
 
-GOLANG_VERSION = 1.14
+GOLANG_VERSION = 1.15
 
 ## include "generic" targets
 include main-targets.mk
