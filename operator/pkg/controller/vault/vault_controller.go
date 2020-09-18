@@ -1749,6 +1749,7 @@ func withVeleroContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) 
 			Image:           v.Spec.GetVeleroFsfreezeImage(),
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Name:            "velero-fsfreeze",
+			Command:         []string{"/bin/bash", "-c", "sleep infinity"},
 			VolumeMounts:    withVaultVolumeMounts(v, nil),
 			SecurityContext: &corev1.SecurityContext{
 				Privileged: pointer.BoolPtr(true),
