@@ -562,7 +562,7 @@ func (spec *VaultSpec) GetStatsDImage() string {
 // GetVeleroFsfreezeImage returns the Velero Fsreeze image to use
 func (spec *VaultSpec) GetVeleroFsfreezeImage() string {
 	if spec.VeleroFsfreezeImage == "" {
-		return "velero/fsfreeze-pause:latest"
+		return "ubuntu:bionic"
 	}
 	return spec.VeleroFsfreezeImage
 }
@@ -655,7 +655,7 @@ func (spec *VaultSpec) GetVaultConfigurerAnnotations() map[string]string {
 // GetFluentDImage returns the FluentD image to use
 func (spec *VaultSpec) GetFluentDImage() string {
 	if spec.FluentDImage == "" {
-		return "fluent/fluentd:stable"
+		return "fluent/fluentd:edge"
 	}
 	return spec.FluentDImage
 }
