@@ -73,5 +73,5 @@ etcd-operator:
       create-crd: false
 
 psp:
-  enable: false
+  enabled: false
   vaultSA: "vault"
