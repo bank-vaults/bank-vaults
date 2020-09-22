@@ -107,13 +107,6 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 		})
 	}
 
-	if vaultConfig.VaultEnvFromPath != "" {
-		containerEnvVars = append(containerEnvVars, corev1.EnvVar{
-			Name:  "VAULT_ENV_FROM_PATH",
-			Value: vaultConfig.VaultEnvFromPath,
-		})
-	}
-
 	if initContainersMutated || containersMutated || vaultConfig.CtConfigMap != "" || vaultConfig.AgentConfigMap != "" {
 		var agentConfigMapName string
 
@@ -358,6 +351,13 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  "VAULT_ENV_DAEMON",
 				Value: "true",
+			})
+		}
+
+		if vaultConfig.VaultEnvFromPath != "" {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  "VAULT_ENV_FROM_PATH",
+				Value: vaultConfig.VaultEnvFromPath,
 			})
 		}
 
