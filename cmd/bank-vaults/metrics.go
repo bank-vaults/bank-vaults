@@ -15,7 +15,8 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
+	"net/http"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -112,12 +113,10 @@ func (e *prometheusExporter) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (e prometheusExporter) Run() error {
-	var defaultMetricsPath = "/metrics"
-	var defaultMetricsPort = ":9091"
-	logrus.Infof("vault metrics exporter enabled: %s%s", defaultMetricsPort, defaultMetricsPath)
+	var metricsPath = "/metrics"
+	var metricsAddr = ":9091"
+	logrus.Infof("vault metrics exporter enabled: %s%s", metricsAddr, metricsPath)
 	prometheus.MustRegister(&e)
-	server := gin.New()
-	server.Use(gin.Logger(), gin.ErrorLogger())
-	server.GET(defaultMetricsPath, gin.WrapH(promhttp.Handler()))
-	return server.Run(defaultMetricsPort)
+	http.DefaultServeMux.Handle(metricsPath, promhttp.Handler())
+	return http.ListenAndServe(metricsAddr, http.DefaultServeMux)
 }
