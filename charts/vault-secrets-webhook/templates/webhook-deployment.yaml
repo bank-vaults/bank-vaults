@@ -98,3 +98,7 @@ spec:
       affinity:
 {{ toYaml .Values.affinity | indent 8 }}
   {{- end }}
+  {{- if .Values.podSecurityContext }}
+      securityContext:
+{{ toYaml .Values.podSecurityContext | indent 8 }}
+  {{- end }}
