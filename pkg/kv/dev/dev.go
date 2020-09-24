@@ -52,5 +52,5 @@ func (d *dev) Get(key string) ([]byte, error) {
 		return d.rootToken, nil
 	}
 
-	return nil, kv.NewNotFoundError("key '%s' is not present in secret", key)
+	return nil, kv.NewNotFoundError("key '%s' is not present in dev mode, only visible in server logs", key)
 }

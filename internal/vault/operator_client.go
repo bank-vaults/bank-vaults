@@ -193,7 +193,7 @@ func (v *vault) Unseal() error {
 
 		// if progress is 0, we failed to unseal vault.
 		if resp.Progress == 0 {
-			return errors.New("failed to unseal vault. progress reset to 0") // nolint:goerr113
+			return errors.New("failed to unseal vault, are you using the right unseal keys?") // nolint:goerr113
 		}
 	}
 }
