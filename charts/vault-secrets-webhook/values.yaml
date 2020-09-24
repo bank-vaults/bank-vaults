@@ -57,6 +57,7 @@ metrics:
 
 securityContext:
   runAsUser: 65534
+  allowPrivilegeEscalation: false
 
 volumes: []
 # - name: vault-tls
