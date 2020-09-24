@@ -24,7 +24,6 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/frankban/quicktest v1.4.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/gin-gonic/gin v1.6.3
 	github.com/google/go-cmp v0.4.0
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/api v1.0.4
