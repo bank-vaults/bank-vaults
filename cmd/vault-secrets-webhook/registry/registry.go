@@ -26,7 +26,7 @@ import (
 
 	"emperror.dev/errors"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
+	awsSession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/heroku/docker-registry-client/registry"
@@ -34,15 +34,18 @@ import (
 	"github.com/patrickmn/go-cache"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"golang.org/x/oauth2/google"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 const ecrCredentialsKey = "AWS_ECR_CREDENTIALS"
+const gcrAuthScope = "https://www.googleapis.com/auth/cloud-platform"
 
 var logger *log.Logger
 var ecrHostPattern *regexp.Regexp
+var gcrHostPattern *regexp.Regexp
 
 func init() {
 	logger = log.New()
@@ -52,6 +55,9 @@ func init() {
 
 	// Adapted from https://github.com/awslabs/amazon-ecr-credential-helper/blob/master/ecr-login/api/client.go#L34
 	ecrHostPattern = regexp.MustCompile(`([a-zA-Z0-9][a-zA-Z0-9-_]*)\.dkr\.ecr(\-fips)?\.([a-zA-Z0-9][a-zA-Z0-9-_]*)\.amazonaws\.com(\.cn)?`)
+
+	// From https://cloud.google.com/container-registry/docs/overview
+	gcrHostPattern = regexp.MustCompile(`^https://((us|eu|asia)\.)?gcr\.io$`)
 }
 
 // ImageRegistry is a docker registry
@@ -380,56 +386,68 @@ func (k *ContainerInfo) Collect(container *corev1.Container, podSpec *corev1.Pod
 	if !found {
 		// if still no credentials and it is an ECR image, try to get credentials through an EC2 instance role
 		if ecrRegistryID, region := getECRRegistryIDAndRegion(k.RegistryAddress); ecrRegistryID != "" {
-			logger.Infof("trying to request AWS credentials for ECR registry %s", k.RegistryAddress)
-
-			var data string
-			cacheKey := ecrCredentialsKey + k.RegistryAddress
-			cachedToken, usingCache := credentialsCache.Get(cacheKey)
-			if usingCache {
-				data = cachedToken.(string)
-				logger.Infof("Using cached AWS ECR Token for registry %s", k.RegistryAddress)
-			} else {
-				sess, err := session.NewSession()
-				if err != nil {
-					logger.Info("Failed to create AWS session, trying with no credentials")
-					return nil
-				}
-				svc := ecr.New(sess, aws.NewConfig().WithRegion(region))
-
-				req := ecr.GetAuthorizationTokenInput{
-					RegistryIds: []*string{aws.String(ecrRegistryID)},
-				}
-
-				resp, err := svc.GetAuthorizationToken(&req)
-				if err != nil {
-					logger.Infof("Failed to get AWS ECR Token, trying with no credentials")
-					return nil
-				}
-
-				// We requested only one entry
-				authData := resp.AuthorizationData[0]
-
-				decodedData, err := base64.StdEncoding.DecodeString(aws.StringValue(authData.AuthorizationToken))
-				data = string(decodedData)
-				if err != nil {
-					return err
-				}
-
-				expiration := authData.ExpiresAt.Sub(time.Now().Add(5 * time.Minute))
-				credentialsCache.Set(cacheKey, data, expiration)
-				logger.Infof("Caching ECR token with expiration in %+v", expiration)
+			if err := getECRCredentials(k, credentialsCache, ecrRegistryID, region); err != nil {
+				return err
 			}
-
-			token := strings.SplitN(data, ":", 2)
-
-			k.RegistryUsername = token[0]
-			k.RegistryPassword = token[1]
-
-			logger.Infof("got AWS credentials for ecr registry %s", k.RegistryAddress)
+		} else if gcrHostPattern.MatchString(k.RegistryAddress) {
+			if err := getGCRCredentials(k); err != nil {
+				return err
+			}
 		} else {
 			logger.Infof("found no credentials for registry %s, assuming it is public", k.RegistryAddress)
 		}
 	}
+
+	return nil
+}
+
+func getECRCredentials(k *ContainerInfo, credentialsCache *cache.Cache, ecrRegistryID string, region string) error {
+	logger.Infof("trying to request AWS credentials for ECR registry %s", k.RegistryAddress)
+
+	var data string
+	cacheKey := ecrCredentialsKey + k.RegistryAddress
+	cachedToken, usingCache := credentialsCache.Get(cacheKey)
+	if usingCache {
+		data = cachedToken.(string)
+		logger.Infof("using cached AWS ECR Token for registry %s", k.RegistryAddress)
+	} else {
+		sess, err := awsSession.NewSession()
+		if err != nil {
+			logger.Info("failed to create AWS session, trying with no credentials")
+			return nil
+		}
+		svc := ecr.New(sess, aws.NewConfig().WithRegion(region))
+
+		req := ecr.GetAuthorizationTokenInput{
+			RegistryIds: []*string{aws.String(ecrRegistryID)},
+		}
+
+		resp, err := svc.GetAuthorizationToken(&req)
+		if err != nil {
+			logger.Infof("failed to get AWS ECR Token, trying with no credentials")
+			return nil
+		}
+
+		// We requested only one entry
+		authData := resp.AuthorizationData[0]
+
+		decodedData, err := base64.StdEncoding.DecodeString(aws.StringValue(authData.AuthorizationToken))
+		data = string(decodedData)
+		if err != nil {
+			return err
+		}
+
+		expiration := authData.ExpiresAt.Sub(time.Now().Add(5 * time.Minute))
+		credentialsCache.Set(cacheKey, data, expiration)
+		logger.Infof("caching ECR token with expiration in %+v", expiration)
+	}
+
+	token := strings.SplitN(data, ":", 2)
+
+	k.RegistryUsername = token[0]
+	k.RegistryPassword = token[1]
+
+	logger.Infof("got AWS credentials for ECR registry %s", k.RegistryAddress)
 
 	return nil
 }
@@ -440,4 +458,26 @@ func getECRRegistryIDAndRegion(registryAddr string) (string, string) {
 		return "", ""
 	}
 	return matches[1], matches[3]
+}
+
+func getGCRCredentials(k *ContainerInfo) error {
+	logger.Infof("trying to request Google Cloud credentials for GCR registry %s", k.RegistryAddress)
+
+	tokenSrc, err := google.DefaultTokenSource(context.TODO(), gcrAuthScope)
+	if err != nil {
+		log.Errorf("error fetching Google Cloud credentials: %s", err)
+		return err
+	}
+
+	token, err := tokenSrc.Token()
+	if err != nil {
+		log.Errorf("error fetching Google Cloud credentials: %s", err)
+		return err
+	}
+
+	k.RegistryUsername = "oauth2accesstoken"
+	k.RegistryPassword = token.AccessToken
+	logger.Infof("got Google Cloud credentials for GCR registry %s", k.RegistryAddress)
+
+	return nil
 }
