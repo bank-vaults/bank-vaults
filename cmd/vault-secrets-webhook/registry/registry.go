@@ -57,7 +57,7 @@ func init() {
 	ecrHostPattern = regexp.MustCompile(`([a-zA-Z0-9][a-zA-Z0-9-_]*)\.dkr\.ecr(\-fips)?\.([a-zA-Z0-9][a-zA-Z0-9-_]*)\.amazonaws\.com(\.cn)?`)
 
 	// From https://cloud.google.com/container-registry/docs/overview
-	gcrHostPattern = regexp.MustCompile(`((us|eu|asia)\.)?gcr.io`)
+	gcrHostPattern = regexp.MustCompile(`^https://((us|eu|asia)\.)?gcr\.io$`)
 }
 
 // ImageRegistry is a docker registry
