@@ -83,11 +83,7 @@ spec:
 {{- if .Values.volumeMounts }}
 {{ toYaml .Values.volumeMounts | indent 12 }}
 {{- end }}
-          securityContext:
-            {{- if .Values.securityContext.runAsUser }}
-            runAsUser: {{ .Values.securityContext.runAsUser }}
-            {{- end }}
-            allowPrivilegeEscalation: false
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
     {{- if .Values.nodeSelector }}
@@ -101,4 +97,8 @@ spec:
   {{- if .Values.affinity }}
       affinity:
 {{ toYaml .Values.affinity | indent 8 }}
+  {{- end }}
+  {{- if .Values.podSecurityContext }}
+      securityContext:
+{{ toYaml .Values.podSecurityContext | indent 8 }}
   {{- end }}

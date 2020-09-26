@@ -57,6 +57,9 @@ metrics:
 
 securityContext:
   runAsUser: 65534
+  allowPrivilegeEscalation: false
+
+podSecurityContext: {}
 
 volumes: []
 # - name: vault-tls
