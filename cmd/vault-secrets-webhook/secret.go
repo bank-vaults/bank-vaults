@@ -28,18 +28,41 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
-func secretNeedsMutation(secret *corev1.Secret) bool {
+func secretNeedsMutation(secret *corev1.Secret) (bool, error) {
 	for key, value := range secret.Data {
-		if key == corev1.DockerConfigJsonKey || hasVaultPrefix(string(value)) {
-			return true
+		if key == corev1.DockerConfigJsonKey {
+			var dc registry.DockerCreds
+			err := json.Unmarshal(value, &dc)
+			if err != nil {
+				return false, errors.Wrap(err, "unmarshal dockerconfig json failed")
+			}
+
+			for _, creds := range dc.Auths {
+				authBytes, err := base64.StdEncoding.DecodeString(creds.Auth)
+				if err != nil {
+					return false, errors.Wrap(err, "auth base64 decoding failed")
+				}
+
+				auth := string(authBytes)
+				if hasVaultPrefix(auth) {
+					return true, nil
+				}
+			}
+		} else if hasVaultPrefix(string(value)) {
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func (mw *mutatingWebhook) mutateSecret(secret *corev1.Secret, vaultConfig VaultConfig) error {
 	// do an early exit and don't construct the Vault client if not needed
-	if !secretNeedsMutation(secret) {
+	requiredToMutate, err := secretNeedsMutation(secret)
+	if err != nil {
+		return errors.Wrap(err, "failed to check if secret needs to be mutated")
+	}
+
+	if !requiredToMutate {
 		return nil
 	}
 
@@ -83,6 +106,7 @@ func (mw *mutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *registry
 		if err != nil {
 			return errors.Wrap(err, "auth base64 decoding failed")
 		}
+
 		auth := string(authBytes)
 		if hasVaultPrefix(auth) {
 			split := strings.Split(auth, ":")
