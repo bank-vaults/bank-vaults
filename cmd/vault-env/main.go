@@ -59,6 +59,7 @@ var (
 		"VAULT_MFA":                    true,
 		"VAULT_ROLE":                   true,
 		"VAULT_PATH":                   true,
+		"VAULT_AUTH_METHOD":            true,
 		"VAULT_TRANSIT_KEY_ID":         true,
 		"VAULT_TRANSIT_PATH":           true,
 		"VAULT_IGNORE_MISSING_SECRETS": true,
@@ -162,6 +163,7 @@ func main() {
 	client, err := vault.NewClientWithOptions(
 		vault.ClientRole(os.Getenv("VAULT_ROLE")),
 		vault.ClientAuthPath(os.Getenv("VAULT_PATH")),
+		vault.ClientAuthMethod(os.Getenv("VAULT_AUTH_METHOD")),
 		vault.ClientLogger(logrusadapter.NewFromEntry(logger)),
 	)
 	if err != nil {

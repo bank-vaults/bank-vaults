@@ -46,14 +46,14 @@ func NewData(cas int, data map[string]interface{}) map[string]interface{} {
 }
 
 type clientOptions struct {
-	url       string
-	role      string
-	authPath  string
-	tokenPath string
-	token     string
-	timeout   time.Duration
-	logger    Logger
-	authType  ClientAuthType
+	url        string
+	role       string
+	authPath   string
+	tokenPath  string
+	token      string
+	timeout    time.Duration
+	logger     Logger
+	authMethod ClientAuthMethod
 }
 
 // ClientOption configures a Vault client using the functional options paradigm popularized by Rob Pike and Dave Cheney.
@@ -119,16 +119,24 @@ func (co clientLogger) apply(o *clientOptions) {
 	o.logger = co.logger
 }
 
-// ClientAuthType file where the Vault token can be found.
-type ClientAuthType string
+// ClientAuthMethod file where the Vault token can be found.
+type ClientAuthMethod string
 
-func (co ClientAuthType) apply(o *clientOptions) {
-	o.authType = co
+func (co ClientAuthMethod) apply(o *clientOptions) {
+	o.authMethod = co
 }
 
 const (
-	AWSEC2AuthType ClientAuthType = "aws-ec2"
-	JWTAuthType    ClientAuthType = "jwt"
+	// AWSEC2AuthMethod is used for the Vault AWS EC2 auth method
+	// as described here: https://www.vaultproject.io/docs/auth/aws#ec2-auth-method
+	AWSEC2AuthMethod ClientAuthMethod = "aws-ec2"
+
+	// JWTAuthMethod is used for the Vault JWT/OIDC/GCP/Kubernetes auth methods
+	// as describe here:
+	// - https://www.vaultproject.io/docs/auth/jwt
+	// - https://www.vaultproject.io/docs/auth/kubernetes
+	// - https://www.vaultproject.io/docs/auth/gcp
+	JWTAuthMethod ClientAuthMethod = "jwt"
 )
 
 // Client is a Vault client with Kubernetes support, token automatic renewing and
@@ -270,8 +278,8 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		o.authPath = "kubernetes"
 	}
 
-	if o.authType == "" {
-		o.authType = JWTAuthType
+	if o.authMethod == "" {
+		o.authMethod = JWTAuthMethod
 	}
 
 	// Default token path
@@ -333,7 +341,7 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 				}, nil
 			}
 
-			if o.authType == AWSEC2AuthType {
+			if o.authMethod == AWSEC2AuthMethod {
 				loginDataFunc = func() (map[string]interface{}, error) {
 					resp, err := http.Get(awsEC2PKCS7Url)
 					if err != nil {
@@ -397,7 +405,7 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					if err != nil {
 						client.logger.Error("failed to read login data", map[string]interface{}{
 							"err":  err,
-							"type": o.authType,
+							"type": o.authMethod,
 						})
 						continue
 					}

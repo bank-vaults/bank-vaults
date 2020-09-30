@@ -270,6 +270,10 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 				Value: strconv.FormatBool(vaultConfig.SkipVerify),
 			},
 			{
+				Name:  "VAULT_AUTH_METHOD",
+				Value: vaultConfig.AuthMethod,
+			},
+			{
 				Name:  "VAULT_PATH",
 				Value: vaultConfig.Path,
 			},
