@@ -447,6 +447,10 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 							},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("250m"),
+									corev1.ResourceMemory: resource.MustParse("64Mi"),
+								},
+								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("50m"),
 									corev1.ResourceMemory: resource.MustParse("64Mi"),
 								},

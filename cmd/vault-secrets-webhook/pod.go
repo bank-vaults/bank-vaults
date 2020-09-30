@@ -578,6 +578,10 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 			VolumeMounts:    containerVolMounts,
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("250m"),
+					corev1.ResourceMemory: resource.MustParse("64Mi"),
+				},
+				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("50m"),
 					corev1.ResourceMemory: resource.MustParse("64Mi"),
 				},
@@ -601,6 +605,10 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 			SecurityContext: getSecurityContext(podSecurityContext, vaultConfig),
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("250m"),
+					corev1.ResourceMemory: resource.MustParse("64Mi"),
+				},
+				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("50m"),
 					corev1.ResourceMemory: resource.MustParse("64Mi"),
 				},
