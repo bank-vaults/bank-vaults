@@ -15,11 +15,13 @@
 package vault
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,6 +33,7 @@ import (
 )
 
 const (
+	awsEC2PKCS7Url = "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7"
 	defaultJWTFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
@@ -43,13 +46,14 @@ func NewData(cas int, data map[string]interface{}) map[string]interface{} {
 }
 
 type clientOptions struct {
-	url       string
-	role      string
-	authPath  string
-	tokenPath string
-	token     string
-	timeout   time.Duration
-	logger    Logger
+	url        string
+	role       string
+	authPath   string
+	tokenPath  string
+	token      string
+	timeout    time.Duration
+	logger     Logger
+	authMethod ClientAuthMethod
 }
 
 // ClientOption configures a Vault client using the functional options paradigm popularized by Rob Pike and Dave Cheney.
@@ -114,6 +118,26 @@ type clientLogger struct {
 func (co clientLogger) apply(o *clientOptions) {
 	o.logger = co.logger
 }
+
+// ClientAuthMethod file where the Vault token can be found.
+type ClientAuthMethod string
+
+func (co ClientAuthMethod) apply(o *clientOptions) {
+	o.authMethod = co
+}
+
+const (
+	// AWSEC2AuthMethod is used for the Vault AWS EC2 auth method
+	// as described here: https://www.vaultproject.io/docs/auth/aws#ec2-auth-method
+	AWSEC2AuthMethod ClientAuthMethod = "aws-ec2"
+
+	// JWTAuthMethod is used for the Vault JWT/OIDC/GCP/Kubernetes auth methods
+	// as describe here:
+	// - https://www.vaultproject.io/docs/auth/jwt
+	// - https://www.vaultproject.io/docs/auth/kubernetes
+	// - https://www.vaultproject.io/docs/auth/gcp
+	JWTAuthMethod ClientAuthMethod = "jwt"
+)
 
 // Client is a Vault client with Kubernetes support, token automatic renewing and
 // access to Transit Secret Engine wrapper
@@ -254,6 +278,10 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		o.authPath = "kubernetes"
 	}
 
+	if o.authMethod == "" {
+		o.authMethod = JWTAuthMethod
+	}
+
 	// Default token path
 	if o.tokenPath == "" {
 		o.tokenPath = os.Getenv("HOME") + "/.vault-token"
@@ -300,6 +328,66 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 				jwtFile = file
 			}
 
+			loginDataFunc := func() (map[string]interface{}, error) {
+				// Projected SA JWTs do expire, so we need to move the reading logic into the loop
+				jwt, err := ioutil.ReadFile(jwtFile)
+				if err != nil {
+					return nil, err
+				}
+
+				return map[string]interface{}{
+					"jwt":  string(jwt),
+					"role": o.role,
+				}, nil
+			}
+
+			if o.authMethod == AWSEC2AuthMethod {
+				loginDataFunc = func() (map[string]interface{}, error) {
+					resp, err := http.Get(awsEC2PKCS7Url)
+					if err != nil {
+						return nil, err
+					}
+					defer resp.Body.Close()
+
+					if resp.StatusCode != http.StatusOK {
+						return nil, errors.Errorf("failed to get EC2 instance metadata: %s", resp.Status)
+					}
+
+					pkcs7Data, err := ioutil.ReadAll(resp.Body)
+					if err != nil {
+						return nil, err
+					}
+
+					pkcs7 := strings.ReplaceAll(string(pkcs7Data), "\n", "")
+
+					jwt, err := ioutil.ReadFile(jwtFile)
+					if err != nil {
+						return nil, err
+					}
+
+					nonce := fmt.Sprintf("%x", sha256.Sum256(jwt))
+
+					return map[string]interface{}{
+						"pkcs7": pkcs7,
+						"nonce": nonce,
+						"role":  o.role,
+					}, nil
+				}
+			} else {
+				loginDataFunc = func() (map[string]interface{}, error) {
+					// Projected SA JWTs do expire, so we need to move the reading logic into the loop
+					jwt, err := ioutil.ReadFile(jwtFile)
+					if err != nil {
+						return nil, err
+					}
+
+					return map[string]interface{}{
+						"jwt":  string(jwt),
+						"role": o.role,
+					}, nil
+				}
+			}
+
 			initialTokenArrived := make(chan string, 1)
 			initialTokenSent := false
 
@@ -313,21 +401,16 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					client.mu.Unlock()
 
 					// Projected SA JWTs do expire, so we need to move the reading logic into the loop
-					jwt, err := ioutil.ReadFile(jwtFile)
+					loginData, err := loginDataFunc()
 					if err != nil {
-						client.logger.Error("failed to read JWT token", map[string]interface{}{
-							"jwt": jwtFile,
-							"err": err,
+						client.logger.Error("failed to read login data", map[string]interface{}{
+							"err":  err,
+							"type": o.authMethod,
 						})
 						continue
 					}
 
-					data := map[string]interface{}{
-						"jwt":  string(jwt),
-						"role": o.role,
-					}
-
-					secret, err := logical.Write(fmt.Sprintf("auth/%s/login", o.authPath), data)
+					secret, err := logical.Write(fmt.Sprintf("auth/%s/login", o.authPath), loginData)
 					if err != nil {
 						client.logger.Error("failed to request new Vault token", map[string]interface{}{"err": err})
 						time.Sleep(1 * time.Second)

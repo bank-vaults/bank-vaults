@@ -45,6 +45,7 @@ import (
 // VaultConfig represents vault options
 type VaultConfig struct {
 	Addr                        string
+	AuthMethod                  string
 	Role                        string
 	Path                        string
 	SkipVerify                  bool
@@ -90,6 +91,7 @@ func init() {
 	viper.SetDefault("vault_addr", "https://vault:8200")
 	viper.SetDefault("vault_skip_verify", "false")
 	viper.SetDefault("vault_path", "kubernetes")
+	viper.SetDefault("vault_auth_method", "jwt")
 	viper.SetDefault("vault_role", "")
 	viper.SetDefault("vault_tls_secret", "")
 	viper.SetDefault("vault_client_timeout", "10s")
@@ -142,6 +144,12 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 				vaultConfig.Role = "default"
 			}
 		}
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-auth-method"]; ok {
+		vaultConfig.AuthMethod = val
+	} else {
+		vaultConfig.AuthMethod = viper.GetString("vault_auth_method")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-path"]; ok {
@@ -471,6 +479,7 @@ func (mw *mutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 		clientConfig,
 		vault.ClientRole(vaultConfig.Role),
 		vault.ClientAuthPath(vaultConfig.Path),
+		vault.ClientAuthMethod(vaultConfig.AuthMethod),
 		vault.ClientLogger(logrusadapter.NewFromEntry(mw.logger)),
 	)
 }
