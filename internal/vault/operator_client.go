@@ -543,6 +543,10 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 		return errors.Wrap(err, "error unmarshalling vault auth methods config")
 	}
 
+	if len(authMethods) == 0 {
+		return nil
+	}
+
 	existingAuths, err := v.cl.Sys().ListAuth()
 	if err != nil {
 		return errors.Wrap(err, "error listing auth backends vault")
@@ -994,6 +998,10 @@ func (v *vault) configurePlugins(config *viper.Viper) error {
 	err := config.UnmarshalKey("plugins", &plugins)
 	if err != nil {
 		return errors.Wrap(err, "error unmarshalling vault plugins config")
+	}
+
+	if len(plugins) == 0 {
+		return nil
 	}
 
 	listPlugins, err := v.cl.Sys().ListPlugins(&api.ListPluginsInput{})
