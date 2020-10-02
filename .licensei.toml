@@ -22,9 +22,9 @@ ignored = [
   "cloud.google.com/go",
   "cloud.google.com/go/storage",
 
-  "gomodules.xyz/orderedmap",
-  "gomodules.xyz/jsonpatch/v2",
-  "gomodules.xyz/jsonpatch/v3",
+  "gomodules.xyz/orderedmap", # MIT
+  "gomodules.xyz/jsonpatch/v2", # Apache 2.0
+  "gomodules.xyz/jsonpatch/v3", # Apache 2.0
 ]
 
 [header]
