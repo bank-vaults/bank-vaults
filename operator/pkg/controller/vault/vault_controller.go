@@ -504,62 +504,12 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
-	// Create the configmap if it doesn't exist
-	cm := configMapForConfigurer(v)
-
-	// Set Vault instance as the owner and controller
-	if err := controllerutil.SetControllerReference(v, cm, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	err = r.createOrUpdateObject(cm)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to create/update configurer configmap: %v", err)
-	}
-
-	externalConfigMaps := corev1.ConfigMapList{}
-	externalConfigMapsFilter := client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(v.LabelsForVaultConfigurer()),
-		Namespace:     v.Namespace,
-	}
-	if err = r.client.List(context.TODO(), &externalConfigMaps, &externalConfigMapsFilter); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to list configmaps: %v", err)
-	}
-
-	externalSecrets := corev1.SecretList{}
-	externalSecretsFilter := client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(v.LabelsForVaultConfigurer()),
-		Namespace:     v.Namespace,
-	}
-	if err = r.client.List(context.TODO(), &externalSecrets, &externalSecretsFilter); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to list secrets: %v", err)
-	}
-
-	// Create the deployment if it doesn't exist
-	configurerDep, err := deploymentForConfigurer(v, externalConfigMaps, externalSecrets, tlsAnnotations)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to fabricate deployment: %v", err)
-	}
-
-	// Set Vault instance as the owner and controller
-	if err := controllerutil.SetControllerReference(v, configurerDep, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-	err = r.createOrUpdateObject(configurerDep)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to create/update configurer deployment: %v", err)
-	}
-
-	// Create the Configurer service if it doesn't exist
-	configurerSer := serviceForVaultConfigurer(v)
-	// Set Vault instance as the owner and controller
-	if err := controllerutil.SetControllerReference(v, configurerSer, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	err = r.createOrUpdateObject(configurerSer)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to create/update service: %v", err)
+	// Create configurer if there is any external config
+	if len(v.Spec.ExternalConfig) != 0 {
+		err := r.deployConfigurer(v, tlsAnnotations)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// Create ingress if specificed
@@ -2228,4 +2178,67 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 func certHostsAndIPsChanged(v *vaultv1alpha1.Vault, service *corev1.Service, cert *x509.Certificate) bool {
 	// TODO very weak check for now
 	return len(cert.DNSNames)+len(cert.IPAddresses) != len(hostsAndIPsForVault(v, service))
+}
+
+func (r *ReconcileVault) deployConfigurer(v *vaultv1alpha1.Vault, tlsAnnotations map[string]string) error {
+	// Create the configmap if it doesn't exist
+	cm := configMapForConfigurer(v)
+
+	// Set Vault instance as the owner and controller
+	err := controllerutil.SetControllerReference(v, cm, r.scheme)
+	if err != nil {
+		return err
+	}
+
+	err = r.createOrUpdateObject(cm)
+	if err != nil {
+		return fmt.Errorf("failed to create/update configurer configmap: %v", err)
+	}
+
+	externalConfigMaps := corev1.ConfigMapList{}
+	externalConfigMapsFilter := client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(v.LabelsForVaultConfigurer()),
+		Namespace:     v.Namespace,
+	}
+	if err = r.client.List(context.TODO(), &externalConfigMaps, &externalConfigMapsFilter); err != nil {
+		return fmt.Errorf("failed to list configmaps: %v", err)
+	}
+
+	externalSecrets := corev1.SecretList{}
+	externalSecretsFilter := client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(v.LabelsForVaultConfigurer()),
+		Namespace:     v.Namespace,
+	}
+	if err = r.client.List(context.TODO(), &externalSecrets, &externalSecretsFilter); err != nil {
+		return fmt.Errorf("failed to list secrets: %v", err)
+	}
+
+	// Create the deployment if it doesn't exist
+	configurerDep, err := deploymentForConfigurer(v, externalConfigMaps, externalSecrets, tlsAnnotations)
+	if err != nil {
+		return fmt.Errorf("failed to fabricate deployment: %v", err)
+	}
+
+	// Set Vault instance as the owner and controller
+	if err := controllerutil.SetControllerReference(v, configurerDep, r.scheme); err != nil {
+		return err
+	}
+	err = r.createOrUpdateObject(configurerDep)
+	if err != nil {
+		return fmt.Errorf("failed to create/update configurer deployment: %v", err)
+	}
+
+	// Create the Configurer service if it doesn't exist
+	configurerSer := serviceForVaultConfigurer(v)
+	// Set Vault instance as the owner and controller
+	if err := controllerutil.SetControllerReference(v, configurerSer, r.scheme); err != nil {
+		return err
+	}
+
+	err = r.createOrUpdateObject(configurerSer)
+	if err != nil {
+		return fmt.Errorf("failed to create/update service: %v", err)
+	}
+
+	return nil
 }
