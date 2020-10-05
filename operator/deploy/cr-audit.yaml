@@ -24,6 +24,7 @@ spec:
 
   fluentdEnabled: true
   fluentdImage: banzaicloud/fluentd-s3:latest
+  fleuntdConfLocation: "/fluentd/etc"
   fluentdConfig: |
     <source>
       @type tail
