@@ -38,7 +38,7 @@ vaultEnv:
   repository: banzaicloud/vault-env
 
 env:
-  VAULT_IMAGE: vault:1.5.0
+  VAULT_IMAGE: vault:1.5.4
   # VAULT_CAPATH: /vault/tls
   # used when the pod that should get secret injected does not specify
   # an imagePullSecret
