@@ -54,7 +54,7 @@ func NewSecretInjector(config Config, client *vault.Client, renewer SecretRenewe
 
 func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inject SecretInjectorFunc) error {
 	transitCache := map[string][]byte{}
-	secretData := map[string]map[string]interface{}{}
+	secretCache := map[string]map[string]interface{}{}
 
 	templater := configuration.NewTemplater(configuration.DefaultLeftDelimiter, configuration.DefaultRightDelimiter)
 
@@ -128,7 +128,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 		var data map[string]interface{}
 		var err error
 
-		if data = secretData[secretCacheKey]; data == nil {
+		if data = secretCache[secretCacheKey]; data == nil {
 			data, err = i.readVaultPath(valuePath, versionOrData, update)
 		}
 
@@ -144,6 +144,8 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 		if err != nil {
 			return err
 		}
+
+		secretCache[secretCacheKey] = data
 
 		if templater.IsGoTemplate(key) {
 			value, err := templater.Template(key, data)
@@ -217,17 +219,17 @@ func (i SecretInjector) readVaultPath(path, versionOrData string, update bool) (
 		var data map[string]interface{}
 		err = json.Unmarshal([]byte(versionOrData), &data)
 		if err != nil {
-			return secretData, errors.Wrap(err, "failed to unmarshal data for writing")
+			return nil, errors.Wrap(err, "failed to unmarshal data for writing")
 		}
 
 		secret, err = i.client.RawClient().Logical().Write(path, data)
 		if err != nil {
-			return secretData, errors.Wrapf(err, "failed to write secret to path: %s", path)
+			return nil, errors.Wrapf(err, "failed to write secret to path: %s", path)
 		}
 	} else {
 		secret, err = i.client.RawClient().Logical().ReadWithData(path, map[string][]string{"version": {versionOrData}})
 		if err != nil {
-			return secretData, errors.Wrapf(err, "failed to read secret from path: %s", path)
+			return nil, errors.Wrapf(err, "failed to read secret from path: %s", path)
 		}
 	}
 
@@ -236,7 +238,7 @@ func (i SecretInjector) readVaultPath(path, versionOrData string, update bool) (
 
 		err = i.renewer.Renew(path, secret)
 		if err != nil {
-			return secretData, errors.Wrap(err, "secret renewal can't be established")
+			return nil, errors.Wrap(err, "secret renewal can't be established")
 		}
 	}
 
