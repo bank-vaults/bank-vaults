@@ -1792,7 +1792,7 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, containers []corev1.Container
 				},
 				{
 					Name:      "fluentd-config",
-					MountPath: "/fluentd/etc",
+					MountPath: v.Spec.GetFleuntDConfLocation(),
 				},
 			}),
 		})

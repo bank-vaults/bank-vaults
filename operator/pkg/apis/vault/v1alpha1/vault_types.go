@@ -148,6 +148,10 @@ type VaultSpec struct {
 	// default: fluent/fluentd:stable
 	FluentDImage string `json:"fluentdImage"`
 
+	// FleuntDConfLocation is the location of the fluent.conf file
+	// default: "/fluentd/etc"
+	FleuntDConfLocation string `json:"fleuntdConfLocation"`
+
 	// FluentDConfig specifices the FluentD configuration to use for Vault log exportation
 	// default:
 	FluentDConfig string `json:"fluentdConfig"`
@@ -658,6 +662,14 @@ func (spec *VaultSpec) GetFluentDImage() string {
 		return "fluent/fluentd:edge"
 	}
 	return spec.FluentDImage
+}
+
+// GetFluentDConfMountPath returns the mount path for the fluent.conf
+func (spec *VaultSpec) GetFleuntDConfLocation() string {
+	if spec.FleuntDConfLocation == "" {
+		return "/fluentd/etc"
+	}
+	return spec.FleuntDConfLocation
 }
 
 // IsFluentDEnabled returns true if fluentd sidecar is to be deployed
