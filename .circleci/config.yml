@@ -136,7 +136,7 @@ workflows:
   helm-chart:
     jobs:
       - helm/lint-chart:
-          executor: helm/helm2
+          executor: helm/helm3
           charts-dir: charts
           filters:
             tags:
