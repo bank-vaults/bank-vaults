@@ -23,7 +23,9 @@ provided under this option will be converted to JSON for the final vault
 
 ## Installing the Chart
 
-To install the chart, use the following, this backs Vault with a Consul cluster:
+### Fresh install
+
+To install the chart on a fresh cluster, use the following:
 
 ```bash
 helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com
@@ -36,6 +38,28 @@ To install the chart backed with a cluster-wide Etcd Operator, use the following
 helm upgrade --install vault-operator . \
 --set=etcd-operator.enabled=true \
 --set=etcd-operator.etcdOperator.commandArgs.cluster-wide=true
+```
+
+### Helm2 -> Helm3 migration
+
+If you have installed the chart with Helm 2 and now you are trying to upgrade it with Helm3 you have to be careful because Helm 3 will delete the Vault CRD from your cluster during the upgrade from Helm 2 (see https://github.com/helm/helm/issues/7279). To avoid that follow these steps:
+
+```bash
+# Make sure you are using Helm 3
+helm version
+
+# version.BuildInfo{Version:"v3.3.4", GitCommit:"a61ce5633af99708171414353ed49547cf05013d", GitTreeState:"clean", GoVersion:"go1.14.9"}
+
+# Get the latest vault-operator chart
+helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com
+helm repo update
+
+# Delete all Helm2 releases of the vault-operator manually wit kubectl to keep the resources in the cluster
+kubectl delete configmaps -n kube-system vault-operator.v1
+# Delete all resources except the Vault CRD
+helm template vault-operator banzaicloud-stable/vault-operator | kubectl delete -f -
+# Install the new Helm3 version of the chart
+helm upgrade --install vault-operator banzaicloud-stable/charts/vault-operator
 ```
 
 ## Configuration
