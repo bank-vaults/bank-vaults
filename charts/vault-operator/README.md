@@ -5,6 +5,7 @@ This directory contains a Kubernetes Helm chart to deploy the Banzai Cloud Vault
 ## Prerequisites Details
 
 * Kubernetes 1.6+
+* Helm 3
 
 ## Chart Details
 
