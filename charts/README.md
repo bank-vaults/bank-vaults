@@ -2,6 +2,8 @@
 
 The official way to deploy the Bank-Vaults is via Helm.
 
+These charts are compatible with Helm 3+.
+
 All charts are deployed to the central Banzai Cloud repository:
 
 ```shell
