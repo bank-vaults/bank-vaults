@@ -216,14 +216,14 @@ workflows:
 
   helm-chart:
     jobs:
-      - helm2/lint-chart:
+      - helm/lint-chart:
           executor: helm/helm2
           charts-dir: charts
           filters:
             tags:
               ignore: /.*/
 
-      - helm3/lint-chart:
+      - helm/lint-chart:
           executor: helm/helm3
           charts-dir: charts
           filters:
