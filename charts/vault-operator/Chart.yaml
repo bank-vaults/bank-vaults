@@ -4,6 +4,7 @@ version: 1.3.5
 appVersion: 1.3.3
 description: A Helm chart for banzaicloud/bank-vaults Vault operator
 home: https://banzaicloud.com/products/bank-vaults/
+icon: https://www.vaultproject.io/assets/images/mega-nav/logo-vault-0f83e3d2.svg
 sources:
   - https://github.com/hashicorp/vault
   - https://github.com/banzaicloud/bank-vaults
@@ -11,4 +12,3 @@ sources:
 maintainers:
   - name: Banzai Cloud
     email: info@banzaicloud.com
-type: application
