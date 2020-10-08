@@ -1,12 +1,3 @@
-{{- if .Values.certManager.issuer.enabled -}}
-apiVersion: cert-manager.io/v1alpha2
-kind: Issuer
-metadata:
-  name: {{ template "vault.fullname" . }}-server-tls
-spec:
-  selfSigned: {}
-{{- end }}
----
 {{- if .Values.certManager.certificate.enabled -}}
 apiVersion: cert-manager.io/v1alpha2
 kind: Certificate
