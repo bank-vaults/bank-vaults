@@ -67,7 +67,11 @@ func (a *awsKMS) decrypt(cipherText []byte) ([]byte, error) {
 		},
 		GrantTokens: []*string{},
 	})
-	return out.Plaintext, err
+	if err != nil {
+		return nil, err
+	}
+
+	return out.Plaintext, nil
 }
 
 func (a *awsKMS) Get(key string) ([]byte, error) {
@@ -88,7 +92,11 @@ func (a *awsKMS) encrypt(plainText []byte) ([]byte, error) {
 		},
 		GrantTokens: []*string{},
 	})
-	return out.CiphertextBlob, err
+	if err != nil {
+		return nil, err
+	}
+
+	return out.CiphertextBlob, nil
 }
 
 func (a *awsKMS) Set(key string, val []byte) error {
