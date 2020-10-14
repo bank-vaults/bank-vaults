@@ -224,7 +224,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			}
 		}
 
-		if len(envVars) == 0 {
+		if len(envVars) == 0 && vaultConfig.VaultEnvFromPath == "" {
 			continue
 		}
 
