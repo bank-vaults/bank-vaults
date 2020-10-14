@@ -2,19 +2,8 @@ version: 2.1
 
 orbs:
   helm: banzaicloud/helm@0.0.7
-  snyk: snyk/snyk@0.0.10
 
 jobs:
-  snyk:
-    docker:
-      - image: 'circleci/golang'
-    steps:
-      - checkout
-      - snyk/scan:
-          additional-arguments: "--prune-repeated-subdependencies"
-          monitor-on-build: true
-          fail-on-issues: false
-
   multi-cluster-acceptance-test:
     machine:
       image: ubuntu-1604:202004-01
@@ -124,13 +113,6 @@ workflows:
   version: 2
   ci:
     jobs:
-      # - check
-      - snyk:
-          context: snyk
-          filters:
-            branches:
-              only:
-                - master
       - multi-cluster-acceptance-test
 
   helm-chart:
