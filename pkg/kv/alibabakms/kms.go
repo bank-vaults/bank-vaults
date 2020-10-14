@@ -46,12 +46,15 @@ func (a *alibabaKMS) decrypt(cipherText []byte) ([]byte, error) {
 	request := kms.CreateDecryptRequest()
 	request.CiphertextBlob = string(cipherText)
 	response, err := a.kmsClient.Decrypt(request)
-	return []byte(response.Plaintext), err
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(response.Plaintext), nil
 }
 
 func (a *alibabaKMS) Get(key string) ([]byte, error) {
 	cipherText, err := a.store.Get(key)
-
 	if err != nil {
 		return nil, err
 	}
@@ -64,12 +67,15 @@ func (a *alibabaKMS) encrypt(plainText []byte) ([]byte, error) {
 	request.KeyId = a.kmsID
 	request.Plaintext = string(plainText)
 	response, err := a.kmsClient.Encrypt(request)
-	return []byte(response.CiphertextBlob), err
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(response.CiphertextBlob), nil
 }
 
 func (a *alibabaKMS) Set(key string, val []byte) error {
 	cipherText, err := a.encrypt(val)
-
 	if err != nil {
 		return err
 	}
