@@ -15,6 +15,7 @@ ignored = [
 
   # Unsupported VCS
   "gopkg.in/fsnotify.v1",
+  "gopkg.in/square/go-jose.v2", # Apache 2.0
   "google.golang.org/grpc",
   "google.golang.org/genproto",
   "google.golang.org/api",
