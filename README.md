@@ -26,12 +26,16 @@
     <img src="https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod" alt="Gitpod Ready-to-Code">
   </a>
 
+  <a href="https://lgtm.com/projects/g/banzaicloud/bank-vaults/alerts/">
+    <img alt="Total alerts" src="https://img.shields.io/lgtm/alerts/g/banzaicloud/bank-vaults.svg?logo=lgtm&logoWidth=18"/>
+  </a>
+
 </p>
 
 
 *Bank Vaults is a thick, tricky, shifty right with a fast and intense tube for experienced surfers only, located on Mentawai. Think heavy steel doors, secret unlocking combinations and burly guards with smack-down attitude. Watch out for clean-up sets.*
 
-*Bank-Vaults is an umbrella project which provides various tools for Vault to make using and operating Hashicorp Vault easier. Its a wrapper for the official Vault client with automatic token renewal and built in Kubernetes support, dynamic database credential provider for Golang SQL based clients. It has a CLI tool to automatically initialize, unseal and configure Vault. It also provides a Kubernetes operator for provisioning, and a mutating webhook for injecting secrets.*
+*Bank-Vaults is an umbrella project which provides various tools for Vault to make using and operating Hashicorp Vault easier. It's a wrapper for the official Vault client with automatic token renewal and built-in Kubernetes support, dynamic database credential provider for Golang `database/sql` based clients. It has a CLI tool to automatically initialize, unseal, and configure Vault. It also provides a Kubernetes operator for provisioning, and a mutating webhook for injecting secrets.*
 
 ---
 
@@ -84,7 +88,7 @@ go get github.com/banzaicloud/bank-vaults/cmd/vault-env
 
 ## Documentation
 
-Read more about usage of bank-vaults in the [detailed
+Read more about the usage of bank-vaults in the [detailed
 Bank-Vaults documentation](https://banzaicloud.com/docs/bank-vaults/) and in our [blog posts about Bank-Vaults](https://banzaicloud.com/tags/bank-vaults/).
 
 ## Development
