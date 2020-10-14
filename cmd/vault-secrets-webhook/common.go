@@ -42,3 +42,7 @@ func getDataFromVault(data map[string]string, vaultClient *vault.Client, vaultCo
 func hasVaultPrefix(value string) bool {
 	return strings.HasPrefix(value, "vault:") || strings.HasPrefix(value, ">>vault:")
 }
+
+func hasInlineVaultDelimiters(value string) bool {
+	return strings.Contains(value, "${{") && strings.Contains(value, "}}")
+}
