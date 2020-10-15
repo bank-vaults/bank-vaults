@@ -24,7 +24,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
-var InlineMutationRegex = regexp.MustCompile("\\${([>]{0,2}vault:.*?)}")
+var InlineMutationRegex = regexp.MustCompile(`\${([>]{0,2}vault:.*?)}`)
 
 func getDataFromVault(data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig, logger logrus.FieldLogger) (map[string]string, error) {
 	vaultData := make(map[string]string, len(data))
