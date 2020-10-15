@@ -8,6 +8,7 @@ debug: false
 
 certificate:
   useCertManager: false
+  servingCertificate: null
   generate: true
   server:
     tls:
