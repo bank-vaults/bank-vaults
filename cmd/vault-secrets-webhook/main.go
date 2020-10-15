@@ -494,7 +494,7 @@ func (mw *mutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 
 		ok := pool.AppendCertsFromPEM(tlsSecret.Data["ca.crt"])
 		if !ok {
-			return nil, errors.Errorf("error loading Vault CA PEM from TLS Secret", tlsSecret.Name)
+			return nil, errors.Errorf("error loading Vault CA PEM from TLS Secret: %s", tlsSecret.Name)
 		}
 
 		clientTLSConfig.RootCAs = pool
