@@ -15,6 +15,7 @@
 package main
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -22,6 +23,8 @@ import (
 	"github.com/banzaicloud/bank-vaults/internal/injector"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
+
+var InlineMutationRegex = regexp.MustCompile("\\${{(.*?)}}")
 
 func getDataFromVault(data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig, logger logrus.FieldLogger) (map[string]string, error) {
 	vaultData := make(map[string]string, len(data))
@@ -44,5 +47,9 @@ func hasVaultPrefix(value string) bool {
 }
 
 func hasInlineVaultDelimiters(value string) bool {
-	return strings.Contains(value, "${{") && strings.Contains(value, "}}")
+	return len(findInlineVaultDelimiters(value)) > 0
+}
+
+func findInlineVaultDelimiters(value string) [][]string {
+	return InlineMutationRegex.FindAllStringSubmatch(value, -1)
 }

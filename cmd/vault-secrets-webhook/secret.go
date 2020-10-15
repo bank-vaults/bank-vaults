@@ -18,7 +18,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"emperror.dev/errors"
@@ -159,14 +158,8 @@ func (mw *mutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *registry
 }
 
 func (mw *mutatingWebhook) mutateInlineSecretData(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
-	r, err := regexp.Compile("\\${{(.*?)}}")
-	if err != nil {
-		return err
-	}
 	for key, value := range sc {
-		vaultSecretReferences := r.FindAllStringSubmatch(value, -1)
-
-		for _, vaultSecretReference := range vaultSecretReferences {
+		for _, vaultSecretReference := range findInlineVaultDelimiters(value) {
 			mapData, err := getDataFromVault(map[string]string{key: vaultSecretReference[1]}, vaultClient, vaultConfig, mw.logger)
 			if err != nil {
 				return err
@@ -176,7 +169,6 @@ func (mw *mutatingWebhook) mutateInlineSecretData(secret *corev1.Secret, sc map[
 			}
 		}
 	}
-
 	return nil
 }
 

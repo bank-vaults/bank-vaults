@@ -16,7 +16,6 @@ package main
 
 import (
 	"encoding/base64"
-	"regexp"
 	"strings"
 
 	"emperror.dev/errors"
@@ -102,14 +101,8 @@ func (mw *mutatingWebhook) mutateConfigMapData(configMap *corev1.ConfigMap, data
 }
 
 func (mw *mutatingWebhook) mutateInlineConfigMapData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
-	r, err := regexp.Compile("\\${{(.*?)}}")
-	if err != nil {
-		return err
-	}
 	for key, value := range data {
-		vaultSecretReferences := r.FindAllStringSubmatch(value, -1)
-
-		for _, vaultSecretReference := range vaultSecretReferences {
+		for _, vaultSecretReference := range findInlineVaultDelimiters(value) {
 			mapData, err := getDataFromVault(map[string]string{key: vaultSecretReference[1]}, vaultClient, vaultConfig, mw.logger)
 			if err != nil {
 				return err
@@ -119,7 +112,6 @@ func (mw *mutatingWebhook) mutateInlineConfigMapData(configMap *corev1.ConfigMap
 			}
 		}
 	}
-
 	return nil
 }
 
