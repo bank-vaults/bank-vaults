@@ -124,6 +124,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | podDisruptionBudget.minAvailable | represents the number of Pods that must be available (integer or percentage) | `1`                                 |
 | certificate.generate             | should a new CA and TLS certificate be generated for the webhook             | `true`                              |
 | certificate.useCertManager       | should request cert-manager for getting a new CA and TLS certificate         | `false`                             |
+| certificate.servingCertificate   | should use an already externally defined Certificate by cert-manager         | `null`                              |
 | certificate.ca.crt               | Base64 encoded CA certificate                                                | ``                                  |
 | certificate.server.tls.crt       | Base64 encoded TLS certificate signed by the CA                              | ``                                  |
 | certificate.server.tls.key       | Base64 encoded  private key of TLS certificate signed by the CA              | ``                                  |

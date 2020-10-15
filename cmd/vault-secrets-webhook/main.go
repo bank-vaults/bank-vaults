@@ -16,10 +16,13 @@ package main
 
 import (
 	"context"
+	"crypto/x509"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
 
+	"emperror.dev/errors"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -333,6 +336,7 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 
 type mutatingWebhook struct {
 	k8sClient kubernetes.Interface
+	namespace string
 	registry  registry.ImageRegistry
 	logger    *logrus.Entry
 }
@@ -469,10 +473,31 @@ func (mw *mutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 	clientConfig.Address = vaultConfig.Addr
 
 	tlsConfig := vaultapi.TLSConfig{Insecure: vaultConfig.SkipVerify}
-
 	err := clientConfig.ConfigureTLS(&tlsConfig)
 	if err != nil {
 		return nil, err
+	}
+
+	if vaultConfig.TLSSecret != "" {
+		tlsSecret, err := mw.k8sClient.CoreV1().Secrets(mw.namespace).Get(
+			context.Background(),
+			vaultConfig.TLSSecret,
+			metav1.GetOptions{},
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read Vault TLS Secret")
+		}
+
+		clientTLSConfig := clientConfig.HttpClient.Transport.(*http.Transport).TLSClientConfig
+
+		pool := x509.NewCertPool()
+
+		ok := pool.AppendCertsFromPEM(tlsSecret.Data["ca.crt"])
+		if !ok {
+			return nil, errors.Errorf("error loading Vault CA PEM from TLS Secret: %s", tlsSecret.Name)
+		}
+
+		clientTLSConfig.RootCAs = pool
 	}
 
 	return vault.NewClientFromConfig(
@@ -540,8 +565,14 @@ func main() {
 		logger.Fatalf("error creating k8s client: %s", err)
 	}
 
+	namespace, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+	if err != nil {
+		logger.Fatalf("error reading k8s namespace: %s", err)
+	}
+
 	mutatingWebhook := mutatingWebhook{
 		k8sClient: k8sClient,
+		namespace: string(namespace),
 		registry:  registry.NewRegistry(),
 		logger:    logger,
 	}
