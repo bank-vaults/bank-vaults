@@ -12,7 +12,10 @@
 {{- $tlsKey = b64enc $server.Key }}
 {{- $caCrt =  b64enc $ca.Cert }}
 {{- else if .Values.certificate.useCertManager }}
-{{/* do nothing with certs here. Cert-manager will handle it all */}}
+{{/* Create a new Certificate with cert-manager. */}}
+{{/* all clientConfig.caBundle will be overridden by cert-manager */}}
+{{- else if .Values.certificate.servingCertificate }}
+{{/* Use an already externally defined Certificate by cert-manager. */}}
 {{/* all clientConfig.caBundle will be overridden by cert-manager */}}
 {{- else }}
 {{- $tlsCrt = required "Required when certificate.generate is false" .Values.certificate.server.tls.crt }}
@@ -20,7 +23,7 @@
 {{- $caCrt = required "Required when certificate.generate is false" .Values.certificate.ca.crt }}
 {{- end }}
 
-{{- if (eq .Values.certificate.useCertManager false) }}
+{{- if $tlsCrt }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -44,6 +47,9 @@ metadata:
 {{- if .Values.certificate.useCertManager }}
   annotations:
     cert-manager.io/inject-ca-from: "{{ .Release.Namespace }}/{{ include "vault-secrets-webhook.servingCertificate" . }}"
+{{- else if .Values.certificate.servingCertificate }}
+  annotations:
+    cert-manager.io/inject-ca-from: "{{ .Release.Namespace }}/{{ .Values.certificate.servingCertificate }}"
 {{- end }}
 webhooks:
 - name: pods.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
