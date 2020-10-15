@@ -109,23 +109,20 @@ sleep 20
 kurun run cmd/examples/main.go
 
 # Only kind is configured to be able to run this test
-if [ "${GITHUB_ACTIONS}" == "true" ]
-then
-    kubectl delete -f operator/deploy/cr-priority.yaml
-    kubectl delete -f operator/deploy/priorityclass.yaml
-    kubectl delete secret vault-unseal-keys
-    kubectl delete pvc --all
+kubectl delete -f operator/deploy/cr-priority.yaml
+kubectl delete -f operator/deploy/priorityclass.yaml
+kubectl delete secret vault-unseal-keys
+kubectl delete pvc --all
 
-    # Sixth test: Run the OIDC authenticated client test
-    kubectl apply -f operator/deploy/cr-oidc.yaml
-    kubectl wait --for=condition=healthy --timeout=120s vault/vault
+# Sixth test: Run the OIDC authenticated client test
+kubectl create namespace vswh # create the namespace beforehand, because we need the CA cert here as well
+kubectl apply -f operator/deploy/cr-oidc.yaml
+kubectl wait --for=condition=healthy --timeout=120s vault/vault
 
-    kurun apply -f hack/oidc-pod.yaml
-    waitfor "kubectl get pod/oidc -o json | jq -e '.status.phase == \"Succeeded\"'"
-fi
+kurun apply -f hack/oidc-pod.yaml
+waitfor "kubectl get pod/oidc -o json | jq -e '.status.phase == \"Succeeded\"'"
 
 # Run the webhook test, the hello-secrets deployment should be successfully mutated
-kubectl create namespace vswh
 helm upgrade --install vault-secrets-webhook ./charts/vault-secrets-webhook \
     --set image.tag=latest \
     --set image.pullPolicy=IfNotPresent \
