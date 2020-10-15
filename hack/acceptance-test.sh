@@ -123,7 +123,6 @@ kurun apply -f hack/oidc-pod.yaml
 waitfor "kubectl get pod/oidc -o json | jq -e '.status.phase == \"Succeeded\"'"
 
 # Run the webhook test, the hello-secrets deployment should be successfully mutated
-kubectl create namespace vswh
 helm upgrade --install vault-secrets-webhook ./charts/vault-secrets-webhook \
     --set image.tag=latest \
     --set image.pullPolicy=IfNotPresent \
