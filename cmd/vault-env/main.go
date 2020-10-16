@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -152,20 +153,31 @@ func main() {
 	// Used both for reading secrets and transit encryption
 	ignoreMissingSecrets := cast.ToBool(os.Getenv("VAULT_IGNORE_MISSING_SECRETS"))
 
+	clientOptions := []vault.ClientOption{vault.ClientLogger(logrusadapter.NewFromEntry(logger))}
 	// The login procedure takes the token from a file (if using Vault Agent)
 	// or requests one for itself (Kubernetes Auth, or GCP, etc...),
 	// so if we got a VAULT_TOKEN for the special value with "vault:login"
 	originalVaultTokenEnvVar := os.Getenv("VAULT_TOKEN")
 	if originalVaultTokenEnvVar == vaultLogin {
 		os.Unsetenv("VAULT_TOKEN")
+	} else if tokenFile := os.Getenv("VAULT_TOKEN_FILE"); tokenFile != "" {
+		// load token from vault-agent .vault-token or injected webhook
+		if b, err := ioutil.ReadFile(tokenFile); err == nil {
+			originalVaultTokenEnvVar = string(b)
+		} else {
+			logger.Fatalf("could not read vault token file: %s", tokenFile)
+		}
+		clientOptions = append(clientOptions, vault.ClientToken(originalVaultTokenEnvVar))
+	} else {
+		// use role/path based authentication
+		clientOptions = append(clientOptions,
+			vault.ClientRole(os.Getenv("VAULT_ROLE")),
+			vault.ClientAuthPath(os.Getenv("VAULT_PATH")),
+			vault.ClientAuthMethod(os.Getenv("VAULT_AUTH_METHOD")),
+		)
 	}
 
-	client, err := vault.NewClientWithOptions(
-		vault.ClientRole(os.Getenv("VAULT_ROLE")),
-		vault.ClientAuthPath(os.Getenv("VAULT_PATH")),
-		vault.ClientAuthMethod(os.Getenv("VAULT_AUTH_METHOD")),
-		vault.ClientLogger(logrusadapter.NewFromEntry(logger)),
-	)
+	client, err := vault.NewClientWithOptions(clientOptions...)
 	if err != nil {
 		logger.Fatal("failed to create vault client", err.Error())
 	}

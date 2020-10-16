@@ -83,6 +83,7 @@ type VaultConfig struct {
 	AgentImagePullPolicy        corev1.PullPolicy
 	Skip                        bool
 	VaultEnvFromPath            string
+	TokenAuthMount              string
 }
 
 func init() {
@@ -326,6 +327,10 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-env-from-path"]; ok {
 		vaultConfig.VaultEnvFromPath = val
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/token-auth-mount"]; ok {
+		vaultConfig.TokenAuthMount = val
 	}
 
 	vaultConfig.AgentImage = viper.GetString("vault_image")

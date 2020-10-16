@@ -344,7 +344,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			})
 		}
 
-		if vaultConfig.UseAgent {
+		if vaultConfig.UseAgent || vaultConfig.TokenAuthMount != "" {
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  "VAULT_TOKEN_FILE",
 				Value: "/vault/.vault-token",
@@ -554,7 +554,37 @@ mountSearch:
 func getInitContainers(originalContainers []corev1.Container, podSecurityContext *corev1.PodSecurityContext, vaultConfig VaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	var containers = []corev1.Container{}
 
-	if vaultConfig.UseAgent || vaultConfig.CtConfigMap != "" {
+	if vaultConfig.TokenAuthMount != "" {
+		// vault.security.banzaicloud.io/token-auth-mount: "token:vault-token"
+		split := strings.Split(vaultConfig.TokenAuthMount, ":")
+		mountName := split[0]
+		tokenName := split[1]
+		fileLoc := "/token/" + tokenName
+		cmd := fmt.Sprintf("cp %s /vault/.vault-token", fileLoc)
+
+		containers = append(containers, corev1.Container{
+			Name:            "copy-vault-token",
+			Image:           vaultConfig.AgentImage,
+			ImagePullPolicy: vaultConfig.AgentImagePullPolicy,
+			Command:         []string{"sh", "-c", cmd},
+			Resources: corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("64Mi"),
+				},
+			},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      "vault-env",
+					MountPath: "/vault/",
+				},
+				{
+					Name:      mountName,
+					MountPath: "/token",
+				},
+			},
+		})
+	} else if vaultConfig.UseAgent || vaultConfig.CtConfigMap != "" {
 		serviceAccountMount := getServiceAccountMount(originalContainers)
 
 		containerVolMounts = append(containerVolMounts, serviceAccountMount, corev1.VolumeMount{
