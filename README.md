@@ -55,6 +55,8 @@
 - [Vault replication across multiple datacenters on Kubernetes](https://banzaicloud.com/blog/vault-multi-datacenter/)
 - [More blog posts about Bank-Vaults](https://banzaicloud.com/tags/bank-vaults/)
 
+Test
+
 We use Vault across our large Kubernetes deployments and all the projects were `reinventing` the wheel. We have externalized all the codebase into this project and removed all the [Pipeline](https://github.com/banzaicloud/pipeline) and [Hollowtrees](https://github.com/banzaicloud/hollowtrees) dependencies thus this project can be used independently as a CLI tool to manage Vault, a Golang library to build upon (OAuth2 tokens, K8s auth, Vault operator, dynamic secrets, cloud credential storage, etc), Helm chart for a HA cluster, operator, mutating webhook and a collection of scripts to support some advanced features (dynamic SSH, etc).
 
 >We take bank-vaults' security and our users' trust very seriously. If you believe you have found a security issue in bank-vaults, please contact us at security@banzaicloud.com.
