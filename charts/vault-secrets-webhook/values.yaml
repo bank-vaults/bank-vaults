@@ -106,3 +106,6 @@ objectSelector: {}
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
+  
+hostNetwork:
+  enabled: false
