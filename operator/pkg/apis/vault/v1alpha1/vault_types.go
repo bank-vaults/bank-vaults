@@ -15,8 +15,6 @@
 package v1alpha1
 
 import (
-	"bytes"
-	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -71,51 +69,6 @@ type VaultList struct {
 	Items           []Vault `json:"items"`
 }
 
-func init() {
-	gob.Register(VaultConfig{})
-	gob.Register(VaultExternalConfig{})
-	gob.Register(map[string]interface{}{})
-	gob.Register([]interface{}{})
-}
-
-type Config extv1beta1.JSON
-
-type VaultConfig extv1beta1.JSON
-
-func (c VaultConfig) DeepCopy() VaultConfig {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	dec := gob.NewDecoder(&buf)
-	err := enc.Encode(c)
-	if err != nil {
-		panic(err)
-	}
-	var copy VaultConfig
-	err = dec.Decode(&copy)
-	if err != nil {
-		panic(err)
-	}
-	return copy
-}
-
-type VaultExternalConfig extv1beta1.JSON
-
-func (c VaultExternalConfig) DeepCopy() VaultExternalConfig {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	dec := gob.NewDecoder(&buf)
-	err := enc.Encode(c)
-	if err != nil {
-		panic(err)
-	}
-	var copy VaultExternalConfig
-	err = dec.Decode(&copy)
-	if err != nil {
-		panic(err)
-	}
-	return copy
-}
-
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // VaultSpec defines the desired state of Vault
@@ -156,7 +109,7 @@ type VaultSpec struct {
 
 	// FleuntDConfLocation is the location of the fluent.conf file
 	// default: "/fluentd/etc"
-	FleuntDConfLocation string `json:"fleuntdConfLocation"`
+	FleuntDConfLocation string `json:"fleuntdConfLocation,omitempty"`
 
 	// FluentDConfig specifices the FluentD configuration to use for Vault log exportation
 	// default:
@@ -217,7 +170,7 @@ type VaultSpec struct {
 	// through its API, thus allows setting up:
 	// - Secret Engines
 	// - Auth Methods
-	// - Autid Devices
+	// - Audit Devices
 	// - Plugin Backends
 	// - Policies
 	// - Startup Secrets (Bank Vaults feature)
@@ -348,7 +301,7 @@ type VaultSpec struct {
 
 	// SidecarEnvsConfig is a list of Kubernetes environment variable definitions that will be passed to Vault sidecar containers.
 	// default:
-	SidecarEnvsConfig []v1.EnvVar `json:"sidecarEnvsConfig"`
+	SidecarEnvsConfig []v1.EnvVar `json:"sidecarEnvsConfig,omitempty"`
 
 	// Resources defines the resource limits for all the resources created by the operator.
 	// See the type for more details.
@@ -445,8 +398,7 @@ func (spec *VaultSpec) GetStorage() map[string]interface{} {
 }
 
 func (spec *VaultSpec) getStorage() map[string]interface{} {
-	var config map[string]interface{}
-	_ = json.Unmarshal(spec.Config.Raw, &config)
+	config := spec.GetVaultConfig()
 	return cast.ToStringMap(config["storage"])
 }
 
@@ -457,9 +409,16 @@ func (spec *VaultSpec) GetHAStorage() map[string]interface{} {
 }
 
 func (spec *VaultSpec) getHAStorage() map[string]interface{} {
-	var config map[string]interface{}
-	_ = json.Unmarshal(spec.Config.Raw, &config)
+	config := spec.GetVaultConfig()
 	return cast.ToStringMap(config["ha_storage"])
+}
+
+func (spec *VaultSpec) GetVaultConfig() map[string]interface{} {
+	var config map[string]interface{}
+	// This config JSON is already validated,
+	// so we can skip wiring through the error everywhere.
+	_ = json.Unmarshal(spec.Config.Raw, &config)
+	return config
 }
 
 // GetEtcdStorage returns the etcd storage if configured or nil
@@ -578,8 +537,7 @@ func (spec *VaultSpec) GetTLSExpiryThreshold() time.Duration {
 }
 
 func (spec *VaultSpec) getListener() map[string]interface{} {
-	var config map[string]interface{}
-	_ = json.Unmarshal(spec.Config.Raw, &config)
+	config := spec.GetVaultConfig()
 	return cast.ToStringMap(config["listener"])
 }
 
@@ -764,8 +722,7 @@ func (spec *VaultSpec) ExternalConfigJSON() string {
 
 // IsAutoUnseal checks if auto-unseal is configured
 func (spec *VaultSpec) IsAutoUnseal() bool {
-	var config map[string]interface{}
-	_ = json.Unmarshal(spec.Config.Raw, &config)
+	config := spec.GetVaultConfig()
 	_, ok := config["seal"]
 	return ok
 }
@@ -1095,25 +1052,25 @@ type AWSUnsealConfig struct {
 	S3Bucket  string `json:"s3Bucket"`
 	S3Prefix  string `json:"s3Prefix"`
 	S3Region  string `json:"s3Region"`
-	S3SSE     string `json:"s3SSE"`
+	S3SSE     string `json:"s3SSE,omitempty"`
 }
 
 // VaultUnsealConfig holds the parameters for remote Vault based unsealing
 type VaultUnsealConfig struct {
 	Address        string `json:"address"`
 	UnsealKeysPath string `json:"unsealKeysPath"`
-	Role           string `json:"role"`
-	AuthPath       string `json:"authPath"`
-	TokenPath      string `json:"tokenPath"`
-	Token          string `json:"token"`
+	Role           string `json:"role,omitempty"`
+	AuthPath       string `json:"authPath,omitempty"`
+	TokenPath      string `json:"tokenPath,omitempty"`
+	Token          string `json:"token,omitempty"`
 }
 
 // HSMUnsealConfig holds the parameters for remote HSM based unsealing
 type HSMUnsealConfig struct {
-	Daemon     bool   `json:"daemon"`
+	Daemon     bool   `json:"daemon,omitempty"`
 	ModulePath string `json:"modulePath"`
 	SlotID     uint   `json:"slotId"`
-	TokenLabel string `json:"tokenLabel"`
+	TokenLabel string `json:"tokenLabel,omitempty"`
 	Pin        string `json:"pin"`
 	KeyLabel   string `json:"keyLabel"`
 }

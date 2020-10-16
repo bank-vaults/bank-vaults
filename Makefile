@@ -32,7 +32,8 @@ GOTESTSUM_VERSION = 0.4.0
 GOLANGCI_VERSION = 1.27.0
 LICENSEI_VERSION = 0.3.1
 CODE_GENERATOR_VERSION = 0.19.3
-CONTROLLER_GEN_VERSION = 0.3.0
+# Change to a released version once 0.4.1 or 0.5.0 is relesed.
+CONTROLLER_GEN_VERSION = 6fa696d
 
 GOLANG_VERSION = 1.15
 
@@ -130,7 +131,7 @@ major: ## Release a new major version
 
 .PHONY: operator-up
 operator-up:
-	kubectl apply -f operator/deploy/crd.yaml
+	kubectl replace -f operator/deploy/crd.yaml || kubectl create -f operator/deploy/crd.yaml
 	kubectl apply -f operator/deploy/rbac.yaml
 	OPERATOR_NAME=vault-dev go run operator/cmd/manager/main.go -verbose
 
