@@ -16,6 +16,7 @@ package main
 
 import (
 	"encoding/base64"
+	"strings"
 
 	"emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -23,9 +24,12 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
-func configMapNeedsMutation(configMap *corev1.ConfigMap) bool {
+func configMapNeedsMutation(configMap *corev1.ConfigMap, vaultConfig VaultConfig) bool {
 	for _, value := range configMap.Data {
 		if hasVaultPrefix(value) {
+			return true
+		}
+		if vaultConfig.InlineMutation && hasInlineVaultDelimiters(value) {
 			return true
 		}
 	}
@@ -39,7 +43,7 @@ func configMapNeedsMutation(configMap *corev1.ConfigMap) bool {
 
 func (mw *mutatingWebhook) mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig VaultConfig) error {
 	// do an early exit and don't construct the Vault client if not needed
-	if !configMapNeedsMutation(configMap) {
+	if !configMapNeedsMutation(configMap, vaultConfig) {
 		return nil
 	}
 
@@ -51,7 +55,15 @@ func (mw *mutatingWebhook) mutateConfigMap(configMap *corev1.ConfigMap, vaultCon
 	defer vaultClient.Close()
 
 	for key, value := range configMap.Data {
-		if hasVaultPrefix(value) {
+		if hasInlineVaultDelimiters(value) {
+			data := map[string]string{
+				key: value,
+			}
+			err := mw.mutateInlineConfigMapData(configMap, data, vaultClient, vaultConfig)
+			if err != nil {
+				return err
+			}
+		} else if hasVaultPrefix(value) {
 			data := map[string]string{
 				key: value,
 			}
@@ -84,6 +96,21 @@ func (mw *mutatingWebhook) mutateConfigMapData(configMap *corev1.ConfigMap, data
 	}
 	for key, value := range mapData {
 		configMap.Data[key] = value
+	}
+	return nil
+}
+
+func (mw *mutatingWebhook) mutateInlineConfigMapData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+	for key, value := range data {
+		for _, vaultSecretReference := range findInlineVaultDelimiters(value) {
+			mapData, err := getDataFromVault(map[string]string{key: vaultSecretReference[1]}, vaultClient, vaultConfig, mw.logger)
+			if err != nil {
+				return err
+			}
+			for key, value := range mapData {
+				configMap.Data[key] = strings.Replace(configMap.Data[key], vaultSecretReference[0], value, -1)
+			}
+		}
 	}
 	return nil
 }

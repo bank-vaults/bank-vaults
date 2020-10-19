@@ -15,6 +15,8 @@
 package main
 
 import (
+	"strings"
+
 	"emperror.dev/errors"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -95,6 +97,15 @@ func traverseObject(o interface{}, vaultClient *vault.Client, vaultConfig VaultC
 				}
 
 				e.Set(dataFromVault["data"])
+			} else if hasInlineVaultDelimiters(s) {
+				dataFromVault := s
+				for _, vaultSecretReference := range findInlineVaultDelimiters(s) {
+					mapData, err := getDataFromVault(map[string]string{"data": vaultSecretReference[1]}, vaultClient, vaultConfig, logger)
+					if err != nil {
+						return err
+					}
+					dataFromVault = strings.Replace(dataFromVault, vaultSecretReference[0], mapData["data"], -1)
+				}
 			}
 		case map[string]interface{}, []interface{}:
 			err := traverseObject(e.Get(), vaultClient, vaultConfig, logger)

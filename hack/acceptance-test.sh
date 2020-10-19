@@ -135,13 +135,16 @@ helm upgrade --install vault-secrets-webhook ./charts/vault-secrets-webhook \
     --wait
 
 kubectl apply -f deploy/test-secret.yaml
-test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].username'` = "dockerrepouser"
-test `kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].password'` = "dockerrepopassword"
+test "$(kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].username')" = "dockerrepouser"
+test "$(kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].password')" = "dockerrepopassword"
+test "$(kubectl get secrets sample-secret -o jsonpath='{.data.inline}' | base64 --decode)" = "Inline: secretId AWS_ACCESS_KEY_ID"
 
 kubectl apply -f deploy/test-configmap.yaml
-test `kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id}'` = "secretId"
+test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id}')" = "secretId"
 test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id-formatted}')" = "AWS key in base64: c2VjcmV0SWQ="
-test `kubectl get cm sample-configmap -o jsonpath='{.binaryData.aws-access-key-id-binary}'` = "secretId"
+test "$(kubectl get cm sample-configmap -o jsonpath='{.binaryData.aws-access-key-id-binary}')" = "secretId"
+test "$(kubectl get cm sample-configmap -o jsonpath='{.data.inline}')" = "Inline: secretId AWS_ACCESS_KEY_ID"
+test "$(kubectl get cm sample-configmap -o jsonpath='{.data.inline}')" = "Inline: secretId AWS_ACCESS_KEY_ID"
 
 kubectl apply -f deploy/test-deployment-seccontext.yaml
 kubectl wait --for=condition=available deployment/hello-secrets-seccontext --timeout=120s

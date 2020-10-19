@@ -28,7 +28,7 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
-func secretNeedsMutation(secret *corev1.Secret) (bool, error) {
+func secretNeedsMutation(secret *corev1.Secret, vaultConfig VaultConfig) (bool, error) {
 	for key, value := range secret.Data {
 		if key == corev1.DockerConfigJsonKey {
 			var dc registry.DockerCreds
@@ -50,6 +50,8 @@ func secretNeedsMutation(secret *corev1.Secret) (bool, error) {
 			}
 		} else if hasVaultPrefix(string(value)) {
 			return true, nil
+		} else if vaultConfig.InlineMutation && hasInlineVaultDelimiters(string(value)) {
+			return true, nil
 		}
 	}
 	return false, nil
@@ -57,7 +59,7 @@ func secretNeedsMutation(secret *corev1.Secret) (bool, error) {
 
 func (mw *mutatingWebhook) mutateSecret(secret *corev1.Secret, vaultConfig VaultConfig) error {
 	// do an early exit and don't construct the Vault client if not needed
-	requiredToMutate, err := secretNeedsMutation(secret)
+	requiredToMutate, err := secretNeedsMutation(secret, vaultConfig)
 	if err != nil {
 		return errors.Wrap(err, "failed to check if secret needs to be mutated")
 	}
@@ -83,6 +85,14 @@ func (mw *mutatingWebhook) mutateSecret(secret *corev1.Secret, vaultConfig Vault
 			err = mw.mutateDockerCreds(secret, &dc, vaultClient, vaultConfig)
 			if err != nil {
 				return errors.Wrap(err, "mutate dockerconfig json failed")
+			}
+		} else if hasInlineVaultDelimiters(string(value)) {
+			data := map[string]string{
+				key: string(value),
+			}
+			err := mw.mutateInlineSecretData(secret, data, vaultClient, vaultConfig)
+			if err != nil {
+				return err
 			}
 		} else if hasVaultPrefix(string(value)) {
 			sc := map[string]string{
@@ -144,6 +154,21 @@ func (mw *mutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *registry
 
 	secret.Data[corev1.DockerConfigJsonKey] = marshalled
 
+	return nil
+}
+
+func (mw *mutatingWebhook) mutateInlineSecretData(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+	for key, value := range sc {
+		for _, vaultSecretReference := range findInlineVaultDelimiters(value) {
+			mapData, err := getDataFromVault(map[string]string{key: vaultSecretReference[1]}, vaultClient, vaultConfig, mw.logger)
+			if err != nil {
+				return err
+			}
+			for key, value := range mapData {
+				secret.Data[key] = []byte(strings.Replace(string(secret.Data[key]), vaultSecretReference[0], value, -1))
+			}
+		}
+	}
 	return nil
 }
 
