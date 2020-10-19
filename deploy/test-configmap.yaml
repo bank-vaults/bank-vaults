@@ -7,8 +7,10 @@ metadata:
     vault.security.banzaicloud.io/vault-role: "default"
     vault.security.banzaicloud.io/vault-skip-verify: "true"
     vault.security.banzaicloud.io/vault-path: "kubernetes"
+    vault.security.banzaicloud.io/inline-mutation: true
 data:
   aws-access-key-id: vault:secret/data/accounts/aws#AWS_ACCESS_KEY_ID
   aws-access-key-id-formatted: "vault:secret/data/accounts/aws#AWS key in base64: ${.AWS_ACCESS_KEY_ID | b64enc}"
+  inline: "Inline: ${vault:secret/data/accounts/aws#AWS_ACCESS_KEY_ID} AWS_ACCESS_KEY_ID"
 binaryData:
   aws-access-key-id-binary: dmF1bHQ6c2VjcmV0L2RhdGEvYWNjb3VudHMvYXdzI0FXU19BQ0NFU1NfS0VZX0lE
