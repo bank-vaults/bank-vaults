@@ -55,6 +55,9 @@ webhooks:
 - name: pods.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
   {{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion }}
   admissionReviewVersions: ["v1beta1"]
+  {{- if .Values.timeoutSeconds }}
+  timeoutSeconds: {{ .Values.timeoutSeconds }}
+  {{- end }}
   {{- end }}
   clientConfig:
     service:
@@ -102,6 +105,9 @@ webhooks:
 - name: secrets.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
   {{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion }}
   admissionReviewVersions: ["v1beta1"]
+  {{- if .Values.timeoutSeconds }}
+  timeoutSeconds: {{ .Values.timeoutSeconds }}
+  {{- end }}
   {{- end }}
   clientConfig:
     service:
@@ -140,6 +146,9 @@ webhooks:
 - name: configmaps.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
   {{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion }}
   admissionReviewVersions: ["v1beta1"]
+  {{- if .Values.timeoutSeconds }}
+  timeoutSeconds: {{ .Values.timeoutSeconds }}
+  {{- end }}
   {{- end }}
   clientConfig:
     service:
@@ -179,6 +188,9 @@ webhooks:
 - name: objects.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
   {{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion }}
   admissionReviewVersions: ["v1beta1"]
+  {{- if .Values.timeoutSeconds }}
+  timeoutSeconds: {{ .Values.timeoutSeconds }}
+  {{- end }}
   {{- end }}
   clientConfig:
     service:
