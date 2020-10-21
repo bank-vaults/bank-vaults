@@ -131,3 +131,5 @@ objectSelector: {}
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
+
+timeoutSeconds: false

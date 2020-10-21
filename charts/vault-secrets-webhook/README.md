@@ -131,6 +131,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | apiSideEffectValue               | Webhook sideEffect value                                                     | `NoneOnDryRun`                      |
 | securityContext                  | Container security context for webhook deployment                            | `{ runAsUser: 65534, allowPrivaledgeEscalation: false }` |
 | podSecurityContext               | Pod security context for webhook deployment                                  | `{}`                                |
+| timeoutSeconds                   | Webhook timeoutSeconds value                                                 | ``                                  |
 
 ### Certificate options
 
