@@ -9,3 +9,4 @@ This is a list of production adopters of Bank-Vaults (in alphabetical order):
 - [Thought Machine](https://thoughtmachine.net) is using Bank-Vaults to provision Vault for their next generation, cloud native, core banking engine also called Vault.
 - [Vase.ai](https://vase.ai) is using Bank-vaults with the Vault Secrets Webhook to pull secrets from vault in to be used in their CI/CD pipelines.
 - [Vonage](https://www.vonage.com/business/) is using Bank-Vaults to provision and configure Vault to provide secrets to application that are on cloud(k8s) and on premise(approle) and also as a transit engine. Uses AWS KMS, S3 and DynamoDB and will be migrated to use raft backend.
+- [TripleLift](https://triplelift.com/company/) is using Bank-Vaults to provision and configure Vault to turbocharge engineer productivity with streamlined team-specific Kubernetes secret injection and provide self-serve backend access to a variety of systems.
