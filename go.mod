@@ -26,35 +26,35 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-logr/logr v0.2.1 // indirect
 	github.com/go-logr/zapr v0.2.0 // indirect
-	github.com/google/go-cmp v0.4.0
+	github.com/google/go-cmp v0.5.2
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/hashicorp/vault/sdk v0.1.13
 	github.com/heroku/docker-registry-client v0.0.0-20181004091502-47ecf50fd8d4
 	github.com/imdario/mergo v0.3.9
-	github.com/jpillora/backoff v0.0.0-20180909062703-3050d21c67d7
+	github.com/jpillora/backoff v1.0.0
 	github.com/json-iterator/go v1.1.10
 	github.com/miekg/pkcs11 v1.0.3
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pierrec/lz4 v2.2.5+incompatible // indirect
-	github.com/prometheus/client_golang v1.5.1
+	github.com/prometheus/client_golang v1.8.0
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
-	github.com/slok/kubewebhook v0.9.1
+	github.com/slok/kubewebhook v0.11.0
 	github.com/spf13/cast v1.3.1
-	github.com/spf13/cobra v0.0.5
-	github.com/spf13/viper v1.7.0
+	github.com/spf13/cobra v1.0.0
+	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.6.1
 	gocloud.dev v0.19.1-0.20200414210820-bb59d59f26d5
 	golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6
 	google.golang.org/api v0.15.0
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
-	k8s.io/api v0.19.2
-	k8s.io/apimachinery v0.19.2
-	k8s.io/client-go v0.19.2
-	k8s.io/code-generator v0.19.2
+	k8s.io/api v0.19.3
+	k8s.io/apimachinery v0.19.3
+	k8s.io/client-go v0.19.3
+	k8s.io/code-generator v0.19.3
 	k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6
 	k8s.io/utils v0.0.0-20200729134348-d5654de09c73
 	logur.dev/adapter/logrus v0.5.0
