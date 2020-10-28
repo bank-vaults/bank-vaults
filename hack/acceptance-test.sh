@@ -143,8 +143,7 @@ kubectl apply -f deploy/test-configmap.yaml
 test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id}')" = "secretId"
 test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id-formatted}')" = "AWS key in base64: c2VjcmV0SWQ="
 test "$(kubectl get cm sample-configmap -o jsonpath='{.binaryData.aws-access-key-id-binary}')" = "secretId"
-test "$(kubectl get cm sample-configmap -o jsonpath='{.data.inline}')" = "Inline: secretId AWS_ACCESS_KEY_ID"
-test "$(kubectl get cm sample-configmap -o jsonpath='{.data.inline}')" = "Inline: secretId AWS_ACCESS_KEY_ID"
+test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id-inline}')" = "AWS_ACCESS_KEY_ID: secretId AWS_SECRET_ACCESS_KEY: s3cr3t"
 
 kubectl apply -f deploy/test-deployment-seccontext.yaml
 kubectl wait --for=condition=available deployment/hello-secrets-seccontext --timeout=120s
