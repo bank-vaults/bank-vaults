@@ -35,13 +35,13 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/iam/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 const ecrCredentialsKey = "AWS_ECR_CREDENTIALS"
-const gcrAuthScope = "https://www.googleapis.com/auth/cloud-platform"
 
 var logger *log.Logger
 var ecrHostPattern *regexp.Regexp
@@ -463,7 +463,7 @@ func getECRRegistryIDAndRegion(registryAddr string) (string, string) {
 func getGCRCredentials(k *ContainerInfo) error {
 	logger.Infof("trying to request Google Cloud credentials for GCR registry %s", k.RegistryAddress)
 
-	tokenSrc, err := google.DefaultTokenSource(context.TODO(), gcrAuthScope)
+	tokenSrc, err := google.DefaultTokenSource(context.TODO(), iam.CloudPlatformScope)
 	if err != nil {
 		log.Errorf("error fetching Google Cloud credentials: %s", err)
 		return err
