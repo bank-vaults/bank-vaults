@@ -82,6 +82,8 @@ type VaultConfig struct {
 	AgentMemory                 resource.Quantity
 	AgentImage                  string
 	AgentImagePullPolicy        corev1.PullPolicy
+	EnvImage                    string
+	EnvImagePullPolicy          corev1.PullPolicy
 	Skip                        bool
 	VaultEnvFromPath            string
 	TokenAuthMount              string
@@ -89,9 +91,7 @@ type VaultConfig struct {
 
 func init() {
 	viper.SetDefault("vault_image", "vault:latest")
-	viper.SetDefault("vault_image_pull_policy", string(corev1.PullIfNotPresent))
 	viper.SetDefault("vault_env_image", "banzaicloud/vault-env:latest")
-	viper.SetDefault("vault_env_image_pull_policy", string(corev1.PullIfNotPresent))
 	viper.SetDefault("vault_ct_image", "hashicorp/consul-template:0.24.1-alpine")
 	viper.SetDefault("vault_addr", "https://vault:8200")
 	viper.SetDefault("vault_skip_verify", "false")
@@ -341,8 +341,41 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.TokenAuthMount = val
 	}
 
-	vaultConfig.AgentImage = viper.GetString("vault_image")
-	vaultConfig.AgentImagePullPolicy = corev1.PullPolicy(viper.GetString("vault_image_pull_policy"))
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-env-image"]; ok {
+		vaultConfig.EnvImage = val
+	} else {
+		vaultConfig.EnvImage = viper.GetString("vault_env_image")
+	}
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-env-image-pull-policy"]; ok {
+		switch val {
+		case "Never", "never":
+			vaultConfig.EnvImagePullPolicy = corev1.PullNever
+		case "Always", "always":
+			vaultConfig.EnvImagePullPolicy = corev1.PullAlways
+		case "IfNotPresent", "ifnotpresent":
+			vaultConfig.EnvImagePullPolicy = corev1.PullIfNotPresent
+		}
+	} else {
+		vaultConfig.EnvImagePullPolicy = corev1.PullIfNotPresent
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-image"]; ok {
+		vaultConfig.AgentImage = val
+	} else {
+		vaultConfig.AgentImage = viper.GetString("vault_image")
+	}
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-image-pull-policy"]; ok {
+		switch val {
+		case "Never", "never":
+			vaultConfig.AgentImagePullPolicy = corev1.PullNever
+		case "Always", "always":
+			vaultConfig.AgentImagePullPolicy = corev1.PullAlways
+		case "IfNotPresent", "ifnotpresent":
+			vaultConfig.AgentImagePullPolicy = corev1.PullIfNotPresent
+		}
+	} else {
+		vaultConfig.AgentImagePullPolicy = corev1.PullIfNotPresent
+	}
 
 	return vaultConfig
 }

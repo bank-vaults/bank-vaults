@@ -25,8 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeVer "k8s.io/apimachinery/pkg/version"
-
-	"github.com/spf13/viper"
 )
 
 const vaultAgentConfig = `
@@ -622,8 +620,8 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 	if initContainersMutated || containersMutated {
 		containers = append(containers, corev1.Container{
 			Name:            "copy-vault-env",
-			Image:           viper.GetString("vault_env_image"),
-			ImagePullPolicy: corev1.PullPolicy(viper.GetString("vault_env_image_pull_policy")),
+			Image:           vaultConfig.EnvImage,
+			ImagePullPolicy: vaultConfig.EnvImagePullPolicy,
 			Command:         []string{"sh", "-c", "cp /usr/local/bin/vault-env /vault/"},
 			VolumeMounts: []corev1.VolumeMount{
 				{
