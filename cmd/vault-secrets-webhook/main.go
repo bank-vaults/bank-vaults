@@ -82,6 +82,8 @@ type VaultConfig struct {
 	AgentMemory                 resource.Quantity
 	AgentImage                  string
 	AgentImagePullPolicy        corev1.PullPolicy
+	EnvImage                    string
+	EnvImagePullPolicy          corev1.PullPolicy
 	Skip                        bool
 	VaultEnvFromPath            string
 	TokenAuthMount              string
@@ -358,9 +360,9 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.AgentImage = viper.GetString("vault_image")
 	}
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-image-pull-policy"]; ok {
-		vaultConfig.EnvImagePullPolicy = val
+		vaultConfig.AgentImagePullPolicy = val
 	} else {
-		vaultConfig.EnvImagePullPolicy = viper.GetString("vault_image_pull_policy")
+		vaultConfig.AgentImagePullPolicy = viper.GetString("vault_image_pull_policy")
 	}
 
 	return vaultConfig
