@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-secrets
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hello-secrets
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hello-secrets
+      annotations:
+        vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
+        vault.security.banzaicloud.io/vault-tls-secret: vault-tls
+        vault.security.banzaicloud.io/vault-env-from-path: "secret/data/accounts/aws"
+    spec:
+      initContainers:
+      - name: init-ubuntu
+        image: ubuntu
+        command: ["sh", "-c", "echo AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID && echo initContainers ready"]
+      containers:
+      - name: alpine
+        image: alpine
+        command: ["sh", "-c", "echo AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY && echo going to sleep... && sleep 10000"]
