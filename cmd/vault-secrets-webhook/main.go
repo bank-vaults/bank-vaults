@@ -341,8 +341,27 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.TokenAuthMount = val
 	}
 
-	vaultConfig.AgentImage = viper.GetString("vault_image")
-	vaultConfig.AgentImagePullPolicy = corev1.PullPolicy(viper.GetString("vault_image_pull_policy"))
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-env-image"]; ok {
+		vaultConfig.EnvImage = val
+	} else {
+		vaultConfig.EnvImage = viper.GetString("vault_env_image")
+	}
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-env-image-pull-policy"]; ok {
+		vaultConfig.EnvImagePullPolicy = val
+	} else {
+		vaultConfig.EnvImagePullPolicy = viper.GetString("vault_env_image_pull_policy")
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-image"]; ok {
+		vaultConfig.AgentImage = val
+	} else {
+		vaultConfig.AgentImage = viper.GetString("vault_image")
+	}
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-image-pull-policy"]; ok {
+		vaultConfig.EnvImagePullPolicy = val
+	} else {
+		vaultConfig.EnvImagePullPolicy = viper.GetString("vault_image_pull_policy")
+	}
 
 	return vaultConfig
 }
