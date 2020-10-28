@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeVer "k8s.io/apimachinery/pkg/version"
 
-	"github.com/spf13/viper"
 )
 
 const vaultAgentConfig = `
