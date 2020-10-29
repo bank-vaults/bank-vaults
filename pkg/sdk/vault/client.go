@@ -15,6 +15,7 @@
 package vault
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"io/ioutil"
@@ -29,6 +30,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/hashicorp/vault/api"
 	vaultapi "github.com/hashicorp/vault/api"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/iam/v1"
 	"k8s.io/client-go/rest"
 )
 
@@ -130,6 +133,10 @@ const (
 	// AWSEC2AuthMethod is used for the Vault AWS EC2 auth method
 	// as described here: https://www.vaultproject.io/docs/auth/aws#ec2-auth-method
 	AWSEC2AuthMethod ClientAuthMethod = "aws-ec2"
+
+	// GCPGCEAuthMethod is used for the Vault GCP GCE auth method
+	// as described here: https://www.vaultproject.io/docs/auth/gcp#gce-login
+	GCPGCEAuthMethod ClientAuthMethod = "gcp-gce"
 
 	// JWTAuthMethod is used for the Vault JWT/OIDC/GCP/Kubernetes auth methods
 	// as describe here:
@@ -328,20 +335,10 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 				jwtFile = file
 			}
 
-			loginDataFunc := func() (map[string]interface{}, error) {
-				// Projected SA JWTs do expire, so we need to move the reading logic into the loop
-				jwt, err := ioutil.ReadFile(jwtFile)
-				if err != nil {
-					return nil, err
-				}
+			var loginDataFunc func() (map[string]interface{}, error)
 
-				return map[string]interface{}{
-					"jwt":  string(jwt),
-					"role": o.role,
-				}, nil
-			}
-
-			if o.authMethod == AWSEC2AuthMethod {
+			switch o.authMethod {
+			case AWSEC2AuthMethod:
 				loginDataFunc = func() (map[string]interface{}, error) {
 					resp, err := http.Get(awsEC2PKCS7Url)
 					if err != nil {
@@ -373,7 +370,26 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 						"role":  o.role,
 					}, nil
 				}
-			} else {
+
+			case GCPGCEAuthMethod:
+				loginDataFunc = func() (map[string]interface{}, error) {
+					tokenSource, err := google.DefaultTokenSource(context.TODO(), iam.CloudPlatformScope)
+					if err != nil {
+						return nil, err
+					}
+
+					jwt, err := tokenSource.Token()
+					if err != nil {
+						return nil, err
+					}
+
+					return map[string]interface{}{
+						"jwt":  jwt,
+						"role": o.role,
+					}, nil
+				}
+
+			default:
 				loginDataFunc = func() (map[string]interface{}, error) {
 					// Projected SA JWTs do expire, so we need to move the reading logic into the loop
 					jwt, err := ioutil.ReadFile(jwtFile)
