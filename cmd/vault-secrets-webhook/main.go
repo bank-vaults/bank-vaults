@@ -91,8 +91,11 @@ type VaultConfig struct {
 
 func init() {
 	viper.SetDefault("vault_image", "vault:latest")
+	viper.SetDefault("vault_image_pull_policy", string(corev1.PullIfNotPresent))
 	viper.SetDefault("vault_env_image", "banzaicloud/vault-env:latest")
+	viper.SetDefault("vault_env_pull_policy", string(corev1.PullIfNotPresent))
 	viper.SetDefault("vault_ct_image", "hashicorp/consul-template:0.24.1-alpine")
+	viper.SetDefault("vault_ct_pull_policy", string(corev1.PullIfNotPresent))
 	viper.SetDefault("vault_addr", "https://vault:8200")
 	viper.SetDefault("vault_skip_verify", "false")
 	viper.SetDefault("vault_path", "kubernetes")
@@ -225,16 +228,9 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-pull-policy"]; ok {
-		switch val {
-		case "Never", "never":
-			vaultConfig.CtImagePullPolicy = corev1.PullNever
-		case "Always", "always":
-			vaultConfig.CtImagePullPolicy = corev1.PullAlways
-		case "IfNotPresent", "ifnotpresent":
-			vaultConfig.CtImagePullPolicy = corev1.PullIfNotPresent
-		}
+		vaultConfig.CtImagePullPolicy = getPullPolicy(val)
 	} else {
-		vaultConfig.CtImagePullPolicy = corev1.PullIfNotPresent
+		vaultConfig.CtImagePullPolicy = getPullPolicy(viper.GetString("vault_ct_pull_policy"))
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-once"]; ok {
@@ -347,16 +343,9 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.EnvImage = viper.GetString("vault_env_image")
 	}
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-env-image-pull-policy"]; ok {
-		switch val {
-		case "Never", "never":
-			vaultConfig.EnvImagePullPolicy = corev1.PullNever
-		case "Always", "always":
-			vaultConfig.EnvImagePullPolicy = corev1.PullAlways
-		case "IfNotPresent", "ifnotpresent":
-			vaultConfig.EnvImagePullPolicy = corev1.PullIfNotPresent
-		}
+		vaultConfig.EnvImagePullPolicy = getPullPolicy(val)
 	} else {
-		vaultConfig.EnvImagePullPolicy = corev1.PullIfNotPresent
+		vaultConfig.EnvImagePullPolicy = getPullPolicy(viper.GetString("vault_env_pull_policy"))
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-image"]; ok {
@@ -365,19 +354,24 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.AgentImage = viper.GetString("vault_image")
 	}
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-image-pull-policy"]; ok {
-		switch val {
-		case "Never", "never":
-			vaultConfig.AgentImagePullPolicy = corev1.PullNever
-		case "Always", "always":
-			vaultConfig.AgentImagePullPolicy = corev1.PullAlways
-		case "IfNotPresent", "ifnotpresent":
-			vaultConfig.AgentImagePullPolicy = corev1.PullIfNotPresent
-		}
+		vaultConfig.AgentImagePullPolicy = getPullPolicy(val)
 	} else {
-		vaultConfig.AgentImagePullPolicy = corev1.PullIfNotPresent
+		vaultConfig.AgentImagePullPolicy = getPullPolicy(viper.GetString("vault_image_pull_policy"))
 	}
 
 	return vaultConfig
+}
+
+func getPullPolicy(pullPolicyStr string) corev1.PullPolicy {
+	switch pullPolicyStr {
+	case "Never", "never":
+		return corev1.PullNever
+	case "Always", "always":
+		return corev1.PullAlways
+	case "IfNotPresent", "ifnotpresent":
+		return corev1.PullIfNotPresent
+	}
+	return corev1.PullIfNotPresent
 }
 
 type mutatingWebhook struct {
