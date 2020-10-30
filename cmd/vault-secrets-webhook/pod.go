@@ -680,7 +680,7 @@ func getContainers(vaultConfig VaultConfig, containerEnvVars []corev1.EnvVar, co
 
 	var ctCommandString []string
 	if vaultConfig.CtOnce {
-		ctCommandString = []string{"-config", "/vault/ct-config/config.hcl", "-once"}
+		ctCommandString = []string{"-config", "/vault/ct-config/config.hcl", "-exit-after-auth"}
 	} else {
 		ctCommandString = []string{"-config", "/vault/ct-config/config.hcl"}
 	}
