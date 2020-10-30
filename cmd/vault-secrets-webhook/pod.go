@@ -680,7 +680,7 @@ func getContainers(vaultConfig VaultConfig, containerEnvVars []corev1.EnvVar, co
 
 	var ctCommandString []string
 	if vaultConfig.CtOnce {
-		ctCommandString = []string{"-config", "/vault/ct-config/config.hcl", "-exit-after-auth"}
+		ctCommandString = []string{"-config", "/vault/ct-config/config.hcl", "-once"}
 	} else {
 		ctCommandString = []string{"-config", "/vault/ct-config/config.hcl"}
 	}
@@ -742,7 +742,7 @@ func getAgentContainers(originalContainers []corev1.Container, vaultConfig Vault
 
 	var agentCommandString []string
 	if vaultConfig.AgentOnce {
-		agentCommandString = []string{"agent", "-config", "/vault/config/config.hcl", "-once"}
+		agentCommandString = []string{"agent", "-config", "/vault/config/config.hcl", "-exit-after-auth"}
 	} else {
 		agentCommandString = []string{"agent", "-config", "/vault/config/config.hcl"}
 	}
