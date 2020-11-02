@@ -450,7 +450,7 @@ func (v *vault) RaftConfiguration() (*RaftConfiguration, error) {
 	defer v.cl.SetToken("")
 	defer func() { rootToken = nil }()
 
-	req := v.cl.NewRequest("GET", "/sys/storage/raft/configuration")
+	req := v.cl.NewRequest("GET", "/v1/sys/storage/raft/configuration")
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
