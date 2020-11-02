@@ -394,12 +394,17 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 			return nil
 		}
 	} else { // raft ha_storage mode
-		rc, err := v.RaftConfiguration()
-		if err != nil {
-			return err
-		}
+		// rc, err := v.RaftConfiguration()
+		// if err != nil {
+		// 	return err
+		// }
 
-		fmt.Printf("RaftConfiguration: %+v\n", rc)
+		// if rc != nil {
+		// 	logrus.Info("vault have already joined raft")
+		// 	return nil
+		// }
+
+		// fmt.Printf("RaftConfiguration: %+v\n", rc)
 	}
 
 	request := api.RaftJoinRequest{
