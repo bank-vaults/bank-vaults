@@ -133,3 +133,5 @@ podDisruptionBudget:
   minAvailable: 1
 
 timeoutSeconds: false
+
+hostNetwork: false
