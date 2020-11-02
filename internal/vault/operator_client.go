@@ -85,7 +85,6 @@ var _ Vault = &vault{}
 // a Vault server.
 type Vault interface {
 	Init() error
-	RaftConfiguration() (*RaftConfiguration, error)
 	RaftInitialized() (bool, error)
 	RaftJoin(string) error
 	Sealed() (bool, error)
@@ -393,18 +392,9 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 			logrus.Info("vault is already initialized, skipping raft join")
 			return nil
 		}
-	} else { // raft ha_storage mode
-		// rc, err := v.RaftConfiguration()
-		// if err != nil {
-		// 	return err
-		// }
-
-		// if rc != nil {
-		// 	logrus.Info("vault have already joined raft")
-		// 	return nil
-		// }
-
-		// fmt.Printf("RaftConfiguration: %+v\n", rc)
+	} else if strings.HasSuffix(os.Getenv("POD_NAME"), "-0") {
+		// raft ha_storage mode
+		return nil
 	}
 
 	request := api.RaftJoinRequest{
@@ -436,38 +426,6 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 	}
 
 	return errors.New("vault hasn't joined raft cluster") // nolint:goerr113
-}
-
-type RaftConfiguration map[string]interface{}
-
-func (v *vault) RaftConfiguration() (*RaftConfiguration, error) {
-	logrus.Debugf("retrieving key from kms service...")
-
-	rootToken, err := v.keyStore.Get(v.rootTokenKey())
-	if err != nil {
-		return nil, errors.Wrapf(err, "unable to get key '%s'", v.rootTokenKey())
-	}
-
-	v.cl.SetToken(string(rootToken))
-
-	// Clear the token and GC it
-	defer runtime.GC()
-	defer v.cl.SetToken("")
-	defer func() { rootToken = nil }()
-
-	req := v.cl.NewRequest("GET", "/v1/sys/storage/raft/configuration")
-
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := v.cl.RawRequestWithContext(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	result := RaftConfiguration{}
-	err = resp.DecodeJSON(&result)
-	return &result, err
 }
 
 func (v *vault) Configure(config *viper.Viper) error {

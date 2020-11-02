@@ -175,8 +175,7 @@ func unseal(unsealConfig unsealCfg, v internalVault.Vault) {
 
 	if unsealConfig.raftHAStorage {
 		if err = v.RaftJoin(""); err != nil {
-			logrus.Errorf("error joining leader vault: %s", err.Error())
-			exitIfNecessary(unsealConfig, 1)
+			logrus.Fatalf("error joining leader vault: %s", err.Error())
 			return
 		}
 
