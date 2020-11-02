@@ -132,6 +132,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | securityContext                  | Container security context for webhook deployment                            | `{ runAsUser: 65534, allowPrivaledgeEscalation: false }` |
 | podSecurityContext               | Pod security context for webhook deployment                                  | `{}`                                |
 | timeoutSeconds                   | Webhook timeoutSeconds value                                                 | ``                                  |
+| hostNetwork                      | allow pod to use the node network namespace                                  | `false`                             |
 
 ### Certificate options
 
