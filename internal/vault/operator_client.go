@@ -382,7 +382,8 @@ func (v *vault) RaftInitialized() (bool, error) {
 
 // RaftJoin joins Vault raft cluster if is not initialized already
 func (v *vault) RaftJoin(leaderAPIAddr string) error {
-	if leaderAPIAddr != "" { // raft storage mode
+	// raft storage mode
+	if leaderAPIAddr != "" {
 		initialized, err := v.cl.Sys().InitStatus()
 		if err != nil {
 			return errors.Wrap(err, "error testing if vault is initialized")
@@ -394,6 +395,7 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 		}
 	} else if strings.HasSuffix(os.Getenv("POD_NAME"), "-0") {
 		// raft ha_storage mode
+		// TODO this currently doesn't allow multi-DC setups with Raft HA storage only mode
 		return nil
 	}
 
