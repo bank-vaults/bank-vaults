@@ -451,6 +451,9 @@ func (spec *VaultSpec) GetStorageType() string {
 // GetHAStorageType returns the type of Vault's ha_storage stanza
 func (spec *VaultSpec) GetHAStorageType() string {
 	haStorage := spec.getHAStorage()
+	if len(haStorage) == 0 {
+		return ""
+	}
 	return reflect.ValueOf(haStorage).MapKeys()[0].String()
 }
 
@@ -703,6 +706,11 @@ func (spec *VaultSpec) IsAutoUnseal() bool {
 // IsRaftStorage checks if raft storage is configured
 func (spec *VaultSpec) IsRaftStorage() bool {
 	return spec.GetStorageType() == "raft"
+}
+
+// IsRaftHAStorage checks if raft ha_storage is configured
+func (spec *VaultSpec) IsRaftHAStorage() bool {
+	return spec.GetStorageType() != "raft" && spec.GetHAStorageType() == "raft"
 }
 
 // IsRaftBootstrapFollower checks if this cluster should be considered the bootstrap follower.

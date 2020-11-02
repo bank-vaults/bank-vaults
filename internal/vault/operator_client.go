@@ -92,7 +92,6 @@ type Vault interface {
 	Unseal() error
 	Leader() (bool, error)
 	Configure(config *viper.Viper) error
-	StepDownActive(string) error
 }
 
 //
@@ -383,13 +382,20 @@ func (v *vault) RaftInitialized() (bool, error) {
 
 // RaftJoin joins Vault raft cluster if is not initialized already
 func (v *vault) RaftJoin(leaderAPIAddr string) error {
-	initialized, err := v.cl.Sys().InitStatus()
-	if err != nil {
-		return errors.Wrap(err, "error testing if vault is initialized")
-	}
+	// raft storage mode
+	if leaderAPIAddr != "" {
+		initialized, err := v.cl.Sys().InitStatus()
+		if err != nil {
+			return errors.Wrap(err, "error testing if vault is initialized")
+		}
 
-	if initialized {
-		logrus.Info("vault is already initialized, skipping raft join")
+		if initialized {
+			logrus.Info("vault is already initialized, skipping raft join")
+			return nil
+		}
+	} else if strings.HasSuffix(os.Getenv("POD_NAME"), "-0") {
+		// raft ha_storage mode
+		// TODO this currently doesn't allow multi-DC setups with Raft HA storage only mode
 		return nil
 	}
 
@@ -413,7 +419,7 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 
 	response, err := v.cl.Sys().RaftJoin(&request)
 	if err != nil {
-		return errors.Wrap(err, "error joining if raft cluster")
+		return errors.Wrap(err, "error joining raft cluster")
 	}
 
 	if response.Joined {
@@ -422,32 +428,6 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 	}
 
 	return errors.New("vault hasn't joined raft cluster") // nolint:goerr113
-}
-
-func (v *vault) StepDownActive(address string) error {
-	logrus.Debugf("retrieving key from kms service...")
-
-	rootToken, err := v.keyStore.Get(v.rootTokenKey())
-	if err != nil {
-		return errors.Wrapf(err, "unable to get key '%s'", v.rootTokenKey())
-	}
-	// Clear the token and GC it
-	defer runtime.GC()
-	defer v.cl.SetToken("")
-	defer func() { rootToken = nil }()
-
-	tmpClient, err := api.NewClient(nil)
-	if err != nil {
-		return errors.Wrap(err, "unable to create temporary client")
-	}
-
-	tmpClient.SetToken(string(rootToken))
-	err = tmpClient.SetAddress(address)
-	if err != nil {
-		return errors.Wrap(err, "unable to set address of client")
-	}
-
-	return tmpClient.Sys().StepDown()
 }
 
 func (v *vault) Configure(config *viper.Viper) error {
