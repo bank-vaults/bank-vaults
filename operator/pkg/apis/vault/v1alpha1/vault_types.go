@@ -705,6 +705,11 @@ func (spec *VaultSpec) IsRaftStorage() bool {
 	return spec.GetStorageType() == "raft"
 }
 
+// IsRaftHAStorage checks if raft ha_storage is configured
+func (spec *VaultSpec) IsRaftHAStorage() bool {
+	return spec.GetStorageType() != "raft" && spec.GetHAStorageType() == "raft"
+}
+
 // IsRaftBootstrapFollower checks if this cluster should be considered the bootstrap follower.
 func (spec *VaultSpec) IsRaftBootstrapFollower() bool {
 	return spec.RaftLeaderAddress != "" && spec.RaftLeaderAddress != "self"

@@ -85,6 +85,7 @@ var _ Vault = &vault{}
 // a Vault server.
 type Vault interface {
 	Init() error
+	RaftConfiguration() (*RaftConfiguration, error)
 	RaftInitialized() (bool, error)
 	RaftJoin(string) error
 	Sealed() (bool, error)
@@ -92,7 +93,6 @@ type Vault interface {
 	Unseal() error
 	Leader() (bool, error)
 	Configure(config *viper.Viper) error
-	StepDownActive(string) error
 }
 
 //
@@ -383,14 +383,23 @@ func (v *vault) RaftInitialized() (bool, error) {
 
 // RaftJoin joins Vault raft cluster if is not initialized already
 func (v *vault) RaftJoin(leaderAPIAddr string) error {
-	initialized, err := v.cl.Sys().InitStatus()
-	if err != nil {
-		return errors.Wrap(err, "error testing if vault is initialized")
-	}
+	if leaderAPIAddr != "" { // raft storage mode
+		initialized, err := v.cl.Sys().InitStatus()
+		if err != nil {
+			return errors.Wrap(err, "error testing if vault is initialized")
+		}
 
-	if initialized {
-		logrus.Info("vault is already initialized, skipping raft join")
-		return nil
+		if initialized {
+			logrus.Info("vault is already initialized, skipping raft join")
+			return nil
+		}
+	} else { // raft ha_storage mode
+		rc, err := v.RaftConfiguration()
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("RaftConfiguration: %+v\n", rc)
 	}
 
 	request := api.RaftJoinRequest{
@@ -413,7 +422,7 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 
 	response, err := v.cl.Sys().RaftJoin(&request)
 	if err != nil {
-		return errors.Wrap(err, "error joining if raft cluster")
+		return errors.Wrap(err, "error joining raft cluster")
 	}
 
 	if response.Joined {
@@ -424,30 +433,36 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 	return errors.New("vault hasn't joined raft cluster") // nolint:goerr113
 }
 
-func (v *vault) StepDownActive(address string) error {
+type RaftConfiguration map[string]interface{}
+
+func (v *vault) RaftConfiguration() (*RaftConfiguration, error) {
 	logrus.Debugf("retrieving key from kms service...")
 
 	rootToken, err := v.keyStore.Get(v.rootTokenKey())
 	if err != nil {
-		return errors.Wrapf(err, "unable to get key '%s'", v.rootTokenKey())
+		return nil, errors.Wrapf(err, "unable to get key '%s'", v.rootTokenKey())
 	}
+
+	v.cl.SetToken(string(rootToken))
+
 	// Clear the token and GC it
 	defer runtime.GC()
 	defer v.cl.SetToken("")
 	defer func() { rootToken = nil }()
 
-	tmpClient, err := api.NewClient(nil)
-	if err != nil {
-		return errors.Wrap(err, "unable to create temporary client")
-	}
+	req := v.cl.NewRequest("GET", "/sys/storage/raft/configuration")
 
-	tmpClient.SetToken(string(rootToken))
-	err = tmpClient.SetAddress(address)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := v.cl.RawRequestWithContext(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "unable to set address of client")
+		return nil, err
 	}
+	defer resp.Body.Close()
 
-	return tmpClient.Sys().StepDown()
+	result := RaftConfiguration{}
+	err = resp.DecodeJSON(&result)
+	return &result, err
 }
 
 func (v *vault) Configure(config *viper.Viper) error {

@@ -1243,6 +1243,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		if v.Spec.IsRaftBootstrapFollower() {
 			unsealCommand = append(unsealCommand, "--raft-secondary")
 		}
+	} else if v.Spec.IsRaftHAStorage() {
+		unsealCommand = append(unsealCommand, "--raft-ha-storage")
 	}
 
 	configJSON := v.Spec.ConfigJSON()
@@ -1372,7 +1374,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	}
 
 	podManagementPolicy := appsv1.ParallelPodManagement
-	if v.Spec.IsRaftStorage() {
+	if v.Spec.IsRaftStorage() || v.Spec.IsRaftHAStorage() {
 		podManagementPolicy = appsv1.OrderedReadyPodManagement
 	}
 
