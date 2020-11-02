@@ -5,7 +5,7 @@ metadata:
 spec:
   size: 3
   image: vault:1.5.4
-  bankVaultsImage: banzaicloud/bank-vaults:raft-ha-storage
+  bankVaultsImage: ghcr.io/banzaicloud/bank-vaults:latest
 
   # Schedule the pods on the same node, since we are using hostPath storage
   nodeAffinity:
