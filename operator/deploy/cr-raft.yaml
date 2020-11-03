@@ -137,6 +137,8 @@ spec:
   
   statsdDisabled: true
 
+  serviceRegistrationEnabled: true
+
   resources:
     # A YAML representation of resource ResourceRequirements for vault container
     # Detail can reference: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container

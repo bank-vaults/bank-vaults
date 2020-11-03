@@ -686,9 +686,15 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
 
 func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 	ls := v.LabelsForVault()
-	selectorLs := v.LabelsForVault()
-	// Label to differentiate per-instance service and global service via label selection
+	// label to differentiate per-instance service and global service via label selection
 	ls["global_service"] = "true"
+
+	selectorLs := v.LabelsForVault()
+	// add the service_registration label
+	if v.Spec.ServiceRegistrationEnabled {
+		selectorLs["vault-active"] = "true"
+	}
+
 	servicePorts, _ := getServicePorts(v)
 
 	annotations := withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{}))
@@ -1247,7 +1253,10 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		unsealCommand = append(unsealCommand, "--raft-ha-storage")
 	}
 
-	configJSON := v.Spec.ConfigJSON()
+	configJSON, err := v.ConfigJSON()
+	if err != nil {
+		return nil, err
+	}
 
 	_, containerPorts := getServicePorts(v)
 
@@ -1258,7 +1267,16 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			Name:            "vault",
 			Args:            []string{"server"},
 			Ports:           containerPorts,
-			Env:             withClusterAddr(v, service, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{}))),
+			Env: withClusterAddr(v, service, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
+				{
+					Name: "VAULT_K8S_POD_NAME",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "metadata.name",
+						},
+					},
+				},
+			}))),
 			SecurityContext: withContainerSecurityContext(v),
 			// This probe makes sure Vault is responsive in a HTTPS manner
 			// See: https://www.vaultproject.io/api/system/init.html
@@ -1369,7 +1387,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 
 	// merge provided VaultPodSpec into the PodSpec defined above
 	// the values in VaultPodSpec will never overwrite fields defined in the PodSpec above
-	if err := mergo.MergeWithOverwrite(&podSpec, v.Spec.VaultPodSpec); err != nil {
+	if err := mergo.Merge(&podSpec, v.Spec.VaultPodSpec, mergo.WithOverride); err != nil {
 		return nil, err
 	}
 
@@ -1794,7 +1812,7 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, containers []corev1.Container
 				},
 				{
 					Name:      "fluentd-config",
-					MountPath: v.Spec.GetFleuntDConfLocation(),
+					MountPath: v.Spec.GetFluentDConfMountPath(),
 				},
 			}),
 		})
