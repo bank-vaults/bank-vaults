@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/imdario/mergo"
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
@@ -668,7 +669,7 @@ func (spec *VaultSpec) GetFluentDImage() string {
 }
 
 // GetFluentDConfMountPath returns the mount path for the fluent.conf
-func (spec *VaultSpec) GetFleuntDConfLocation() string {
+func (spec *VaultSpec) GetFluentDConfMountPath() string {
 	if spec.FleuntDConfLocation == "" {
 		return "/fluentd/etc"
 	}
@@ -686,9 +687,29 @@ func (spec *VaultSpec) IsStatsDDisabled() bool {
 }
 
 // ConfigJSON returns the Config field as a JSON string
-func (spec *VaultSpec) ConfigJSON() string {
-	config, _ := json.Marshal(spec.Config)
-	return string(config)
+func (v *Vault) ConfigJSON() (string, error) {
+	config := map[string]interface{}(v.Spec.Config)
+
+	if v.Spec.HasHAStorage() {
+		serviceRegistration := map[string]interface{}{
+			"service_registration": map[string]interface{}{
+				"kubernetes": map[string]string{
+					"namespace": v.Namespace,
+				},
+			},
+		}
+
+		if err := mergo.Merge(&config, serviceRegistration); err != nil {
+			return "", err
+		}
+	}
+
+	configJSON, err := json.Marshal(config)
+	if err != nil {
+		return "", err
+	}
+
+	return string(configJSON), nil
 }
 
 // ExternalConfigJSON returns the ExternalConfig field as a JSON string
