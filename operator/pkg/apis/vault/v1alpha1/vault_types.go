@@ -273,6 +273,11 @@ type VaultSpec struct {
 	// default: ClusterIP
 	ServiceType string `json:"serviceType"`
 
+	// serviceRegistrationEnabled enables the injection of the service_registration Vault stanza.
+	// This requires elaborated RBAC privileges for updating Pod labels for the Vault Pod.
+	// default: false
+	ServiceRegistrationEnabled bool `json:"serviceRegistrationEnabled"`
+
 	// RaftLeaderAddress defines the leader address of the raft cluster in multi-cluster deployments.
 	// (In single cluster (namespace) deployments it is automatically detected).
 	// "self" is a special value which means that this instance should be the bootstrap leader instance.
@@ -690,7 +695,7 @@ func (spec *VaultSpec) IsStatsDDisabled() bool {
 func (v *Vault) ConfigJSON() (string, error) {
 	config := map[string]interface{}(v.Spec.Config)
 
-	if v.Spec.HasHAStorage() {
+	if v.Spec.ServiceRegistrationEnabled && v.Spec.HasHAStorage() {
 		serviceRegistration := map[string]interface{}{
 			"service_registration": map[string]interface{}{
 				"kubernetes": map[string]string{

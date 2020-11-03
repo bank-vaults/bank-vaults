@@ -685,13 +685,15 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
 }
 
 func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
-	// label to differentiate per-instance service and global service via label selection
 	ls := v.LabelsForVault()
+	// label to differentiate per-instance service and global service via label selection
 	ls["global_service"] = "true"
 
-	// add the service_registration label
 	selectorLs := v.LabelsForVault()
-	selectorLs["vault-active"] = "true"
+	// add the service_registration label
+	if v.Spec.ServiceRegistrationEnabled {
+		selectorLs["vault-active"] = "true"
+	}
 
 	servicePorts, _ := getServicePorts(v)
 
