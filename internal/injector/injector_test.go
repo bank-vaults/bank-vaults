@@ -97,6 +97,7 @@ func TestSecretInjector(t *testing.T) {
 		assert.Equal(t, map[string]string{
 			"ACCOUNT_PASSWORD": "secret",
 			"TRANSIT_SECRET":   "secret",
+			"INLINE_SECRET":    "scheme://secret:secret@127.0.0.1:8080",
 		}, results)
 	})
 
