@@ -77,6 +77,7 @@ func TestSecretInjector(t *testing.T) {
 			"TRANSIT_SECRET":   `>>vault:transit/decrypt/mykey#${.plaintext | b64dec}#{"ciphertext":"` + ciphertext + `"}`,
 			"ROOT_CERT":        ">>vault:pki/root/generate/internal#certificate",
 			"ROOT_CERT_CACHED": ">>vault:pki/root/generate/internal#certificate",
+			"INLINE_SECRET":    "scheme://${vault:secret/data/account#password}:${vault:secret/data/account#password}@127.0.0.1:8080",
 		}
 
 		results := map[string]string{}
