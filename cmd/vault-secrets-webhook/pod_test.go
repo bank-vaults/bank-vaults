@@ -360,7 +360,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 						Env: []corev1.EnvVar{
 							{
 								Name:  "myvar",
-								Value: "scheme://${vault:secret/data/account#password}:${vault:secret/data/account#password}@127.0.0.1:8080",
+								Value: "scheme://${vault:secret/data/account#username}:${vault:secret/data/account#password}@127.0.0.1:8080",
 							},
 						},
 					},
@@ -375,7 +375,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 					Args:         []string{"/bin/bash"},
 					VolumeMounts: []corev1.VolumeMount{{Name: "vault-env", MountPath: "/vault/"}},
 					Env: []corev1.EnvVar{
-						{Name: "myvar", Value: "scheme://${vault:secret/data/account#password}:${vault:secret/data/account#password}@127.0.0.1:8080"},
+						{Name: "myvar", Value: "scheme://${vault:secret/data/account#username}:${vault:secret/data/account#password}@127.0.0.1:8080"},
 						{Name: "VAULT_ADDR", Value: "addr"},
 						{Name: "VAULT_SKIP_VERIFY", Value: "false"},
 						{Name: "VAULT_AUTH_METHOD", Value: "jwt"},
