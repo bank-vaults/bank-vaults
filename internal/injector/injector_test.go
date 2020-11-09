@@ -52,7 +52,7 @@ func TestSecretInjector(t *testing.T) {
 
 	ciphertext := secret.Data["ciphertext"].(string)
 
-	_, err = client.RawClient().Logical().Write("secret/data/account", vault.NewData(0, map[string]interface{}{"password": "secret"}))
+	_, err = client.RawClient().Logical().Write("secret/data/account", vault.NewData(0, map[string]interface{}{"username": "superusername", "password": "secret"}))
 	assert.NoError(t, err)
 
 	err = client.RawClient().Sys().Mount("pki", &vaultapi.MountInput{Type: "pki"})
@@ -77,6 +77,7 @@ func TestSecretInjector(t *testing.T) {
 			"TRANSIT_SECRET":   `>>vault:transit/decrypt/mykey#${.plaintext | b64dec}#{"ciphertext":"` + ciphertext + `"}`,
 			"ROOT_CERT":        ">>vault:pki/root/generate/internal#certificate",
 			"ROOT_CERT_CACHED": ">>vault:pki/root/generate/internal#certificate",
+			"INLINE_SECRET":    "scheme://${vault:secret/data/account#username}:${vault:secret/data/account#password}@127.0.0.1:8080",
 		}
 
 		results := map[string]string{}
@@ -96,6 +97,7 @@ func TestSecretInjector(t *testing.T) {
 		assert.Equal(t, map[string]string{
 			"ACCOUNT_PASSWORD": "secret",
 			"TRANSIT_SECRET":   "secret",
+			"INLINE_SECRET":    "scheme://superusername:secret@127.0.0.1:8080",
 		}, results)
 	})
 

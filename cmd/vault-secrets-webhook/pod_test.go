@@ -343,6 +343,54 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			mutated: true,
 			wantErr: false,
 		},
+		{name: "Will mutate container with command, no args, with inline mutation",
+			fields: fields{
+				k8sClient: fake.NewSimpleClientset(),
+				registry: &MockRegistry{
+					Image: imagev1.ImageConfig{},
+				},
+			},
+			args: args{
+				containers: []corev1.Container{
+					{
+						Name:    "MyContainer",
+						Image:   "myimage",
+						Command: []string{"/bin/bash"},
+						Args:    nil,
+						Env: []corev1.EnvVar{
+							{
+								Name:  "myvar",
+								Value: "scheme://${vault:secret/data/account#username}:${vault:secret/data/account#password}@127.0.0.1:8080",
+							},
+						},
+					},
+				},
+				vaultConfig: vaultConfig,
+			},
+			wantedContainers: []corev1.Container{
+				{
+					Name:         "MyContainer",
+					Image:        "myimage",
+					Command:      []string{"/vault/vault-env"},
+					Args:         []string{"/bin/bash"},
+					VolumeMounts: []corev1.VolumeMount{{Name: "vault-env", MountPath: "/vault/"}},
+					Env: []corev1.EnvVar{
+						{Name: "myvar", Value: "scheme://${vault:secret/data/account#username}:${vault:secret/data/account#password}@127.0.0.1:8080"},
+						{Name: "VAULT_ADDR", Value: "addr"},
+						{Name: "VAULT_SKIP_VERIFY", Value: "false"},
+						{Name: "VAULT_AUTH_METHOD", Value: "jwt"},
+						{Name: "VAULT_PATH", Value: "path"},
+						{Name: "VAULT_ROLE", Value: "role"},
+						{Name: "VAULT_IGNORE_MISSING_SECRETS", Value: "ignoreMissingSecrets"},
+						{Name: "VAULT_ENV_PASSTHROUGH", Value: "vaultEnvPassThrough"},
+						{Name: "VAULT_JSON_LOG", Value: "enableJSONLog"},
+						{Name: "VAULT_CLIENT_TIMEOUT", Value: "10s"},
+					},
+				},
+			},
+			mutated: true,
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
