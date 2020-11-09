@@ -284,6 +284,14 @@ type VaultSpec struct {
 	// default: ""
 	RaftLeaderAddress string `json:"raftLeaderAddress"`
 
+	// MultiDCRaftFollowerExternalAddress defines an explicit address on which a follower is reachable.
+	// This only applies in multidc configurations. The default operation is to fetch the raft cluster address from
+	// the service's ingress allocated address. This option provides the ability to provide a specific external address
+	// for the raft cluster to communicate with, in case of values returned by kubernetes internally, are not re-usable
+	// between external cluster members.
+	// default: ""
+	MultiDCRaftFollowerExternalAddress string `json:"multiDCRaftFollowerExternalAddress"`
+
 	// ServicePorts is an extra map of ports that should be exposed by the Vault Service.
 	// default:
 	ServicePorts map[string]int32 `json:"servicePorts"`

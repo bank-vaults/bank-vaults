@@ -1640,10 +1640,20 @@ func withCredentialsEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.E
 func withClusterAddr(v *vaultv1alpha1.Vault, service *corev1.Service, envs []corev1.EnvVar) []corev1.EnvVar {
 	value := ""
 
-	ingressPoints := loadBalancerIngressPoints(service)
+	// Use specific external address to form raft cluster
+    if v.Spec.MultiDCRaftFollowerExternalAddress != "" {
 
-	if len(ingressPoints) > 0 {
-		value = ingressPoints[len(ingressPoints)-1]
+        value = v.Spec.MultiDCRaftFollowerExternalAddress
+
+   // Use address provided by the service's ingress IP or Hostname
+    } else {
+
+	    ingressPoints := loadBalancerIngressPoints(service)
+
+	    if len(ingressPoints) > 0 {
+	     	value = ingressPoints[len(ingressPoints)-1]
+     	}
+
 	}
 
 	// Only applies to multi-cluster setups:
