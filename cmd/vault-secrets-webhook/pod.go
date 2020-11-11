@@ -210,6 +210,9 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 			if hasVaultPrefix(env.Value) {
 				envVars = append(envVars, env)
 			}
+			if hasInlineVaultDelimiters(env.Value) {
+				envVars = append(envVars, env)
+			}
 			if env.ValueFrom != nil {
 				valueFrom, err := mw.lookForValueFrom(env, ns)
 				if err != nil {

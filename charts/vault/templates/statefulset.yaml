@@ -120,9 +120,11 @@ spec:
             port: vault
         securityContext:
           readOnlyRootFilesystem: true
+          {{ if not .Values.vault.config.disable_mlock }}
           capabilities:
             add:
             - IPC_LOCK
+          {{ end }}
         volumeMounts:
         - name: vault-config
           mountPath: /vault/config/

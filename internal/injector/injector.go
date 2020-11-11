@@ -16,6 +16,7 @@ package injector
 
 import (
 	"encoding/json"
+	"regexp"
 	"strings"
 
 	"emperror.dev/errors"
@@ -52,6 +53,10 @@ func NewSecretInjector(config Config, client *vault.Client, renewer SecretRenewe
 	return SecretInjector{config: config, client: client, renewer: renewer, logger: logger}
 }
 
+var (
+	InlineMutationRegex = regexp.MustCompile(`\${([>]{0,2}vault:.*?)}`)
+)
+
 func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inject SecretInjectorFunc) error {
 	transitCache := map[string][]byte{}
 	secretCache := map[string]map[string]interface{}{}
@@ -59,6 +64,20 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 	templater := configuration.NewTemplater(configuration.DefaultLeftDelimiter, configuration.DefaultRightDelimiter)
 
 	for name, value := range references {
+		if hasInlineVaultDelimiters(value) {
+			for _, vaultSecretReference := range findInlineVaultDelimiters(value) {
+				mapData, err := getDataFromVault(map[string]string{name: vaultSecretReference[1]}, i)
+				if err != nil {
+					return err
+				}
+				for _, v := range mapData {
+					value = strings.Replace(value, vaultSecretReference[0], v, -1)
+				}
+			}
+			inject(name, value)
+			continue
+		}
+
 		var update bool
 		if strings.HasPrefix(value, ">>vault:") {
 			value = strings.TrimPrefix(value, ">>")
@@ -271,4 +290,22 @@ func (i SecretInjector) readVaultPath(path, versionOrData string, update bool) (
 	}
 
 	return secretData, nil
+}
+
+func hasInlineVaultDelimiters(value string) bool {
+	return len(findInlineVaultDelimiters(value)) > 0
+}
+
+func findInlineVaultDelimiters(value string) [][]string {
+	return InlineMutationRegex.FindAllStringSubmatch(value, -1)
+}
+
+func getDataFromVault(data map[string]string, secretInjector SecretInjector) (map[string]string, error) {
+	vaultData := make(map[string]string, len(data))
+
+	inject := func(key, value string) {
+		vaultData[key] = value
+	}
+
+	return vaultData, secretInjector.InjectSecretsFromVault(data, inject)
 }

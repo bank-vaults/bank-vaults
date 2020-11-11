@@ -158,9 +158,7 @@ func main() {
 	// or requests one for itself (Kubernetes Auth, or GCP, etc...),
 	// so if we got a VAULT_TOKEN for the special value with "vault:login"
 	originalVaultTokenEnvVar := os.Getenv("VAULT_TOKEN")
-	if originalVaultTokenEnvVar == vaultLogin {
-		os.Unsetenv("VAULT_TOKEN")
-	} else if tokenFile := os.Getenv("VAULT_TOKEN_FILE"); tokenFile != "" {
+	if tokenFile := os.Getenv("VAULT_TOKEN_FILE"); tokenFile != "" {
 		// load token from vault-agent .vault-token or injected webhook
 		if b, err := ioutil.ReadFile(tokenFile); err == nil {
 			originalVaultTokenEnvVar = string(b)
@@ -169,6 +167,9 @@ func main() {
 		}
 		clientOptions = append(clientOptions, vault.ClientToken(originalVaultTokenEnvVar))
 	} else {
+		if originalVaultTokenEnvVar == vaultLogin {
+			os.Unsetenv("VAULT_TOKEN")
+		}
 		// use role/path based authentication
 		clientOptions = append(clientOptions,
 			vault.ClientRole(os.Getenv("VAULT_ROLE")),

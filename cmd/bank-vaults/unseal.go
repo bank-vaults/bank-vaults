@@ -32,6 +32,7 @@ const cfgAuto = "auto"
 const cfgRaft = "raft"
 const cfgRaftLeaderAddress = "raft-leader-address"
 const cfgRaftSecondary = "raft-secondary"
+const cfgRaftHAStorage = "raft-ha-storage"
 
 type unsealCfg struct {
 	unsealPeriod      time.Duration
@@ -41,6 +42,7 @@ type unsealCfg struct {
 	raft              bool
 	raftLeaderAddress string
 	raftSecondary     bool
+	raftHAStorage     bool
 }
 
 var unsealCmd = &cobra.Command{
@@ -59,6 +61,7 @@ from one of the followings:
 		appConfig.BindPFlag(cfgRaft, cmd.PersistentFlags().Lookup(cfgRaft))                           // nolint
 		appConfig.BindPFlag(cfgRaftLeaderAddress, cmd.PersistentFlags().Lookup(cfgRaftLeaderAddress)) // nolint
 		appConfig.BindPFlag(cfgRaftSecondary, cmd.PersistentFlags().Lookup(cfgRaftSecondary))         // nolint
+		appConfig.BindPFlag(cfgRaftHAStorage, cmd.PersistentFlags().Lookup(cfgRaftHAStorage))         // nolint
 		appConfig.BindPFlag(cfgOnce, cmd.PersistentFlags().Lookup(cfgOnce))                           // nolint
 		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))         // nolint
 		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))       // nolint
@@ -74,6 +77,7 @@ from one of the followings:
 		unsealConfig.raft = appConfig.GetBool(cfgRaft)
 		unsealConfig.raftLeaderAddress = appConfig.GetString(cfgRaftLeaderAddress)
 		unsealConfig.raftSecondary = appConfig.GetBool(cfgRaftSecondary)
+		unsealConfig.raftHAStorage = appConfig.GetBool(cfgRaftHAStorage)
 
 		store, err := kvStoreForConfig(appConfig)
 		if err != nil {
@@ -169,6 +173,15 @@ func unseal(unsealConfig unsealCfg, v internalVault.Vault) {
 		return
 	}
 
+	if unsealConfig.raftHAStorage {
+		if err = v.RaftJoin(""); err != nil {
+			logrus.Fatalf("error joining leader vault: %s", err.Error())
+			return
+		}
+
+		logrus.Info("successfully joined raft")
+	}
+
 	logrus.Info("successfully unsealed vault")
 
 	exitIfNecessary(unsealConfig, 0)
@@ -187,6 +200,7 @@ func init() {
 	unsealCmd.PersistentFlags().Bool(cfgRaft, false, "Join leader vault instance in raft mode")
 	unsealCmd.PersistentFlags().String(cfgRaftLeaderAddress, "", "Address of leader vault instance in raft mode")
 	unsealCmd.PersistentFlags().Bool(cfgRaftSecondary, false, "This instance should always join a raft leader")
+	unsealCmd.PersistentFlags().Bool(cfgRaftHAStorage, false, "Join leader vault instance in raft HA storage mode")
 	unsealCmd.PersistentFlags().String(cfgInitRootToken, "", "Root token for the new vault cluster (only if -init=true)")
 	unsealCmd.PersistentFlags().Bool(cfgStoreRootToken, true, "Should the root token be stored in the key store (only if -init=true)")
 	unsealCmd.PersistentFlags().Bool(cfgPreFlightChecks, true, "should the key store be tested first to validate access rights")

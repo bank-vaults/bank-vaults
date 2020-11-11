@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/imdario/mergo"
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
@@ -272,6 +273,11 @@ type VaultSpec struct {
 	// default: ClusterIP
 	ServiceType string `json:"serviceType"`
 
+	// serviceRegistrationEnabled enables the injection of the service_registration Vault stanza.
+	// This requires elaborated RBAC privileges for updating Pod labels for the Vault Pod.
+	// default: false
+	ServiceRegistrationEnabled bool `json:"serviceRegistrationEnabled"`
+
 	// RaftLeaderAddress defines the leader address of the raft cluster in multi-cluster deployments.
 	// (In single cluster (namespace) deployments it is automatically detected).
 	// "self" is a special value which means that this instance should be the bootstrap leader instance.
@@ -451,6 +457,9 @@ func (spec *VaultSpec) GetStorageType() string {
 // GetHAStorageType returns the type of Vault's ha_storage stanza
 func (spec *VaultSpec) GetHAStorageType() string {
 	haStorage := spec.getHAStorage()
+	if len(haStorage) == 0 {
+		return ""
+	}
 	return reflect.ValueOf(haStorage).MapKeys()[0].String()
 }
 
@@ -665,7 +674,7 @@ func (spec *VaultSpec) GetFluentDImage() string {
 }
 
 // GetFluentDConfMountPath returns the mount path for the fluent.conf
-func (spec *VaultSpec) GetFleuntDConfLocation() string {
+func (spec *VaultSpec) GetFluentDConfMountPath() string {
 	if spec.FleuntDConfLocation == "" {
 		return "/fluentd/etc"
 	}
@@ -683,9 +692,29 @@ func (spec *VaultSpec) IsStatsDDisabled() bool {
 }
 
 // ConfigJSON returns the Config field as a JSON string
-func (spec *VaultSpec) ConfigJSON() string {
-	config, _ := json.Marshal(spec.Config)
-	return string(config)
+func (v *Vault) ConfigJSON() (string, error) {
+	config := map[string]interface{}(v.Spec.Config)
+
+	if v.Spec.ServiceRegistrationEnabled && v.Spec.HasHAStorage() {
+		serviceRegistration := map[string]interface{}{
+			"service_registration": map[string]interface{}{
+				"kubernetes": map[string]string{
+					"namespace": v.Namespace,
+				},
+			},
+		}
+
+		if err := mergo.Merge(&config, serviceRegistration); err != nil {
+			return "", err
+		}
+	}
+
+	configJSON, err := json.Marshal(config)
+	if err != nil {
+		return "", err
+	}
+
+	return string(configJSON), nil
 }
 
 // ExternalConfigJSON returns the ExternalConfig field as a JSON string
@@ -703,6 +732,11 @@ func (spec *VaultSpec) IsAutoUnseal() bool {
 // IsRaftStorage checks if raft storage is configured
 func (spec *VaultSpec) IsRaftStorage() bool {
 	return spec.GetStorageType() == "raft"
+}
+
+// IsRaftHAStorage checks if raft ha_storage is configured
+func (spec *VaultSpec) IsRaftHAStorage() bool {
+	return spec.GetStorageType() != "raft" && spec.GetHAStorageType() == "raft"
 }
 
 // IsRaftBootstrapFollower checks if this cluster should be considered the bootstrap follower.

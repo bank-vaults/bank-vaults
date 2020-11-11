@@ -1,0 +1,92 @@
+apiVersion: "vault.banzaicloud.com/v1alpha1"
+kind: "Vault"
+metadata:
+  name: "vault"
+spec:
+  size: 1
+  image: vault:1.5.4
+  
+  # Describe where you would like to store the Vault unseal keys and root token
+  # in OSS encrypted with KMS.
+  unsealConfig:
+    alibaba:
+      kmsKeyId: "9d8063eb-f9dc-421b-be80-15d195c9f148"
+      kmsRegion: "eu-central-1"
+      ossEndpoint: "oss-eu-central-1.aliyuncs.com"
+      ossBucket: "bank-vaults"
+
+  # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
+  serviceAccount: vault
+
+  # A YAML representation of a final vault config file, this config represents
+  # a backend config in on a PV.
+  # See https://www.vaultproject.io/docs/configuration/ for more information.
+  config:
+    storage:
+      file:
+        path: "/vault/file"
+    listener:
+      tcp:
+        address: "0.0.0.0:8200"
+        tls_cert_file: /vault/tls/server.crt
+        tls_key_file: /vault/tls/server.key
+    api_addr: https://vault.default:8200
+    telemetry:
+      statsd_address: localhost:9125
+    ui: true
+
+  # See: https://banzaicloud.com/docs/bank-vaults/cli-tool/#example-external-vault-configuration
+  # The repository also contains a lot examples in the deploy/ and operator/deploy directories.
+  externalConfig:
+    policies:
+      - name: allow_secrets
+        rules: path "secret/*" {
+          capabilities = ["create", "read", "update", "delete", "list"]
+          }
+    auth:
+      - type: kubernetes
+        roles:
+          # Allow every pod in the default namespace to use the secret kv store
+          - name: default
+            bound_service_account_names: default
+            bound_service_account_namespaces: default
+            policies: allow_secrets
+            ttl: 1h
+
+  # Create a secret with your Alibaba credentials first, to able to mount it:
+  # kubectl create secret generic alibaba --from-literal=access_key_id="..." --from-literal=access_key_secret="..."
+  envsConfig:
+    - name: BANK_VAULTS_ALIBABA_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: alibaba
+          key: access_key_id
+    - name: BANK_VAULTS_ALIBABA_ACCESS_KEY_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: alibaba
+          key: access_key_secret
+
+  # Use local disk to store Vault file data, see config section.
+  volumes:
+    - name: vault-file
+      persistentVolumeClaim:
+        claimName: vault-file
+
+  volumeMounts:
+    - name: vault-file
+      mountPath: /vault/file
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vault-file
+spec:
+  # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class-1
+  # storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
