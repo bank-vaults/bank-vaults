@@ -7,7 +7,7 @@ metadata:
     vault_cr: vault
 spec:
   size: 3
-  image: vault:1.5.4
+  image: vault:1.6.0
   
   # Common annotations for all created resources
   annotations:

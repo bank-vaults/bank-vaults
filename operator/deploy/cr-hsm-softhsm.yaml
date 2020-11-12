@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: vault:1.5.4
+  image: vault:1.6.0
   
   # Common annotations for all created resources
   annotations:
