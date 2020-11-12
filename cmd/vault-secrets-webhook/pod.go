@@ -109,19 +109,22 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 		var agentConfigMapName string
 
 		if vaultConfig.UseAgent || vaultConfig.CtConfigMap != "" {
-			configMap := getConfigMapForVaultAgent(pod, vaultConfig)
-			agentConfigMapName = configMap.Name
-
-			if !dryRun {
-				_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(context.Background(), configMap, metav1.CreateOptions{})
-				if err != nil {
-					if errors.IsAlreadyExists(err) {
-						_, err = mw.k8sClient.CoreV1().ConfigMaps(ns).Update(context.Background(), configMap, metav1.UpdateOptions{})
-						if err != nil {
+			if vaultConfig.AgentConfigMap != "" {
+				agentConfigMapName = vaultConfig.AgentConfigMap
+			} else {
+				configMap := getConfigMapForVaultAgent(pod, vaultConfig)
+				agentConfigMapName = configMap.Name
+				if !dryRun {
+					_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(context.Background(), configMap, metav1.CreateOptions{})
+					if err != nil {
+						if errors.IsAlreadyExists(err) {
+							_, err = mw.k8sClient.CoreV1().ConfigMaps(ns).Update(context.Background(), configMap, metav1.UpdateOptions{})
+							if err != nil {
+								return err
+							}
+						} else {
 							return err
 						}
-					} else {
-						return err
 					}
 				}
 			}
@@ -162,7 +165,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 		mw.logger.Debug("Successfully appended pod containers to spec")
 	}
 
-	if vaultConfig.AgentConfigMap != "" {
+	if vaultConfig.AgentConfigMap != "" && vaultConfig.UseAgent == false {
 		mw.logger.Debug("Vault Agent config found")
 
 		mw.addAgentSecretsVolToContainers(vaultConfig, pod.Spec.Containers)
@@ -185,7 +188,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 			shareProcessNamespace := true
 			pod.Spec.ShareProcessNamespace = &shareProcessNamespace
 		}
-		pod.Spec.initContainers = append(getAgentContainers(pod.Spec.Containers, vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
+		pod.Spec.Containers = append(getAgentContainers(pod.Spec.Containers, vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
 
 		mw.logger.Debug("Successfully appended pod containers to spec")
 	}
@@ -599,12 +602,19 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 			AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 		}
 
+		var agentCommandString []string
+		if vaultConfig.AgentOnce {
+			agentCommandString = []string{"vault", "agent", "-config", "/vault/agent/config.hcl", "-exit-after-auth"}
+		} else {
+			agentCommandString = []string{"vault", "agent", "-config", "/vault/agent/config.hcl"}
+		}
+
 		containers = append(containers, corev1.Container{
 			Name:            "vault-agent",
 			Image:           vaultConfig.AgentImage,
 			ImagePullPolicy: vaultConfig.AgentImagePullPolicy,
 			SecurityContext: securityContext,
-			Command:         []string{"vault", "agent", "-config=/vault/agent/config.hcl"},
+			Command:         agentCommandString,
 			Env:             containerEnvVars,
 			VolumeMounts:    containerVolMounts,
 			Resources: corev1.ResourceRequirements{
