@@ -29,7 +29,6 @@ import (
 
 const vaultAgentConfig = `
 pid_file = "/tmp/pidfile"
-exit_after_auth = true
 
 auto_auth {
 	method "kubernetes" {
@@ -602,19 +601,12 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 			AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 		}
 
-		var agentCommandString []string
-		if vaultConfig.AgentOnce {
-			agentCommandString = []string{"vault", "agent", "-config", "/vault/agent/config.hcl", "-exit-after-auth"}
-		} else {
-			agentCommandString = []string{"vault", "agent", "-config", "/vault/agent/config.hcl"}
-		}
-
 		containers = append(containers, corev1.Container{
 			Name:            "vault-agent",
 			Image:           vaultConfig.AgentImage,
 			ImagePullPolicy: vaultConfig.AgentImagePullPolicy,
 			SecurityContext: securityContext,
-			Command:         agentCommandString,
+			Command:         []string{"vault", "agent", "-config=/vault/agent/config.hcl", "-exit-after-auth"},
 			Env:             containerEnvVars,
 			VolumeMounts:    containerVolMounts,
 			Resources: corev1.ResourceRequirements{
