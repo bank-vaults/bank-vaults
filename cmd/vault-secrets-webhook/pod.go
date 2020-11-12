@@ -164,7 +164,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 		mw.logger.Debug("Successfully appended pod containers to spec")
 	}
 
-	if vaultConfig.AgentConfigMap != "" && vaultConfig.UseAgent == false {
+	if vaultConfig.AgentConfigMap != "" && !vaultConfig.UseAgent {
 		mw.logger.Debug("Vault Agent config found")
 
 		mw.addAgentSecretsVolToContainers(vaultConfig, pod.Spec.Containers)
