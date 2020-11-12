@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 3
-  image: vault:1.5.4
+  image: vault:1.6.0
   
   # Set use which node label for pod anti-affinity. Prevent all vault put on same AZ.
   # Detail can reference: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity

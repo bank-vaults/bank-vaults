@@ -57,7 +57,7 @@ spec:
             policies: ["allow_secrets", "allow_pki"]
             ttl: 1h
 
-  image: vault:1.5.4
+  image: vault:1.6.0
 
   # It's always a good idea to specify
   resources:
