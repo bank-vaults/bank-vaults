@@ -481,7 +481,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 						{
 							Name:            "vault-agent",
 							Image:           "vault:latest",
-							Command:         []string{"vault", "agent", "-config=/vault/agent/config.hcl"},
+							Command:         []string{"vault", "agent", "-config=/vault/agent/config.hcl", "-exit-after-auth"},
 							ImagePullPolicy: "IfNotPresent",
 							Env: []corev1.EnvVar{
 								{

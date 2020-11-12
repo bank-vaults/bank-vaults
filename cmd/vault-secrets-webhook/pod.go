@@ -29,7 +29,6 @@ import (
 
 const vaultAgentConfig = `
 pid_file = "/tmp/pidfile"
-exit_after_auth = true
 
 auto_auth {
 	method "kubernetes" {
@@ -109,19 +108,22 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 		var agentConfigMapName string
 
 		if vaultConfig.UseAgent || vaultConfig.CtConfigMap != "" {
-			configMap := getConfigMapForVaultAgent(pod, vaultConfig)
-			agentConfigMapName = configMap.Name
-
-			if !dryRun {
-				_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(context.Background(), configMap, metav1.CreateOptions{})
-				if err != nil {
-					if errors.IsAlreadyExists(err) {
-						_, err = mw.k8sClient.CoreV1().ConfigMaps(ns).Update(context.Background(), configMap, metav1.UpdateOptions{})
-						if err != nil {
+			if vaultConfig.AgentConfigMap != "" {
+				agentConfigMapName = vaultConfig.AgentConfigMap
+			} else {
+				configMap := getConfigMapForVaultAgent(pod, vaultConfig)
+				agentConfigMapName = configMap.Name
+				if !dryRun {
+					_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(context.Background(), configMap, metav1.CreateOptions{})
+					if err != nil {
+						if errors.IsAlreadyExists(err) {
+							_, err = mw.k8sClient.CoreV1().ConfigMaps(ns).Update(context.Background(), configMap, metav1.UpdateOptions{})
+							if err != nil {
+								return err
+							}
+						} else {
 							return err
 						}
-					} else {
-						return err
 					}
 				}
 			}
@@ -162,7 +164,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 		mw.logger.Debug("Successfully appended pod containers to spec")
 	}
 
-	if vaultConfig.AgentConfigMap != "" {
+	if vaultConfig.AgentConfigMap != "" && !vaultConfig.UseAgent {
 		mw.logger.Debug("Vault Agent config found")
 
 		mw.addAgentSecretsVolToContainers(vaultConfig, pod.Spec.Containers)
@@ -604,7 +606,7 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 			Image:           vaultConfig.AgentImage,
 			ImagePullPolicy: vaultConfig.AgentImagePullPolicy,
 			SecurityContext: securityContext,
-			Command:         []string{"vault", "agent", "-config=/vault/agent/config.hcl"},
+			Command:         []string{"vault", "agent", "-config=/vault/agent/config.hcl", "-exit-after-auth"},
 			Env:             containerEnvVars,
 			VolumeMounts:    containerVolMounts,
 			Resources: corev1.ResourceRequirements{
