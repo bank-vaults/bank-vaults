@@ -717,6 +717,8 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 			Type:     serviceType(v),
 			Selector: selectorLs,
 			Ports:    servicePorts,
+			// Optional setting for requesting specific load balancer ip addresses.
+			LoadBalancerIP: v.Spec.LoadBalancerIP,
 			// In case of multi-cluster deployments we need to publish the port
 			// before being considered ready, otherwise the LoadBalancer won't
 			// be able to direct traffic from the leader to the joining instance.

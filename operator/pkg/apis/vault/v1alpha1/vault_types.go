@@ -269,9 +269,14 @@ type VaultSpec struct {
 	// default:
 	EtcdAffinity *v1.Affinity `json:"etcdAffinity,omitempty"`
 
-	// ServiceType is a Kuberrnetes Service type of the Vault Service.
+	// ServiceType is a Kubernetes Service type of the Vault Service.
 	// default: ClusterIP
 	ServiceType string `json:"serviceType"`
+
+	// LoadBalancerIP is an optional setting for allocating a specific address for the entry service object
+	// of type LoadBalancer
+	// default: ""
+	LoadBalancerIP string `json:"loadBalancerIP,omitempty"`
 
 	// serviceRegistrationEnabled enables the injection of the service_registration Vault stanza.
 	// This requires elaborated RBAC privileges for updating Pod labels for the Vault Pod.
