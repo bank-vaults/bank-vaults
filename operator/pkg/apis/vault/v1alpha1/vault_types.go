@@ -73,6 +73,8 @@ type VaultList struct {
 func init() {
 	gob.Register(VaultConfig{})
 	gob.Register(VaultExternalConfig{})
+	gob.Register(map[string]interface{}{})
+	gob.Register([]interface{}{})
 }
 
 type VaultConfig map[string]interface{}
