@@ -81,10 +81,10 @@ jobs:
 
     - name: Load Docker images to kind
       run: |
-        kind load docker-image banzaicloud/bank-vaults:latest
-        kind load docker-image banzaicloud/vault-operator:latest
-        kind load docker-image banzaicloud/vault-secrets-webhook:latest
-        kind load docker-image banzaicloud/vault-env:latest
+        kind load docker-image ghcr.io/banzaicloud/bank-vaults:latest
+        kind load docker-image ghcr.io/banzaicloud/vault-operator:latest
+        kind load docker-image ghcr.io/banzaicloud/vault-secrets-webhook:latest
+        kind load docker-image ghcr.io/banzaicloud/vault-env:latest
 
     - name: Install socat and kurun
       run: |

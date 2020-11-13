@@ -97,10 +97,10 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | affinity                         | affinities to use                                                            | `{}`                                |
 | debug                            | debug logs for webhook                                                       | `false`                             |
 | image.pullPolicy                 | image pull policy                                                            | `IfNotPresent`                      |
-| image.repository                 | image repo that contains the admission server                                | `banzaicloud/vault-secrets-webhook` |
+| image.repository                 | image repo that contains the admission server                                | `ghcr.io/banzaicloud/vault-secrets-webhook` |
 | image.tag                        | image tag                                                                    | `6.0`                             |
 | image.imagePullSecrets           | image pull secrets for private repositories                                  | `[]`                                |
-| vaultEnv.repository             | image repo that contains the vault-env container                             | `banzaicloud/vault-env`             |
+| vaultEnv.repository             | image repo that contains the vault-env container                             | `ghcr.io/banzaicloud/vault-env`             |
 | namespaceSelector                | namespace selector to use, will limit webhook scope                          | `{}`                                |
 | objectSelector                | object selector to use, will limit webhook scope (K8s version 1.15+)            | `{}`                                |
 | nodeSelector                     | node selector to use                                                         | `{}`                                |

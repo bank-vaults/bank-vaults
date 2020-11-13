@@ -130,7 +130,7 @@ helm upgrade --install vault-secrets-webhook ./charts/vault-secrets-webhook \
     --set configmapFailurePolicy=Fail \
     --set podsFailurePolicy=Fail \
     --set secretsFailurePolicy=Fail \
-    --set env.VAULT_ENV_IMAGE=banzaicloud/vault-env:latest \
+    --set env.VAULT_ENV_IMAGE=ghcr.io/banzaicloud/vault-env:latest \
     --namespace vswh \
     --wait
 
