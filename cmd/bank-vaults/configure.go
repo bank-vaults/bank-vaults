@@ -63,12 +63,7 @@ var configureCmd = &cobra.Command{
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
 		}
 
-		vaultConfig, err := vaultConfigForConfig(c)
-		if err != nil {
-			logrus.Fatalf("error building vault config: %s", err.Error())
-		}
-
-		v, err := internalVault.New(store, cl, vaultConfig)
+		v, err := internalVault.New(store, cl, vaultConfigForConfig(c))
 		if err != nil {
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
@@ -247,11 +242,11 @@ func stringInSlice(list []string, match string) bool {
 }
 
 func init() {
-	configureCmd.Flags().Bool(cfgOnce, false, "Run configure only once")
-	configureCmd.Flags().Bool(cfgFatal, false, "Make configuration errors fatal to the configurator")
-	configureCmd.Flags().Duration(cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the Vault instance")
-	configureCmd.Flags().StringSlice(cfgVaultConfigFile, []string{internalVault.DefaultConfigFile}, "The filename of the YAML/JSON Vault configuration")
-	configureCmd.Flags().Bool(cfgDisableMetrics, false, "Disable configurer metrics")
+	configBoolVar(configureCmd, cfgOnce, false, "Run configure only once")
+	configBoolVar(configureCmd, cfgFatal, false, "Make configuration errors fatal to the configurator")
+	configDurationVar(configureCmd, cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the Vault instance")
+	configStringSliceVar(configureCmd, cfgVaultConfigFile, []string{internalVault.DefaultConfigFile}, "The filename of the YAML/JSON Vault configuration")
+	configBoolVar(configureCmd, cfgDisableMetrics, false, "Disable configurer metrics")
 
 	rootCmd.AddCommand(configureCmd)
 }

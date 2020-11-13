@@ -35,9 +35,7 @@ import (
 	kvvault "github.com/banzaicloud/bank-vaults/pkg/kv/vault"
 )
 
-// TODO review this function's returned error
-// nolint: unparam
-func vaultConfigForConfig(_ *viper.Viper) (internalVault.Config, error) {
+func vaultConfigForConfig(c *viper.Viper) internalVault.Config {
 	return internalVault.Config{
 		SecretShares:    c.GetInt(cfgSecretShares),
 		SecretThreshold: c.GetInt(cfgSecretThreshold),
@@ -46,7 +44,7 @@ func vaultConfigForConfig(_ *viper.Viper) (internalVault.Config, error) {
 		StoreRootToken: c.GetBool(cfgStoreRootToken),
 
 		PreFlightChecks: c.GetBool(cfgPreFlightChecks),
-	}, nil
+	}
 }
 
 // all returns true if all values of a string slice are equal to target value
@@ -292,6 +290,6 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		return file, nil
 
 	default:
-		return nil, errors.Errorf("unsupported backend mode: '%s'", cfg.GetString(cfgMode))
+		return nil, errors.Errorf("unsupported backend mode: '%s'", mode)
 	}
 }

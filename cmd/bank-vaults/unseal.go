@@ -77,12 +77,7 @@ from one of the followings:
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
 		}
 
-		vaultConfig, err := vaultConfigForConfig(c)
-		if err != nil {
-			logrus.Fatalf("error building vault config: %s", err.Error())
-		}
-
-		v, err := internalVault.New(store, cl, vaultConfig)
+		v, err := internalVault.New(store, cl, vaultConfigForConfig(c))
 		if err != nil {
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
@@ -182,17 +177,17 @@ func exitIfNecessary(unsealConfig unsealCfg, code int) {
 }
 
 func init() {
-	unsealCmd.Flags().Duration(cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the vault instance")
-	unsealCmd.Flags().Bool(cfgInit, false, "Initialize vault instance if not yet initialized")
-	unsealCmd.Flags().Bool(cfgOnce, false, "Run unseal only once")
-	unsealCmd.Flags().Bool(cfgRaft, false, "Join leader vault instance in raft mode")
-	unsealCmd.Flags().String(cfgRaftLeaderAddress, "", "Address of leader vault instance in raft mode")
-	unsealCmd.Flags().Bool(cfgRaftSecondary, false, "This instance should always join a raft leader")
-	unsealCmd.Flags().Bool(cfgRaftHAStorage, false, "Join leader vault instance in raft HA storage mode")
-	unsealCmd.Flags().String(cfgInitRootToken, "", "Root token for the new vault cluster (only if -init=true)")
-	unsealCmd.Flags().Bool(cfgStoreRootToken, true, "Should the root token be stored in the key store (only if -init=true)")
-	unsealCmd.Flags().Bool(cfgPreFlightChecks, true, "should the key store be tested first to validate access rights")
-	unsealCmd.Flags().Bool(cfgAuto, false, "Run in auto-unseal mode")
+	configDurationVar(unsealCmd, cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the vault instance")
+	configBoolVar(unsealCmd, cfgInit, false, "Initialize vault instance if not yet initialized")
+	configBoolVar(unsealCmd, cfgOnce, false, "Run unseal only once")
+	configBoolVar(unsealCmd, cfgRaft, false, "Join leader vault instance in raft mode")
+	configStringVar(unsealCmd, cfgRaftLeaderAddress, "", "Address of leader vault instance in raft mode")
+	configBoolVar(unsealCmd, cfgRaftSecondary, false, "This instance should always join a raft leader")
+	configBoolVar(unsealCmd, cfgRaftHAStorage, false, "Join leader vault instance in raft HA storage mode")
+	configStringVar(unsealCmd, cfgInitRootToken, "", "Root token for the new vault cluster (only if -init=true)")
+	configBoolVar(unsealCmd, cfgStoreRootToken, true, "Should the root token be stored in the key store (only if -init=true)")
+	configBoolVar(unsealCmd, cfgPreFlightChecks, true, "should the key store be tested first to validate access rights")
+	configBoolVar(unsealCmd, cfgAuto, false, "Run in auto-unseal mode")
 
 	rootCmd.AddCommand(unsealCmd)
 }
