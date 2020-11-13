@@ -29,17 +29,13 @@ const cfgPreFlightChecks = "pre-flight-checks"
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialise the target Vault instance",
-	Long: `This command will verify the Cloud KMS service is accessible, then
+	Long: `This command will verify the backend service is accessible, then
 run "vault init" against the target Vault instance, before encrypting and
-storing the keys in the Cloud KMS keyring.
+storing the keys in the given backend.
 
 It will not unseal the Vault instance after initialising.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))     // nolint
-		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))   // nolint
-		appConfig.BindPFlag(cfgPreFlightChecks, cmd.PersistentFlags().Lookup(cfgPreFlightChecks)) // nolint
-
-		store, err := kvStoreForConfig(appConfig)
+		store, err := kvStoreForConfig(c)
 		if err != nil {
 			logrus.Fatalf("error creating kv store: %s", err.Error())
 		}
@@ -49,12 +45,7 @@ It will not unseal the Vault instance after initialising.`,
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
 		}
 
-		vaultConfig, err := vaultConfigForConfig(appConfig)
-		if err != nil {
-			logrus.Fatalf("error building vault config: %s", err.Error())
-		}
-
-		v, err := internalVault.New(store, cl, vaultConfig)
+		v, err := internalVault.New(store, cl, vaultConfigForConfig(c))
 		if err != nil {
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
@@ -66,9 +57,9 @@ It will not unseal the Vault instance after initialising.`,
 }
 
 func init() {
-	initCmd.PersistentFlags().String(cfgInitRootToken, "", "root token for the new vault cluster")
-	initCmd.PersistentFlags().Bool(cfgStoreRootToken, true, "should the root token be stored in the key store")
-	initCmd.PersistentFlags().Bool(cfgPreFlightChecks, true, "should the key store be tested first to validate access rights")
+	configStringVar(initCmd, cfgInitRootToken, "", "root token for the new vault cluster")
+	configBoolVar(rootCmd, cfgStoreRootToken, true, "should the root token be stored in the key store")
+	configBoolVar(rootCmd, cfgPreFlightChecks, true, "should the key store be tested first to validate access rights")
 
 	rootCmd.AddCommand(initCmd)
 }
