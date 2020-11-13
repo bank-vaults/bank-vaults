@@ -56,30 +56,18 @@ from one of the followings:
 - Alibaba KMS (backed by OSS)
 - Kubernetes Secrets (should be used only for development purposes)`,
 	Run: func(cmd *cobra.Command, args []string) {
-		appConfig.BindPFlag(cfgUnsealPeriod, cmd.PersistentFlags().Lookup(cfgUnsealPeriod))           // nolint
-		appConfig.BindPFlag(cfgInit, cmd.PersistentFlags().Lookup(cfgInit))                           // nolint
-		appConfig.BindPFlag(cfgRaft, cmd.PersistentFlags().Lookup(cfgRaft))                           // nolint
-		appConfig.BindPFlag(cfgRaftLeaderAddress, cmd.PersistentFlags().Lookup(cfgRaftLeaderAddress)) // nolint
-		appConfig.BindPFlag(cfgRaftSecondary, cmd.PersistentFlags().Lookup(cfgRaftSecondary))         // nolint
-		appConfig.BindPFlag(cfgRaftHAStorage, cmd.PersistentFlags().Lookup(cfgRaftHAStorage))         // nolint
-		appConfig.BindPFlag(cfgOnce, cmd.PersistentFlags().Lookup(cfgOnce))                           // nolint
-		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))         // nolint
-		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))       // nolint
-		appConfig.BindPFlag(cfgPreFlightChecks, cmd.PersistentFlags().Lookup(cfgPreFlightChecks))     // nolint
-		appConfig.BindPFlag(cfgAuto, cmd.PersistentFlags().Lookup(cfgAuto))                           // nolint
-
 		var unsealConfig unsealCfg
 
-		unsealConfig.unsealPeriod = appConfig.GetDuration(cfgUnsealPeriod)
-		unsealConfig.proceedInit = appConfig.GetBool(cfgInit)
-		unsealConfig.runOnce = appConfig.GetBool(cfgOnce)
-		unsealConfig.auto = appConfig.GetBool(cfgAuto)
-		unsealConfig.raft = appConfig.GetBool(cfgRaft)
-		unsealConfig.raftLeaderAddress = appConfig.GetString(cfgRaftLeaderAddress)
-		unsealConfig.raftSecondary = appConfig.GetBool(cfgRaftSecondary)
-		unsealConfig.raftHAStorage = appConfig.GetBool(cfgRaftHAStorage)
+		unsealConfig.unsealPeriod = c.GetDuration(cfgUnsealPeriod)
+		unsealConfig.proceedInit = c.GetBool(cfgInit)
+		unsealConfig.runOnce = c.GetBool(cfgOnce)
+		unsealConfig.auto = c.GetBool(cfgAuto)
+		unsealConfig.raft = c.GetBool(cfgRaft)
+		unsealConfig.raftLeaderAddress = c.GetString(cfgRaftLeaderAddress)
+		unsealConfig.raftSecondary = c.GetBool(cfgRaftSecondary)
+		unsealConfig.raftHAStorage = c.GetBool(cfgRaftHAStorage)
 
-		store, err := kvStoreForConfig(appConfig)
+		store, err := kvStoreForConfig(c)
 		if err != nil {
 			logrus.Fatalf("error creating kv store: %s", err.Error())
 		}
@@ -89,7 +77,7 @@ from one of the followings:
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
 		}
 
-		vaultConfig, err := vaultConfigForConfig(appConfig)
+		vaultConfig, err := vaultConfigForConfig(c)
 		if err != nil {
 			logrus.Fatalf("error building vault config: %s", err.Error())
 		}
@@ -194,17 +182,17 @@ func exitIfNecessary(unsealConfig unsealCfg, code int) {
 }
 
 func init() {
-	unsealCmd.PersistentFlags().Duration(cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the vault instance")
-	unsealCmd.PersistentFlags().Bool(cfgInit, false, "Initialize vault instance if not yet initialized")
-	unsealCmd.PersistentFlags().Bool(cfgOnce, false, "Run unseal only once")
-	unsealCmd.PersistentFlags().Bool(cfgRaft, false, "Join leader vault instance in raft mode")
-	unsealCmd.PersistentFlags().String(cfgRaftLeaderAddress, "", "Address of leader vault instance in raft mode")
-	unsealCmd.PersistentFlags().Bool(cfgRaftSecondary, false, "This instance should always join a raft leader")
-	unsealCmd.PersistentFlags().Bool(cfgRaftHAStorage, false, "Join leader vault instance in raft HA storage mode")
-	unsealCmd.PersistentFlags().String(cfgInitRootToken, "", "Root token for the new vault cluster (only if -init=true)")
-	unsealCmd.PersistentFlags().Bool(cfgStoreRootToken, true, "Should the root token be stored in the key store (only if -init=true)")
-	unsealCmd.PersistentFlags().Bool(cfgPreFlightChecks, true, "should the key store be tested first to validate access rights")
-	unsealCmd.PersistentFlags().Bool(cfgAuto, false, "Run in auto-unseal mode")
+	unsealCmd.Flags().Duration(cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the vault instance")
+	unsealCmd.Flags().Bool(cfgInit, false, "Initialize vault instance if not yet initialized")
+	unsealCmd.Flags().Bool(cfgOnce, false, "Run unseal only once")
+	unsealCmd.Flags().Bool(cfgRaft, false, "Join leader vault instance in raft mode")
+	unsealCmd.Flags().String(cfgRaftLeaderAddress, "", "Address of leader vault instance in raft mode")
+	unsealCmd.Flags().Bool(cfgRaftSecondary, false, "This instance should always join a raft leader")
+	unsealCmd.Flags().Bool(cfgRaftHAStorage, false, "Join leader vault instance in raft HA storage mode")
+	unsealCmd.Flags().String(cfgInitRootToken, "", "Root token for the new vault cluster (only if -init=true)")
+	unsealCmd.Flags().Bool(cfgStoreRootToken, true, "Should the root token be stored in the key store (only if -init=true)")
+	unsealCmd.Flags().Bool(cfgPreFlightChecks, true, "should the key store be tested first to validate access rights")
+	unsealCmd.Flags().Bool(cfgAuto, false, "Run in auto-unseal mode")
 
 	rootCmd.AddCommand(unsealCmd)
 }

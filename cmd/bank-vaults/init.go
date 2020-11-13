@@ -35,11 +35,7 @@ storing the keys in the Cloud KMS keyring.
 
 It will not unseal the Vault instance after initialising.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		appConfig.BindPFlag(cfgInitRootToken, cmd.PersistentFlags().Lookup(cfgInitRootToken))     // nolint
-		appConfig.BindPFlag(cfgStoreRootToken, cmd.PersistentFlags().Lookup(cfgStoreRootToken))   // nolint
-		appConfig.BindPFlag(cfgPreFlightChecks, cmd.PersistentFlags().Lookup(cfgPreFlightChecks)) // nolint
-
-		store, err := kvStoreForConfig(appConfig)
+		store, err := kvStoreForConfig(c)
 		if err != nil {
 			logrus.Fatalf("error creating kv store: %s", err.Error())
 		}
@@ -49,7 +45,7 @@ It will not unseal the Vault instance after initialising.`,
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
 		}
 
-		vaultConfig, err := vaultConfigForConfig(appConfig)
+		vaultConfig, err := vaultConfigForConfig(c)
 		if err != nil {
 			logrus.Fatalf("error building vault config: %s", err.Error())
 		}
@@ -66,9 +62,9 @@ It will not unseal the Vault instance after initialising.`,
 }
 
 func init() {
-	initCmd.PersistentFlags().String(cfgInitRootToken, "", "root token for the new vault cluster")
-	initCmd.PersistentFlags().Bool(cfgStoreRootToken, true, "should the root token be stored in the key store")
-	initCmd.PersistentFlags().Bool(cfgPreFlightChecks, true, "should the key store be tested first to validate access rights")
+	initCmd.Flags().String(cfgInitRootToken, "", "root token for the new vault cluster")
+	initCmd.Flags().Bool(cfgStoreRootToken, true, "should the root token be stored in the key store")
+	initCmd.Flags().Bool(cfgPreFlightChecks, true, "should the key store be tested first to validate access rights")
 
 	rootCmd.AddCommand(initCmd)
 }

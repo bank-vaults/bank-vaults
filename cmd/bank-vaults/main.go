@@ -26,7 +26,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var appConfig *viper.Viper
+var c *viper.Viper
 
 const cfgSecretShares = "secret-shares"
 const cfgSecretThreshold = "secret-threshold"
@@ -118,40 +118,36 @@ func execute() {
 
 func configIntVar(key string, defaultValue int, description string) {
 	rootCmd.PersistentFlags().Int(key, defaultValue, description)
-	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key)) // nolint
 }
 
 func configStringVar(key, defaultValue, description string) {
 	rootCmd.PersistentFlags().String(key, defaultValue, description)
-	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key)) // nolint
 }
 
 func configStringSliceVar(key string, defaultValue []string, description string) {
 	rootCmd.PersistentFlags().StringSlice(key, defaultValue, description)
-	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key)) // nolint
 }
 
 func configStringMapVar(key string, value *map[string]string, description string) {
 	rootCmd.PersistentFlags().StringToStringVar(value, key, nil, description)
-	appConfig.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key)) // nolint
 }
 
 func init() {
-	appConfig = viper.New()
-	appConfig.SetEnvPrefix("bank_vaults")
+	c = viper.New()
+	c.SetEnvPrefix("bank_vaults")
 	replacer := strings.NewReplacer("-", "_")
-	appConfig.SetEnvKeyReplacer(replacer)
-	appConfig.AutomaticEnv()
+	c.SetEnvKeyReplacer(replacer)
+	c.AutomaticEnv()
 
 	// SelectMode
 	configStringVar(
 		cfgMode,
-		cfgModeValueGoogleCloudKMSGCS,
+		"",
 		fmt.Sprintf(`Select the mode to use:
-						'%s' => Google Cloud Storage with encryption using Google KMS;
+						'%s' => Google Cloud Storage using Google KMS encryption;
 						'%s' => AWS S3 Object Storage using AWS KMS encryption;
 						'%s' => Azure Key Vault secret;
-						'%s' => Alibaba OSS with KMS encryption;
+						'%s' => Alibaba OSS using Alibaba KMS encryption;
 						'%s' => Remote Vault;
 						'%s' => Kubernetes Secrets;
 						'%s' => Kubernetes Secrets encrypted with HSM;

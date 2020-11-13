@@ -39,13 +39,13 @@ import (
 // nolint: unparam
 func vaultConfigForConfig(_ *viper.Viper) (internalVault.Config, error) {
 	return internalVault.Config{
-		SecretShares:    appConfig.GetInt(cfgSecretShares),
-		SecretThreshold: appConfig.GetInt(cfgSecretThreshold),
+		SecretShares:    c.GetInt(cfgSecretShares),
+		SecretThreshold: c.GetInt(cfgSecretThreshold),
 
-		InitRootToken:  appConfig.GetString(cfgInitRootToken),
-		StoreRootToken: appConfig.GetBool(cfgStoreRootToken),
+		InitRootToken:  c.GetString(cfgInitRootToken),
+		StoreRootToken: c.GetBool(cfgStoreRootToken),
 
-		PreFlightChecks: appConfig.GetBool(cfgPreFlightChecks),
+		PreFlightChecks: c.GetBool(cfgPreFlightChecks),
 	}, nil
 }
 
