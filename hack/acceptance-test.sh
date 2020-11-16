@@ -13,6 +13,7 @@ function finish {
     echo "The last command was: $(history 1 | awk '{print $2}')"
     kubectl get pods
     kubectl describe pods
+    kubectl describe services
     kubectl logs deployment/vault-operator
     kubectl logs --all-containers statefulset/vault
     kubectl logs -n vswh deployment/vault-secrets-webhook
