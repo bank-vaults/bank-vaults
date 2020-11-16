@@ -90,7 +90,7 @@ if [ $COMMAND = "install" ]; then
 
         local REGION=$(get_region)
 
-        helm upgrade --install vault-operator charts/vault-operator --wait --set image.tag=master --set image.pullPolicy=Always
+        helm upgrade --install vault-operator charts/vault-operator --wait --set image.tag=latest --set image.pullPolicy=Always
 
         create_aws_secret
 

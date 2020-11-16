@@ -43,7 +43,7 @@ var bankVaultsImage string
 
 func init() {
 	if bankVaultsImage = os.Getenv("BANK_VAULTS_IMAGE"); bankVaultsImage == "" {
-		bankVaultsImage = "banzaicloud/bank-vaults:latest"
+		bankVaultsImage = "ghcr.io/banzaicloud/bank-vaults:latest"
 	}
 }
 
@@ -148,7 +148,7 @@ type VaultSpec struct {
 	FluentDEnabled bool `json:"fluentdEnabled"`
 
 	// FluentDImage specifices the FluentD image to use for Vault log exportation
-	// default: fluent/fluentd:stable
+	// default: fluent/fluentd:edge
 	FluentDImage string `json:"fluentdImage"`
 
 	// FleuntDConfLocation is the location of the fluent.conf file

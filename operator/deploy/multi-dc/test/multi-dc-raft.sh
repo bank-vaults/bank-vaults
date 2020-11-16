@@ -73,7 +73,7 @@ function infra_setup {
 function install_instance {
     local INSTANCE=$1
 
-    helm upgrade --install vault-operator charts/vault-operator --wait --set image.tag=master --set image.pullPolicy=Always
+    helm upgrade --install vault-operator charts/vault-operator --wait --set image.tag=latest --set image.pullPolicy=Always
 
     kubectl apply -f operator/deploy/rbac.yaml
     cat operator/deploy/multi-dc/test/cr-${INSTANCE}.yaml | envtpl | kubectl apply -f -

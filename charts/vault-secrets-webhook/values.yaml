@@ -17,7 +17,7 @@ certificate:
   ca:
     crt:
 image:
-  repository: banzaicloud/vault-secrets-webhook
+  repository: ghcr.io/banzaicloud/vault-secrets-webhook
   # tag: ""
   pullPolicy: IfNotPresent
   imagePullSecrets: []
@@ -36,7 +36,7 @@ serviceAccount:
   #  iam.gke.io/gcp-service-account: gsa@project.iam.gserviceaccount.com
 
 vaultEnv:
-  repository: banzaicloud/vault-env
+  repository: ghcr.io/banzaicloud/vault-env
 
 env:
   VAULT_IMAGE: vault:1.6.0

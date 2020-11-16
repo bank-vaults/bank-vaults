@@ -26,7 +26,7 @@ debug: build ## Builds binary package
 
 .PHONY: debug-docker
 debug-docker: debug ## Builds binary package
-	docker build -t banzaicloud/${BINARY_NAME}:debug -f Dockerfile.dev .
+	docker build -t ghcr.io/banzaicloud/${BINARY_NAME}:debug -f Dockerfile.dev .
 
 bin/golangci-lint: bin/golangci-lint-${GOLANGCI_VERSION}
 	@ln -sf golangci-lint-${GOLANGCI_VERSION} bin/golangci-lint

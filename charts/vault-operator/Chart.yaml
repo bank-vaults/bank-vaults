@@ -1,7 +1,7 @@
 apiVersion: v2
 type: application
 name: vault-operator
-version: 1.8.0
+version: 1.8.1
 appVersion: 1.8.0
 description: A Helm chart for banzaicloud/bank-vaults Vault operator
 home: https://banzaicloud.com/products/bank-vaults/

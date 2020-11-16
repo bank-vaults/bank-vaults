@@ -209,7 +209,7 @@ vault:
 
 unsealer:
   image:
-    repository: banzaicloud/bank-vaults
+    repository: ghcr.io/banzaicloud/bank-vaults
     # tag: ""
     pullPolicy: IfNotPresent
   args:
