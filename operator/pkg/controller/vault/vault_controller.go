@@ -1641,12 +1641,11 @@ func withCredentialsEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.E
 // withClusterAddr overrides cluster_addr with the env var in multi-cluster deployments
 func withClusterAddr(v *vaultv1alpha1.Vault, service *corev1.Service, envs []corev1.EnvVar) []corev1.EnvVar {
 	value := ""
-
-    ingressPoints := loadBalancerIngressPoints(service)
+	ingressPoints := loadBalancerIngressPoints(service)
 
 	if len(ingressPoints) > 0 {
-	    value = ingressPoints[len(ingressPoints)-1]
-    }
+		value = ingressPoints[len(ingressPoints)-1]
+	}
 
 	// Only applies to multi-cluster setups:
 	// This currently allows only one instance per cluster,
