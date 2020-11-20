@@ -1096,7 +1096,7 @@ func loadBalancerIngressPoints(service *corev1.Service) []string {
 
 	// Use defined IP
 	if service.Spec.LoadBalancerIP != "" {
-		hostAndIPs = append(hostAndIPs, service.Spec.LoadBalancerIP)
+		hostsAndIPs = append(hostsAndIPs, service.Spec.LoadBalancerIP)
 
 	// Use allocated IP or Hostname
 	} else {
