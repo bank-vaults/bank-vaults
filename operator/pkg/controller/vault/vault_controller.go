@@ -324,7 +324,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	if service.Spec.Type == corev1.ServiceTypeLoadBalancer && !v.Spec.IsTLSDisabled() && v.Spec.ExistingTLSSecretName == "" {
 		key, err := client.ObjectKeyFromObject(service)
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to get objecy key for service: %v", err)
+			return reconcile.Result{}, fmt.Errorf("failed to get object key for service: %v", err)
 		}
 
 		err = r.client.Get(context.Background(), key, service)
@@ -1093,12 +1093,20 @@ func hostsAndIPsForVault(v *vaultv1alpha1.Vault, service *corev1.Service) []stri
 
 func loadBalancerIngressPoints(service *corev1.Service) []string {
 	var hostsAndIPs []string
-	for _, ingress := range service.Status.LoadBalancer.Ingress {
-		if ingress.IP != "" {
-			hostsAndIPs = append(hostsAndIPs, ingress.IP)
-		}
-		if ingress.Hostname != "" {
-			hostsAndIPs = append(hostsAndIPs, ingress.Hostname)
+
+	// Use defined IP
+	if service.Spec.LoadBalancerIP != "" {
+		hostsAndIPs = append(hostsAndIPs, service.Spec.LoadBalancerIP)
+
+	// Use allocated IP or Hostname
+	} else {
+		for _, ingress := range service.Status.LoadBalancer.Ingress {
+			if ingress.IP != "" {
+				hostsAndIPs = append(hostsAndIPs, ingress.IP)
+			}
+			if ingress.Hostname != "" {
+				hostsAndIPs = append(hostsAndIPs, ingress.Hostname)
+			}
 		}
 	}
 	return hostsAndIPs
