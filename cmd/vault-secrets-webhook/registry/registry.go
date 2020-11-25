@@ -149,7 +149,7 @@ func getImageConfig(container ContainerInfo) (*v1.Config, error) {
 
 	if registrySkipVerify {
 		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // nolint:gosec
 		}
 		options = append(options, remote.WithTransport(tr))
 	}
