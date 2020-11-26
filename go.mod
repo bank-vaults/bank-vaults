@@ -12,6 +12,7 @@ require (
 	github.com/Azure/go-autorest/autorest/validation v0.2.1-0.20191028180845-3492b2aff503 // indirect
 	github.com/Masterminds/semver/v3 v3.1.0
 	github.com/Masterminds/sprig/v3 v3.1.0
+	github.com/Microsoft/hcsshim v0.8.10 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.193
 	github.com/aliyun/aliyun-oss-go-sdk v2.0.4+incompatible
 	github.com/aws/aws-sdk-go v1.35.5
@@ -19,11 +20,10 @@ require (
 	github.com/banzaicloud/bank-vaults/pkg/sdk v0.2.1
 	github.com/banzaicloud/k8s-objectmatcher v1.5.0
 	github.com/containerd/containerd v1.3.4 // indirect
+	github.com/containerd/continuity v0.0.0-20201119173150-04c754faca46 // indirect
 	github.com/coreos/etcd-operator v0.9.4
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
-	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200706150819-a40b877fbb9e+incompatible
-	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/frankban/quicktest v1.4.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-logr/logr v0.2.1 // indirect
@@ -32,6 +32,7 @@ require (
 	github.com/go-openapi/swag v0.19.10 // indirect
 	github.com/golang/snappy v0.0.2 // indirect
 	github.com/google/go-cmp v0.5.2
+	github.com/google/go-containerregistry v0.1.4
 	github.com/gopherjs/gopherjs v0.0.0-20191106031601-ce3c9ade29de // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.15.0 // indirect
@@ -40,7 +41,6 @@ require (
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/hashicorp/vault/sdk v0.1.13
-	github.com/heroku/docker-registry-client v0.0.0-20181004091502-47ecf50fd8d4
 	github.com/imdario/mergo v0.3.9
 	github.com/jpillora/backoff v1.0.0
 	github.com/json-iterator/go v1.1.10
@@ -50,8 +50,7 @@ require (
 	github.com/miekg/pkcs11 v1.0.3
 	github.com/mitchellh/mapstructure v1.2.2
 	github.com/onsi/ginkgo v1.14.0 // indirect
-	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.0.1
+	github.com/opencontainers/runc v0.1.1 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pierrec/lz4 v2.2.5+incompatible // indirect
@@ -89,7 +88,6 @@ require (
 
 replace (
 	github.com/banzaicloud/bank-vaults/pkg/sdk => ./pkg/sdk
-	github.com/heroku/docker-registry-client => github.com/banzaicloud/docker-registry-client v0.0.0-20191118103116-f48ee8de5b3b
 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 )
 

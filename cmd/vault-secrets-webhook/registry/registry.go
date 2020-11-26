@@ -16,10 +16,11 @@ package registry
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -29,8 +30,10 @@ import (
 	awsSession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	dockerTypes "github.com/docker/docker/api/types"
-	"github.com/heroku/docker-registry-client/registry"
-	imagev1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/patrickmn/go-cache"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -66,7 +69,7 @@ type ImageRegistry interface {
 		clientset kubernetes.Interface,
 		namespace string,
 		container *corev1.Container,
-		podSpec *corev1.PodSpec) (*imagev1.ImageConfig, error)
+		podSpec *corev1.PodSpec) (*v1.Config, error)
 }
 
 // Registry impl
@@ -93,9 +96,13 @@ func IsAllowedToCache(container *corev1.Container) bool {
 	if container.ImagePullPolicy == corev1.PullAlways {
 		return false
 	}
-	_, reference := parseContainerImage(container.Image)
 
-	return reference != "latest"
+	reference, err := name.ParseReference(container.Image)
+	if err != nil {
+		return false
+	}
+
+	return reference.Identifier() != "latest"
 }
 
 // GetImageConfig returns entrypoint and command of container
@@ -103,12 +110,12 @@ func (r *Registry) GetImageConfig(
 	clientset kubernetes.Interface,
 	namespace string,
 	container *corev1.Container,
-	podSpec *corev1.PodSpec) (*imagev1.ImageConfig, error) {
+	podSpec *corev1.PodSpec) (*v1.Config, error) {
 	allowToCache := IsAllowedToCache(container)
 	if allowToCache {
 		if imageConfig, cacheHit := r.imageCache.Get(container.Image); cacheHit {
 			logger.Infof("found image %s in cache", container.Image)
-			return imageConfig.(*imagev1.ImageConfig), nil
+			return imageConfig.(*v1.Config), nil
 		}
 	}
 
@@ -121,7 +128,7 @@ func (r *Registry) GetImageConfig(
 
 	logger.Infoln("I'm using registry", containerInfo.RegistryAddress)
 
-	imageConfig, err := getImageBlob(containerInfo)
+	imageConfig, err := getImageConfig(containerInfo)
 	if imageConfig != nil && allowToCache {
 		r.imageCache.Set(container.Image, imageConfig, cache.DefaultExpiration)
 	}
@@ -129,72 +136,45 @@ func (r *Registry) GetImageConfig(
 	return imageConfig, err
 }
 
-// GetImageBlob download image blob from registry
-func getImageBlob(container ContainerInfo) (*imagev1.ImageConfig, error) {
-	imageName, reference := parseContainerImage(container.Image)
-
+// getImageConfig download image blob from registry
+func getImageConfig(container ContainerInfo) (*v1.Config, error) {
 	registrySkipVerify := viper.GetBool("registry_skip_verify")
 
-	var hub *registry.Registry
-	var err error
+	options := []remote.Option{
+		remote.WithAuth(&authn.Basic{
+			Username: container.RegistryUsername,
+			Password: container.RegistryPassword,
+		}),
+	}
 
 	if registrySkipVerify {
-		hub, err = registry.NewInsecure(container.RegistryAddress, container.RegistryUsername, container.RegistryPassword)
-	} else {
-		hub, err = registry.New(container.RegistryAddress, container.RegistryUsername, container.RegistryPassword)
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot create client for registry")
-	}
-
-	manifest, err := hub.ManifestV2(imageName, reference)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot download manifest for image")
-	}
-
-	reader, err := hub.DownloadBlob(imageName, manifest.Config.Digest)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot download blob")
-	}
-
-	defer reader.Close()
-
-	b, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot read blob")
-	}
-
-	var imageMetadata imagev1.Image
-	err = json.Unmarshal(b, &imageMetadata)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot unmarshal BlobResponse JSON")
-	}
-
-	return &imageMetadata.Config, nil
-}
-
-// parseContainerImage returns image and reference
-func parseContainerImage(image string) (string, string) {
-	var split []string
-
-	if strings.Contains(image, "@") {
-		split = strings.SplitN(image, "@", 2)
-		subsplit := strings.SplitN(split[0], ":", 2)
-		if len(subsplit) > 1 {
-			split[0] = subsplit[0]
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // nolint:gosec
 		}
-	} else {
-		split = strings.SplitN(image, ":", 2)
+		options = append(options, remote.WithTransport(tr))
 	}
 
-	imageName := split[0]
-	reference := "latest"
-
-	if len(split) > 1 {
-		reference = split[1]
+	ref, err := name.ParseReference(container.Image)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse image reference")
 	}
 
-	return imageName, reference
+	descriptor, err := remote.Get(ref, options...)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot fetch image descriptor")
+	}
+
+	image, err := descriptor.Image()
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot convert image descriptor to v1.Image")
+	}
+
+	configFile, err := image.ConfigFile()
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot extract config file of image")
+	}
+
+	return &configFile.Config, nil
 }
 
 // K8s structure keeps information retrieved from POD definition

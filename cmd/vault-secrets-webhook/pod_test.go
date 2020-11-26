@@ -19,7 +19,7 @@ import (
 	"time"
 
 	cmp "github.com/google/go-cmp/cmp"
-	imagev1 "github.com/opencontainers/image-spec/specs-go/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -42,10 +42,10 @@ var vaultConfig = VaultConfig{
 }
 
 type MockRegistry struct {
-	Image imagev1.ImageConfig
+	Image v1.Config
 }
 
-func (r *MockRegistry) GetImageConfig(_ kubernetes.Interface, _ string, _ *corev1.Container, _ *corev1.PodSpec) (*imagev1.ImageConfig, error) {
+func (r *MockRegistry) GetImageConfig(_ kubernetes.Interface, _ string, _ *corev1.Container, _ *corev1.PodSpec) (*v1.Config, error) {
 	return &r.Image, nil
 }
 
@@ -75,7 +75,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
-					Image: imagev1.ImageConfig{},
+					Image: v1.Config{},
 				},
 			},
 			args: args{
@@ -123,7 +123,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
-					Image: imagev1.ImageConfig{},
+					Image: v1.Config{},
 				},
 			},
 			args: args{
@@ -171,7 +171,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
-					Image: imagev1.ImageConfig{
+					Image: v1.Config{
 						Entrypoint: []string{"myEntryPoint"},
 					},
 				},
@@ -221,7 +221,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
-					Image: imagev1.ImageConfig{
+					Image: v1.Config{
 						Cmd: []string{"myCmd"},
 					},
 				},
@@ -271,7 +271,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
-					Image: imagev1.ImageConfig{},
+					Image: v1.Config{},
 				},
 			},
 			args: args{
@@ -298,7 +298,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
-					Image: imagev1.ImageConfig{},
+					Image: v1.Config{},
 				},
 			},
 			args: args{
@@ -347,7 +347,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
-					Image: imagev1.ImageConfig{},
+					Image: v1.Config{},
 				},
 			},
 			args: args{
@@ -443,7 +443,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
-					Image: imagev1.ImageConfig{},
+					Image: v1.Config{},
 				},
 			},
 			args: args{
@@ -632,7 +632,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
-					Image: imagev1.ImageConfig{},
+					Image: v1.Config{},
 				},
 			},
 			args: args{
