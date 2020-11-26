@@ -7,7 +7,7 @@
 {{- $cn := printf "%s.%s.svc" $svcName .Release.Namespace }}
 {{- $altName1 := printf "%s.cluster.local" $cn }}
 {{- $altName2 := printf "%s" $cn }}
-{{- $server := genSignedCert $cn nil (list $altName1 $altName2) 365 $ca }}
+{{- $server := genSignedCert $cn nil (concat (list $altName1 $altName2) .Values.certificate.extraAltNames) 365 $ca }}
 {{- $tlsCrt = b64enc $server.Cert }}
 {{- $tlsKey = b64enc $server.Key }}
 {{- $caCrt =  b64enc $ca.Cert }}
@@ -60,10 +60,14 @@ webhooks:
   {{- end }}
   {{- end }}
   clientConfig:
+    {{- if .Values.webhookClientConfig.useUrl }}
+    url: {{ .Values.webhookClientConfig.url }}
+    {{- else }}
     service:
       namespace: {{ .Release.Namespace }}
       name: {{ template "vault-secrets-webhook.fullname" . }}
       path: /pods
+    {{- end }}
     caBundle: {{ $caCrt }}
   rules:
   - operations:
@@ -110,10 +114,14 @@ webhooks:
   {{- end }}
   {{- end }}
   clientConfig:
+    {{- if .Values.webhookClientConfig.useUrl }}
+    url: {{ .Values.webhookClientConfig.url }}
+    {{- else }}
     service:
       namespace: {{ .Release.Namespace }}
       name: {{ template "vault-secrets-webhook.fullname" . }}
       path: /secrets
+    {{- end }}
     caBundle: {{ $caCrt }}
   rules:
   - operations:
@@ -151,10 +159,14 @@ webhooks:
   {{- end }}
   {{- end }}
   clientConfig:
+    {{- if .Values.webhookClientConfig.useUrl }}
+    url: {{ .Values.webhookClientConfig.url }}
+    {{- else }}
     service:
       namespace: {{ .Release.Namespace }}
       name: {{ template "vault-secrets-webhook.fullname" . }}
       path: /configmaps
+    {{- end }}
     caBundle: {{ $caCrt }}
   rules:
     - operations:
@@ -193,10 +205,14 @@ webhooks:
   {{- end }}
   {{- end }}
   clientConfig:
+    {{- if .Values.webhookClientConfig.useUrl }}
+    url: {{ .Values.webhookClientConfig.url }}
+    {{- else }}
     service:
       namespace: {{ .Release.Namespace }}
       name: {{ template "vault-secrets-webhook.fullname" . }}
       path: /objects
+    {{- end }}
     caBundle: {{ $caCrt }}
   rules:
   - operations:

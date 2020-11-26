@@ -1,0 +1,27 @@
+{{- if .Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ template "vault-secrets-webhook.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  {{- if .Values.ingress.annotations }}
+  annotations:
+{{ toYaml .Values.ingress.annotations | indent 4 }}
+  {{- end }}  
+spec:
+  tls:
+  - hosts:
+      - {{ .Values.ingress.host }}
+    secretName: {{ include "vault-secrets-webhook.servingCertificate" . }}
+  rules:
+  - host: {{ .Values.ingress.host }}
+    http:
+      paths:
+      - path: /
+        backend:
+          service:
+            name: {{ template "vault-secrets-webhook.fullname" . }}
+            port:
+              number: {{ .Values.service.externalPort }}
+{{- end }}
