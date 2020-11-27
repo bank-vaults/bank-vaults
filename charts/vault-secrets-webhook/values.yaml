@@ -16,6 +16,9 @@ certificate:
       key:
   ca:
     crt:
+  extraAltNames: []
+  # use extra names if you want use the webhook via an ingress or a loadbalancer
+
 image:
   repository: ghcr.io/banzaicloud/vault-secrets-webhook
   # tag: ""
@@ -27,6 +30,22 @@ service:
   type: ClusterIP
   externalPort: 443
   internalPort: 8443
+  annotations: {}
+  # Annotate service
+  # This can be used for example if type is AWS LoadBalancer and you want to add security groups
+
+ingress:
+  enabled: false
+  annotations: {}
+  # dns of ingress for vault-webhook
+  # host: example.com
+
+webhookClientConfig:
+  # By default the mutating webhook uses the service of the webhook directly to contact webhook
+  # Use url if webhook should be contacted over loadbalancer or ingress instead of service object
+  useUrl: false
+  # set the url how the webhook should be contacted (including protocol https://)
+  # url: https://example.com
 
 serviceAccount:
   labels: {}

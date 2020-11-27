@@ -75,5 +75,8 @@ spec:
   - {{ include "vault-secrets-webhook.fullname" . }}
   - {{ include "vault-secrets-webhook.fullname" . }}.{{ .Release.Namespace }}
   - {{ include "vault-secrets-webhook.fullname" . }}.{{ .Release.Namespace }}.svc
+  {{- range .Values.certificate.extraAltNames }}
+  - {{ . }}
+  {{- end }}
 
 {{- end }}
