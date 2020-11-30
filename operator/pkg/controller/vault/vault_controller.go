@@ -666,7 +666,7 @@ func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
 	etcdCluster.Spec.Repository = v.Spec.EtcdRepository
 	etcdCluster.Spec.Pod = &etcdv1beta2.PodPolicy{
 		PersistentVolumeClaimSpec: v.Spec.EtcdPVCSpec,
-		Resources:                 *getEtcdResource(v),
+		Resources:                 getEtcdResource(v),
 		Annotations:               v.Spec.EtcdPodAnnotations,
 		BusyboxImage:              v.Spec.EtcdPodBusyBoxImage,
 		Affinity:                  getEtcdAffinity(v, etcdName),
@@ -1007,7 +1007,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 				Env:          withNamespaceEnv(v, withCommonEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{})))),
 				VolumeMounts: withHSMVolumeMount(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts))),
 				WorkingDir:   "/config",
-				Resources:    *getBankVaultsResource(v),
+				Resources:    getBankVaultsResource(v),
 			},
 		},
 		Volumes:         withHSMVolume(v, withTLSVolume(v, withCredentialsVolume(v, volumes))),
@@ -1098,7 +1098,7 @@ func loadBalancerIngressPoints(service *corev1.Service) []string {
 	if service.Spec.LoadBalancerIP != "" {
 		hostsAndIPs = append(hostsAndIPs, service.Spec.LoadBalancerIP)
 
-	// Use allocated IP or Hostname
+		// Use allocated IP or Hostname
 	} else {
 		for _, ingress := range service.Status.LoadBalancer.Ingress {
 			if ingress.IP != "" {
@@ -1313,7 +1313,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				FailureThreshold: 2,
 			},
 			VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
-			Resources:    *getVaultResource(v),
+			Resources:    getVaultResource(v),
 		},
 		{
 			Image:           v.Spec.GetBankVaultsImage(),
@@ -1337,7 +1337,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Protocol:      "TCP",
 			}},
 			VolumeMounts: withHSMVolumeMount(v, withBanksVaultsVolumeMounts(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{})))),
-			Resources:    *getBankVaultsResource(v),
+			Resources:    getBankVaultsResource(v),
 		},
 	})))
 
@@ -1348,7 +1348,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			Name:            "bank-vaults-hsm-pcscd",
 			Command:         []string{"pcscd-entrypoint.sh"},
 			VolumeMounts:    withHSMVolumeMount(v, nil),
-			Resources:       *getHSMDaemonResource(v),
+			Resources:       getHSMDaemonResource(v),
 			SecurityContext: &corev1.SecurityContext{
 				Privileged: pointer.BoolPtr(true),
 				RunAsUser:  pointer.Int64Ptr(0),
@@ -1386,7 +1386,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					},
 				})),
 				VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
-				Resources:    *getVaultResource(v),
+				Resources:    getVaultResource(v),
 			},
 		}),
 
@@ -1770,7 +1770,8 @@ func withStatsDContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) 
 				Name:      "statsd-mapping",
 				MountPath: "/tmp/",
 			}},
-			Resources: *getPrometheusExporterResource(v),
+			Resources: getPrometheusExporterResource(v),
+			Env:       withSidecarEnv(v, []v1.EnvVar{}),
 		})
 	}
 	return containers
@@ -1826,6 +1827,8 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, containers []corev1.Container
 					MountPath: v.Spec.GetFluentDConfMountPath(),
 				},
 			}),
+			Resources: getFluentDResource(v),
+			Env:       withSidecarEnv(v, []v1.EnvVar{}),
 		})
 	}
 	return containers
@@ -2058,12 +2061,12 @@ func getPodNames(pods []corev1.Pod) []string {
 }
 
 // getVaultResource return resource in spec or return pre-defined resource if not configurated
-func getVaultResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
+func getVaultResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
 	if v.Spec.Resources != nil && v.Spec.Resources.Vault != nil {
-		return v.Spec.Resources.Vault
+		return *v.Spec.Resources.Vault
 	}
 
-	return &corev1.ResourceRequirements{
+	return corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("250m"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
@@ -2076,12 +2079,12 @@ func getVaultResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
 }
 
 // getBankVaultsResource return resource in spec or return pre-defined resource if not configurated
-func getBankVaultsResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
+func getBankVaultsResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
 	if v.Spec.Resources != nil && v.Spec.Resources.BankVaults != nil {
-		return v.Spec.Resources.BankVaults
+		return *v.Spec.Resources.BankVaults
 	}
 
-	return &corev1.ResourceRequirements{
+	return corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("100m"),
 			corev1.ResourceMemory: resource.MustParse("64Mi"),
@@ -2094,12 +2097,12 @@ func getBankVaultsResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements 
 }
 
 // getEtcdResource return resource in spec or return pre-defined resource if not configurated
-func getEtcdResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
+func getEtcdResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
 	if v.Spec.Resources != nil && v.Spec.Resources.Etcd != nil {
-		return v.Spec.Resources.Etcd
+		return *v.Spec.Resources.Etcd
 	}
 
-	return &corev1.ResourceRequirements{
+	return corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("100m"),
 			corev1.ResourceMemory: resource.MustParse("64Mi"),
@@ -2112,12 +2115,12 @@ func getEtcdResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
 }
 
 // getHSMDaemonResource return resource in spec or return pre-defined resource if not configurated
-func getHSMDaemonResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
+func getHSMDaemonResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
 	if v.Spec.Resources != nil && v.Spec.Resources.HSMDaemon != nil {
-		return v.Spec.Resources.HSMDaemon
+		return *v.Spec.Resources.HSMDaemon
 	}
 
-	return &corev1.ResourceRequirements{
+	return corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("100m"),
 			corev1.ResourceMemory: resource.MustParse("64Mi"),
@@ -2130,12 +2133,30 @@ func getHSMDaemonResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
 }
 
 // getPrometheusExporterResource return resource in spec or return pre-defined resource if not configurated
-func getPrometheusExporterResource(v *vaultv1alpha1.Vault) *corev1.ResourceRequirements {
+func getPrometheusExporterResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
 	if v.Spec.Resources != nil && v.Spec.Resources.PrometheusExporter != nil {
-		return v.Spec.Resources.PrometheusExporter
+		return *v.Spec.Resources.PrometheusExporter
 	}
 
-	return &corev1.ResourceRequirements{
+	return corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("200m"),
+			corev1.ResourceMemory: resource.MustParse("128Mi"),
+		},
+	}
+}
+
+// getFluentDResource return resource in spec or return pre-defined resource if not configurated
+func getFluentDResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
+	if v.Spec.Resources != nil && v.Spec.Resources.FluentD != nil {
+		return *v.Spec.Resources.FluentD
+	}
+
+	return corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("100m"),
 			corev1.ResourceMemory: resource.MustParse("64Mi"),
@@ -2156,10 +2177,10 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 	}
 
 	// We need the CA certificate only
-	if currentSecret.Type == "kubernetes.io/tls" {
-		currentSecret.Type = "Opaque"
-		delete(currentSecret.Data, "tls.crt")
-		delete(currentSecret.Data, "tls.key")
+	if currentSecret.Type == v1.SecretTypeTLS {
+		currentSecret.Type = v1.SecretTypeOpaque
+		delete(currentSecret.Data, v1.TLSCertKey)
+		delete(currentSecret.Data, v1.TLSPrivateKeyKey)
 		if err := controllerutil.SetControllerReference(v, &currentSecret, r.scheme); err != nil {
 			return fmt.Errorf("failed to set current secret controller reference: %v", err)
 		}
