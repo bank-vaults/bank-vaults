@@ -1098,6 +1098,7 @@ type Resources struct {
 	HSMDaemon          *v1.ResourceRequirements `json:"hsmDaemon,omitempty"`
 	Etcd               *v1.ResourceRequirements `json:"etcd,omitempty"`
 	PrometheusExporter *v1.ResourceRequirements `json:"prometheusExporter,omitempty"`
+	FluentD            *v1.ResourceRequirements `json:"fluentd,omitempty"`
 }
 
 // Ingress specification for the Vault cluster

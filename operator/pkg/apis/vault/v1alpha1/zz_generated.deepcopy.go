@@ -187,6 +187,11 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 		*out = new(v1.ResourceRequirements)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.FluentD != nil {
+		in, out := &in.FluentD, &out.FluentD
+		*out = new(v1.ResourceRequirements)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
