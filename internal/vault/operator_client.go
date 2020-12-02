@@ -844,7 +844,7 @@ func (v *vault) configureGithubMappings(path string, mappings map[string]interfa
 			return errors.Wrap(err, "error converting mapping for github")
 		}
 		for userOrTeam, policy := range mapping {
-			_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/map/%s/%s", path, mappingType, userOrTeam), map[string]interface{}{"value": policy})
+			err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/map/%s/%s", path, mappingType, userOrTeam), map[string]interface{}{"value": policy})
 			if err != nil {
 				return errors.Wrapf(err, "error putting %s github mapping into vault", mappingType)
 			}
@@ -855,8 +855,7 @@ func (v *vault) configureGithubMappings(path string, mappings map[string]interfa
 
 func (v *vault) configureAwsConfig(path string, config map[string]interface{}) error {
 	// https://www.vaultproject.io/api/auth/aws/index.html
-	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config/client", path), config)
-
+	err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config/client", path), config)
 	if err != nil {
 		return errors.Wrap(err, "error putting aws config into vault")
 	}
@@ -877,7 +876,7 @@ func (v *vault) configureGenericAuthRoles(method, path, roleSubPath string, role
 			return errors.Wrapf(err, "error converting roles for %s", method)
 		}
 
-		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/%s/%s", path, roleSubPath, role["name"]), role)
+		err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/%s/%s", path, roleSubPath, role["name"]), role)
 		if err != nil {
 			return errors.Wrapf(err, "error putting %s %s role into vault", role["name"], method)
 		}
@@ -892,7 +891,7 @@ func (v *vault) configureUserpassUsers(path string, users []interface{}) error {
 			return errors.Wrapf(err, "error converting user for userpass")
 		}
 
-		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/%s/%s", path, "users", user["username"]), user)
+		err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/%s/%s", path, "users", user["username"]), user)
 		if err != nil {
 			return errors.Wrapf(err, "error putting userpass %s user into vault", user["username"])
 		}
@@ -909,7 +908,7 @@ func (v *vault) configureAWSCrossAccountRoles(path string, crossAccountRoles []i
 
 		stsAccount := fmt.Sprint(crossAccountRole["sts_account"])
 
-		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/config/sts/%s", path, stsAccount), crossAccountRole)
+		err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config/sts/%s", path, stsAccount), crossAccountRole)
 		if err != nil {
 			return errors.Wrapf(err, "error putting %s cross account aws role into vault", stsAccount)
 		}
@@ -925,8 +924,7 @@ func (v *vault) configureAWSCrossAccountRoles(path string, crossAccountRoles []i
 // https://www.vaultproject.io/api/auth/gcp/index.html
 // https://www.vaultproject.io/api/auth/github/index.html
 func (v *vault) configureGenericAuthConfig(method, path string, config map[string]interface{}) error {
-	_, err := v.cl.Logical().Write(fmt.Sprintf("auth/%s/config", path), config)
-
+	err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config", path), config)
 	if err != nil {
 		return errors.Wrapf(err, "error putting %s auth config into vault", method)
 	}
@@ -950,8 +948,7 @@ func (v *vault) configureJwtRoles(path string, roles []interface{}) error {
 			role["claim_mappings"] = cast.ToStringMap(val)
 		}
 
-		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
-
+		err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
 		if err != nil {
 			return errors.Wrapf(err, "error putting %s jwt role into vault", role["name"])
 		}
@@ -965,7 +962,7 @@ func (v *vault) configureGenericUserAndGroupMappings(method, path string, mappin
 		if err != nil {
 			return errors.Wrapf(err, "error converting mapping for %s", method)
 		}
-		_, err = v.cl.Logical().Write(fmt.Sprintf("auth/%s/%s/%s", path, mappingType, userOrGroup), mapping)
+		err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/%s/%s", path, mappingType, userOrGroup), mapping)
 		if err != nil {
 			return errors.Wrapf(err, "error putting %s %s mapping into vault", method, mappingType)
 		}
@@ -1184,8 +1181,7 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 				}
 
 				if !dontUpdate {
-					_, err = v.cl.Logical().Write(configPath, subConfigData)
-
+					err = v.writeWithWarningCheck(configPath, subConfigData)
 					if err != nil {
 						if isOverwriteProhibitedError(err) {
 							logrus.Infoln("can't reconfigure", configPath, "please delete it manually")
@@ -1231,7 +1227,7 @@ func (v *vault) rotateSecretEngineCredentials(secretEngineType, path, name, conf
 	if _, ok := v.rotateCache[rotatePath]; !ok {
 		logrus.Infoln("doing credential rotation at", rotatePath)
 
-		_, err := v.cl.Logical().Write(rotatePath, nil)
+		err := v.writeWithWarningCheck(rotatePath, nil)
 		if err != nil {
 			return errors.Wrapf(err, "error rotating credentials for '%s' config in vault", configPath)
 		}
@@ -1315,7 +1311,7 @@ func (v *vault) configureStartupSecrets(config *viper.Viper) error {
 				return errors.Wrap(err, "unable to read 'kv' startup secret")
 			}
 
-			_, err = v.cl.Logical().Write(path, data)
+			err = v.writeWithWarningCheck(path, data)
 			if err != nil {
 				return errors.Wrapf(err, "error writing data for startup 'kv' secret '%s'", path)
 			}
@@ -1331,7 +1327,7 @@ func (v *vault) configureStartupSecrets(config *viper.Viper) error {
 				return errors.Wrap(err, "error generating 'pki' startup secret")
 			}
 
-			_, err = v.cl.Logical().Write(path, certData)
+			err = v.writeWithWarningCheck(path, certData)
 			if err != nil {
 				return errors.Wrapf(err, "error writing data for startup 'pki' secret '%s'", path)
 			}
@@ -1341,6 +1337,19 @@ func (v *vault) configureStartupSecrets(config *viper.Viper) error {
 		}
 	}
 
+	return nil
+}
+
+func (v *vault) writeWithWarningCheck(path string, data map[string]interface{}) error {
+	sec, err := v.cl.Logical().Write(path, data)
+	if err != nil {
+		return err
+	}
+	if sec != nil {
+		for _, warning := range sec.Warnings {
+			logrus.Warn(warning)
+		}
+	}
 	return nil
 }
 
@@ -1517,13 +1526,13 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 
 		if g == nil {
 			logrus.Infof("creating group: %s", group["name"])
-			_, err = v.cl.Logical().Write("identity/group", config)
+			err = v.writeWithWarningCheck("identity/group", config)
 			if err != nil {
 				return errors.Wrapf(err, "failed to create group %s", group["name"])
 			}
 		} else {
 			logrus.Infof("tuning already existing group: %s", group["name"])
-			_, err = v.cl.Logical().Write(fmt.Sprintf("identity/group/name/%s", group["name"]), config)
+			err = v.writeWithWarningCheck(fmt.Sprintf("identity/group/name/%s", group["name"]), config)
 			if err != nil {
 				return errors.Wrapf(err, "failed to tune group %s", group["name"])
 			}
@@ -1557,13 +1566,13 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 
 		if ga == "" {
 			logrus.Infof("creating group-alias: %s@%s", groupAlias["name"], accessor)
-			_, err = v.cl.Logical().Write("identity/group-alias", config)
+			err = v.writeWithWarningCheck("identity/group-alias", config)
 			if err != nil {
 				return errors.Wrapf(err, "failed to create group-alias %s", groupAlias["name"])
 			}
 		} else {
 			logrus.Infof("tuning already existing group-alias: %s@%s - ID: %s", groupAlias["name"], accessor, ga)
-			_, err = v.cl.Logical().Write(fmt.Sprintf("identity/group-alias/id/%s", ga), config)
+			err = v.writeWithWarningCheck(fmt.Sprintf("identity/group-alias/id/%s", ga), config)
 			if err != nil {
 				return errors.Wrapf(err, "failed to tune group-alias %s", ga)
 			}
