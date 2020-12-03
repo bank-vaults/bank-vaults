@@ -37,14 +37,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	crconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
+
+	vaultpkg "github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 // DefaultConfigFile is the name of the default config file
 const DefaultConfigFile = "vault-config.yml"
 
-// secretEngineConfigNoNeedName holds the secret engine types where
+// secretEnginesWihtoutNameConfig holds the secret engine types where
 // the name shouldn't be part of the config path
-var secretEngineConfigNoNeedName = map[string]bool{
+var secretEnginesWihtoutNameConfig = map[string]bool{
 	"ad":       true,
 	"alicloud": true,
 	"azure":    true,
@@ -844,7 +846,7 @@ func (v *vault) configureGithubMappings(path string, mappings map[string]interfa
 			return errors.Wrap(err, "error converting mapping for github")
 		}
 		for userOrTeam, policy := range mapping {
-			err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/map/%s/%s", path, mappingType, userOrTeam), map[string]interface{}{"value": policy})
+			_, err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/map/%s/%s", path, mappingType, userOrTeam), map[string]interface{}{"value": policy})
 			if err != nil {
 				return errors.Wrapf(err, "error putting %s github mapping into vault", mappingType)
 			}
@@ -855,7 +857,7 @@ func (v *vault) configureGithubMappings(path string, mappings map[string]interfa
 
 func (v *vault) configureAwsConfig(path string, config map[string]interface{}) error {
 	// https://www.vaultproject.io/api/auth/aws/index.html
-	err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config/client", path), config)
+	_, err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config/client", path), config)
 	if err != nil {
 		return errors.Wrap(err, "error putting aws config into vault")
 	}
@@ -876,7 +878,7 @@ func (v *vault) configureGenericAuthRoles(method, path, roleSubPath string, role
 			return errors.Wrapf(err, "error converting roles for %s", method)
 		}
 
-		err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/%s/%s", path, roleSubPath, role["name"]), role)
+		_, err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/%s/%s", path, roleSubPath, role["name"]), role)
 		if err != nil {
 			return errors.Wrapf(err, "error putting %s %s role into vault", role["name"], method)
 		}
@@ -891,7 +893,7 @@ func (v *vault) configureUserpassUsers(path string, users []interface{}) error {
 			return errors.Wrapf(err, "error converting user for userpass")
 		}
 
-		err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/%s/%s", path, "users", user["username"]), user)
+		_, err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/%s/%s", path, "users", user["username"]), user)
 		if err != nil {
 			return errors.Wrapf(err, "error putting userpass %s user into vault", user["username"])
 		}
@@ -908,7 +910,7 @@ func (v *vault) configureAWSCrossAccountRoles(path string, crossAccountRoles []i
 
 		stsAccount := fmt.Sprint(crossAccountRole["sts_account"])
 
-		err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config/sts/%s", path, stsAccount), crossAccountRole)
+		_, err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config/sts/%s", path, stsAccount), crossAccountRole)
 		if err != nil {
 			return errors.Wrapf(err, "error putting %s cross account aws role into vault", stsAccount)
 		}
@@ -924,7 +926,7 @@ func (v *vault) configureAWSCrossAccountRoles(path string, crossAccountRoles []i
 // https://www.vaultproject.io/api/auth/gcp/index.html
 // https://www.vaultproject.io/api/auth/github/index.html
 func (v *vault) configureGenericAuthConfig(method, path string, config map[string]interface{}) error {
-	err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config", path), config)
+	_, err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config", path), config)
 	if err != nil {
 		return errors.Wrapf(err, "error putting %s auth config into vault", method)
 	}
@@ -948,7 +950,7 @@ func (v *vault) configureJwtRoles(path string, roles []interface{}) error {
 			role["claim_mappings"] = cast.ToStringMap(val)
 		}
 
-		err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
+		_, err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/role/%s", path, role["name"]), role)
 		if err != nil {
 			return errors.Wrapf(err, "error putting %s jwt role into vault", role["name"])
 		}
@@ -962,7 +964,7 @@ func (v *vault) configureGenericUserAndGroupMappings(method, path string, mappin
 		if err != nil {
 			return errors.Wrapf(err, "error converting mapping for %s", method)
 		}
-		err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/%s/%s", path, mappingType, userOrGroup), mapping)
+		_, err = v.writeWithWarningCheck(fmt.Sprintf("auth/%s/%s/%s", path, mappingType, userOrGroup), mapping)
 		if err != nil {
 			return errors.Wrapf(err, "error putting %s %s mapping into vault", method, mappingType)
 		}
@@ -1132,7 +1134,7 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 				}
 
 				name, ok := subConfigData["name"]
-				if !ok && !isConfigNoNeedName(secretEngineType, configOption) {
+				if !ok && !configNeedsNoName(secretEngineType, configOption) {
 					return errors.Errorf("error finding sub config data name for secret engine: %s/%s", path, configOption)
 				}
 
@@ -1163,11 +1165,30 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 				// Delete the rotate key from the map, so we don't push it to vault
 				delete(subConfigData, "rotate")
 
-				var dontUpdate = false
+				saveTo := cast.ToString(subConfigData["save_to"])
+				// Delete the rotate key from the map, so we don't push it to vault
+				delete(subConfigData, "save_to")
+
+				var shouldUpdate = true
 				if (createOnly || rotate) && mountExists {
-					sec, err := v.cl.Logical().Read(configPath)
-					if err != nil {
-						return errors.Wrapf(err, "error reading configPath %s", configPath)
+					var sec interface{}
+					if configOption == "root/generate" { // the pki generate call is a different beast
+						req := v.cl.NewRequest("GET", fmt.Sprintf("/v1/%s/ca", path))
+						resp, err := v.cl.RawRequestWithContext(context.Background(), req)
+						if resp != nil {
+							defer resp.Body.Close()
+						}
+						if err != nil {
+							return errors.Wrapf(err, "failed to check pki CA")
+						}
+						if resp.StatusCode == http.StatusOK {
+							sec = true
+						}
+					} else {
+						sec, err = v.cl.Logical().Read(configPath)
+						if err != nil {
+							return errors.Wrapf(err, "error reading configPath %s", configPath)
+						}
 					}
 
 					if sec != nil {
@@ -1176,18 +1197,25 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 							reason = "create_only"
 						}
 						logrus.Infof("Secret at configpath %s already exists, %s was set so this will not be updated", configPath, reason)
-						dontUpdate = true
+						shouldUpdate = false
 					}
 				}
 
-				if !dontUpdate {
-					err = v.writeWithWarningCheck(configPath, subConfigData)
+				if shouldUpdate {
+					sec, err := v.writeWithWarningCheck(configPath, subConfigData)
 					if err != nil {
 						if isOverwriteProhibitedError(err) {
 							logrus.Infoln("can't reconfigure", configPath, "please delete it manually")
 							continue
 						}
 						return errors.Wrapf(err, "error configuring %s config in vault", configPath)
+					}
+
+					if saveTo != "" {
+						_, err = v.writeWithWarningCheck(saveTo, vaultpkg.NewData(0, sec.Data))
+						if err != nil {
+							return errors.Wrapf(err, "error saving secret in vault to %s", saveTo)
+						}
 					}
 				}
 
@@ -1227,7 +1255,7 @@ func (v *vault) rotateSecretEngineCredentials(secretEngineType, path, name, conf
 	if _, ok := v.rotateCache[rotatePath]; !ok {
 		logrus.Infoln("doing credential rotation at", rotatePath)
 
-		err := v.writeWithWarningCheck(rotatePath, nil)
+		_, err := v.writeWithWarningCheck(rotatePath, nil)
 		if err != nil {
 			return errors.Wrapf(err, "error rotating credentials for '%s' config in vault", configPath)
 		}
@@ -1311,7 +1339,7 @@ func (v *vault) configureStartupSecrets(config *viper.Viper) error {
 				return errors.Wrap(err, "unable to read 'kv' startup secret")
 			}
 
-			err = v.writeWithWarningCheck(path, data)
+			_, err = v.writeWithWarningCheck(path, data)
 			if err != nil {
 				return errors.Wrapf(err, "error writing data for startup 'kv' secret '%s'", path)
 			}
@@ -1327,7 +1355,7 @@ func (v *vault) configureStartupSecrets(config *viper.Viper) error {
 				return errors.Wrap(err, "error generating 'pki' startup secret")
 			}
 
-			err = v.writeWithWarningCheck(path, certData)
+			_, err = v.writeWithWarningCheck(path, certData)
 			if err != nil {
 				return errors.Wrapf(err, "error writing data for startup 'pki' secret '%s'", path)
 			}
@@ -1340,17 +1368,17 @@ func (v *vault) configureStartupSecrets(config *viper.Viper) error {
 	return nil
 }
 
-func (v *vault) writeWithWarningCheck(path string, data map[string]interface{}) error {
+func (v *vault) writeWithWarningCheck(path string, data map[string]interface{}) (*api.Secret, error) {
 	sec, err := v.cl.Logical().Write(path, data)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if sec != nil {
 		for _, warning := range sec.Warnings {
 			logrus.Warn(warning)
 		}
 	}
-	return nil
+	return sec, nil
 }
 
 func readStartupSecret(startupSecret map[string]interface{}) (string, map[string]interface{}, error) {
@@ -1526,13 +1554,13 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 
 		if g == nil {
 			logrus.Infof("creating group: %s", group["name"])
-			err = v.writeWithWarningCheck("identity/group", config)
+			_, err = v.writeWithWarningCheck("identity/group", config)
 			if err != nil {
 				return errors.Wrapf(err, "failed to create group %s", group["name"])
 			}
 		} else {
 			logrus.Infof("tuning already existing group: %s", group["name"])
-			err = v.writeWithWarningCheck(fmt.Sprintf("identity/group/name/%s", group["name"]), config)
+			_, err = v.writeWithWarningCheck(fmt.Sprintf("identity/group/name/%s", group["name"]), config)
 			if err != nil {
 				return errors.Wrapf(err, "failed to tune group %s", group["name"])
 			}
@@ -1566,13 +1594,13 @@ func (v *vault) configureIdentityGroups(config *viper.Viper) error {
 
 		if ga == "" {
 			logrus.Infof("creating group-alias: %s@%s", groupAlias["name"], accessor)
-			err = v.writeWithWarningCheck("identity/group-alias", config)
+			_, err = v.writeWithWarningCheck("identity/group-alias", config)
 			if err != nil {
 				return errors.Wrapf(err, "failed to create group-alias %s", groupAlias["name"])
 			}
 		} else {
 			logrus.Infof("tuning already existing group-alias: %s@%s - ID: %s", groupAlias["name"], accessor, ga)
-			err = v.writeWithWarningCheck(fmt.Sprintf("identity/group-alias/id/%s", ga), config)
+			_, err = v.writeWithWarningCheck(fmt.Sprintf("identity/group-alias/id/%s", ga), config)
 			if err != nil {
 				return errors.Wrapf(err, "failed to tune group-alias %s", ga)
 			}
@@ -1657,9 +1685,9 @@ func getMountConfigInput(secretEngine map[string]interface{}) (api.MountConfigIn
 	return mountConfigInput, nil
 }
 
-func isConfigNoNeedName(secretEngineType string, configOption string) bool {
+func configNeedsNoName(secretEngineType string, configOption string) bool {
 	if configOption == "config" {
-		_, ok := secretEngineConfigNoNeedName[secretEngineType]
+		_, ok := secretEnginesWihtoutNameConfig[secretEngineType]
 		return ok
 	}
 
