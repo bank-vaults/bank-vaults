@@ -263,8 +263,10 @@ secrets:
         issuing_certificates: https://vault.default:8200/v1/pki/ca
         crl_distribution_points: https://vault.default:8200/v1/pki/crl
       root/generate:
-      - name: internal
-        common_name: vault.default
+      - name: exported
+        common_name: vault.vault
+        create_only: true
+        save_to: "secret/data/pki/ca" # save private_key to a kv version 2 location
       roles:
       - name: default
         allowed_domains: localhost,pod,svc,default
