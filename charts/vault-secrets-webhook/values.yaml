@@ -60,11 +60,14 @@ vaultEnv:
 env:
   VAULT_IMAGE: vault:1.6.0
   # VAULT_CAPATH: /vault/tls
-  # used when the pod that should get secret injected does not specify
-  # an imagePullSecret
+  # # Used when the pod that should get secret injected does not
+  # # specify an imagePullSecret
   # DEFAULT_IMAGE_PULL_SECRET:
   # DEFAULT_IMAGE_PULL_SECRET_NAMESPACE:
   # VAULT_CLIENT_TIMEOUT: 10s
+  # # define the webhook's role in Vault used for authentication,
+  # # if not defined individually in resources by annotations.
+  # VAULT_ROLE: vault-secrets-webhook
 
 metrics:
   enabled: false
