@@ -154,7 +154,7 @@ func getImageConfig(container ContainerInfo) (*v1.Config, error) {
 		options = append(options, remote.WithTransport(tr))
 	}
 
-	ref, err := name.ParseReference(container.Image)
+	ref, err := name.ParseReference(fmt.Sprintf("%s/%s", container.RegistryName, container.Image))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse image reference")
 	}
