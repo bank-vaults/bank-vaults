@@ -60,7 +60,7 @@ vaultEnv:
 env:
   VAULT_IMAGE: vault:1.6.0
   # VAULT_CAPATH: /vault/tls
-  # # Wsed when the pod that should get secret injected does not
+  # # Used when the pod that should get secret injected does not
   # # specify an imagePullSecret
   # DEFAULT_IMAGE_PULL_SECRET:
   # DEFAULT_IMAGE_PULL_SECRET_NAMESPACE:
