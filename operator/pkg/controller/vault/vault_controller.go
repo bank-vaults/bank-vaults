@@ -1403,6 +1403,12 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		return nil, err
 	}
 
+	// merge provided VaultContainerSpec into the Vault Container defined above
+	// the values in VaultContainerSpec will never overwrite fields defined in the PodSpec above
+	if err := mergo.Merge(&podSpec.Containers[0], v.Spec.VaultContainerSpec, mergo.WithOverride); err != nil {
+		return nil, err
+	}
+
 	podManagementPolicy := appsv1.ParallelPodManagement
 	if v.Spec.IsRaftStorage() || v.Spec.IsRaftHAStorage() {
 		podManagementPolicy = appsv1.OrderedReadyPodManagement

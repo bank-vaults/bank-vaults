@@ -206,6 +206,14 @@ spec:
   #     hostnames:
   #     - "vault.local"
 
+  # It is possible to override the Vault container directly:
+  # vaultContainerSpec:
+  #   lifecycle:
+  #     postStart:
+  #       exec:
+  #         command:
+  #              - setcap cap_ipc_lock=+ep /vault/plugins/orchestrate
+  
   # Marks presence of Istio, which influences things like port namings
   istioEnabled: false
 
