@@ -188,6 +188,11 @@ type VaultSpec struct {
 	// default:
 	VaultPodSpec v1.PodSpec `json:"vaultPodSpec"`
 
+	// VaultContainerSpec is a Kubernetes Container specification snippet that will be merged into the operator generated
+	// Vault Container specification.
+	// default:
+	VaultContainerSpec v1.Container `json:"vaultContainerSpec"`
+
 	// VaultConfigurerAnnotations define a set of Kubernetes annotations that will be added to the Vault Configurer Pod.
 	// default:
 	VaultConfigurerAnnotations map[string]string `json:"vaultConfigurerAnnotations"`

@@ -411,6 +411,7 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 		}
 	}
 	in.VaultPodSpec.DeepCopyInto(&out.VaultPodSpec)
+	in.VaultContainerSpec.DeepCopyInto(&out.VaultContainerSpec)
 	if in.VaultConfigurerAnnotations != nil {
 		in, out := &in.VaultConfigurerAnnotations, &out.VaultConfigurerAnnotations
 		*out = make(map[string]string, len(*in))
