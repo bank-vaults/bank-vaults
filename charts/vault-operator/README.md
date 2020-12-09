@@ -70,8 +70,8 @@ The following table lists the configurable parameters of the vault chart and the
 |-----------------------------|---------------------------------------------|-----------------------------------------------------|
 | `image.pullPolicy`          | Container pull policy                       | `IfNotPresent`                                      |
 | `image.repository`          | Container image to use                      | `banzaicloud/vault-operator`                        |
-| `image.bankVaultsRepository`| Container image to use for Bank-Vaults      | `banzaicloud/bank-vaults`                        |
-| `image.tag`                 | Container image tag to deploy               | `1.7.0`                                             |
+| `image.bankVaultsRepository`| Container image to use for Bank-Vaults      | `banzaicloud/bank-vaults`                           |
+| `image.tag`                 | Container image tag to deploy               | `.Chart.AppVersion`                                 |
 | `image.imagePullSecrets`    | Image pull secrets for private repositories | `[]`                                                |
 | `replicaCount`              | k8s replicas                                | `1`                                                 |
 | `resources.requests.cpu`    | Container requested CPU                     | `100m`                                              |
