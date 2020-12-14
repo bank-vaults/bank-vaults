@@ -1,5 +1,5 @@
 # Installing Prometheus Operator is required to make this example work:
-# kubectl apply -f https://raw.githubusercontent.com/coreos/prometheus-operator/master/bundle.yaml
+# kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/master/bundle.yaml
 #
 # After applying this check the Vault targets on the Prometheus UI:
 #  1. kubectl port-forward prometheus-prometheus-0 9090

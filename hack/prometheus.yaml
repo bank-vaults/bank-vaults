@@ -4,8 +4,7 @@ metadata:
   name: prometheus
 spec:
   serviceMonitorSelector: {}
-  serviceMonitorNamespaceSelector:
-    any: true
+  serviceMonitorNamespaceSelector: {}
   storage:
     volumeClaimTemplate:
       spec:
