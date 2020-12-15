@@ -531,8 +531,16 @@ func (spec *VaultSpec) HasStorageHAEnabled() bool {
 // IsTLSDisabled returns if Vault's TLS should be disabled
 func (spec *VaultSpec) IsTLSDisabled() bool {
 	listener := spec.getListener()
-	tcpSpecs := cast.ToStringMap(listener["tcp"])
-	return cast.ToBool(tcpSpecs["tls_disable"])
+	tcp := cast.ToStringMap(listener["tcp"])
+	return cast.ToBool(tcp["tls_disable"])
+}
+
+// IsTelemetryUnauthenticated returns if Vault's telemetry endpoint can be accessed publicly
+func (spec *VaultSpec) IsTelemetryUnauthenticated() bool {
+	listener := spec.getListener()
+	tcp := cast.ToStringMap(listener["tcp"])
+	telemetry := cast.ToStringMap(tcp["telemetry"])
+	return cast.ToBool(telemetry["unauthenticated_metrics_access"])
 }
 
 // GetAPIScheme returns if Vault's API address should be called on http or https
