@@ -740,6 +740,12 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 			JobLabel: v.Name,
 			Selector: metav1.LabelSelector{
 				MatchLabels: ls,
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      appsv1.StatefulSetPodNameLabel,
+						Operator: metav1.LabelSelectorOpExists,
+					},
+				},
 			},
 			NamespaceSelector: monitorv1.NamespaceSelector{
 				MatchNames: []string{v.Namespace},
@@ -750,7 +756,7 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 	vaultVersionWithPrometheus := semver.MustParse("1.1.0")
 	version, err := v.Spec.GetVersion()
 	if err == nil && !version.LessThan(vaultVersionWithPrometheus) {
-		serviceMonitor.Spec.Endpoints = []monitorv1.Endpoint{{
+		endpoint := monitorv1.Endpoint{
 			Interval: "30s",
 			Port:     v.Spec.GetAPIPortName(),
 			Scheme:   strings.ToLower(string(getVaultURIScheme(v))),
@@ -761,8 +767,11 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 					InsecureSkipVerify: true,
 				},
 			},
-			BearerTokenFile: fmt.Sprintf("/etc/prometheus/config_out/.%s-token", v.Name),
-		}}
+		}
+		if !v.Spec.IsTelemetryUnauthenticated() {
+			endpoint.BearerTokenFile = fmt.Sprintf("/etc/prometheus/config_out/.%s-token", v.Name)
+		}
+		serviceMonitor.Spec.Endpoints = []monitorv1.Endpoint{endpoint}
 	} else {
 		serviceMonitor.Spec.Endpoints = []monitorv1.Endpoint{{
 			Interval: "30s",
