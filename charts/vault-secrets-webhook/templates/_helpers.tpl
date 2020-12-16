@@ -53,3 +53,14 @@ Overrideable version for container image tags.
 {{- define "vault-secrets-webhook.bank-vaults.version" -}}
 {{- .Values.image.tag | default (printf "%s" .Chart.AppVersion) -}}
 {{- end -}}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "vault-secrets-webhook.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (include "vault-secrets-webhook.fullname" .) .Values.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.name }}
+{{- end }}
+{{- end }}

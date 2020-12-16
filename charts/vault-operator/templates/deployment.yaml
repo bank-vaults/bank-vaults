@@ -89,6 +89,6 @@ spec:
       nodeSelector:
 {{ toYaml .Values.nodeSelector | indent 8 }}
 {{- end }}
-      serviceAccountName: {{ include "vault-operator.fullname" . }}
+      serviceAccountName: {{ include "vault-operator.serviceAccountName" . }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
 {{- include "vault-operator.imagePullSecrets" . | indent 6 }}

@@ -37,3 +37,14 @@ Overrideable version for container image tags.
 {{- define "vault.bank-vaults.version" -}}
 {{- .Values.unsealer.image.tag | default (printf "%s" .Chart.AppVersion) -}}
 {{- end -}}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "vault.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (include "vault.fullname" .) .Values.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.name }}
+{{- end }}
+{{- end }}

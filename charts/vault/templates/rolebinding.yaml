@@ -1,10 +1,10 @@
-{{- if .Values.rbac.enabled }}
+{{- if .Values.serviceAccount.create }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: {{ .Release.Namespace }}-{{ template "vault.fullname" . }}-auth-delegator
   labels:
-    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    helm.sh/chart: {{ template "vault.chart" . }}
     app.kubernetes.io/name: {{ template "vault.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
@@ -14,7 +14,7 @@ roleRef:
   name: system:auth-delegator
 subjects:
 - kind: ServiceAccount
-  name: {{ template "vault.fullname" . }}
+  name: {{ template "vault.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -22,7 +22,7 @@ kind: RoleBinding
 metadata:
   name: {{ template "vault.fullname" . }}-secret-access
   labels:
-    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    helm.sh/chart: {{ template "vault.chart" . }}
     app.kubernetes.io/name: {{ template "vault.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
@@ -32,6 +32,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 subjects:
 - kind: ServiceAccount
-  name: {{ template "vault.fullname" . }}
+  name: {{ template "vault.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
 {{- end }}
