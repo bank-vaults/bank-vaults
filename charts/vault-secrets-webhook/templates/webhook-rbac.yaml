@@ -1,18 +1,22 @@
+{{- if .Values.serviceAccount.create }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  name: {{ template "vault-secrets-webhook.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
-  name: {{ template "vault-secrets-webhook.fullname" . }}
-  {{- if .Values.serviceAccount.annotations }}
+  {{- with .Values.serviceAccount.annotations }}
   annotations:
-{{ toYaml .Values.serviceAccount.annotations | indent 4 }}
-  {{- end }}  
-  {{- if .Values.serviceAccount.labels }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   labels:
+    helm.sh/chart: {{ include "vault-secrets-webhook.chart" . }}
+    app.kubernetes.io/name: {{ include "vault-secrets-webhook.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  {{- if .Values.serviceAccount.labels }}
 {{ toYaml .Values.serviceAccount.labels | indent 4 }}
   {{- end }}
 ---
-{{- if .Values.rbac.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -55,7 +59,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
-  name: {{ template "vault-secrets-webhook.fullname" . }}
+  name: {{ template "vault-secrets-webhook.serviceAccountName" . }}
 {{- if .Values.rbac.authDelegatorRole.enabled }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -68,7 +72,7 @@ roleRef:
   name: system:auth-delegator
 subjects:
   - kind: ServiceAccount
-    name: {{ template "vault-secrets-webhook.fullname" . }}
+    name: {{ template "vault-secrets-webhook.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
 {{- end }}
 {{- end }}

@@ -3,7 +3,7 @@ kind: ConfigMap
 metadata:
   name: "{{ template "vault.fullname" . }}-statsd-mapping"
   labels:
-    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    helm.sh/chart: {{ template "vault.chart" . }}
     app.kubernetes.io/name: "{{ template "vault.name" . }}"
     app.kubernetes.io/instance: {{ .Release.Name | quote }}
     app.kubernetes.io/managed-by: {{ .Release.Service | quote }}

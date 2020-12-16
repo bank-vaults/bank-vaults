@@ -3,7 +3,7 @@ kind: StatefulSet
 metadata:
   name: {{ template "vault.fullname" . }}
   labels:
-    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    helm.sh/chart: {{ template "vault.chart" . }}
     app.kubernetes.io/name: {{ template "vault.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
@@ -256,7 +256,7 @@ spec:
                   app.kubernetes.io/name: {{ template "vault.fullname" . }}
                   app.kubernetes.io/instance: {{ .Release.Name | quote }}
 {{- end }}
-      serviceAccountName: {{ template "vault.fullname" . }}
+      serviceAccountName: {{ template "vault.serviceAccountName" . }}
       securityContext:
         fsGroup: 65534
       volumes:

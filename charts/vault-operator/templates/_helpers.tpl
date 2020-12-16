@@ -61,3 +61,14 @@ imagePullSecrets:
     {{- end }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "vault-operator.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (include "vault-operator.fullname" .) .Values.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.name }}
+{{- end }}
+{{- end }}

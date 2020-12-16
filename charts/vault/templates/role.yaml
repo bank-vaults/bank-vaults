@@ -1,10 +1,10 @@
-{{- if .Values.rbac.enabled }}
+{{- if .Values.serviceAccount.create }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ template "vault.fullname" . }}-secret-access
   labels:
-    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    helm.sh/chart: {{ template "vault.chart" . }}
     app.kubernetes.io/name: {{ template "vault.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
@@ -12,10 +12,11 @@ rules:
 - apiGroups: [""]
   resources: ["secrets"]
   verbs: ["*"]
+{{- end }}
 {{- if .Values.rbac.psp.enabled }}
+---
 - apiGroups: ["extensions"]
   resources: ["podsecuritypolicies"]
   verbs: ["use"]
   resourceNames: [{{ template "vault.fullname" . }}]
-{{- end }}
 {{- end }}

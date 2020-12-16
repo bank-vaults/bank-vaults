@@ -1,9 +1,15 @@
+{{- if .Values.serviceAccount.create -}}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "vault-operator.fullname" . }}
+  name: {{ include "vault-operator.serviceAccountName" . }}
   labels:
     helm.sh/chart: {{ include "vault-operator.chart" . }}
     app.kubernetes.io/name: {{ include "vault-operator.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

@@ -1,3 +1,4 @@
+{{- if .Values.serviceAccount.create -}}
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -6,12 +7,13 @@ metadata:
     helm.sh/chart: {{ include "vault-operator.chart" . }}
 subjects:
 - kind: ServiceAccount
-  name: {{ include "vault-operator.fullname" . }}
+  name: {{ include "vault-operator.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
   name: {{ include "vault-operator.fullname" . }}
   apiGroup: rbac.authorization.k8s.io
+{{- end }}
 {{- if .Values.psp.enabled }}
 ---
 kind: RoleBinding
@@ -22,7 +24,7 @@ metadata:
     helm.sh/chart: {{ include "vault-operator.chart" . }}
 subjects:
 - kind: ServiceAccount
-  name: {{ include "vault-operator.fullname" . }}
+  name: {{ include "vault-operator.serviceAccountName" . }}
 roleRef:
   kind: Role
   name: psp:{{ include "vault-operator.fullname" . }}

@@ -5,7 +5,7 @@ metadata:
   name: {{ template "vault-secrets-webhook.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    helm.sh/chart: {{ template "vault-secrets-webhook.chart" . }}
     app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
@@ -39,7 +39,7 @@ metadata:
   name: {{ template "vault-secrets-webhook.fullname" . }}-metrics
   namespace: {{ .Release.Namespace }}
   labels:
-    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    helm.sh/chart: {{ template "vault-secrets-webhook.chart" . }}
     app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
