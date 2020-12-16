@@ -9,8 +9,8 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   labels:
-    helm.sh/chart: {{ include "vault-operator.chart" . }}
-    app.kubernetes.io/name: {{ include "vault-operator.name" . }}
+    helm.sh/chart: {{ include "vault-secrets-webhook.chart" . }}
+    app.kubernetes.io/name: {{ include "vault-secrets-webhook.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
   {{- if .Values.serviceAccount.labels }}
