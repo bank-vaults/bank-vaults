@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  helm: banzaicloud/helm@0.0.7
+  helm: banzaicloud/helm@0.0.8
 
 jobs:
   multi-cluster-acceptance-test:
