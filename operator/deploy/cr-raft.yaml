@@ -7,8 +7,8 @@ metadata:
     vault_cr: vault
 spec:
   size: 3
-  image: vault:1.6.0
-  
+  image: vault:1.6.1
+
   # Common annotations for all created resources
   annotations:
     common/annotation: "true"
@@ -134,7 +134,7 @@ spec:
     api_addr: https://vault.default:8200
     cluster_addr: "https://${.Env.POD_NAME}:8201"
     ui: true
-  
+
   statsdDisabled: true
 
   serviceRegistrationEnabled: true

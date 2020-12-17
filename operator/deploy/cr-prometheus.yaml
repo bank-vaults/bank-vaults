@@ -11,8 +11,8 @@ metadata:
   name: "vault"
 spec:
   size: 2
-  image: vault:1.6.0
-  
+  image: vault:1.6.1
+
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault
 
@@ -57,7 +57,7 @@ spec:
         tls_key_file: /vault/tls/server.key
         # If you are using HA I suggest uncommenting this part, please check:
         # https://www.vaultproject.io/docs/configuration/telemetry#prometheus
-        # In case this is uncommented, the whole token ceremony below with 
+        # In case this is uncommented, the whole token ceremony below with
         # Vault Agent is unnecessary.
         telemetry:
           unauthenticated_metrics_access: true
@@ -67,7 +67,7 @@ spec:
     api_addr: https://vault.default:8200
     cluster_addr: "https://${.Env.POD_NAME}:8201"
     ui: true
-  
+
   serviceMonitorEnabled: true
 
   serviceRegistrationEnabled: true

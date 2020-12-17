@@ -16,8 +16,8 @@ metadata:
   namespace: default
 spec:
   size: 1
-  image: vault:1.6.0
-  
+  image: vault:1.6.1
+
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults
   # configurer/unsealer will be running
   serviceAccount: vault
@@ -166,8 +166,8 @@ metadata:
   namespace: tenant
 spec:
   size: 1
-  image: vault:1.6.0
-  
+  image: vault:1.6.1
+
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults
   # configurer/unsealer will be running
   serviceAccount: vault

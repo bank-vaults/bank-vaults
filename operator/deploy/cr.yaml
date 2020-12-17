@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: vault:1.6.0
+  image: vault:1.6.1
   # specify a custom bank-vaults image with bankVaultsImage:
   # bankVaultsImage: ghcr.io/banzaicloud/bank-vaults:latest
 
@@ -213,7 +213,7 @@ spec:
   #       exec:
   #         command:
   #              - setcap cap_ipc_lock=+ep /vault/plugins/orchestrate
-  
+
   # Marks presence of Istio, which influences things like port namings
   istioEnabled: false
 

@@ -4,8 +4,8 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: vault:1.6.0
-  
+  image: vault:1.6.1
+
   vaultPodSpec:
     priorityClassName: high-priority
 
@@ -15,11 +15,11 @@ spec:
   # Common annotations for all created resources
   annotations:
     common/annotation: "true"
-  
+
   # Vault Pods , Services and TLS Secret annotations
   vaultAnnotations:
     type/instance: "vault"
-  
+
   # Vault Configurer Pods and Services annotations
   vaultConfigurerAnnotations:
     type/instance: "vaultconfigurer"

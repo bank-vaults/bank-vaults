@@ -5,10 +5,10 @@ metadata:
   name: "vault-kv-unseal"
 spec:
   size: 1
-  image: vault:1.6.0
-  
+  image: vault:1.6.1
+
   # Describe where you would like to store the Vault unseal keys and root token
-  # in seperate remote Vault instance. 
+  # in seperate remote Vault instance.
   unsealConfig:
     vault:
       address: https://vault:8200 # Remote Address for Vault
