@@ -4,8 +4,8 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: vault:1.6.0
-  
+  image: vault:1.6.1
+
   # Describe where you would like to store the Vault unseal keys and root token
   # in Azure KeyVault.
   unsealConfig:

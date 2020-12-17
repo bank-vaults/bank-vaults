@@ -4,8 +4,8 @@ metadata:
   name: "vault-primary"
 spec:
   size: 1
-  image: vault:1.6.0
-  
+  image: vault:1.6.1
+
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault
 
@@ -41,7 +41,7 @@ spec:
       kmsKeyId: "9f054126-2a98-470c-9f10-9b3b0cad94a1,02a2ba49-42ce-487f-b006-34c64f4b760e"
       s3Region: "eu-west-1,eu-central-1"
       s3Bucket: "bank-vaults,bank-vaults-0"
-      s3Prefix: "raft-" 
+      s3Prefix: "raft-"
 
   # "self" is a special value which means that this
   # instance should be the bootstrap leader instance.
@@ -112,7 +112,7 @@ spec:
             allow_subdomains: true
             generate_lease: true
             ttl: 1m
-      
+
     # Allows writing some secrets to Vault (useful for development purposes).
     # See https://www.vaultproject.io/docs/secrets/kv/index.html for more information.
     startupSecrets:

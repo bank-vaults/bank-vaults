@@ -4,16 +4,16 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: vault:1.6.0
-  
+  image: vault:1.6.1
+
   # Common annotations for all created resources
   annotations:
     common/annotation: "true"
-  
+
   # Vault Pods , Services and TLS Secret annotations
   vaultAnnotations:
     type/instance: "vault"
-  
+
   # Vault Configurer Pods and Services annotations
   vaultConfigurerAnnotations:
     type/instance: "vaultconfigurer"
@@ -109,7 +109,7 @@ spec:
     api_addr: https://vault.default:8200
     cluster_addr: "https://${.Env.POD_NAME}:8201"
     ui: true
-  
+
   statsdDisabled: true
 
   # See: https://banzaicloud.com/docs/bank-vaults/cli-tool/#example-external-vault-configuration

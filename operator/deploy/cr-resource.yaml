@@ -4,8 +4,8 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: vault:1.6.0
-  
+  image: vault:1.6.1
+
   resources:
     # A YAML representation of resource ResourceRequirements for vault container
     # Detail can reference: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container
@@ -38,11 +38,11 @@ spec:
   # Common annotations for all created resources
   annotations:
     common/annotation: "true"
-  
+
   # Vault Pods , Services and TLS Secret annotations
   vaultAnnotations:
     type/instance: "vault"
-  
+
   # Vault Configurer Pods and Services annotations
   vaultConfigurerAnnotations:
     type/instance: "vaultconfigurer"

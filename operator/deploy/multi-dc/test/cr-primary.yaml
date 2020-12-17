@@ -4,8 +4,8 @@ metadata:
   name: "vault-primary"
 spec:
   size: 1
-  image: vault:1.6.0
-  
+  image: vault:1.6.1
+
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault
 
@@ -107,7 +107,7 @@ spec:
             allow_subdomains: true
             generate_lease: true
             ttl: 1m
-      
+
     # Allows writing some secrets to Vault (useful for development purposes).
     # See https://www.vaultproject.io/docs/secrets/kv/index.html for more information.
     startupSecrets:

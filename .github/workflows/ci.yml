@@ -10,7 +10,7 @@ jobs:
 
     services:
       vault:
-        image: vault:1.6.0
+        image: vault:1.6.1
         env:
           SKIP_SETCAP: true
           VAULT_DEV_ROOT_TOKEN_ID: 227e1cce-6bf7-30bb-2d2a-acc854318caf
@@ -44,7 +44,7 @@ jobs:
       run: make check
       env:
         VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
-    
+
     - name: Lint Helm charts
       uses: helm/chart-testing-action@v1.1.0
       with:

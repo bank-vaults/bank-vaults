@@ -4,7 +4,7 @@ metadata:
   name: vault
 spec:
   size: 1
-  image: vault:1.6.0
+  image: vault:1.6.1
   bankVaultsImage: banzaicloud/bank-vaults:master
 
   serviceAccount: vault

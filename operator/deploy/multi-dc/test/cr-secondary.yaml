@@ -4,8 +4,8 @@ metadata:
   name: "vault-secondary"
 spec:
   size: 1
-  image: vault:1.6.0
-  
+  image: vault:1.6.1
+
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault
 
@@ -37,7 +37,7 @@ spec:
       address: "http://{{.CENTRAL_VAULT_ADDRESS}}:8200"
       token: "227e1cce-6bf7-30bb-2d2a-acc854318caf"
       unsealKeysPath: "secret/data/vault-unseal-keys"
-  
+
   raftLeaderAddress: {{.RAFT_LEADER_ADDRESS}}
 
   # A YAML representation of a final vault config file.

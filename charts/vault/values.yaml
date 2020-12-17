@@ -6,7 +6,7 @@ strategy:
   type: RollingUpdate
 image:
   repository: vault
-  tag: 1.6.0
+  tag: 1.6.1
   pullPolicy: IfNotPresent
 
 service:

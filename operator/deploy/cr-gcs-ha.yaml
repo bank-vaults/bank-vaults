@@ -4,8 +4,8 @@ metadata:
   name: "vault"
 spec:
   size: 2
-  image: vault:1.6.0
-  
+  image: vault:1.6.1
+
   # Describe where you would like to store the Vault unseal keys and root token
   # in GCS encrypted with KMS.
   unsealConfig:
@@ -71,7 +71,7 @@ spec:
               max_ttl: "0"
           roleset:
             - name: editor
-              # To avoid vault deleting and recreating the Google Service Account everytime this config is applied 
+              # To avoid vault deleting and recreating the Google Service Account everytime this config is applied
               # set create_only=true. Disable when you need to actually apply a change
               create_only: "true"
               secret_type: "service_account_key"

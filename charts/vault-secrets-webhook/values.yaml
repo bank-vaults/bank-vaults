@@ -51,7 +51,7 @@ vaultEnv:
   repository: ghcr.io/banzaicloud/vault-env
 
 env:
-  VAULT_IMAGE: vault:1.6.0
+  VAULT_IMAGE: vault:1.6.1
   # VAULT_CAPATH: /vault/tls
   # # Used when the pod that should get secret injected does not
   # # specify an imagePullSecret

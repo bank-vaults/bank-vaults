@@ -114,7 +114,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | tolerations                      | tolerations to add                                                           | `[]`                                |
 | rbac.psp.enabled                 | use pod security policy                                                      | `false`                             |
 | rbac.authDelegatorRole.enabled    | bind `system:auth-delegator` to the ServiceAccount                          | `false`                             |
-| env.VAULT_IMAGE                  | vault image                                                                  | `vault:1.6.0`                       |
+| env.VAULT_IMAGE                  | vault image                                                                  | `vault:1.6.1`                       |
 | volumes                          | extra volume definitions                                                     | `[]`                                |
 | volumeMounts                     | extra volume mounts                                                          | `[]`                                |
 | configMapMutation                | enable injecting values from Vault to ConfigMaps                             | `false`                             |
