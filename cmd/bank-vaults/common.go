@@ -15,6 +15,8 @@
 package main
 
 import (
+	"os"
+
 	"emperror.dev/errors"
 	"github.com/spf13/viper"
 
@@ -103,6 +105,19 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		s3SSEAlgos := cfg.GetStringSlice(cfgAWS3SSEAlgo)
 		kmsRegions := cfg.GetStringSlice(cfgAWSKMSRegion)
 		kmsKeyIDs := cfg.GetStringSlice(cfgAWSKMSKeyID)
+
+		// Try to use the standard AWS region
+		// setting if not provided for KMS/S3
+		awsRegion := os.Getenv("AWS_REGION")
+		if awsRegion == "" {
+			awsRegion = os.Getenv("AWS_DEFAULT_REGION")
+		}
+		if len(s3Regions) == 0 && awsRegion != "" {
+			s3Regions = []string{awsRegion}
+		}
+		if len(kmsRegions) == 0 && awsRegion != "" {
+			kmsRegions = []string{awsRegion}
+		}
 
 		if len(s3Regions) != len(s3Buckets) {
 			return nil, errors.Errorf("specify the same number of regions and buckets for AWS S3 kv store [%d != %d]", len(s3Regions), len(s3Buckets))
