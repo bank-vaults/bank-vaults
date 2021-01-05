@@ -9,13 +9,14 @@ spec:
   # A YAML representation of nodeAffinity
   # Detail can reference: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   # And: https://kubernetes.io/docs/setup/multiple-zones/#nodes-are-labeled
-  nodeAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-      nodeSelectorTerms:
-      - matchExpressions:
-        - key : "kubernetes.io/hostname"
-          operator: In
-          values: ["minikube"]
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key : "kubernetes.io/hostname"
+            operator: In
+            values: ["minikube"]
 
   # Support for custom Vault (and sidecar) pod annotations
   annotations:

@@ -300,14 +300,20 @@ type VaultSpec struct {
 	// default:
 	ServicePorts map[string]int32 `json:"servicePorts"`
 
+	// Affinity is a group of affinity scheduling rules applied to all Vault Pods.
+	// default:
+	Affinity *v1.Affinity `json:"affinity,omitempty"`
+
 	// PodAntiAffinity is the TopologyKey in the Vault Pod's PodAntiAffinity.
 	// No PodAntiAffinity is used if empty.
+	// Deprecated. Use Affinity.
 	// default:
-	PodAntiAffinity string `json:"podAntiAffinity"`
+	PodAntiAffinity string `json:"podAntiAffinity,omitempty"`
 
 	// NodeAffinity is Kubernetees NodeAffinity definition that should be applied to all Vault Pods.
+	// Deprecated. Use Affinity.
 	// default:
-	NodeAffinity v1.NodeAffinity `json:"nodeAffinity"`
+	NodeAffinity v1.NodeAffinity `json:"nodeAffinity,omitempty"`
 
 	// NodeSelector is Kubernetees NodeSelector definition that should be applied to all Vault Pods.
 	// default:

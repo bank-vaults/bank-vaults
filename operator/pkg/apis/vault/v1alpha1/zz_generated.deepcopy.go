@@ -470,6 +470,11 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 			(*out)[key] = val
 		}
 	}
+	if in.Affinity != nil {
+		in, out := &in.Affinity, &out.Affinity
+		*out = new(v1.Affinity)
+		(*in).DeepCopyInto(*out)
+	}
 	in.NodeAffinity.DeepCopyInto(&out.NodeAffinity)
 	if in.NodeSelector != nil {
 		in, out := &in.NodeSelector, &out.NodeSelector
