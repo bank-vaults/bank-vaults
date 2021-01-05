@@ -1365,11 +1365,16 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		})
 	}
 
+	affinity := &corev1.Affinity{
+		PodAntiAffinity: getPodAntiAffinity(v),
+		NodeAffinity:    getNodeAffinity(v),
+	}
+	if v.Spec.Affinity != nil {
+		affinity = v.Spec.Affinity
+	}
+
 	podSpec := corev1.PodSpec{
-		Affinity: &corev1.Affinity{
-			PodAntiAffinity: getPodAntiAffinity(v),
-			NodeAffinity:    getNodeAffinity(v),
-		},
+		Affinity: affinity,
 
 		ServiceAccountName:           v.Spec.GetServiceAccount(),
 		AutomountServiceAccountToken: pointer.BoolPtr(true),
