@@ -126,7 +126,7 @@ func TestSecretInjector(t *testing.T) {
 		}
 
 		err = injector.InjectSecretsFromVault(references, injectFunc)
-		assert.EqualError(t, err, "key 'data' not found under path: secret/get/data")
+		assert.EqualError(t, err, "path not found: secret/get/data")
 	})
 }
 
