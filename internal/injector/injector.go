@@ -151,17 +151,17 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 			data, err = i.readVaultPath(valuePath, versionOrData, update)
 		}
 
-		if data == nil && err != nil {
+		if err != nil {
+			return err
+		}
+
+		if data == nil {
 			if !i.config.IgnoreMissingSecrets {
 				return errors.Errorf("path not found: %s", valuePath)
 			}
 
-			i.logger.Errorln("path not found:", valuePath)
+			i.logger.Errorf("path not found: %s", valuePath)
 			continue
-		}
-
-		if err != nil {
-			return err
 		}
 
 		secretCache[secretCacheKey] = data
@@ -202,18 +202,17 @@ func (i SecretInjector) InjectSecretsFromVaultPath(paths string, inject SecretIn
 		}
 
 		data, err := i.readVaultPath(valuePath, version, false)
+		if err != nil {
+			return err
+		}
 
-		if data == nil && err != nil {
+		if data == nil {
 			if !i.config.IgnoreMissingSecrets {
 				return errors.Errorf("path not found: %s", valuePath)
 			}
 
 			i.logger.Errorln("path not found:", valuePath)
 			continue
-		}
-
-		if err != nil {
-			return errors.Wrapf(err, "failed to read secret from path: %s", valuePath)
 		}
 
 		for key, value := range data {
@@ -262,7 +261,7 @@ func (i SecretInjector) readVaultPath(path, versionOrData string, update bool) (
 	}
 
 	if secret == nil {
-		return nil, errors.Errorf("path not found: %s", path)
+		return nil, nil
 	}
 
 	for _, warning := range secret.Warnings {
