@@ -116,7 +116,7 @@ spec:
             {{ else }}
             scheme: HTTPS
             {{ end }}
-            path: /v1/sys/health?standbyok=true&perfstandbyok=true
+            path: /v1/sys/health?standbyok=true&perfstandbyok=true&drsecondarycode=299
             port: vault
         securityContext:
           readOnlyRootFilesystem: true
