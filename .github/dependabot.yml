@@ -1,0 +1,7 @@
+version: 2
+updates:
+  # Keep Docker dependencies up to date
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "daily"
