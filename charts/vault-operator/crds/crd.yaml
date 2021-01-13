@@ -2665,7 +2665,6 @@ spec:
                     - keyLabel
                     - modulePath
                     - pin
-                    - slotId
                     type: object
                   kubernetes:
                     description: KubernetesUnsealConfig holds the parameters for Kubernetes
@@ -17010,9 +17009,9 @@ spec:
                 description: 'VolumeClaimTemplates define some extra Kubernetes PersistentVolumeClaim
                   templates for the Vault Statefulset. default:'
                 items:
-                  description: EmbeddedPersistentVolumeClaim is an embeddable version
-                    of k8s.io/api/core/v1.PersistentVolumeClaim. It contains TypeMeta
-                    and a reduced ObjectMeta.
+                  description: EmbeddedPersistentVolumeClaim is an embeddable and
+                    controller-gen friendly version of k8s.io/api/core/v1.PersistentVolumeClaim.
+                    It contains TypeMeta and a reduced ObjectMeta.
                   properties:
                     apiVersion:
                       description: 'APIVersion defines the versioned schema of this
@@ -18691,8 +18690,6 @@ spec:
                 type: array
             required:
             - config
-            - serviceRegistrationEnabled
-            - vaultContainerSpec
             type: object
           status:
             description: VaultStatus defines the observed state of Vault

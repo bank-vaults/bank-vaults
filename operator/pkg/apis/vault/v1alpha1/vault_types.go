@@ -147,7 +147,7 @@ type VaultSpec struct {
 	// VaultContainerSpec is a Kubernetes Container specification snippet that will be merged into the operator generated
 	// Vault Container specification.
 	// default:
-	VaultContainerSpec v1.Container `json:"vaultContainerSpec"`
+	VaultContainerSpec v1.Container `json:"vaultContainerSpec,omitempty"`
 
 	// VaultConfigurerAnnotations define a set of Kubernetes annotations that will be added to the Vault Configurer Pod.
 	// default:
@@ -244,7 +244,7 @@ type VaultSpec struct {
 	// serviceRegistrationEnabled enables the injection of the service_registration Vault stanza.
 	// This requires elaborated RBAC privileges for updating Pod labels for the Vault Pod.
 	// default: false
-	ServiceRegistrationEnabled bool `json:"serviceRegistrationEnabled"`
+	ServiceRegistrationEnabled bool `json:"serviceRegistrationEnabled,omitempty"`
 
 	// RaftLeaderAddress defines the leader address of the raft cluster in multi-cluster deployments.
 	// (In single cluster (namespace) deployments it is automatically detected).
@@ -1117,7 +1117,7 @@ type VaultUnsealConfig struct {
 type HSMUnsealConfig struct {
 	Daemon     bool   `json:"daemon,omitempty"`
 	ModulePath string `json:"modulePath"`
-	SlotID     uint   `json:"slotId"`
+	SlotID     uint   `json:"slotId,omitempty"`
 	TokenLabel string `json:"tokenLabel,omitempty"`
 	Pin        string `json:"pin"`
 	KeyLabel   string `json:"keyLabel"`
