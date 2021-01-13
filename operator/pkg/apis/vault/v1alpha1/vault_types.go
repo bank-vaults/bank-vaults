@@ -293,7 +293,7 @@ type VaultSpec struct {
 
 	// VolumeClaimTemplates define some extra Kubernetes PersistentVolumeClaim templates for the Vault Statefulset.
 	// default:
-	VolumeClaimTemplates []v1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
+	VolumeClaimTemplates []EmbeddedPersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
 
 	// VaultEnvsConfig is a list of Kubernetes environment variable definitions that will be passed to the Vault container.
 	// default:
@@ -351,6 +351,48 @@ type VaultSpec struct {
 
 	// InitContainers add extra initContainers
 	VaultInitContainers []v1.Container `json:"vaultInitContainers,omitempty"`
+}
+
+// EmbeddedPersistentVolumeClaim is an embeddable and controller-gen friendly version of k8s.io/api/core/v1.PersistentVolumeClaim.
+// It contains TypeMeta and a reduced ObjectMeta.
+type EmbeddedPersistentVolumeClaim struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// EmbeddedMetadata contains metadata relevant to an EmbeddedResource.
+	EmbeddedObjectMetadata `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	// Spec defines the desired characteristics of a volume requested by a pod author.
+	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+	// +optional
+	Spec v1.PersistentVolumeClaimSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+}
+
+// EmbeddedObjectMetadata contains a subset of the fields included in k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta
+// Only fields which are relevant to embedded resources are included.
+// controller-gen discards embedded ObjectMetadata type fields, so we have to overcome this.
+type EmbeddedObjectMetadata struct {
+	// Name must be unique within a namespace. Is required when creating resources, although
+	// some resources may allow a client to request the generation of an appropriate name
+	// automatically. Name is primarily intended for creation idempotence and configuration
+	// definition.
+	// Cannot be updated.
+	// More info: http://kubernetes.io/docs/user-guide/identifiers#names
+	// +optional
+	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+
+	// Map of string keys and values that can be used to organize and categorize
+	// (scope and select) objects. May match selectors of replication controllers
+	// and services.
+	// More info: http://kubernetes.io/docs/user-guide/labels
+	// +optional
+	Labels map[string]string `json:"labels,omitempty" protobuf:"bytes,11,rep,name=labels"`
+
+	// Annotations is an unstructured key value map stored with a resource that may be
+	// set by external tools to store and retrieve arbitrary metadata. They are not
+	// queryable and should be preserved when modifying objects.
+	// More info: http://kubernetes.io/docs/user-guide/annotations
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,12,rep,name=annotations"`
 }
 
 // HAStorageTypes is the set of storage backends supporting High Availability
@@ -577,8 +619,14 @@ func (spec *VaultSpec) GetVeleroFsfreezeImage() string {
 func (spec *VaultSpec) GetVolumeClaimTemplates() []v1.PersistentVolumeClaim {
 	var pvcs []v1.PersistentVolumeClaim
 	for _, pvc := range spec.VolumeClaimTemplates {
-		pvc.Status.Phase = v1.ClaimPending
-		pvcs = append(pvcs, pvc)
+		pvcs = append(pvcs, v1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        pvc.Name,
+				Labels:      pvc.Labels,
+				Annotations: pvc.Annotations,
+			},
+			Spec: pvc.Spec,
+		})
 	}
 	return pvcs
 }
