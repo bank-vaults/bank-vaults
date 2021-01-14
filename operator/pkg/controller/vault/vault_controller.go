@@ -1029,7 +1029,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	// merge provided VaultConfigurerPodSpec into the PodSpec defined above
 	// the values in VaultConfigurerPodSpec will never overwrite fields defined in the PodSpec above
 	if v.Spec.VaultConfigurerPodSpec != nil {
-		if err := mergo.Merge(&podSpec, v.Spec.VaultConfigurerPodSpec); err != nil {
+		if err := mergo.Merge(&podSpec, v1.PodSpec(*v.Spec.VaultConfigurerPodSpec)); err != nil {
 			return nil, err
 		}
 	}
@@ -1411,7 +1411,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	// merge provided VaultPodSpec into the PodSpec defined above
 	// the values in VaultPodSpec will never overwrite fields defined in the PodSpec above
 	if v.Spec.VaultPodSpec != nil {
-		if err := mergo.Merge(&podSpec, v.Spec.VaultPodSpec, mergo.WithOverride); err != nil {
+		if err := mergo.Merge(&podSpec, v1.PodSpec(*v.Spec.VaultPodSpec), mergo.WithOverride); err != nil {
 			return nil, err
 		}
 	}

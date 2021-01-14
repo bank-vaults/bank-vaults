@@ -8724,8 +8724,6 @@ spec:
                       - name
                       type: object
                     type: array
-                required:
-                - containers
                 type: object
               vaultContainerSpec:
                 description: 'VaultContainerSpec is a Kubernetes Container specification
@@ -16994,8 +16992,6 @@ spec:
                       - name
                       type: object
                     type: array
-                required:
-                - containers
                 type: object
               veleroEnabled:
                 description: 'VeleroEnabled describes if the cluster has a Velero
