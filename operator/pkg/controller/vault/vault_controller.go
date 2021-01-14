@@ -1223,13 +1223,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	// No need to override etcd config, and use user input value
 	if v.Spec.HasEtcdStorage() && v.Spec.GetEtcdSize() > 0 {
 
-		// Overwrite Vault config with the generated TLS certificate's settings
-		etcdStorage := v.Spec.GetEtcdStorage()
-		etcdStorage["tls_ca_file"] = "/etcd/tls/" + etcdutil.CliCAFile
-		etcdStorage["tls_cert_file"] = "/etcd/tls/" + etcdutil.CliCertFile
-		etcdStorage["tls_key_file"] = "/etcd/tls/" + etcdutil.CliKeyFile
-
 		// Mount the Secret holding the certificate into Vault
+		etcdStorage := v.Spec.GetEtcdStorage()
 		etcdAddress := etcdStorage["address"].(string)
 		etcdURL, err := url.Parse(etcdAddress)
 		if err != nil {
