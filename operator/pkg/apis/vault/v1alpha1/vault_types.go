@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
 	"github.com/imdario/mergo"
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
@@ -751,6 +752,27 @@ func (v *Vault) ConfigJSON() (string, error) {
 		}
 
 		if err := mergo.Merge(&config, serviceRegistration); err != nil {
+			return "", err
+		}
+	}
+
+	// Overwrite Vault config with the generated TLS certificate's settings
+	if v.Spec.HasEtcdStorage() && v.Spec.GetEtcdSize() > 0 {
+		storageKey := "storage"
+		if v.Spec.hasHAStorageStanza() && v.Spec.GetHAStorageType() == "etcd" {
+			storageKey = "ha_storage"
+		}
+		etcdStorage := map[string]interface{}{
+			storageKey: map[string]interface{}{
+				"etcd": map[string]interface{}{
+					"tls_ca_file":   "/etcd/tls/" + etcdutil.CliCAFile,
+					"tls_cert_file": "/etcd/tls/" + etcdutil.CliCertFile,
+					"tls_key_file":  "/etcd/tls/" + etcdutil.CliKeyFile,
+				},
+			},
+		}
+
+		if err := mergo.Merge(&config, etcdStorage); err != nil {
 			return "", err
 		}
 	}
