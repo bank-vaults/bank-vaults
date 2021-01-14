@@ -81,7 +81,7 @@ kubectl delete secret vault-unseal-keys
 
 # Third test: Raft HA setup
 kubectl apply -f operator/deploy/cr-raft.yaml
-kubectl wait --for=condition=healthy --timeout=120s vault/vault
+kubectl wait --for=condition=healthy --timeout=150s vault/vault
 kubectl delete -f operator/deploy/cr-raft.yaml
 kubectl delete secret vault-unseal-keys
 kubectl delete pvc --all
