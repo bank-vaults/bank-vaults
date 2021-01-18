@@ -24,14 +24,17 @@ import (
 	dockerTypes "github.com/docker/docker/api/types"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
+
+type dockerCreds struct {
+	Auths map[string]dockerTypes.AuthConfig `json:"auths"`
+}
 
 func secretNeedsMutation(secret *corev1.Secret, vaultConfig VaultConfig) (bool, error) {
 	for key, value := range secret.Data {
 		if key == corev1.DockerConfigJsonKey {
-			var dc registry.DockerCreds
+			var dc dockerCreds
 			err := json.Unmarshal(value, &dc)
 			if err != nil {
 				return false, errors.Wrap(err, "unmarshal dockerconfig json failed")
@@ -77,7 +80,7 @@ func (mw *mutatingWebhook) mutateSecret(secret *corev1.Secret, vaultConfig Vault
 
 	for key, value := range secret.Data {
 		if key == corev1.DockerConfigJsonKey {
-			var dc registry.DockerCreds
+			var dc dockerCreds
 			err := json.Unmarshal(value, &dc)
 			if err != nil {
 				return errors.Wrap(err, "unmarshal dockerconfig json failed")
@@ -108,8 +111,8 @@ func (mw *mutatingWebhook) mutateSecret(secret *corev1.Secret, vaultConfig Vault
 	return nil
 }
 
-func (mw *mutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *registry.DockerCreds, vaultClient *vault.Client, vaultConfig VaultConfig) error {
-	assembled := registry.DockerCreds{Auths: map[string]dockerTypes.AuthConfig{}}
+func (mw *mutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+	assembled := dockerCreds{Auths: map[string]dockerTypes.AuthConfig{}}
 
 	for key, creds := range dc.Auths {
 		authBytes, err := base64.StdEncoding.DecodeString(creds.Auth)

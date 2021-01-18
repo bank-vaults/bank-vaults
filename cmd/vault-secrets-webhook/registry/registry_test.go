@@ -16,10 +16,7 @@ package registry
 
 import (
 	"testing"
-	"time"
 
-	"github.com/patrickmn/go-cache"
-	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -63,75 +60,5 @@ func TestIsAllowedToCache(t *testing.T) {
 		if test.allowToCache != allowToCache {
 			t.Errorf("IsAllowedToCache() != %v", test.allowToCache)
 		}
-	}
-}
-
-func TestParsingRegistryAddress(t *testing.T) {
-	tests := []struct {
-		container       *corev1.Container
-		podSpec         *corev1.PodSpec
-		registryAddress string
-	}{
-		{
-			container: &corev1.Container{
-				Image: "foo:bar",
-			},
-			podSpec:         &corev1.PodSpec{},
-			registryAddress: "https://index.docker.io",
-		},
-		{
-			container: &corev1.Container{
-				Image: "foo",
-			},
-			podSpec:         &corev1.PodSpec{},
-			registryAddress: "https://index.docker.io",
-		},
-		{
-			container: &corev1.Container{
-				Image: "library/foo:latest",
-			},
-			podSpec:         &corev1.PodSpec{},
-			registryAddress: "https://index.docker.io",
-		},
-		{
-			container: &corev1.Container{
-				Image: "index.docker.io/foo:latest",
-			},
-			podSpec:         &corev1.PodSpec{},
-			registryAddress: "https://index.docker.io",
-		},
-		{
-			container: &corev1.Container{
-				Image: "foo:bar",
-			},
-			podSpec:         &corev1.PodSpec{},
-			registryAddress: "https://index.docker.io",
-		},
-		{
-			container: &corev1.Container{
-				Image: "docker.io/foo:bar",
-			},
-			podSpec:         &corev1.PodSpec{},
-			registryAddress: "https://index.docker.io",
-		},
-		{
-			container: &corev1.Container{
-				Image: "docker.pkg.github.com/banzaicloud/bank-vaults/vault-env:0.6.0",
-			},
-			podSpec:         &corev1.PodSpec{},
-			registryAddress: "https://docker.pkg.github.com",
-		},
-	}
-
-	for _, test := range tests {
-		containerInfo := ContainerInfo{}
-		mockCache := cache.New(time.Minute, time.Minute)
-
-		err := containerInfo.Collect(test.container, test.podSpec, mockCache)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		assert.Equal(t, test.registryAddress, containerInfo.RegistryAddress)
 	}
 }

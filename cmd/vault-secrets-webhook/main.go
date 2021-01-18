@@ -117,7 +117,6 @@ func init() {
 	viper.SetDefault("telemetry_listen_address", "")
 	viper.SetDefault("default_image_pull_secret", "")
 	viper.SetDefault("default_image_pull_secret_namespace", "")
-	viper.SetDefault("default_image_pull_docker_config_json_key", corev1.DockerConfigJsonKey)
 	viper.SetDefault("registry_skip_verify", "false")
 	viper.SetDefault("enable_json_log", "false")
 	viper.SetDefault("log_level", "info")
@@ -390,7 +389,7 @@ func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.O
 
 	switch v := obj.(type) {
 	case *corev1.Pod:
-		return false, mw.mutatePod(v, vaultConfig, whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.IsAdmissionRequestDryRun(ctx))
+		return false, mw.mutatePod(ctx, v, vaultConfig, whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.IsAdmissionRequestDryRun(ctx))
 
 	case *corev1.Secret:
 		return false, mw.mutateSecret(v, vaultConfig)

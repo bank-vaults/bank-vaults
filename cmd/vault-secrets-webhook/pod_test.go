@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -45,7 +46,7 @@ type MockRegistry struct {
 	Image v1.Config
 }
 
-func (r *MockRegistry) GetImageConfig(_ kubernetes.Interface, _ string, _ *corev1.Container, _ *corev1.PodSpec) (*v1.Config, error) {
+func (r *MockRegistry) GetImageConfig(_ context.Context, _ kubernetes.Interface, _ string, _ *corev1.Container, _ *corev1.PodSpec) (*v1.Config, error) {
 	return &r.Image, nil
 }
 
@@ -400,7 +401,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 				registry:  tt.fields.registry,
 				logger:    logrus.NewEntry(logrus.New()),
 			}
-			got, err := mw.mutateContainers(tt.args.containers, tt.args.podSpec, tt.args.vaultConfig, tt.args.ns)
+			got, err := mw.mutateContainers(context.Background(), tt.args.containers, tt.args.podSpec, tt.args.vaultConfig, tt.args.ns)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("mutatingWebhook.mutateContainers() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -781,7 +782,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 				registry:  tt.fields.registry,
 				logger:    logrus.NewEntry(logrus.New()),
 			}
-			err := mw.mutatePod(tt.args.pod, tt.args.vaultConfig, tt.args.ns, false)
+			err := mw.mutatePod(context.Background(), tt.args.pod, tt.args.vaultConfig, tt.args.ns, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("mutatingWebhook.mutatePod() error = %v, wantErr %v", err, tt.wantErr)
 				return

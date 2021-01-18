@@ -31,7 +31,8 @@ require (
 	github.com/go-openapi/swag v0.19.10 // indirect
 	github.com/golang/snappy v0.0.2 // indirect
 	github.com/google/go-cmp v0.5.2
-	github.com/google/go-containerregistry v0.1.4
+	github.com/google/go-containerregistry v0.4.0
+	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20210113221012-4eb508cda163
 	github.com/gopherjs/gopherjs v0.0.0-20191106031601-ce3c9ade29de // indirect
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
@@ -63,7 +64,6 @@ require (
 	github.com/stretchr/testify v1.6.1
 	go.uber.org/zap v1.14.1 // indirect
 	gocloud.dev v0.19.1-0.20200414210820-bb59d59f26d5
-	golang.org/x/net v0.0.0-20201006153459-a7d1128ccaa0 // indirect
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 	golang.org/x/tools v0.0.0-20201008025239-9df69603baec // indirect
@@ -76,9 +76,8 @@ require (
 	k8s.io/apiextensions-apiserver v0.19.3
 	k8s.io/apimachinery v0.19.3
 	k8s.io/client-go v0.19.3
-	k8s.io/code-generator v0.19.3
-	k8s.io/klog/v2 v2.3.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6
+	k8s.io/code-generator v0.20.1
+	k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd
 	k8s.io/utils v0.0.0-20200729134348-d5654de09c73
 	logur.dev/adapter/logrus v0.5.0
 	sigs.k8s.io/controller-runtime v0.6.2
