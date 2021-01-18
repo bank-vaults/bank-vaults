@@ -45,10 +45,10 @@ auto_auth {
 	}
 }`
 
-func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, ns string, dryRun bool) error {
+func (mw *mutatingWebhook) mutatePod(ctx context.Context, pod *corev1.Pod, vaultConfig VaultConfig, ns string, dryRun bool) error {
 	mw.logger.Debug("Successfully connected to the API")
 
-	initContainersMutated, err := mw.mutateContainers(pod.Spec.InitContainers, &pod.Spec, vaultConfig, ns)
+	initContainersMutated, err := mw.mutateContainers(ctx, pod.Spec.InitContainers, &pod.Spec, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 		mw.logger.Debug("No pod init containers were mutated")
 	}
 
-	containersMutated, err := mw.mutateContainers(pod.Spec.Containers, &pod.Spec, vaultConfig, ns)
+	containersMutated, err := mw.mutateContainers(ctx, pod.Spec.Containers, &pod.Spec, vaultConfig, ns)
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, vaultConfig VaultConfig, n
 	return nil
 }
 
-func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSpec *corev1.PodSpec, vaultConfig VaultConfig, ns string) (bool, error) {
+func (mw *mutatingWebhook) mutateContainers(ctx context.Context, containers []corev1.Container, podSpec *corev1.PodSpec, vaultConfig VaultConfig, ns string) (bool, error) {
 	mutated := false
 
 	for i, container := range containers {
@@ -237,7 +237,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 
 		// the container has no explicitly specified command
 		if len(args) == 0 {
-			imageConfig, err := mw.registry.GetImageConfig(mw.k8sClient, ns, &container, podSpec) // nolint:gosec
+			imageConfig, err := mw.registry.GetImageConfig(ctx, mw.k8sClient, ns, &container, podSpec) // nolint:gosec
 			if err != nil {
 				return false, err
 			}
