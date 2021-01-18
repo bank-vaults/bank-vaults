@@ -17,7 +17,6 @@ package registry
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net/http"
 
 	"emperror.dev/errors"
@@ -146,7 +145,7 @@ func getImageConfig(ctx context.Context, client kubernetes.Interface, container 
 		options = append(options, remote.WithTransport(tr))
 	}
 
-	ref, err := name.ParseReference(fmt.Sprintf("%s/%s", container.Image))
+	ref, err := name.ParseReference(container.Image)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse image reference")
 	}
