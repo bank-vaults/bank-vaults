@@ -123,7 +123,7 @@ func getImageConfig(ctx context.Context, client kubernetes.Interface, container 
 	registrySkipVerify := viper.GetBool("registry_skip_verify")
 
 	authChain, err := k8schain.New(
-		context.TODO(),
+		ctx,
 		client,
 		k8schain.Options{
 			Namespace:          container.Namespace,
