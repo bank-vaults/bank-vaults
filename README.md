@@ -73,7 +73,7 @@ You usually don't need to use the CLI directly, rather you should install the ch
 
 To grab the CLI binary go to the [releases](https://github.com/banzaicloud/bank-vaults/releases) page and download it.
 
-On macOs, you can directly Homebrew the CLI:
+On macOS, you can directly Homebrew the CLI:
 
 ```
 $ brew install banzaicloud/tap/bank-vaults
