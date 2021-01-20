@@ -361,6 +361,13 @@ func (mw *mutatingWebhook) mutateContainers(ctx context.Context, containers []co
 			})
 		}
 
+		if vaultConfig.ExitOnExpiredLease {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  "VAULT_ENV_DAEMON_EXIT_WHEN_EXPIRED",
+				Value: "true",
+			})
+		}
+
 		if vaultConfig.VaultEnvFromPath != "" {
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  "VAULT_ENV_FROM_PATH",

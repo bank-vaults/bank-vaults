@@ -87,6 +87,7 @@ type VaultConfig struct {
 	Skip                        bool
 	VaultEnvFromPath            string
 	TokenAuthMount              string
+	ExitOnExpiredLease          bool
 }
 
 func init() {
@@ -105,6 +106,7 @@ func init() {
 	viper.SetDefault("vault_client_timeout", "10s")
 	viper.SetDefault("vault_agent", "false")
 	viper.SetDefault("vault_env_daemon", "false")
+	viper.SetDefault("vault_env_daemon_exit_when_expired", "false")
 	viper.SetDefault("vault_ct_share_process_namespace", "")
 	viper.SetDefault("psp_allow_privilege_escalation", "false")
 	viper.SetDefault("vault_ignore_missing_secrets", "false")
@@ -194,6 +196,12 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.VaultEnvDaemon, _ = strconv.ParseBool(val)
 	} else {
 		vaultConfig.VaultEnvDaemon, _ = strconv.ParseBool(viper.GetString("vault_env_daemon"))
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-env-daemon-exit-when-expired"]; ok {
+		vaultConfig.ExitOnExpiredLease, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.ExitOnExpiredLease, _ = strconv.ParseBool(viper.GetString("vault_env_daemon_exit_when_expired"))
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-configmap"]; ok {
