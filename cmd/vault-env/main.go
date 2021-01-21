@@ -42,35 +42,34 @@ type sanitizedEnviron []string
 
 var (
 	sanitizeEnvmap = map[string]bool{
-		"VAULT_TOKEN":                        true,
-		"VAULT_ADDR":                         true,
-		"VAULT_CACERT":                       true,
-		"VAULT_CAPATH":                       true,
-		"VAULT_CLIENT_CERT":                  true,
-		"VAULT_CLIENT_KEY":                   true,
-		"VAULT_CLIENT_TIMEOUT":               true,
-		"VAULT_CLUSTER_ADDR":                 true,
-		"VAULT_MAX_RETRIES":                  true,
-		"VAULT_REDIRECT_ADDR":                true,
-		"VAULT_SKIP_VERIFY":                  true,
-		"VAULT_TLS_SERVER_NAME":              true,
-		"VAULT_CLI_NO_COLOR":                 true,
-		"VAULT_RATE_LIMIT":                   true,
-		"VAULT_NAMESPACE":                    true,
-		"VAULT_MFA":                          true,
-		"VAULT_ROLE":                         true,
-		"VAULT_PATH":                         true,
-		"VAULT_AUTH_METHOD":                  true,
-		"VAULT_TRANSIT_KEY_ID":               true,
-		"VAULT_TRANSIT_PATH":                 true,
-		"VAULT_IGNORE_MISSING_SECRETS":       true,
-		"VAULT_ENV_PASSTHROUGH":              true,
-		"VAULT_JSON_LOG":                     true,
-		"VAULT_LOG_LEVEL":                    true,
-		"VAULT_REVOKE_TOKEN":                 true,
-		"VAULT_ENV_DAEMON":                   true,
-		"VAULT_ENV_FROM_PATH":                true,
-		"VAULT_ENV_DAEMON_EXIT_WHEN_EXPIRED": true,
+		"VAULT_TOKEN":                  true,
+		"VAULT_ADDR":                   true,
+		"VAULT_CACERT":                 true,
+		"VAULT_CAPATH":                 true,
+		"VAULT_CLIENT_CERT":            true,
+		"VAULT_CLIENT_KEY":             true,
+		"VAULT_CLIENT_TIMEOUT":         true,
+		"VAULT_CLUSTER_ADDR":           true,
+		"VAULT_MAX_RETRIES":            true,
+		"VAULT_REDIRECT_ADDR":          true,
+		"VAULT_SKIP_VERIFY":            true,
+		"VAULT_TLS_SERVER_NAME":        true,
+		"VAULT_CLI_NO_COLOR":           true,
+		"VAULT_RATE_LIMIT":             true,
+		"VAULT_NAMESPACE":              true,
+		"VAULT_MFA":                    true,
+		"VAULT_ROLE":                   true,
+		"VAULT_PATH":                   true,
+		"VAULT_AUTH_METHOD":            true,
+		"VAULT_TRANSIT_KEY_ID":         true,
+		"VAULT_TRANSIT_PATH":           true,
+		"VAULT_IGNORE_MISSING_SECRETS": true,
+		"VAULT_ENV_PASSTHROUGH":        true,
+		"VAULT_JSON_LOG":               true,
+		"VAULT_LOG_LEVEL":              true,
+		"VAULT_REVOKE_TOKEN":           true,
+		"VAULT_ENV_DAEMON":             true,
+		"VAULT_ENV_FROM_PATH":          true,
 	}
 )
 
@@ -84,11 +83,6 @@ func (environ *sanitizedEnviron) append(name string, value string) {
 
 type daemonSecretRenewer struct {
 	client *vault.Client
-	sigs   chan os.Signal
-	logger logrus.FieldLogger
-}
-
-type daemonLeaseTTLWatcher struct {
 	sigs   chan os.Signal
 	logger logrus.FieldLogger
 }
@@ -108,6 +102,10 @@ func (r daemonSecretRenewer) Renew(path string, secret *vaultapi.Secret) error {
 			case renewOutput := <-renewer.RenewCh():
 				r.logger.Infof("secret %s renewed for %ds", path, renewOutput.Secret.LeaseDuration)
 			case doneError := <-renewer.DoneCh():
+				if !secret.Renewable {
+					time.Sleep(time.Duration(secret.LeaseDuration) * time.Second)
+					r.logger.Infof("secret lease for %s has expired", path)
+				}
 				r.logger.WithField("error", doneError).Infof("secret renewal for %s has stopped, sending SIGTERM to process", path)
 
 				r.sigs <- syscall.SIGTERM
@@ -121,20 +119,6 @@ func (r daemonSecretRenewer) Renew(path string, secret *vaultapi.Secret) error {
 		}
 	}()
 
-	return nil
-}
-
-func (r daemonLeaseTTLWatcher) Watch(path string, leaseDuration int) error {
-	go func() {
-		time.Sleep(time.Duration(leaseDuration) * time.Second)
-		r.logger.Infof("secret lease for %s has expired, sending SIGTERM to process", path)
-
-		r.sigs <- syscall.SIGTERM
-
-		timeout := <-time.After(10 * time.Second)
-		r.logger.Infoln("killing process due to SIGTERM timeout =", timeout)
-		r.sigs <- syscall.SIGKILL
-	}()
 	return nil
 }
 
@@ -156,7 +140,6 @@ func main() {
 	}
 
 	daemonMode := cast.ToBool(os.Getenv("VAULT_ENV_DAEMON"))
-	exitOnExpiredLease := cast.ToBool(os.Getenv("VAULT_ENV_DAEMON_EXIT_WHEN_EXPIRED"))
 
 	sigs := make(chan os.Signal, 1)
 
@@ -228,20 +211,15 @@ func main() {
 		TransitPath:          os.Getenv("VAULT_TRANSIT_PATH"),
 		DaemonMode:           daemonMode,
 		IgnoreMissingSecrets: ignoreMissingSecrets,
-		ExitOnExpiredLease:   exitOnExpiredLease,
 	}
 
 	var secretRenewer injector.SecretRenewer
-	var leaseWatcher injector.LeaseTTLWatcher
 
 	if daemonMode {
 		secretRenewer = daemonSecretRenewer{client: client, sigs: sigs, logger: logger}
-		if exitOnExpiredLease {
-			leaseWatcher = daemonLeaseTTLWatcher{sigs: sigs, logger: logger}
-		}
 	}
 
-	secretInjector := injector.NewSecretInjector(config, client, secretRenewer, logger, leaseWatcher)
+	secretInjector := injector.NewSecretInjector(config, client, secretRenewer, logger)
 
 	for _, env := range os.Environ() {
 		split := strings.SplitN(env, "=", 2)

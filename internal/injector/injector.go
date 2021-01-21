@@ -35,28 +35,22 @@ type SecretRenewer interface {
 	Renew(path string, secret *vaultapi.Secret) error
 }
 
-type LeaseTTLWatcher interface {
-	Watch(path string, leaseDuration int) error
-}
-
 type Config struct {
 	TransitKeyID         string
 	TransitPath          string
 	IgnoreMissingSecrets bool
 	DaemonMode           bool
-	ExitOnExpiredLease   bool
 }
 
 type SecretInjector struct {
-	config       Config
-	client       *vault.Client
-	renewer      SecretRenewer
-	logger       logrus.FieldLogger
-	leaseWatcher LeaseTTLWatcher
+	config  Config
+	client  *vault.Client
+	renewer SecretRenewer
+	logger  logrus.FieldLogger
 }
 
-func NewSecretInjector(config Config, client *vault.Client, renewer SecretRenewer, logger logrus.FieldLogger, watcher LeaseTTLWatcher) SecretInjector {
-	return SecretInjector{config: config, client: client, renewer: renewer, logger: logger, leaseWatcher: watcher}
+func NewSecretInjector(config Config, client *vault.Client, renewer SecretRenewer, logger logrus.FieldLogger) SecretInjector {
+	return SecretInjector{config: config, client: client, renewer: renewer, logger: logger}
 }
 
 var (
@@ -257,19 +251,10 @@ func (i SecretInjector) readVaultPath(path, versionOrData string, update bool) (
 		}
 	}
 
-	if i.config.DaemonMode && secret != nil && secret.Renewable && secret.LeaseDuration > 0 {
+	if i.config.DaemonMode && secret != nil && secret.LeaseDuration > 0 {
 		i.logger.Infof("secret %s has a lease duration of %ds, starting renewal", path, secret.LeaseDuration)
 
 		err = i.renewer.Renew(path, secret)
-		if err != nil {
-			return nil, errors.Wrap(err, "secret renewal can't be established")
-		}
-	}
-
-	if i.config.DaemonMode && i.config.ExitOnExpiredLease && secret != nil && !secret.Renewable && secret.LeaseDuration > 0 {
-		i.logger.Infof("non renewable secret %s has a lease duration of %ds, starting timer", path, secret.LeaseDuration)
-
-		err = i.leaseWatcher.Watch(path, secret.LeaseDuration)
 		if err != nil {
 			return nil, errors.Wrap(err, "secret renewal can't be established")
 		}

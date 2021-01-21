@@ -69,7 +69,7 @@ func TestSecretInjector(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	injector := NewSecretInjector(Config{}, client, nil, logrus.New(), nil)
+	injector := NewSecretInjector(Config{}, client, nil, logrus.New())
 
 	t.Run("success", func(t *testing.T) {
 		references := map[string]string{
@@ -154,7 +154,7 @@ func TestSecretInjectorFromPath(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	injector := NewSecretInjector(Config{}, client, nil, logrus.New(), nil)
+	injector := NewSecretInjector(Config{}, client, nil, logrus.New())
 
 	t.Run("success", func(t *testing.T) {
 		paths := "secret/data/account1"

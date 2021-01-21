@@ -37,7 +37,7 @@ func getDataFromVault(data map[string]string, vaultClient *vault.Client, vaultCo
 		TransitKeyID: vaultConfig.TransitKeyID,
 		TransitPath:  vaultConfig.TransitPath,
 	}
-	secretInjector := injector.NewSecretInjector(config, vaultClient, nil, logger, nil)
+	secretInjector := injector.NewSecretInjector(config, vaultClient, nil, logger)
 
 	return vaultData, secretInjector.InjectSecretsFromVault(data, inject)
 }
