@@ -102,6 +102,10 @@ func (r daemonSecretRenewer) Renew(path string, secret *vaultapi.Secret) error {
 			case renewOutput := <-renewer.RenewCh():
 				r.logger.Infof("secret %s renewed for %ds", path, renewOutput.Secret.LeaseDuration)
 			case doneError := <-renewer.DoneCh():
+				if !secret.Renewable {
+					time.Sleep(time.Duration(secret.LeaseDuration) * time.Second)
+					r.logger.Infof("secret lease for %s has expired", path)
+				}
 				r.logger.WithField("error", doneError).Infof("secret renewal for %s has stopped, sending SIGTERM to process", path)
 
 				r.sigs <- syscall.SIGTERM
@@ -136,6 +140,7 @@ func main() {
 	}
 
 	daemonMode := cast.ToBool(os.Getenv("VAULT_ENV_DAEMON"))
+
 	sigs := make(chan os.Signal, 1)
 
 	var entrypointCmd []string
@@ -209,6 +214,7 @@ func main() {
 	}
 
 	var secretRenewer injector.SecretRenewer
+
 	if daemonMode {
 		secretRenewer = daemonSecretRenewer{client: client, sigs: sigs, logger: logger}
 	}

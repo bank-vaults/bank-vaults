@@ -251,7 +251,7 @@ func (i SecretInjector) readVaultPath(path, versionOrData string, update bool) (
 		}
 	}
 
-	if i.config.DaemonMode && secret != nil && secret.Renewable && secret.LeaseDuration > 0 {
+	if i.config.DaemonMode && secret != nil && secret.LeaseDuration > 0 {
 		i.logger.Infof("secret %s has a lease duration of %ds, starting renewal", path, secret.LeaseDuration)
 
 		err = i.renewer.Renew(path, secret)
