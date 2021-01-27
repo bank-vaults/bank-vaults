@@ -12,7 +12,7 @@ The `MutatingWebhookConfiguration` gets created before the actual backend Pod wh
 
 You will need to add the following annotations to the resources that you wish to mutate:
 
-```
+```yaml
 vault.security.banzaicloud.io/vault-addr: https://[URL FOR VAULT]
 vault.security.banzaicloud.io/vault-path: [Auth path]
 vault.security.banzaicloud.io/vault-role: [Auth role]
@@ -53,31 +53,32 @@ Omitting the version will tell Vault to pull the latest version.
 
 ## Installing the Chart
 
-**In case of the K8s version is lower than 1.15 the namespace where you install the webhook must have a label of `name` with the namespace name as the value, so the `namespaceSelector` in the `MutatingWebhookConfiguration` can skip the namespace of the webhook, so no self-mutation takes place. If the K8s version is 1.15 at least, the default `objectSelector` will prevent the self-mutation**
+**In case of the K8s version is lower than 1.15 the namespace where you install the webhook must have a label of `name` with the namespace name as the label value, so the `namespaceSelector` in the `MutatingWebhookConfiguration` can skip the namespace of the webhook, so no self-mutation takes place. If the K8s version is 1.15 at least, the default `objectSelector` will prevent the self-mutation (you don't have to configure anything) and you are free to install to any namespace of your choice.**.
 
 
 ```bash
+# You have to do this only in case you are not using Helm 3.2 or later and Kubernetes 1.15 or later.
 WEBHOOK_NS=${WEBHOOK_NS:-vswh}
 kubectl create namespace "${WEBHOOK_NS}"
 kubectl label ns "${WEBHOOK_NS}" name="${WEBHOOK_NS}"
 ```
 
 ```bash
-$ helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch/master
+$ helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com/
 $ helm repo update
 ```
 
 ```bash
-$ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook --wait
+$ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook --create-namespace
 ```
 
-**NOTE**: `--wait` is necessary because of Helm timing issues, please see [this issue](https://github.com/banzaicloud/banzai-charts/issues/888).
+**NOTE**: `--wait` is sometimes necessary because of some Helm timing issues, please see [this issue](https://github.com/banzaicloud/banzai-charts/issues/888).
 
 ### Openshift 4.3
 For security reasons, the `runAsUser` must be in the range between 1000570000 and 1000579999. By setting the value of `securityContext.runAsUser` to "", OpenShift chooses a valid User.
 
 ```bash
-$ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook --set-string securityContext.runAsUser="" --wait
+$ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook --set-string securityContext.runAsUser="" --create-namespace
 ```
 
 ### About GKE Private Clusters
