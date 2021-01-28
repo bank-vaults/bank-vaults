@@ -573,13 +573,15 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-	if !reflect.DeepEqual(podNames, v.Status.Nodes) || !reflect.DeepEqual(leader, v.Status.Leader) {
+	conditionStatus := v1.ConditionFalse
+	if leader != "" && statusError == "" {
+		conditionStatus = v1.ConditionTrue
+	}
+
+	if !reflect.DeepEqual(podNames, v.Status.Nodes) || !reflect.DeepEqual(leader, v.Status.Leader) || len(v.Status.Conditions) == 0 ||
+		v.Status.Conditions[0].Status != conditionStatus || v.Status.Conditions[0].Error != statusError {
 		v.Status.Nodes = podNames
 		v.Status.Leader = leader
-		conditionStatus := v1.ConditionFalse
-		if leader != "" && statusError == "" {
-			conditionStatus = v1.ConditionTrue
-		}
 		v.Status.Conditions = []v1.ComponentCondition{{
 			Type:   v1.ComponentHealthy,
 			Status: conditionStatus,
