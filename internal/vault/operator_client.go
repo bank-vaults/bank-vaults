@@ -609,6 +609,23 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 			}
 		}
 
+		// config data can have a child dict. But it will cause:
+		// `json: unsupported type: map[interface {}]interface {}`
+		// So check and replace by `map[string]interface{}` before using it.
+		if config, ok := authMethod["config"]; ok {
+			config, err := cast.ToStringMapE(config)
+			if err != nil {
+				return errors.Wrapf(err, "error type fixing config block for %s", authMethodType)
+			}
+			for k, v := range config {
+				switch val := v.(type) {
+				case map[interface{}]interface{}:
+					config[k] = cast.ToStringMap(val)
+				}
+			}
+			authMethod["config"] = config
+		}
+
 		switch authMethodType {
 		case "kubernetes":
 			config, err := getOrDefaultStringMap(authMethod, "config")
