@@ -147,7 +147,7 @@ bin/controller-gen: bin/controller-gen-${CONTROLLER_GEN_VERSION}
 
 .PHONY: generate-crds
 generate-crds: bin/controller-gen ## Regenerate CRDs in the Helm chart and examples
-	bin/controller-gen crd paths=./operator/... output:crd:artifacts:config=./operator/deploy/
+	bin/controller-gen crd:maxDescLen=0,preserveUnknownFields=false paths=./operator/... output:crd:artifacts:config=./operator/deploy/
 	cp operator/deploy/vault.banzaicloud.com_vaults.yaml charts/vault-operator/crds/crd.yaml
 	cp operator/deploy/vault.banzaicloud.com_vaults.yaml operator/deploy/crd.yaml
 	rm operator/deploy/vault.banzaicloud.com_vaults.yaml
