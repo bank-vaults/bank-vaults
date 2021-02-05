@@ -5,7 +5,7 @@ metadata:
   name: "vault-kv-unseal"
 spec:
   size: 1
-  image: vault:1.6.1
+  image: vault:1.6.2
 
   # Describe where you would like to store the Vault unseal keys and root token
   # in seperate remote Vault instance.

@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 3
-  image: vault:1.6.1
+  image: vault:1.6.2
   bankVaultsImage: ghcr.io/banzaicloud/bank-vaults:latest
 
   # Schedule the pods on the same node, since we are using hostPath storage
