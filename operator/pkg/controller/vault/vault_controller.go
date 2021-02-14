@@ -2019,7 +2019,7 @@ func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContex
 	}
 	return &corev1.SecurityContext{
 		Capabilities: &corev1.Capabilities{
-			Add: []corev1.Capability{"IPC_LOCK"},
+			Add: []corev1.Capability{"IPC_LOCK", "SETFCAP"},
 		},
 	}
 }
