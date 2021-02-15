@@ -59,6 +59,8 @@ We use Vault across our large Kubernetes deployments and all the projects were `
 
 >We take bank-vaults' security and our users' trust very seriously. If you believe you have found a security issue in bank-vaults, please contact us at security@banzaicloud.com.
 
+Bank-Vaults is a core part of [Banzai Cloud Pipeline](https://github.com/banzaicloud/pipeline), a Cloud Native application and devops platform that natively supports multi- and hybrid-cloud deployments.
+
 
 ## Installing
 
