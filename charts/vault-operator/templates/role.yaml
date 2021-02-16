@@ -58,6 +58,19 @@ rules:
   - customresourcedefinitions
   verbs:
   - get
+{{- if .Capabilities.APIVersions.Has "route.openshift.io/v1/Route" }}
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  - routes/custom-host
+  verbs:
+  - list
+  - get
+  - create
+  - update
+  - watch
+{{- end }}
 - apiGroups:
   - extensions
   resources:
