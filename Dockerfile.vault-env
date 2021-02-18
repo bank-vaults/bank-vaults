@@ -15,7 +15,7 @@ COPY . /build
 RUN CGO_ENABLED=0 go build ./cmd/vault-env
 
 
-FROM alpine:3.13.1
+FROM alpine:3.13.2
 
 RUN apk add --update --no-cache ca-certificates
 COPY --from=builder /build/vault-env /usr/local/bin/vault-env
