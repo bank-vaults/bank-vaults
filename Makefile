@@ -2,6 +2,12 @@
 
 OS = $(shell uname)
 
+DOCKER_BUILD_EXTRA_ARGS ?=
+# Export HOST_NETWORK=1 if you want to build the docker images with host network (useful when using some VPNs)
+ifeq (${HOST_NETWORK}, 1)
+	DOCKER_BUILD_EXTRA_ARGS += --network host
+endif
+
 # Project variables
 PACKAGE = github.com/banzaicloud/bank-vaults
 BINARY_NAME ?= bank-vaults
@@ -61,16 +67,30 @@ build-debug: build ## Build a binary with remote debugging capabilities
 
 .PHONY: docker
 docker: ## Build a Docker image
-	docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile .
+	docker build ${DOCKER_BUILD_EXTRA_ARGS} -t ${DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile .
 ifeq (${DOCKER_LATEST}, 1)
 	docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
 endif
 
+.PHONY: image
+image: ## Build an OCI image with buildah
+	buildah bud -t ${DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile .
+ifeq (${IMAGE_LATEST}, 1)
+	buildah tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
+endif
+
 .PHONY: docker-webhook
 docker-webhook: ## Build a Docker-webhook image
-	docker build -t ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.webhook .
+	docker build ${DOCKER_BUILD_EXTRA_ARGS} -t ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.webhook .
 ifeq (${DOCKER_LATEST}, 1)
 	docker tag ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} ${WEBHOOK_DOCKER_IMAGE}:latest
+endif
+
+.PHONY: image-webhook
+image-webhook: ## Build a webhook OCI image
+	buildah bud -t ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.webhook .
+ifeq (${IMAGE_LATEST}, 1)
+	buildah tag ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} ${WEBHOOK_DOCKER_IMAGE}:latest
 endif
 
 .PHONY: docker-vault-env
@@ -78,6 +98,13 @@ docker-vault-env: ## Build a Docker-vault-env image
 	docker build -t ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.vault-env .
 ifeq (${DOCKER_LATEST}, 1)
 	docker tag ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} ${VAULT_ENV_DOCKER_IMAGE}:latest
+endif
+
+.PHONY: image-vault-env
+image-vault-env: ## Build an OCI vault-env image
+	buildah bud -t ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.vault-env .
+ifeq (${IMAGE_LATEST}, 1)
+	buildah tag ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} ${VAULT_ENV_DOCKER_IMAGE}:latest
 endif
 
 .PHONY: docker-push
@@ -89,7 +116,7 @@ endif
 
 .PHONY: docker-operator
 docker-operator: ## Build a Docker image for the Operator
-	docker build -t ${OPERATOR_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.operator .
+	docker build ${DOCKER_BUILD_EXTRA_ARGS} -t ${OPERATOR_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.operator .
 ifeq (${DOCKER_LATEST}, 1)
 	docker tag ${OPERATOR_DOCKER_IMAGE}:${DOCKER_TAG} ${OPERATOR_DOCKER_IMAGE}:latest
 endif
