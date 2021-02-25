@@ -8,4 +8,5 @@ require (
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/spf13/cast v1.3.0
 	k8s.io/client-go v0.19.2
+	google.golang.org/genproto v0.0.0-20210224155714-063164c882e6
 )
