@@ -17,6 +17,7 @@ package vault
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -26,12 +27,15 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/compute/metadata"
+	credentials "cloud.google.com/go/iam/credentials/apiv1"
 	"emperror.dev/errors"
 	"github.com/fsnotify/fsnotify"
 	"github.com/hashicorp/vault/api"
 	vaultapi "github.com/hashicorp/vault/api"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iam/v1"
+	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
 	"k8s.io/client-go/rest"
 )
 
@@ -137,6 +141,10 @@ const (
 	// GCPGCEAuthMethod is used for the Vault GCP GCE auth method
 	// as described here: https://www.vaultproject.io/docs/auth/gcp#gce-login
 	GCPGCEAuthMethod ClientAuthMethod = "gcp-gce"
+
+	// GCPIAMAuthMethod is used for the Vault GCP IAM auth method
+	// as described here: https://www.vaultproject.io/docs/auth/gcp#iam
+	GCPIAMAuthMethod ClientAuthMethod = "gcp-iam"
 
 	// JWTAuthMethod is used for the Vault JWT/OIDC/GCP/Kubernetes auth methods
 	// as describe here:
@@ -385,6 +393,45 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 
 					return map[string]interface{}{
 						"jwt":  jwt,
+						"role": o.role,
+					}, nil
+				}
+
+			case GCPIAMAuthMethod:
+				loginDataFunc = func() (map[string]interface{}, error) {
+					c, err := credentials.NewIamCredentialsClient(context.TODO())
+					if err != nil {
+						return nil, err
+					}
+
+					metadataClient := metadata.NewClient(nil)
+					serviceAccountEmail, err := metadataClient.Email("default")
+					if err != nil {
+						return nil, err
+					}
+
+					jwtPayload := map[string]interface{}{
+						"aud": fmt.Sprintf("vault/%s", o.role),
+						"sub": serviceAccountEmail,
+						"exp": time.Now().Add(time.Minute * 10).Unix(),
+					}
+
+					payloadBytes, err := json.Marshal(jwtPayload)
+					if err != nil {
+						return nil, err
+					}
+
+					req := &credentialspb.SignJwtRequest{
+						Name:    fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccountEmail),
+						Payload: string(payloadBytes),
+					}
+					resp, err := c.SignJwt(context.TODO(), req)
+					if err != nil {
+						return nil, err
+					}
+
+					return map[string]interface{}{
+						"jwt":  resp.SignedJwt,
 						"role": o.role,
 					}, nil
 				}
