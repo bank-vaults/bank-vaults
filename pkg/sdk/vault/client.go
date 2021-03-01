@@ -142,7 +142,8 @@ const (
 	// as described here: https://www.vaultproject.io/docs/auth/gcp#gce-login
 	GCPGCEAuthMethod ClientAuthMethod = "gcp-gce"
 
-	// GCPIAMAuthMethod is TODO
+	// GCPIAMAuthMethod is used for the Vault GCP IAM auth method
+	// as described here: https://www.vaultproject.io/docs/auth/gcp#iam
 	GCPIAMAuthMethod ClientAuthMethod = "gcp-iam"
 
 	// JWTAuthMethod is used for the Vault JWT/OIDC/GCP/Kubernetes auth methods
