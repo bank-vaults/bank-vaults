@@ -130,6 +130,7 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 
 	if val := annotations["vault.security.banzaicloud.io/mutate"]; val == "skip" {
 		vaultConfig.Skip = true
+
 		return vaultConfig
 	}
 
@@ -370,6 +371,7 @@ func getPullPolicy(pullPolicyStr string) corev1.PullPolicy {
 	case "IfNotPresent", "ifnotpresent":
 		return corev1.PullIfNotPresent
 	}
+
 	return corev1.PullIfNotPresent
 }
 

@@ -29,6 +29,8 @@ import (
 )
 
 func TestSecretInjector(t *testing.T) {
+	t.Parallel()
+
 	os.Setenv("VAULT_ADDR", "http://localhost:8200")
 
 	config := vaultapi.DefaultConfig()
@@ -50,7 +52,7 @@ func TestSecretInjector(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	ciphertext := secret.Data["ciphertext"].(string)
+	ciphertext := secret.Data["ciphertext"].(string) // nolint:forcetypeassert
 
 	_, err = client.RawClient().Logical().Write("secret/data/account", vault.NewData(0, map[string]interface{}{"username": "superusername", "password": "secret"}))
 	assert.NoError(t, err)
@@ -58,7 +60,7 @@ func TestSecretInjector(t *testing.T) {
 	err = client.RawClient().Sys().Mount("pki", &vaultapi.MountInput{Type: "pki"})
 	assert.NoError(t, err)
 
-	defer func() {
+	t.Cleanup(func() {
 		err = client.RawClient().Sys().Unmount("transit")
 		assert.NoError(t, err)
 
@@ -67,11 +69,13 @@ func TestSecretInjector(t *testing.T) {
 
 		err = client.RawClient().Sys().Unmount("pki")
 		assert.NoError(t, err)
-	}()
+	})
 
 	injector := NewSecretInjector(Config{}, client, nil, logrus.New())
 
 	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
 		references := map[string]string{
 			"ACCOUNT_PASSWORD": "vault:secret/data/account#password",
 			"TRANSIT_SECRET":   `>>vault:transit/decrypt/mykey#${.plaintext | b64dec}#{"ciphertext":"` + ciphertext + `"}`,
@@ -102,6 +106,8 @@ func TestSecretInjector(t *testing.T) {
 	})
 
 	t.Run("correct path but missing secret", func(t *testing.T) {
+		t.Parallel()
+
 		references := map[string]string{
 			"SECRET": "vault:secret/data/supersecret#password",
 		}
@@ -116,6 +122,8 @@ func TestSecretInjector(t *testing.T) {
 	})
 
 	t.Run("incorrect kv2 path", func(t *testing.T) {
+		t.Parallel()
+
 		references := map[string]string{
 			"SECRET": "vault:secret/get/data#data",
 		}
@@ -131,6 +139,8 @@ func TestSecretInjector(t *testing.T) {
 }
 
 func TestSecretInjectorFromPath(t *testing.T) {
+	t.Parallel()
+
 	os.Setenv("VAULT_ADDR", "http://localhost:8200")
 
 	config := vaultapi.DefaultConfig()
@@ -147,16 +157,18 @@ func TestSecretInjectorFromPath(t *testing.T) {
 	_, err = client.RawClient().Logical().Write("secret/data/account2", vault.NewData(0, map[string]interface{}{"password3": "secret", "password4": "secret2"}))
 	assert.NoError(t, err)
 
-	defer func() {
+	t.Cleanup(func() {
 		_, err = client.RawClient().Logical().Delete("secret/metadata/account1")
 		assert.NoError(t, err)
 		_, err = client.RawClient().Logical().Delete("secret/metadata/account2")
 		assert.NoError(t, err)
-	}()
+	})
 
 	injector := NewSecretInjector(Config{}, client, nil, logrus.New())
 
 	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
 		paths := "secret/data/account1"
 
 		results := map[string]string{}
@@ -175,6 +187,8 @@ func TestSecretInjectorFromPath(t *testing.T) {
 	})
 
 	t.Run("success multiple paths", func(t *testing.T) {
+		t.Parallel()
+
 		paths := "secret/data/account1,secret/data/account2"
 		results := map[string]string{}
 
@@ -194,6 +208,8 @@ func TestSecretInjectorFromPath(t *testing.T) {
 	})
 
 	t.Run("incorrect kv2 path", func(t *testing.T) {
+		t.Parallel()
+
 		paths := "secret/data/doesnotexist"
 
 		results := map[string]string{}

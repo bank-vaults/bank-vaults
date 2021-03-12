@@ -124,7 +124,7 @@ func (mw *mutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCr
 		if hasVaultPrefix(auth) {
 			split := strings.Split(auth, ":")
 			if len(split) != 4 {
-				return errors.New("splitting auth credentials failed") // nolint:goerr113
+				return errors.New("splitting auth credentials failed")
 			}
 			username := fmt.Sprintf("%s:%s", split[0], split[1])
 			password := fmt.Sprintf("%s:%s", split[2], split[3])

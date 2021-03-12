@@ -113,8 +113,8 @@ func (e *prometheusExporter) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (e prometheusExporter) Run() error {
-	var metricsPath = "/metrics"
-	var metricsAddr = ":9091"
+	metricsPath := "/metrics"
+	metricsAddr := ":9091"
 	logrus.Infof("vault metrics exporter enabled: %s%s", metricsAddr, metricsPath)
 	prometheus.MustRegister(&e)
 	http.DefaultServeMux.Handle(metricsPath, promhttp.Handler())

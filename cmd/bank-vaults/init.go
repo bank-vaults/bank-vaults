@@ -22,9 +22,11 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
-const cfgInitRootToken = "init-root-token"
-const cfgStoreRootToken = "store-root-token"
-const cfgPreFlightChecks = "pre-flight-checks"
+const (
+	cfgInitRootToken   = "init-root-token"
+	cfgStoreRootToken  = "store-root-token"
+	cfgPreFlightChecks = "pre-flight-checks"
+)
 
 var initCmd = &cobra.Command{
 	Use:   "init",

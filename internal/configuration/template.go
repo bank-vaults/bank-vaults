@@ -25,6 +25,7 @@ import (
 	"strings"
 	"text/template"
 
+	cloudkms "cloud.google.com/go/kms/apiv1"
 	"emperror.dev/errors"
 	"github.com/Masterminds/sprig/v3"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -36,8 +37,6 @@ import (
 	_ "gocloud.dev/blob/fileblob"
 	_ "gocloud.dev/blob/gcsblob"
 	_ "gocloud.dev/blob/s3blob"
-
-	cloudkms "cloud.google.com/go/kms/apiv1"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
@@ -86,7 +85,6 @@ func (t Templater) Template(templateText string, data interface{}) (*bytes.Buffe
 		Funcs(customFuncs()).
 		Delims(t.leftDelimiter, t.rightDelimiter).
 		Parse(templateText)
-
 	if err != nil {
 		return nil, errors.WrapIf(err, "error parsing template")
 	}
@@ -125,7 +123,7 @@ func blobRead(urlstr string) (string, error) {
 
 	u, err := url.Parse(urlstr)
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "failed to parse blob url: %s", urlstr)
 	}
 
 	i := strings.LastIndex(u.Path, "/")
@@ -134,13 +132,13 @@ func blobRead(urlstr string) (string, error) {
 
 	bucket, err := blob.OpenBucket(ctx, u.String())
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "failed to open blob bucket: %s", u.String())
 	}
 	defer bucket.Close()
 
 	data, err := bucket.ReadAll(ctx, key)
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "failed to read blob bucket key: %s", key)
 	}
 
 	return string(data), nil
@@ -149,17 +147,18 @@ func blobRead(urlstr string) (string, error) {
 func awsKmsDecrypt(encodedString string, encryptionContext ...string) (string, error) {
 	awsSession, err := session.NewSession()
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to create AWS session")
 	}
 	svc := kms.New(awsSession)
 	decoded, err := base64.StdEncoding.DecodeString(encodedString)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to decode base64 string")
 	}
 	result, err := svc.Decrypt(&kms.DecryptInput{CiphertextBlob: decoded, EncryptionContext: convertContextMap(encryptionContext)})
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to decrypt ciphertext")
 	}
+
 	return string(result.Plaintext), nil
 }
 
@@ -181,6 +180,7 @@ func gcpKmsDecrypt(encodedString string, projectID string, location string, keyR
 	if err != nil {
 		panic(fmt.Sprintf("Decrypt: %v", err))
 	}
+
 	return string(resp.Plaintext), nil
 }
 
@@ -189,6 +189,7 @@ func fileContent(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return strings.ReplaceAll(string(r), "\n", "\\n"), nil
 }
 
@@ -198,6 +199,7 @@ func convertContextMap(encryptionContext []string) map[string]*string {
 		v := strings.Split(p, "=")
 		m[v[0]] = &v[1]
 	}
+
 	return m
 }
 
