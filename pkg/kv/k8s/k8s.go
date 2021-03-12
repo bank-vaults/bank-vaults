@@ -108,16 +108,17 @@ func (k *k8sStorage) Set(key string, val []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "error writing secret key '%s' into secret '%s'", key, k.secret)
 	}
+
 	return nil
 }
 
 func (k *k8sStorage) Get(key string) ([]byte, error) {
 	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(context.Background(), k.secret, metav1.GetOptions{})
-
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, kv.NewNotFoundError("error getting secret for key '%s': %s", key, err.Error())
 		}
+
 		return nil, errors.Wrapf(err, "error getting secret for key '%s'", key)
 	}
 

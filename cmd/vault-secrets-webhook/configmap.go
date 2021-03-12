@@ -38,6 +38,7 @@ func configMapNeedsMutation(configMap *corev1.ConfigMap, vaultConfig VaultConfig
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -94,9 +95,11 @@ func (mw *mutatingWebhook) mutateConfigMapData(configMap *corev1.ConfigMap, data
 	if err != nil {
 		return err
 	}
+
 	for key, value := range mapData {
 		configMap.Data[key] = value
 	}
+
 	return nil
 }
 
@@ -112,6 +115,7 @@ func (mw *mutatingWebhook) mutateInlineConfigMapData(configMap *corev1.ConfigMap
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -120,6 +124,7 @@ func (mw *mutatingWebhook) mutateConfigMapBinaryData(configMap *corev1.ConfigMap
 	if err != nil {
 		return err
 	}
+
 	for key, value := range mapData {
 		// binary data are stored in base64 inside vault
 		// we need to decode base64 since k8s will encode this data too
@@ -129,5 +134,6 @@ func (mw *mutatingWebhook) mutateConfigMapBinaryData(configMap *corev1.ConfigMap
 		}
 		configMap.BinaryData[key] = valueBytes
 	}
+
 	return nil
 }

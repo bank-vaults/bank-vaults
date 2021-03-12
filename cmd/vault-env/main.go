@@ -47,41 +47,39 @@ type envType struct {
 	login bool
 }
 
-var (
-	sanitizeEnvmap = map[string]envType{
-		"VAULT_TOKEN":                  {login: true},
-		"VAULT_ADDR":                   {login: true},
-		"VAULT_AGENT_ADDR":             {login: true},
-		"VAULT_CACERT":                 {login: true},
-		"VAULT_CAPATH":                 {login: true},
-		"VAULT_CLIENT_CERT":            {login: true},
-		"VAULT_CLIENT_KEY":             {login: true},
-		"VAULT_CLIENT_TIMEOUT":         {login: true},
-		"VAULT_SRV_LOOKUP":             {login: true},
-		"VAULT_SKIP_VERIFY":            {login: true},
-		"VAULT_NAMESPACE":              {login: true},
-		"VAULT_TLS_SERVER_NAME":        {login: true},
-		"VAULT_WRAP_TTL":               {login: true},
-		"VAULT_MFA":                    {login: true},
-		"VAULT_MAX_RETRIES":            {login: true},
-		"VAULT_CLUSTER_ADDR":           {login: false},
-		"VAULT_REDIRECT_ADDR":          {login: false},
-		"VAULT_CLI_NO_COLOR":           {login: false},
-		"VAULT_RATE_LIMIT":             {login: false},
-		"VAULT_ROLE":                   {login: false},
-		"VAULT_PATH":                   {login: false},
-		"VAULT_AUTH_METHOD":            {login: false},
-		"VAULT_TRANSIT_KEY_ID":         {login: false},
-		"VAULT_TRANSIT_PATH":           {login: false},
-		"VAULT_IGNORE_MISSING_SECRETS": {login: false},
-		"VAULT_ENV_PASSTHROUGH":        {login: false},
-		"VAULT_JSON_LOG":               {login: false},
-		"VAULT_LOG_LEVEL":              {login: false},
-		"VAULT_REVOKE_TOKEN":           {login: false},
-		"VAULT_ENV_DAEMON":             {login: false},
-		"VAULT_ENV_FROM_PATH":          {login: false},
-	}
-)
+var sanitizeEnvmap = map[string]envType{
+	"VAULT_TOKEN":                  {login: true},
+	"VAULT_ADDR":                   {login: true},
+	"VAULT_AGENT_ADDR":             {login: true},
+	"VAULT_CACERT":                 {login: true},
+	"VAULT_CAPATH":                 {login: true},
+	"VAULT_CLIENT_CERT":            {login: true},
+	"VAULT_CLIENT_KEY":             {login: true},
+	"VAULT_CLIENT_TIMEOUT":         {login: true},
+	"VAULT_SRV_LOOKUP":             {login: true},
+	"VAULT_SKIP_VERIFY":            {login: true},
+	"VAULT_NAMESPACE":              {login: true},
+	"VAULT_TLS_SERVER_NAME":        {login: true},
+	"VAULT_WRAP_TTL":               {login: true},
+	"VAULT_MFA":                    {login: true},
+	"VAULT_MAX_RETRIES":            {login: true},
+	"VAULT_CLUSTER_ADDR":           {login: false},
+	"VAULT_REDIRECT_ADDR":          {login: false},
+	"VAULT_CLI_NO_COLOR":           {login: false},
+	"VAULT_RATE_LIMIT":             {login: false},
+	"VAULT_ROLE":                   {login: false},
+	"VAULT_PATH":                   {login: false},
+	"VAULT_AUTH_METHOD":            {login: false},
+	"VAULT_TRANSIT_KEY_ID":         {login: false},
+	"VAULT_TRANSIT_PATH":           {login: false},
+	"VAULT_IGNORE_MISSING_SECRETS": {login: false},
+	"VAULT_ENV_PASSTHROUGH":        {login: false},
+	"VAULT_JSON_LOG":               {login: false},
+	"VAULT_LOG_LEVEL":              {login: false},
+	"VAULT_REVOKE_TOKEN":           {login: false},
+	"VAULT_ENV_DAEMON":             {login: false},
+	"VAULT_ENV_FROM_PATH":          {login: false},
+}
 
 // Appends variable an entry (name=value) into the environ list.
 // VAULT_* variables are not populated into this list if this is not a login scenario.
@@ -303,7 +301,8 @@ func main() {
 
 		close(sigs)
 
-		if _, ok := err.(*exec.ExitError); ok {
+		var eerr exec.ExitError
+		if errors.As(err, &eerr) {
 			os.Exit(cmd.ProcessState.ExitCode())
 		} else if err != nil {
 			logger.Fatalln("failed to exec process", entrypointCmd, err.Error())

@@ -42,13 +42,11 @@ var _ kv.Service = &googleKms{}
 func New(store kv.Service, project, location, keyring, cryptoKey string) (kv.Service, error) {
 	ctx := context.Background()
 	client, err := google.DefaultClient(ctx, cloudkms.CloudPlatformScope)
-
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating google client")
 	}
 
 	kmsService, err := cloudkms.NewService(context.Background(), option.WithHTTPClient(client))
-
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating google kms service client")
 	}
@@ -64,7 +62,6 @@ func (g *googleKms) encrypt(s []byte) ([]byte, error) {
 	resp, err := g.svc.Projects.Locations.KeyRings.CryptoKeys.Encrypt(g.keyPath, &cloudkms.EncryptRequest{
 		Plaintext: base64.StdEncoding.EncodeToString(s),
 	}).Do()
-
 	if err != nil {
 		return nil, errors.Wrap(err, "error encrypting data")
 	}
@@ -76,7 +73,6 @@ func (g *googleKms) decrypt(s []byte) ([]byte, error) {
 	resp, err := g.svc.Projects.Locations.KeyRings.CryptoKeys.Decrypt(g.keyPath, &cloudkms.DecryptRequest{
 		Ciphertext: base64.StdEncoding.EncodeToString(s),
 	}).Do()
-
 	if err != nil {
 		return nil, errors.Wrap(err, "error decrypting data")
 	}
@@ -86,7 +82,6 @@ func (g *googleKms) decrypt(s []byte) ([]byte, error) {
 
 func (g *googleKms) Get(key string) ([]byte, error) {
 	cipherText, err := g.store.Get(key)
-
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting data")
 	}
@@ -96,7 +91,6 @@ func (g *googleKms) Get(key string) ([]byte, error) {
 
 func (g *googleKms) Set(key string, val []byte) error {
 	cipherText, err := g.encrypt(val)
-
 	if err != nil {
 		return errors.Wrap(err, "error setting data")
 	}

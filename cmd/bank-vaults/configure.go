@@ -21,15 +21,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/banzaicloud/bank-vaults/internal/configuration"
-	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
-
 	"github.com/fsnotify/fsnotify"
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/banzaicloud/bank-vaults/internal/configuration"
+	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 const (
@@ -110,6 +110,7 @@ var configureCmd = &cobra.Command{
 					if err != nil {
 						logrus.Errorf("error checking if vault is sealed: %s, waiting %s before trying again...", err.Error(), unsealConfig.unsealPeriod)
 						time.Sleep(unsealConfig.unsealPeriod)
+
 						continue
 					}
 
@@ -117,6 +118,7 @@ var configureCmd = &cobra.Command{
 					if sealed {
 						logrus.Infof("vault is sealed, waiting %s before trying again...", unsealConfig.unsealPeriod)
 						time.Sleep(unsealConfig.unsealPeriod)
+
 						continue
 					}
 
@@ -127,9 +129,11 @@ var configureCmd = &cobra.Command{
 						if errorFatal {
 							os.Exit(1)
 						}
+
 						failedConfigurationsCount++
 						// Failed configuration handler - Increase the backoff sleep
 						go handleConfigurationError(config.ConfigFileUsed(), configurations, b.Duration())
+
 						return
 					}
 
@@ -137,6 +141,7 @@ var configureCmd = &cobra.Command{
 					b.Reset()
 					successfulConfigurationsCount++
 					logrus.Info("successfully configured vault")
+
 					return
 				}
 			}()

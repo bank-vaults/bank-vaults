@@ -547,6 +547,7 @@ mountSearch:
 		for _, mount := range container.VolumeMounts {
 			if mount.MountPath == "/var/run/secrets/kubernetes.io/serviceaccount" {
 				serviceAccountMount = mount
+
 				break mountSearch
 			}
 		}
@@ -555,7 +556,7 @@ mountSearch:
 }
 
 func getInitContainers(originalContainers []corev1.Container, podSecurityContext *corev1.PodSecurityContext, vaultConfig VaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
-	var containers = []corev1.Container{}
+	containers := []corev1.Container{}
 
 	if vaultConfig.TokenAuthMount != "" {
 		// vault.security.banzaicloud.io/token-auth-mount: "token:vault-token"
@@ -653,7 +654,7 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 }
 
 func getContainers(vaultConfig VaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
-	var containers = []corev1.Container{}
+	containers := []corev1.Container{}
 	securityContext := &corev1.SecurityContext{
 		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 	}
@@ -710,7 +711,7 @@ func getContainers(vaultConfig VaultConfig, containerEnvVars []corev1.EnvVar, co
 }
 
 func getAgentContainers(originalContainers []corev1.Container, vaultConfig VaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
-	var containers = []corev1.Container{}
+	containers := []corev1.Container{}
 	securityContext := &corev1.SecurityContext{
 		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 		Capabilities: &corev1.Capabilities{

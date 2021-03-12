@@ -44,6 +44,7 @@ func New(name string) (kv.Service, error) {
 
 	keyClient := keyvault.New()
 	keyClient.Authorizer = GetKeyvaultAuthorizer()
+
 	return &azureKeyVault{
 		client:       &keyClient,
 		vaultBaseURL: fmt.Sprintf("https://%s.%s", name, azure.PublicCloud.KeyVaultDNSSuffix),
@@ -52,13 +53,13 @@ func New(name string) (kv.Service, error) {
 
 func (a *azureKeyVault) Get(key string) ([]byte, error) {
 	bundle, err := a.client.GetSecret(context.Background(), a.vaultBaseURL, key, "")
-
 	if err != nil {
-		err := err.(autorest.DetailedError)
-		if err.StatusCode == http.StatusNotFound {
+		var aerr autorest.DetailedError
+		if errors.As(err, &aerr) && aerr.StatusCode == http.StatusNotFound {
 			return nil, kv.NewNotFoundError("error getting secret for key '%s': %s", key, err.Error())
 		}
-		return nil, err
+
+		return nil, errors.Wrapf(err, "failed to get key: %s", key)
 	}
 
 	return []byte(*bundle.Value), nil
@@ -72,5 +73,5 @@ func (a *azureKeyVault) Set(key string, val []byte) error {
 
 	_, err := a.client.SetSecret(context.Background(), a.vaultBaseURL, key, parameters)
 
-	return err
+	return errors.Wrapf(err, "failed to set key: %s", key)
 }
