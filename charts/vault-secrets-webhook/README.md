@@ -120,8 +120,9 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | volumeMounts                     | extra volume mounts                                                          | `[]`                                |
 | configMapMutation                | enable injecting values from Vault to ConfigMaps                             | `false`                             |
 | customResourceMutations         | list of CustomResources to inject values from Vault                           | `[]`                                |
-| podDisruptionBudget.enabled      | enable PodDisruptionBudget                                                   | `false`                             |
+| podDisruptionBudget.enabled      | enable PodDisruptionBudget                                                   | `true `                             |
 | podDisruptionBudget.minAvailable | represents the number of Pods that must be available (integer or percentage) | `1`                                 |
+| podDisruptionBudget.maxUnavailable | represents the number of Pods that can be unavailable (integer or percentage) | ``                               |
 | certificate.generate             | should a new CA and TLS certificate be generated for the webhook             | `true`                              |
 | certificate.useCertManager       | should request cert-manager for getting a new CA and TLS certificate         | `false`                             |
 | certificate.servingCertificate   | should use an already externally defined Certificate by cert-manager         | `null`                              |
