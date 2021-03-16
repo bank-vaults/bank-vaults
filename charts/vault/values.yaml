@@ -295,3 +295,8 @@ certManager:
     # issuerRef:
     # additionalDomains:
     #   - vault.mydomain.com
+
+podDisruptionBudget:
+  enabled: true
+  #minAvailable: 1
+  maxUnavailable: 1
