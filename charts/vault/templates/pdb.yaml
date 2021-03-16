@@ -2,14 +2,13 @@
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ template "vault-secrets-webhook.fullname" . }}
+  name: {{ template "vault.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    helm.sh/chart: {{ template "vault-secrets-webhook.chart" . }}
-    app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}
+    helm.sh/chart: {{ template "vault.chart" . }}
+    app.kubernetes.io/name: {{ template "vault.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
-    app.kubernetes.io/component: mutating-webhook
 spec:
   {{- with .Values.podDisruptionBudget.minAvailable }}
   minAvailable: {{ . }}
@@ -19,6 +18,6 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}
+      app.kubernetes.io/name: {{ template "vault.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
