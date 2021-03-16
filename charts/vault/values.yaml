@@ -300,3 +300,7 @@ podDisruptionBudget:
   enabled: true
   #minAvailable: 1
   maxUnavailable: 1
+
+## Assign a PriorityClassName to pods if set
+priorityClassName: ""
+

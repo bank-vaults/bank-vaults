@@ -259,6 +259,9 @@ spec:
       serviceAccountName: {{ template "vault.serviceAccountName" . }}
       securityContext:
         fsGroup: 65534
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
       volumes:
         - name: vault-raw-config
           secret:

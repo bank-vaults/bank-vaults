@@ -144,6 +144,7 @@ The following tables lists the configurable parameters of the vault chart and th
 | `podDisruptionBudget.enabled`        | enable PodDisruptionBudget                                                   | `true`                             |
 | `podDisruptionBudget.minAvailable`   | represents the number of Pods that must be available (integer or percentage) | `nil`                                |
 | `podDisruptionBudget.maxUnavailable` | represents the number of Pods that can be unavailable (integer or percentage) | `1`                                 |
+| `priorityClassName`     | The PriorityClass to assign to Pods  | `""`                                               |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
