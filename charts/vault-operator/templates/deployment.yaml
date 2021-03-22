@@ -40,7 +40,8 @@ spec:
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ include "vault-operator.vault-operator.version" . }}"          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ .Values.image.repository }}:{{ include "vault-operator.vault-operator.version" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
             - vault-operator
             - -sync_period
