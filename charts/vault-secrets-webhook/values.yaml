@@ -49,6 +49,7 @@ webhookClientConfig:
 
 vaultEnv:
   repository: ghcr.io/banzaicloud/vault-env
+  # tag: ""
 
 env:
   VAULT_IMAGE: vault:1.6.2

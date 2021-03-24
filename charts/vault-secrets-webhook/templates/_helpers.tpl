@@ -53,6 +53,9 @@ Overrideable version for container image tags.
 {{- define "vault-secrets-webhook.bank-vaults.version" -}}
 {{- .Values.image.tag | default (printf "%s" .Chart.AppVersion) -}}
 {{- end -}}
+{{- define "vault-secrets-webhook.vault-env.version" -}}
+{{- .Values.vaultEnv.tag | default (printf "%s" .Chart.AppVersion) -}}
+{{- end -}}
 
 {{/*
 Create the name of the service account to use
