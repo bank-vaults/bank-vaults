@@ -130,7 +130,7 @@ func (mw *mutatingWebhook) mutateConfigMapBinaryData(configMap *corev1.ConfigMap
 		// we need to decode base64 since k8s will encode this data too
 		valueBytes, err := base64.StdEncoding.DecodeString(value)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "failed to decode ConfigMap binary data")
 		}
 		configMap.BinaryData[key] = valueBytes
 	}

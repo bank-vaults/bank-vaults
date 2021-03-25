@@ -110,7 +110,7 @@ func (t kvTester) Test(key string) error {
 	_, err := t.Service.Get(key)
 	if err != nil {
 		if !isNotFoundError(err) {
-			return err
+			return err // nolint:wrapcheck
 		}
 	}
 
@@ -218,7 +218,7 @@ func (v *vault) keyStoreNotFound(key string) (bool, error) {
 		return true, nil
 	}
 
-	return false, err
+	return false, err // nolint:wrapcheck
 }
 
 func (v *vault) keyStoreSet(key string, val []byte) error {
@@ -504,11 +504,11 @@ func (*vault) testKey() string {
 func (v *vault) kubernetesAuthConfigDefault() (map[string]interface{}, error) {
 	kubernetesCACert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 	if err != nil {
-		return nil, err
+		return nil, errors.WrapIf(err, "failed to read ca.crt")
 	}
 	tokenReviewerJWT, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 	if err != nil {
-		return nil, err
+		return nil, errors.WrapIf(err, "failed to read serviceaccount token")
 	}
 	config := map[string]interface{}{
 		"kubernetes_host":    fmt.Sprint("https://", os.Getenv("KUBERNETES_SERVICE_HOST")),
@@ -516,7 +516,7 @@ func (v *vault) kubernetesAuthConfigDefault() (map[string]interface{}, error) {
 		"token_reviewer_jwt": string(tokenReviewerJWT),
 	}
 
-	return config, err
+	return config, nil
 }
 
 func (v *vault) configureAuthMethods(config *viper.Viper) error {

@@ -19,6 +19,8 @@ import (
 	"os"
 	"path"
 
+	"emperror.dev/errors"
+
 	"github.com/banzaicloud/bank-vaults/pkg/kv"
 )
 
@@ -43,5 +45,5 @@ func (f *file) Get(key string) ([]byte, error) {
 		return nil, kv.NewNotFoundError("key '%s' is not present in file", key)
 	}
 
-	return val, err
+	return val, errors.WrapIff(err, "failed to read file for key: %s", key)
 }
