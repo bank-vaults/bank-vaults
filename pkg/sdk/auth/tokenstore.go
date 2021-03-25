@@ -27,8 +27,10 @@ import (
 )
 
 // Verify tokenstores satisfy the correct interface
-var _ TokenStore = (*inMemoryTokenStore)(nil)
-var _ TokenStore = (*vaultTokenStore)(nil)
+var (
+	_ TokenStore = (*inMemoryTokenStore)(nil)
+	_ TokenStore = (*vaultTokenStore)(nil)
+)
 
 // Token represents an access token
 type Token struct {
@@ -160,7 +162,7 @@ func (tokenStore *inMemoryTokenStore) List(userID string) ([]*Token, error) {
 		i := 0
 		for _, v := range userTokens {
 			tokens[i] = v
-			i++
+			i++ // nolint:wastedassign
 		}
 		return tokens, nil
 	}

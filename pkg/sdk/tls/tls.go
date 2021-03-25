@@ -41,17 +41,17 @@ const (
 )
 
 var (
-	// InvalidHostNameError is returned when you have a hostname that has already been covered by a wildcard hostname
-	InvalidHostNameError = errors.New("invalid host name, this has been already covered by the wildcard")
+	// ErrInvalidHostName is returned when you have a hostname that has already been covered by a wildcard hostname
+	ErrInvalidHostName = errors.New("invalid host name, this has been already covered by the wildcard")
 
-	// InvalidCAError will be returned if the provided CA is invalid
-	InvalidCAError = errors.New("the CA provided is not valid")
+	// ErrInvalidCA will be returned if the provided CA is invalid
+	ErrInvalidCA = errors.New("the CA provided is not valid")
 
-	// EmptyCAError will be returned if the CA provided was empty
-	EmptyCAError = errors.New("an empty CA was provided")
+	// ErrEmptyCA will be returned if the CA provided was empty
+	ErrEmptyCA = errors.New("an empty CA was provided")
 
-	// ExpiredCAError will be returned if the CA does not meet the required threshold of validity
-	ExpiredCAError = errors.New("the CA provided will expired before the provided threshold")
+	// ErrExpiredCA will be returned if the CA does not meet the required threshold of validity
+	ErrExpiredCA = errors.New("the CA provided will expired before the provided threshold")
 )
 
 // CertificateManager contains a certificate chain and methods to generate certificates on that chain
@@ -138,7 +138,7 @@ func (sh *SeparatedCertHosts) Validate() error {
 		for _, host := range sh.Hosts {
 			if strings.Contains(host, hostWithoutWildCard) {
 				if !strings.Contains(strings.ReplaceAll(host, hostWithoutWildCard, ""), ".") {
-					return errors.WithStack(InvalidHostNameError)
+					return errors.WithStack(ErrInvalidHostName)
 				}
 			}
 		}
@@ -185,23 +185,23 @@ func getTimes(validity string) (notBefore time.Time, validityDuration time.Durat
 // NewChain generates ca, server, client and peer TLS certificates.
 // hosts: Comma-separated hostnames and IPs to generate a certificate for
 // validity: Duration that certificate is valid for, in Go Duration format
-func (cc *CertificateManager) NewChain() error {
-	err := cc.GenerateCA()
+func (cm *CertificateManager) NewChain() error {
+	err := cm.GenerateCA()
 	if err != nil {
 		return errors.Wrap(err, "error generating new certificate authority")
 	}
 
-	err = cc.GenerateServer()
+	err = cm.GenerateServer()
 	if err != nil {
 		return errors.Wrap(err, "error generating new server certificate")
 	}
 
-	err = cc.GenerateClient()
+	err = cm.GenerateClient()
 	if err != nil {
 		return errors.Wrap(err, "error generating new server certificate")
 	}
 
-	err = cc.GeneratePeer()
+	err = cm.GeneratePeer()
 	if err != nil {
 		return errors.Wrap(err, "error generating new server certificate")
 	}
@@ -234,7 +234,7 @@ func certToBytes(certBytes []byte) ([]byte, error) {
 // LoadCA will load an existing certifiate authority into the CertificateManager and underlying chain
 func (cm *CertificateManager) LoadCA(caCertBytes []byte, caKeyBytes []byte, expirationThreshold time.Duration) error {
 	if len(caCertBytes) == 0 || len(caKeyBytes) == 0 {
-		return EmptyCAError
+		return ErrEmptyCA
 	}
 
 	// Get CA expiration date
@@ -244,24 +244,24 @@ func (cm *CertificateManager) LoadCA(caCertBytes []byte, caKeyBytes []byte, expi
 	}
 
 	if time.Until(tlsExpiration) < expirationThreshold {
-		return ExpiredCAError
+		return ErrExpiredCA
 	}
 
 	caCertPem, _ := pem.Decode(caCertBytes)
 	if caCertPem == nil {
-		return errors.Wrap(InvalidCAError, "no PEM encoded CA certificate could be found")
+		return errors.Wrap(ErrInvalidCA, "no PEM encoded CA certificate could be found")
 	}
 	caKeyPem, _ := pem.Decode(caKeyBytes)
 	if caKeyPem == nil {
-		return errors.Wrap(InvalidCAError, "no PEM encoded CA key could be found")
+		return errors.Wrap(ErrInvalidCA, "no PEM encoded CA key could be found")
 	}
 
 	if caCertPem.Type != "CERTIFICATE" {
-		return errors.Wrap(InvalidCAError, "the CA certificate was not of type CERTIFICATE")
+		return errors.Wrap(ErrInvalidCA, "the CA certificate was not of type CERTIFICATE")
 	}
 
 	if caKeyPem.Type != "RSA PRIVATE KEY" {
-		return errors.Wrap(InvalidCAError, "the CA certificate was not of type RSA PRIVATE KEY")
+		return errors.Wrap(ErrInvalidCA, "the CA certificate was not of type RSA PRIVATE KEY")
 	}
 
 	caCert, err := x509.ParseCertificate(caCertPem.Bytes)
@@ -358,51 +358,51 @@ func (cm *CertificateManager) GenerateServer() error {
 }
 
 // GenerateClient will generate a new client TLS certificate signed by the CA within the chain
-func (c *CertificateManager) GenerateClient() error {
+func (cm *CertificateManager) GenerateClient() error {
 	clientCertRequest := ClientCertificateRequest{
 		Subject: pkix.Name{
 			Organization: []string{"Banzai Cloud"},
 			CommonName:   "Banzai Cloud Generated Client Cert",
 		},
-		Validity:  c.validityDuration,
-		notBefore: c.notBefore,
+		Validity:  cm.validityDuration,
+		notBefore: cm.notBefore,
 	}
 
-	clientCert, err := GenerateClientCertificate(clientCertRequest, c.caCertTemplate, c.caKey)
+	clientCert, err := GenerateClientCertificate(clientCertRequest, cm.caCertTemplate, cm.caKey)
 	if err != nil {
 		return err
 	}
 
-	c.Chain.ClientKey = string(clientCert.Key)
-	c.Chain.ClientCert = string(clientCert.Certificate)
+	cm.Chain.ClientKey = string(clientCert.Key)
+	cm.Chain.ClientCert = string(clientCert.Certificate)
 	return nil
 }
 
 // GeneratePeer will generate a new peer TLS certificate signed by the CA within the chain
-func (c *CertificateManager) GeneratePeer() error {
+func (cm *CertificateManager) GeneratePeer() error {
 	peerCertRequest := PeerCertificateRequest{
 		Subject: pkix.Name{
 			Organization: []string{"Banzai Cloud"},
 			CommonName:   "Banzai Cloud Generated Peer Cert",
 		},
-		Validity:  c.validityDuration,
-		notBefore: c.notBefore,
+		Validity:  cm.validityDuration,
+		notBefore: cm.notBefore,
 	}
 
-	if len(c.sHosts.WildCardHosts) != 0 {
-		peerCertRequest.Subject.CommonName = c.sHosts.WildCardHosts[0]
-		peerCertRequest.DNSNames = append(peerCertRequest.DNSNames, c.sHosts.WildCardHosts...)
+	if len(cm.sHosts.WildCardHosts) != 0 {
+		peerCertRequest.Subject.CommonName = cm.sHosts.WildCardHosts[0]
+		peerCertRequest.DNSNames = append(peerCertRequest.DNSNames, cm.sHosts.WildCardHosts...)
 	}
-	peerCertRequest.IPAddresses = append(peerCertRequest.IPAddresses, c.sHosts.IPs...)
-	peerCertRequest.DNSNames = append(peerCertRequest.DNSNames, c.sHosts.Hosts...)
+	peerCertRequest.IPAddresses = append(peerCertRequest.IPAddresses, cm.sHosts.IPs...)
+	peerCertRequest.DNSNames = append(peerCertRequest.DNSNames, cm.sHosts.Hosts...)
 
-	peerCert, err := GeneratePeerCertificate(peerCertRequest, c.caCertTemplate, c.caKey)
+	peerCert, err := GeneratePeerCertificate(peerCertRequest, cm.caCertTemplate, cm.caKey)
 	if err != nil {
 		return err
 	}
 
-	c.Chain.PeerKey = string(peerCert.Key)
-	c.Chain.PeerCert = string(peerCert.Certificate)
+	cm.Chain.PeerKey = string(peerCert.Key)
+	cm.Chain.PeerCert = string(peerCert.Certificate)
 	return nil
 }
 

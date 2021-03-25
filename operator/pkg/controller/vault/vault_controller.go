@@ -1150,7 +1150,7 @@ func populateTLSSecret(v *vaultv1alpha1.Vault, service *corev1.Service, secret *
 	err = certMgr.LoadCA(caCrt, caKey, v.Spec.GetTLSExpiryThreshold())
 
 	// If the CA is expired, empty or not valid but not errored - create a new chain
-	if err == bvtls.ExpiredCAError || err == bvtls.EmptyCAError {
+	if err == bvtls.ErrExpiredCA || err == bvtls.ErrEmptyCA {
 		log.Info("TLS CA will be regenerated due to: ", "error", err.Error())
 
 		err = certMgr.NewChain()

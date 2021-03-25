@@ -23,6 +23,8 @@ linters:
         - nlreturn
 
         # TODO: fixme
+        - paralleltest
+        - forcetypeassert
         - wrapcheck
         - exportloopref
         - cyclop
