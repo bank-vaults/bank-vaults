@@ -31,7 +31,6 @@ import (
 	credentials "cloud.google.com/go/iam/credentials/apiv1"
 	"emperror.dev/errors"
 	"github.com/fsnotify/fsnotify"
-	"github.com/hashicorp/vault/api"
 	vaultapi "github.com/hashicorp/vault/api"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iam/v1"
@@ -114,7 +113,7 @@ func (co ClientTimeout) apply(o *clientOptions) {
 }
 
 // ClientLogger wraps a logur.Logger compatible logger to be used in the client.
-func ClientLogger(logger Logger) clientLogger {
+func ClientLogger(logger Logger) clientLogger { // nolint:revive
 	return clientLogger{logger: logger}
 }
 
@@ -345,10 +344,10 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 
 			var loginDataFunc func() (map[string]interface{}, error)
 
-			switch o.authMethod {
+			switch o.authMethod { // nolint:exhaustive
 			case AWSEC2AuthMethod:
 				loginDataFunc = func() (map[string]interface{}, error) {
-					resp, err := http.Get(awsEC2PKCS7Url)
+					resp, err := http.Get(awsEC2PKCS7Url) // nolint:noctx
 					if err != nil {
 						return nil, err
 					}
@@ -572,7 +571,7 @@ func (client *Client) Close() {
 }
 
 // NewRawClient creates a new raw Vault client.
-func NewRawClient() (*api.Client, error) {
+func NewRawClient() (*vaultapi.Client, error) {
 	config := vaultapi.DefaultConfig()
 	if config.Error != nil {
 		return nil, config.Error
@@ -584,7 +583,7 @@ func NewRawClient() (*api.Client, error) {
 }
 
 // NewInsecureRawClient creates a new raw Vault client with insecure TLS.
-func NewInsecureRawClient() (*api.Client, error) {
+func NewInsecureRawClient() (*vaultapi.Client, error) {
 	config := vaultapi.DefaultConfig()
 	if config.Error != nil {
 		return nil, config.Error

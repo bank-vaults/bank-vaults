@@ -41,7 +41,7 @@ func DynamicSecretDataSource(dialect string, source string) (dynamicSecretDataSo
 
 	sourceParts := strings.Split(source, "@")
 	if len(sourceParts) != 2 {
-		err = errors.New("invalid database source") // nolint:goerr113
+		err = errors.New("invalid database source")
 		return
 	}
 
@@ -49,7 +49,6 @@ func DynamicSecretDataSource(dialect string, source string) (dynamicSecretDataSo
 	vaultCredsEndpoint := "database/creds/" + vaultRole
 
 	vaultClient, err := vault.NewClient(vaultRole)
-
 	if err != nil {
 		err = errors.Wrap(err, "failed to establish vault connection")
 		return
@@ -67,7 +66,6 @@ func DynamicSecretDataSource(dialect string, source string) (dynamicSecretDataSo
 	}
 
 	secretRenewer, err := vaultClient.RawClient().NewRenewer(&vaultapi.RenewerInput{Secret: secret})
-
 	if err != nil {
 		vaultClient.Close()
 		err = errors.Wrap(err, "failed to start db credential renewer")
