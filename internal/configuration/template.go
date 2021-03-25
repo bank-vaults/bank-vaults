@@ -165,12 +165,12 @@ func awsKmsDecrypt(encodedString string, encryptionContext ...string) (string, e
 func gcpKmsDecrypt(encodedString string, projectID string, location string, keyRing string, key string) (string, error) {
 	decoded, err := base64.StdEncoding.DecodeString(encodedString)
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "failed to base64 decode ciphertext")
 	}
 	ctx := context.Background()
 	client, err := cloudkms.NewKeyManagementClient(ctx)
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "failed to construct KMS client")
 	}
 	req := &kmspb.DecryptRequest{
 		Name:       fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", projectID, location, keyRing, key),

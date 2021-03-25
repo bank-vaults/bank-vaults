@@ -190,7 +190,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 
 		publicKeyValue, err := p11.Object(publicKey).Value()
 		if err != nil {
-			return nil, err
+			return nil, errors.WrapIf(err, "can't get puclic key value")
 		}
 
 		publicKey, err := x509.ParsePKCS1PublicKey(publicKeyValue)
@@ -235,7 +235,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 func (h *hsmCrypto) Get(key string) ([]byte, error) {
 	ciphertext, err := h.storage.Get(key)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to get data from storage")
 	}
 
 	plaintext, err := h.decrypt(ciphertext)

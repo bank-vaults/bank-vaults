@@ -23,6 +23,7 @@ linters:
         - nlreturn
 
         # TODO: fixme
+        - wrapcheck
         - exportloopref
         - cyclop
         - godox
