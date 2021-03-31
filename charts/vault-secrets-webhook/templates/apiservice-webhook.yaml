@@ -94,6 +94,10 @@ webhooks:
       - {{ .Release.Namespace }}
 {{- if semverCompare ">=1.15-0" .Capabilities.KubeVersion.GitVersion }}
   objectSelector:
+  {{- if .Values.objectSelector.matchLabels }}
+    matchLabels:
+{{ toYaml .Values.objectSelector.matchLabels | indent 6 }}
+  {{- end }}
     matchExpressions:
     {{- if .Values.objectSelector.matchExpressions }}
 {{ toYaml .Values.objectSelector.matchExpressions | indent 4 }}
@@ -147,6 +151,21 @@ webhooks:
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
+{{- if semverCompare ">=1.15-0" .Capabilities.KubeVersion.GitVersion }}
+  objectSelector:
+  {{- if .Values.objectSelector.matchLabels }}
+    matchLabels:
+{{ toYaml .Values.objectSelector.matchLabels | indent 6 }}
+  {{- end }}
+    matchExpressions:
+    {{- if .Values.objectSelector.matchExpressions }}
+{{ toYaml .Values.objectSelector.matchExpressions | indent 4 }}
+    {{- end }}
+    - key: security.banzaicloud.io/mutate
+      operator: NotIn
+      values:
+      - skip
+{{- end }}
 {{- if semverCompare ">=1.12-0" .Capabilities.KubeVersion.GitVersion }}
   sideEffects: {{ .Values.apiSideEffectValue }}
 {{- end }}
@@ -192,6 +211,21 @@ webhooks:
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
+{{- if semverCompare ">=1.15-0" .Capabilities.KubeVersion.GitVersion }}
+  objectSelector:
+  {{- if .Values.objectSelector.matchLabels }}
+    matchLabels:
+{{ toYaml .Values.objectSelector.matchLabels | indent 6 }}
+  {{- end }}
+    matchExpressions:
+    {{- if .Values.objectSelector.matchExpressions }}
+{{ toYaml .Values.objectSelector.matchExpressions | indent 4 }}
+    {{- end }}
+    - key: security.banzaicloud.io/mutate
+      operator: NotIn
+      values:
+      - skip
+{{- end }}
 {{- if semverCompare ">=1.12-0" .Capabilities.KubeVersion.GitVersion }}
   sideEffects: {{ .Values.apiSideEffectValue }}
 {{- end }}
@@ -240,6 +274,10 @@ webhooks:
       - {{ .Release.Namespace }}
 {{- if semverCompare ">=1.15-0" .Capabilities.KubeVersion.GitVersion }}
   objectSelector:
+  {{- if .Values.objectSelector.matchLabels }}
+    matchLabels:
+{{ toYaml .Values.objectSelector.matchLabels | indent 6 }}
+  {{- end }}
     matchExpressions:
     {{- if .Values.objectSelector.matchExpressions }}
 {{ toYaml .Values.objectSelector.matchExpressions | indent 4 }}
