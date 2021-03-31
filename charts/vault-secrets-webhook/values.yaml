@@ -155,6 +155,8 @@ objectSelector: {}
   #   operator: NotIn
   #   values:
   #   - skip
+  # matchLabels:
+  #   vault-injection: enabled
 
 podDisruptionBudget:
   enabled: true
