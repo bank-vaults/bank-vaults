@@ -161,6 +161,10 @@ webhooks:
     {{- if .Values.objectSelector.matchExpressions }}
 {{ toYaml .Values.objectSelector.matchExpressions | indent 4 }}
     {{- end }}
+    - key: owner
+      operator: NotIn
+      values:
+      - helm
     - key: security.banzaicloud.io/mutate
       operator: NotIn
       values:
@@ -221,6 +225,10 @@ webhooks:
     {{- if .Values.objectSelector.matchExpressions }}
 {{ toYaml .Values.objectSelector.matchExpressions | indent 4 }}
     {{- end }}
+    - key: owner
+      operator: NotIn
+      values:
+      - helm
     - key: security.banzaicloud.io/mutate
       operator: NotIn
       values:
