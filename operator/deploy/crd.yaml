@@ -1265,10 +1265,8 @@ spec:
                         type: string
                     required:
                     - kmsKeyId
-                    - kmsRegion
                     - s3Bucket
                     - s3Prefix
-                    - s3Region
                     type: object
                   azure:
                     properties:

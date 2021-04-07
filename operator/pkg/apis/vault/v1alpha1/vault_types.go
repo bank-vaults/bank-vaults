@@ -1076,10 +1076,10 @@ type AzureUnsealConfig struct {
 // AWSUnsealConfig holds the parameters for AWS KMS based unsealing
 type AWSUnsealConfig struct {
 	KMSKeyID  string `json:"kmsKeyId"`
-	KMSRegion string `json:"kmsRegion"`
+	KMSRegion string `json:"kmsRegion,omitempty"`
 	S3Bucket  string `json:"s3Bucket"`
 	S3Prefix  string `json:"s3Prefix"`
-	S3Region  string `json:"s3Region"`
+	S3Region  string `json:"s3Region,omitempty"`
 	S3SSE     string `json:"s3SSE,omitempty"`
 }
 
