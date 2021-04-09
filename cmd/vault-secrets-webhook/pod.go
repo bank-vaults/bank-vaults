@@ -160,7 +160,11 @@ func (mw *mutatingWebhook) mutatePod(ctx context.Context, pod *corev1.Pod, vault
 			shareProcessNamespace := true
 			pod.Spec.ShareProcessNamespace = &shareProcessNamespace
 		}
-		pod.Spec.Containers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
+		if !vaultConfig.CtOnce {
+			pod.Spec.Containers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
+		} else {
+			pod.Spec.InitContainers = append(pod.Spec.InitContainers, getContainers(vaultConfig, containerEnvVars, containerVolMounts)...)
+		}
 
 		mw.logger.Debug("Successfully appended pod containers to spec")
 	}

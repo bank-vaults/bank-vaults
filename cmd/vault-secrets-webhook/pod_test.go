@@ -645,6 +645,197 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "Will mutate pod with ct-once annotations",
+			fields: fields{
+				k8sClient: fake.NewSimpleClientset(),
+				registry: &MockRegistry{
+					Image: v1.Config{},
+				},
+			},
+			args: args{
+				pod: &corev1.Pod{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:    "MyContainer",
+								Image:   "myimage",
+								Command: []string{"/bin/bash"},
+								Args:    nil,
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+									},
+								},
+							},
+						},
+					},
+				},
+				vaultConfig: VaultConfig{
+					CtConfigMap:          "config-map-test",
+					CtOnce:               true,
+					ConfigfilePath:       "/vault/secrets",
+					Addr:                 "test",
+					SkipVerify:           false,
+					CtCPU:                resource.MustParse("50m"),
+					CtMemory:             resource.MustParse("128Mi"),
+					AgentImage:           "vault:latest",
+					AgentImagePullPolicy: "IfNotPresent",
+				},
+			},
+			wantedPod: &corev1.Pod{
+				Spec: corev1.PodSpec{
+					InitContainers: []corev1.Container{
+						{
+							Name:            "vault-agent",
+							Image:           "vault:latest",
+							Command:         []string{"vault", "agent", "-config=/vault/agent/config.hcl", "-exit-after-auth"},
+							ImagePullPolicy: "IfNotPresent",
+							Env: []corev1.EnvVar{
+								{
+									Name:  "VAULT_ADDR",
+									Value: "test",
+								},
+								{
+									Name:  "VAULT_SKIP_VERIFY",
+									Value: "false",
+								},
+							},
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("250m"),
+									corev1.ResourceMemory: resource.MustParse("64Mi"),
+								},
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("50m"),
+									corev1.ResourceMemory: resource.MustParse("64Mi"),
+								},
+							},
+							SecurityContext: initContainerSecurityContext,
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "vault-env",
+									MountPath: "/vault/",
+								},
+								{
+									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+								},
+								{
+									Name:      "vault-agent-config",
+									MountPath: "/vault/agent/",
+								},
+							},
+						},
+						{
+							Name: "consul-template",
+							Args: []string{"-config", "/vault/ct-config/config.hcl", "-once"},
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("50m"),
+									corev1.ResourceMemory: resource.MustParse("128Mi"),
+								},
+							},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "VAULT_ADDR",
+									Value: "test",
+								},
+								{
+									Name:  "VAULT_SKIP_VERIFY",
+									Value: "false",
+								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "vault-env",
+									MountPath: "/vault/",
+								},
+								{
+									Name:      "ct-secrets",
+									MountPath: "/vault/secrets",
+								},
+								{
+									Name:      "vault-env",
+									MountPath: "/home/consul-template",
+								},
+								{
+									Name:      "ct-configmap",
+									ReadOnly:  true,
+									MountPath: "/vault/ct-config/config.hcl",
+									SubPath:   "config.hcl",
+								},
+							},
+						},
+					},
+					Containers: []corev1.Container{
+						{
+							Name:    "MyContainer",
+							Image:   "myimage",
+							Command: []string{"/bin/bash"},
+							Args:    nil,
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+								},
+								{
+									Name:      "ct-secrets",
+									MountPath: "/vault/secrets",
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "vault-env",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{
+									Medium: corev1.StorageMediumMemory,
+								},
+							},
+						},
+						{
+							Name: "vault-agent-config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "-vault-agent-config",
+									},
+								},
+							},
+						},
+						{
+							Name: "ct-secrets",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{
+									Medium: corev1.StorageMediumMemory,
+								},
+							},
+						},
+						{
+							Name: "ct-configmap",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "config-map-test",
+									},
+									Items: []corev1.KeyToPath{
+										{
+											Key:  "config.hcl",
+											Path: "config.hcl",
+										},
+									},
+									DefaultMode: &defaultMode,
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "Will mutate pod with agent-configmap annotations",
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
