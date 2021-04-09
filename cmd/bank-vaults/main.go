@@ -23,69 +23,90 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var c = viper.New()
 
-const cfgSecretShares = "secret-shares"
-const cfgSecretThreshold = "secret-threshold"
+const (
+	cfgSecretShares    = "secret-shares"
+	cfgSecretThreshold = "secret-threshold"
+)
 
-const cfgMode = "mode"
-const cfgModeValueAWSKMS3 = "aws-kms-s3"
-const cfgModeValueGoogleCloudKMSGCS = "google-cloud-kms-gcs"
-const cfgModeValueAzureKeyVault = "azure-key-vault"
-const cfgModeValueAlibabaKMSOSS = "alibaba-kms-oss"
-const cfgModeValueVault = "vault"
-const cfgModeValueK8S = "k8s"
-const cfgModeValueHSMK8S = "hsm-k8s"
-const cfgModeValueHSM = "hsm"
-const cfgModeValueDev = "dev"
-const cfgModeValueFile = "file"
+const (
+	cfgMode                       = "mode"
+	cfgModeValueAWSKMS3           = "aws-kms-s3"
+	cfgModeValueGoogleCloudKMSGCS = "google-cloud-kms-gcs"
+	cfgModeValueAzureKeyVault     = "azure-key-vault"
+	cfgModeValueAlibabaKMSOSS     = "alibaba-kms-oss"
+	cfgModeValueVault             = "vault"
+	cfgModeValueK8S               = "k8s"
+	cfgModeValueHSMK8S            = "hsm-k8s"
+	cfgModeValueHSM               = "hsm"
+	cfgModeValueDev               = "dev"
+	cfgModeValueFile              = "file"
+)
 
-const cfgGoogleCloudKMSProject = "google-cloud-kms-project"
-const cfgGoogleCloudKMSLocation = "google-cloud-kms-location"
-const cfgGoogleCloudKMSKeyRing = "google-cloud-kms-key-ring"
-const cfgGoogleCloudKMSCryptoKey = "google-cloud-kms-crypto-key"
+const (
+	cfgGoogleCloudKMSProject   = "google-cloud-kms-project"
+	cfgGoogleCloudKMSLocation  = "google-cloud-kms-location"
+	cfgGoogleCloudKMSKeyRing   = "google-cloud-kms-key-ring"
+	cfgGoogleCloudKMSCryptoKey = "google-cloud-kms-crypto-key"
+)
 
-const cfgGoogleCloudStorageBucket = "google-cloud-storage-bucket"
-const cfgGoogleCloudStoragePrefix = "google-cloud-storage-prefix"
+const (
+	cfgGoogleCloudStorageBucket = "google-cloud-storage-bucket"
+	cfgGoogleCloudStoragePrefix = "google-cloud-storage-prefix"
+)
 
-const cfgAWSKMSRegion = "aws-kms-region"
-const cfgAWSKMSKeyID = "aws-kms-key-id"
+const (
+	cfgAWSKMSRegion = "aws-kms-region"
+	cfgAWSKMSKeyID  = "aws-kms-key-id"
+)
 
-const cfgAWSS3Bucket = "aws-s3-bucket"
-const cfgAWSS3Prefix = "aws-s3-prefix"
-const cfgAWSS3Region = "aws-s3-region"
-const cfgAWS3SSEAlgo = "aws-s3-sse-algo"
+const (
+	cfgAWSS3Bucket = "aws-s3-bucket"
+	cfgAWSS3Prefix = "aws-s3-prefix"
+	cfgAWSS3Region = "aws-s3-region"
+	cfgAWS3SSEAlgo = "aws-s3-sse-algo"
+)
 
 const cfgAzureKeyVaultName = "azure-key-vault-name"
 
-const cfgAlibabaOSSEndpoint = "alibaba-oss-endpoint"
-const cfgAlibabaOSSBucket = "alibaba-oss-bucket"
-const cfgAlibabaOSSPrefix = "alibaba-oss-prefix"
-const cfgAlibabaAccessKeyID = "alibaba-access-key-id"
-const cfgAlibabaAccessKeySecret = "alibaba-access-key-secret"
-const cfgAlibabaKMSRegion = "alibaba-kms-region"
-const cfgAlibabaKMSKeyID = "alibaba-kms-key-id"
+const (
+	cfgAlibabaOSSEndpoint     = "alibaba-oss-endpoint"
+	cfgAlibabaOSSBucket       = "alibaba-oss-bucket"
+	cfgAlibabaOSSPrefix       = "alibaba-oss-prefix"
+	cfgAlibabaAccessKeyID     = "alibaba-access-key-id"
+	cfgAlibabaAccessKeySecret = "alibaba-access-key-secret"
+	cfgAlibabaKMSRegion       = "alibaba-kms-region"
+	cfgAlibabaKMSKeyID        = "alibaba-kms-key-id"
+)
 
-const cfgVaultAddress = "vault-addr"
-const cfgVaultUnsealKeysPath = "vault-unseal-keys-path"
-const cfgVaultRole = "vault-role"
-const cfgVaultAuthPath = "vault-auth-path"
-const cfgVaultTokenPath = "vault-token-path"
-const cfgVaultToken = "vault-token"
+const (
+	cfgVaultAddress        = "vault-addr"
+	cfgVaultUnsealKeysPath = "vault-unseal-keys-path"
+	cfgVaultRole           = "vault-role"
+	cfgVaultAuthPath       = "vault-auth-path"
+	cfgVaultTokenPath      = "vault-token-path"
+	cfgVaultToken          = "vault-token"
+)
 
-const cfgK8SNamespace = "k8s-secret-namespace"
-const cfgK8SSecret = "k8s-secret-name"
-const cfgK8SLabels = "k8s-secret-labels"
+const (
+	cfgK8SNamespace = "k8s-secret-namespace"
+	cfgK8SSecret    = "k8s-secret-name"
+	cfgK8SLabels    = "k8s-secret-labels"
+)
 
-const cfgHSMModulePath = "hsm-module-path"
-const cfgHSMSlotID = "hsm-slot-id"
-const cfgHSMTokenLabel = "hsm-token-label" // nolint:gosec
-const cfgHSMPin = "hsm-pin"
-const cfgHSMKeyLabel = "hsm-key-label"
+const (
+	cfgHSMModulePath = "hsm-module-path"
+	cfgHSMSlotID     = "hsm-slot-id"
+	cfgHSMTokenLabel = "hsm-token-label" // nolint:gosec
+	cfgHSMPin        = "hsm-pin"
+	cfgHSMKeyLabel   = "hsm-key-label"
+)
 
 const cfgFilePath = "file-path"
 
@@ -110,8 +131,7 @@ func execute() {
 	}()
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(-1)
+		logrus.Fatalf("error executing command: %s", err.Error())
 	}
 }
 

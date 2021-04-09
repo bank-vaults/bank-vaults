@@ -88,6 +88,7 @@ func (r *Registry) GetImageConfig(
 	if allowToCache {
 		if imageConfig, cacheHit := r.imageCache.Get(container.Image); cacheHit {
 			logger.Infof("found image %s in cache", container.Image)
+
 			return imageConfig.(*v1.Config), nil
 		}
 	}
@@ -131,7 +132,7 @@ func getImageConfig(ctx context.Context, client kubernetes.Interface, container 
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to create k8schain authentication")
 	}
 
 	options := []remote.Option{

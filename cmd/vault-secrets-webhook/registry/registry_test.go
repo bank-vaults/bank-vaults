@@ -21,6 +21,8 @@ import (
 )
 
 func TestIsAllowedToCache(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		container    *corev1.Container
 		allowToCache bool
@@ -55,6 +57,7 @@ func TestIsAllowedToCache(t *testing.T) {
 			allowToCache: false,
 		},
 	}
+
 	for _, test := range tests {
 		allowToCache := IsAllowedToCache(test.container)
 		if test.allowToCache != allowToCache {

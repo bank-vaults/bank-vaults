@@ -25,14 +25,16 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
-const cfgUnsealPeriod = "unseal-period"
-const cfgInit = "init"
-const cfgOnce = "once"
-const cfgAuto = "auto"
-const cfgRaft = "raft"
-const cfgRaftLeaderAddress = "raft-leader-address"
-const cfgRaftSecondary = "raft-secondary"
-const cfgRaftHAStorage = "raft-ha-storage"
+const (
+	cfgUnsealPeriod      = "unseal-period"
+	cfgInit              = "init"
+	cfgOnce              = "once"
+	cfgAuto              = "auto"
+	cfgRaft              = "raft"
+	cfgRaftLeaderAddress = "raft-leader-address"
+	cfgRaftSecondary     = "raft-secondary"
+	cfgRaftHAStorage     = "raft-ha-storage"
+)
 
 type unsealCfg struct {
 	unsealPeriod      time.Duration

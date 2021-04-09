@@ -56,24 +56,24 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	log := logrus.New()
 
 	if config.KeyLabel == "" {
-		return nil, errors.New("key label is required") // nolint:goerr113
+		return nil, errors.New("key label is required")
 	}
 
 	module, err := p11.OpenModule(config.ModulePath)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to open p11 module: %s", config.ModulePath)
 	}
 
 	info, err := module.Info()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get module info")
 	}
 
 	log.Infof("HSM Information %+v", info)
 
 	slots, err := module.Slots()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to list module slots")
 	}
 
 	log.Infof("HSM Searching for slot in HSM slots %+v", slots)
@@ -83,6 +83,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 			if s.ID() == config.SlotID {
 				slot = &s // nolint:gosec
 				log.Infof("found HSM slot %d in HSM by slot ID", slot.ID())
+
 				break
 			}
 		} else {
@@ -93,13 +94,14 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 			if tokenInfo.Label == config.TokenLabel {
 				slot = &s // nolint:gosec
 				log.Infof("found HSM slot %d in HSM by token label", slot.ID())
+
 				break
 			}
 		}
 	}
 
 	if slot == nil {
-		return nil, errors.New("can't find HSM slot") // nolint:goerr113
+		return nil, errors.New("can't find HSM slot")
 	}
 
 	tokenInfo, err := slot.TokenInfo()
@@ -188,7 +190,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 
 		publicKeyValue, err := p11.Object(publicKey).Value()
 		if err != nil {
-			return nil, err
+			return nil, errors.WrapIf(err, "can't get puclic key value")
 		}
 
 		publicKey, err := x509.ParsePKCS1PublicKey(publicKeyValue)
@@ -233,7 +235,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 func (h *hsmCrypto) Get(key string) ([]byte, error) {
 	ciphertext, err := h.storage.Get(key)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to get data from storage")
 	}
 
 	plaintext, err := h.decrypt(ciphertext)
@@ -302,6 +304,7 @@ func (h *hsmStorage) Get(key string) ([]byte, error) {
 		if err.Error() == noObjectsFoundErrMsg {
 			return nil, kv.NewNotFoundError("object doesn't exist in HSM: %s", key)
 		}
+
 		return nil, errors.Wrap(err, "failed to read object from HSM")
 	}
 
@@ -316,5 +319,6 @@ func (h *hsmStorage) Set(key string, value []byte) error {
 	}
 
 	_, err := h.session.CreateObject(attributes)
+
 	return errors.Wrap(err, "failed to write object to HSM")
 }

@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"emperror.dev/errors"
-
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
@@ -53,9 +52,7 @@ func NewSecretInjector(config Config, client *vault.Client, renewer SecretRenewe
 	return SecretInjector{config: config, client: client, renewer: renewer, logger: logger}
 }
 
-var (
-	InlineMutationRegex = regexp.MustCompile(`\${([>]{0,2}vault:.*?)}`)
-)
+var InlineMutationRegex = regexp.MustCompile(`\${([>]{0,2}vault:.*?)}`)
 
 func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inject SecretInjectorFunc) error {
 	transitCache := map[string][]byte{}
@@ -75,6 +72,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 				}
 			}
 			inject(name, value)
+
 			continue
 		}
 
@@ -88,6 +86,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 
 		if !strings.HasPrefix(value, "vault:") {
 			inject(name, value)
+
 			continue
 		}
 
@@ -98,6 +97,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 		if name == "VAULT_TOKEN" && valuePath == "login" {
 			value = i.client.RawClient().Token()
 			inject(name, value)
+
 			continue
 		}
 
@@ -109,6 +109,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 
 			if v, ok := transitCache[value]; ok {
 				inject(name, string(v))
+
 				continue
 			}
 
@@ -118,11 +119,13 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 					return errors.Wrapf(err, "failed to decrypt variable: %s", name)
 				}
 				i.logger.Errorln("failed to decrypt variable:", name, err)
+
 				continue
 			}
 
 			transitCache[value] = out
 			inject(name, string(out))
+
 			continue
 		}
 
@@ -130,7 +133,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 		valuePath = split[0]
 
 		if len(split) < 2 {
-			return errors.New("secret data key or template not defined") // nolint:goerr113
+			return errors.New("secret data key or template not defined")
 		}
 
 		key := split[1]
@@ -161,6 +164,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 			}
 
 			i.logger.Errorf("path not found: %s", valuePath)
+
 			continue
 		}
 
@@ -212,6 +216,7 @@ func (i SecretInjector) InjectSecretsFromVaultPath(paths string, inject SecretIn
 			}
 
 			i.logger.Errorln("path not found:", valuePath)
+
 			continue
 		}
 
@@ -273,7 +278,7 @@ func (i SecretInjector) readVaultPath(path, versionOrData string, update bool) (
 		secretData = cast.ToStringMap(v2Data)
 
 		// Check if a given version of a path is destroyed
-		metadata := secret.Data["metadata"].(map[string]interface{})
+		metadata := secret.Data["metadata"].(map[string]interface{}) // nolint:forcetypeassert
 		if metadata["destroyed"].(bool) {
 			i.logger.Warnln("version of secret has been permanently destroyed version:", versionOrData, "path:", path)
 		}

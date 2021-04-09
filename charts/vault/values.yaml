@@ -6,7 +6,7 @@ strategy:
   type: RollingUpdate
 image:
   repository: vault
-  tag: 1.6.1
+  tag: 1.6.2
   pullPolicy: IfNotPresent
 
 service:
@@ -258,6 +258,8 @@ rbac:
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
+  # Specifies whether the system:auth-delegator ClusterRoleBinding should be bound to the created serviceAccount
+  createClusterRoleBinding: true
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
@@ -295,3 +297,11 @@ certManager:
     # issuerRef:
     # additionalDomains:
     #   - vault.mydomain.com
+
+podDisruptionBudget:
+  enabled: true
+  # minAvailable: 1
+  maxUnavailable: 1
+
+## Assign a PriorityClassName to pods if set
+priorityClassName: ""

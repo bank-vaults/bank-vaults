@@ -1,0 +1,137 @@
+apiVersion: "vault.banzaicloud.com/v1alpha1"
+kind: Vault
+metadata:
+  name: vault-dev
+spec:
+  size: 1
+  image: docker.io/library/vault:dev-ui
+  bankVaultsImage: ghcr.io/banzaicloud/bank-vaults:<branch_name>
+
+  # Common annotations for all created resources
+  annotations:
+    common/annotation: "true"
+
+  # Vault Pods , Services and TLS Secret annotations
+  vaultAnnotations:
+    type/instance: "vault"
+
+  # Vault Configurer Pods and Services annotations
+  vaultConfigurerAnnotations:
+    type/instance: "vaultconfigurer"
+
+  # Vault Pods , Services and TLS Secret labels
+  vaultLabels:
+    example.com/log-format: "json"
+
+  # Vault Configurer Pods and Services labels
+  vaultConfigurerLabels:
+    example.com/log-format: "string"
+
+  # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
+  serviceAccount: vault
+
+  # Specify the Service's type where the Vault Service is exposed
+  # Please note that some Ingress controllers like https://github.com/kubernetes/ingress-gce
+  # forces you to expose your Service on a NodePort
+  serviceType: ClusterIP
+
+  # Use local disk to store Vault file data, see config section.
+  volumes:
+    - name: vault-file
+      persistentVolumeClaim:
+        claimName: vault-file
+
+  volumeMounts:
+    - name: vault-file
+      mountPath: /vault/file
+
+  # Describe where you would like to store the Vault unseal keys and root token.
+  unsealConfig:
+    options:
+      # The preFlightChecks flag enables unseal and root token storage tests
+      # This is true by default
+      preFlightChecks: true
+    kubernetes:
+      secretNamespace: default
+
+  # A YAML representation of a final vault config file.
+  # See https://www.vaultproject.io/docs/configuration/ for more information.
+  config:
+    storage:
+      file:
+        path: "${ .Env.VAULT_STORAGE_FILE }" # An example how Vault config environment interpolation can be used
+    listener:
+      tcp:
+        address: "0.0.0.0:8200"
+        # Uncommenting the following line and deleting tls_cert_file and tls_key_file disables TLS
+        # tls_disable: true
+        tls_cert_file: /vault/tls/server.crt
+        tls_key_file: /vault/tls/server.key
+    telemetry:
+      statsd_address: localhost:9125
+    ui: true
+
+  # See: https://github.com/banzaicloud/bank-vaults#example-external-vault-configuration for more details.
+  externalConfig:
+    policies:
+      - name: allow_secrets
+        rules: path "secret/*" {
+          capabilities = ["create", "read", "update", "delete", "list"]
+          }
+      - name: allow_pki
+        rules: path "pki/*" {
+          capabilities = ["create", "read", "update", "delete", "list"]
+          }
+    auth:
+      - type: ldap
+        config:
+          url: ldaps://ldap.myorg.com:636
+          starttls: False
+          insecure_tls: False
+          binddn: "cn=vault,ou=Users,dc=example,dc=com"
+          bindpass: "testpass"
+          userdn: "ou=Users,dc=example,dc=com"
+      - type: kubernetes
+        roles:
+          # Allow every pod in the default namespace to use the secret kv store
+          - name: default
+            bound_service_account_names: ["vault-secrets-webhook", "vault", "default"]
+            bound_service_account_namespaces: ["vault-infra", "app"]
+            policies: ["allow_secrets", "allow_pki"]
+            ttl: 1h
+
+    secrets:
+      - path: secret
+        type: kv
+        description: General secrets.
+        options:
+          version: 2
+
+      - type: pki
+        description: Vault PKI Backend
+        config:
+          default_lease_ttl: 168h
+          max_lease_ttl: 720h
+        configuration:
+          config:
+          - name: urls
+            issuing_certificates: https://vault.vault:8200/v1/pki/ca
+            crl_distribution_points: https://vault.vault:8200/v1/pki/crl
+          root/generate:
+          - name: internal
+            common_name: vault.vault
+          roles:
+          - name: default
+            allowed_domains: localhost,pod,svc,vault
+            allow_subdomains: true
+            generate_lease: true
+            ttl: 1m
+
+  vaultEnvsConfig:
+    - name: VAULT_LOG_LEVEL
+      value: debug
+    - name: VAULT_STORAGE_FILE
+      value: "/vault/file"
+
+  # Marks presence of Istio, which influences things like port namings
+  istioEnabled: false

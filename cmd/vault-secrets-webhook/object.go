@@ -106,6 +106,7 @@ func traverseObject(o interface{}, vaultClient *vault.Client, vaultConfig VaultC
 					}
 					dataFromVault = strings.Replace(dataFromVault, vaultSecretReference[0], mapData["data"], -1)
 				}
+				e.Set(dataFromVault)
 			}
 		case map[string]interface{}, []interface{}:
 			err := traverseObject(e.Get(), vaultClient, vaultConfig, logger)

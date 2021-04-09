@@ -35,20 +35,22 @@ func (f *multi) Set(key string, val []byte) error {
 	for _, service := range f.services {
 		err := service.Set(key, val)
 		if err != nil {
-			return err
+			return err // nolint:wrapcheck
 		}
 	}
+
 	return nil
 }
 
 func (f *multi) Get(key string) ([]byte, error) {
 	multiErr := errors.NewPlain("Can't find key in any of the backends")
+
 	for _, service := range f.services {
 		val, err := service.Get(key)
 		if err != nil {
 			// Not found error means that they given object is not present, that is a hard error.
 			if kv.IsNotFoundError(err) {
-				return nil, err
+				return nil, err // nolint:wrapcheck
 			}
 			logrus.Infof("error finding key %q in key/value Service, trying next one: %s", key, err)
 			multiErr = errors.Append(multiErr, err)
@@ -56,5 +58,6 @@ func (f *multi) Get(key string) ([]byte, error) {
 			return val, nil
 		}
 	}
-	return nil, multiErr
+
+	return nil, multiErr // nolint:wrapcheck
 }

@@ -51,6 +51,8 @@ func (r *MockRegistry) GetImageConfig(_ context.Context, _ kubernetes.Interface,
 }
 
 func Test_mutatingWebhook_mutateContainers(t *testing.T) {
+	t.Parallel()
+
 	vaultConfigEnvFrom := vaultConfig
 	vaultConfigEnvFrom.VaultEnvFromPath = "secrets/application"
 
@@ -72,7 +74,8 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 		wantErr          bool
 		wantedContainers []corev1.Container
 	}{
-		{name: "Will mutate container with command, no args",
+		{
+			name: "Will mutate container with command, no args",
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
@@ -120,7 +123,8 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			mutated: true,
 			wantErr: false,
 		},
-		{name: "Will mutate container with command, other syntax",
+		{
+			name: "Will mutate container with command, other syntax",
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
@@ -168,7 +172,8 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			mutated: true,
 			wantErr: false,
 		},
-		{name: "Will mutate container with args, no command",
+		{
+			name: "Will mutate container with args, no command",
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
@@ -218,7 +223,8 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			mutated: true,
 			wantErr: false,
 		},
-		{name: "Will mutate container with no container-command, no entrypoint",
+		{
+			name: "Will mutate container with no container-command, no entrypoint",
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
@@ -268,7 +274,8 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			mutated: true,
 			wantErr: false,
 		},
-		{name: "Will not mutate container without secrets with correct prefix",
+		{
+			name: "Will not mutate container without secrets with correct prefix",
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
@@ -295,7 +302,8 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			mutated: false,
 			wantErr: false,
 		},
-		{name: "Will mutate container with env-from-path annotation",
+		{
+			name: "Will mutate container with env-from-path annotation",
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
@@ -344,7 +352,8 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			mutated: true,
 			wantErr: false,
 		},
-		{name: "Will mutate container with command, no args, with inline mutation",
+		{
+			name: "Will mutate container with command, no args, with inline mutation",
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
@@ -395,28 +404,33 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		ttp := tt
+		t.Run(ttp.name, func(t *testing.T) {
+			t.Parallel()
+
 			mw := &mutatingWebhook{
-				k8sClient: tt.fields.k8sClient,
-				registry:  tt.fields.registry,
+				k8sClient: ttp.fields.k8sClient,
+				registry:  ttp.fields.registry,
 				logger:    logrus.NewEntry(logrus.New()),
 			}
-			got, err := mw.mutateContainers(context.Background(), tt.args.containers, tt.args.podSpec, tt.args.vaultConfig, tt.args.ns)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("mutatingWebhook.mutateContainers() error = %v, wantErr %v", err, tt.wantErr)
+			got, err := mw.mutateContainers(context.Background(), ttp.args.containers, ttp.args.podSpec, ttp.args.vaultConfig, ttp.args.ns)
+			if (err != nil) != ttp.wantErr {
+				t.Errorf("mutatingWebhook.mutateContainers() error = %v, wantErr %v", err, ttp.wantErr)
 				return
 			}
-			if got != tt.mutated {
-				t.Errorf("mutatingWebhook.mutateContainers() = %v, want %v", got, tt.mutated)
+			if got != ttp.mutated {
+				t.Errorf("mutatingWebhook.mutateContainers() = %v, want %v", got, ttp.mutated)
 			}
-			if !cmp.Equal(tt.args.containers, tt.wantedContainers) {
-				t.Errorf("mutatingWebhook.mutateContainers() = diff %v", cmp.Diff(tt.args.containers, tt.wantedContainers))
+			if !cmp.Equal(ttp.args.containers, ttp.wantedContainers) {
+				t.Errorf("mutatingWebhook.mutateContainers() = diff %v", cmp.Diff(ttp.args.containers, ttp.wantedContainers))
 			}
 		})
 	}
 }
 
 func Test_mutatingWebhook_mutatePod(t *testing.T) {
+	t.Parallel()
+
 	type fields struct {
 		k8sClient kubernetes.Interface
 		registry  registry.ImageRegistry
@@ -440,7 +454,8 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 		wantErr   bool
 		wantedPod *corev1.Pod
 	}{
-		{name: "Will mutate pod with ct-configmap annotations",
+		{
+			name: "Will mutate pod with ct-configmap annotations",
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
@@ -629,7 +644,8 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		{name: "Will mutate pod with agent-configmap annotations",
+		{
+			name: "Will mutate pod with agent-configmap annotations",
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
@@ -776,20 +792,23 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		ttp := tt
+		t.Run(ttp.name, func(t *testing.T) {
+			t.Parallel()
+
 			mw := &mutatingWebhook{
-				k8sClient: tt.fields.k8sClient,
-				registry:  tt.fields.registry,
+				k8sClient: ttp.fields.k8sClient,
+				registry:  ttp.fields.registry,
 				logger:    logrus.NewEntry(logrus.New()),
 			}
-			err := mw.mutatePod(context.Background(), tt.args.pod, tt.args.vaultConfig, tt.args.ns, false)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("mutatingWebhook.mutatePod() error = %v, wantErr %v", err, tt.wantErr)
+			err := mw.mutatePod(context.Background(), ttp.args.pod, ttp.args.vaultConfig, ttp.args.ns, false)
+			if (err != nil) != ttp.wantErr {
+				t.Errorf("mutatingWebhook.mutatePod() error = %v, wantErr %v", err, ttp.wantErr)
 				return
 			}
 
-			if !cmp.Equal(tt.args.pod, tt.wantedPod) {
-				t.Errorf("mutatingWebhook.mutatePod() = diff %v", cmp.Diff(tt.args.pod, tt.wantedPod))
+			if !cmp.Equal(ttp.args.pod, ttp.wantedPod) {
+				t.Errorf("mutatingWebhook.mutatePod() = diff %v", cmp.Diff(ttp.args.pod, ttp.wantedPod))
 			}
 		})
 	}

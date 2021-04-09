@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: vault:1.6.1
+  image: vault:1.6.2
 
   resources:
     # A YAML representation of resource ResourceRequirements for vault container

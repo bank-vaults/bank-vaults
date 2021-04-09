@@ -39,10 +39,11 @@ func NewNotFoundError(msg string, args ...interface{}) *NotFoundError {
 }
 
 func IsNotFoundError(err error) bool {
-	cause := errors.Cause(err)
-	if notFoundError, ok := cause.(*NotFoundError); ok && notFoundError.NotFound() {
+	var notFoundErr NotFoundError
+	if errors.As(err, &notFoundErr) && notFoundErr.NotFound() {
 		return true
 	}
+
 	return false
 }
 

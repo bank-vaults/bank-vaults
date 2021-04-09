@@ -573,13 +573,15 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-	if !reflect.DeepEqual(podNames, v.Status.Nodes) || !reflect.DeepEqual(leader, v.Status.Leader) {
+	conditionStatus := v1.ConditionFalse
+	if leader != "" && statusError == "" {
+		conditionStatus = v1.ConditionTrue
+	}
+
+	if !reflect.DeepEqual(podNames, v.Status.Nodes) || !reflect.DeepEqual(leader, v.Status.Leader) || len(v.Status.Conditions) == 0 ||
+		v.Status.Conditions[0].Status != conditionStatus || v.Status.Conditions[0].Error != statusError {
 		v.Status.Nodes = podNames
 		v.Status.Leader = leader
-		conditionStatus := v1.ConditionFalse
-		if leader != "" && statusError == "" {
-			conditionStatus = v1.ConditionTrue
-		}
 		v.Status.Conditions = []v1.ComponentCondition{{
 			Type:   v1.ComponentHealthy,
 			Status: conditionStatus,
@@ -1148,7 +1150,7 @@ func populateTLSSecret(v *vaultv1alpha1.Vault, service *corev1.Service, secret *
 	err = certMgr.LoadCA(caCrt, caKey, v.Spec.GetTLSExpiryThreshold())
 
 	// If the CA is expired, empty or not valid but not errored - create a new chain
-	if err == bvtls.ExpiredCAError || err == bvtls.EmptyCAError {
+	if err == bvtls.ErrExpiredCA || err == bvtls.ErrEmptyCA {
 		log.Info("TLS CA will be regenerated due to: ", "error", err.Error())
 
 		err = certMgr.NewChain()
@@ -2017,7 +2019,7 @@ func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContex
 	}
 	return &corev1.SecurityContext{
 		Capabilities: &corev1.Capabilities{
-			Add: []corev1.Capability{"IPC_LOCK"},
+			Add: []corev1.Capability{"IPC_LOCK", "SETFCAP"},
 		},
 	}
 }

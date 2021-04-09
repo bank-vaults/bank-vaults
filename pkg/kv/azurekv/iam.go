@@ -24,10 +24,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 )
 
-var (
-	// for service principal and device
-	keyvaultAuthorizer autorest.Authorizer
-)
+// for service principal and device
+var keyvaultAuthorizer autorest.Authorizer
 
 func init() {
 	var err error

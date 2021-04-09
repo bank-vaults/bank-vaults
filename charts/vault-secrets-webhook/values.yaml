@@ -49,9 +49,10 @@ webhookClientConfig:
 
 vaultEnv:
   repository: ghcr.io/banzaicloud/vault-env
+  # tag: ""
 
 env:
-  VAULT_IMAGE: vault:1.6.1
+  VAULT_IMAGE: vault:1.6.2
   # VAULT_CAPATH: /vault/tls
   # # Used when the pod that should get secret injected does not
   # # specify an imagePullSecret
@@ -154,10 +155,13 @@ objectSelector: {}
   #   operator: NotIn
   #   values:
   #   - skip
+  # matchLabels:
+  #   vault-injection: enabled
 
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
+  # maxUnavailable: 1
 
 timeoutSeconds: false
 

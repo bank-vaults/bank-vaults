@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 3
-  image: vault:1.6.1
+  image: vault:1.6.2
 
   # A YAML representation of nodeAffinity
   # Detail can reference: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity

@@ -12,7 +12,7 @@ The `MutatingWebhookConfiguration` gets created before the actual backend Pod wh
 
 You will need to add the following annotations to the resources that you wish to mutate:
 
-```
+```yaml
 vault.security.banzaicloud.io/vault-addr: https://[URL FOR VAULT]
 vault.security.banzaicloud.io/vault-path: [Auth path]
 vault.security.banzaicloud.io/vault-role: [Auth role]
@@ -53,31 +53,32 @@ Omitting the version will tell Vault to pull the latest version.
 
 ## Installing the Chart
 
-**In case of the K8s version is lower than 1.15 the namespace where you install the webhook must have a label of `name` with the namespace name as the value, so the `namespaceSelector` in the `MutatingWebhookConfiguration` can skip the namespace of the webhook, so no self-mutation takes place. If the K8s version is 1.15 at least, the default `objectSelector` will prevent the self-mutation**
+**In case of the K8s version is lower than 1.15 the namespace where you install the webhook must have a label of `name` with the namespace name as the label value, so the `namespaceSelector` in the `MutatingWebhookConfiguration` can skip the namespace of the webhook, so no self-mutation takes place. If the K8s version is 1.15 at least, the default `objectSelector` will prevent the self-mutation (you don't have to configure anything) and you are free to install to any namespace of your choice.**.
 
 
 ```bash
+# You have to do this only in case you are not using Helm 3.2 or later and Kubernetes 1.15 or later.
 WEBHOOK_NS=${WEBHOOK_NS:-vswh}
 kubectl create namespace "${WEBHOOK_NS}"
 kubectl label ns "${WEBHOOK_NS}" name="${WEBHOOK_NS}"
 ```
 
 ```bash
-$ helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch/master
+$ helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com/
 $ helm repo update
 ```
 
 ```bash
-$ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook --wait
+$ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook --create-namespace
 ```
 
-**NOTE**: `--wait` is necessary because of Helm timing issues, please see [this issue](https://github.com/banzaicloud/banzai-charts/issues/888).
+**NOTE**: `--wait` is sometimes necessary because of some Helm timing issues, please see [this issue](https://github.com/banzaicloud/banzai-charts/issues/888).
 
 ### Openshift 4.3
 For security reasons, the `runAsUser` must be in the range between 1000570000 and 1000579999. By setting the value of `securityContext.runAsUser` to "", OpenShift chooses a valid User.
 
 ```bash
-$ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook --set-string securityContext.runAsUser="" --wait
+$ helm upgrade --namespace vswh --install vswh banzaicloud-stable/vault-secrets-webhook --set-string securityContext.runAsUser="" --create-namespace
 ```
 
 ### About GKE Private Clusters
@@ -100,7 +101,8 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | image.repository                 | image repo that contains the admission server                                | `ghcr.io/banzaicloud/vault-secrets-webhook` |
 | image.tag                        | image tag                                                                    | `.Chart.AppVersion`                 |
 | image.imagePullSecrets           | image pull secrets for private repositories                                  | `[]`                                |
-| vaultEnv.repository             | image repo that contains the vault-env container                              | `ghcr.io/banzaicloud/vault-env`     |
+| vaultEnv.repository              | image repo that contains the vault-env container                             | `ghcr.io/banzaicloud/vault-env`     |
+| vaultEnv.tag                     | image tag for the vault-env container                                        | `.Chart.AppVersion`                 |
 | namespaceSelector                | namespace selector to use, will limit webhook scope                          | `{}`                                |
 | objectSelector                | object selector to use, will limit webhook scope (K8s version 1.15+)            | `{}`                                |
 | nodeSelector                     | node selector to use                                                         | `{}`                                |
@@ -114,13 +116,14 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | tolerations                      | tolerations to add                                                           | `[]`                                |
 | rbac.psp.enabled                 | use pod security policy                                                      | `false`                             |
 | rbac.authDelegatorRole.enabled    | bind `system:auth-delegator` to the ServiceAccount                          | `false`                             |
-| env.VAULT_IMAGE                  | vault image                                                                  | `vault:1.6.1`                       |
+| env.VAULT_IMAGE                  | vault image                                                                  | `vault:1.6.2`                       |
 | volumes                          | extra volume definitions                                                     | `[]`                                |
 | volumeMounts                     | extra volume mounts                                                          | `[]`                                |
 | configMapMutation                | enable injecting values from Vault to ConfigMaps                             | `false`                             |
 | customResourceMutations         | list of CustomResources to inject values from Vault                           | `[]`                                |
-| podDisruptionBudget.enabled      | enable PodDisruptionBudget                                                   | `false`                             |
+| podDisruptionBudget.enabled      | enable PodDisruptionBudget                                                   | `true `                             |
 | podDisruptionBudget.minAvailable | represents the number of Pods that must be available (integer or percentage) | `1`                                 |
+| podDisruptionBudget.maxUnavailable | represents the number of Pods that can be unavailable (integer or percentage) | ``                               |
 | certificate.generate             | should a new CA and TLS certificate be generated for the webhook             | `true`                              |
 | certificate.useCertManager       | should request cert-manager for getting a new CA and TLS certificate         | `false`                             |
 | certificate.servingCertificate   | should use an already externally defined Certificate by cert-manager         | `null`                              |

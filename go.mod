@@ -1,7 +1,7 @@
 module github.com/banzaicloud/bank-vaults
 
 require (
-	cloud.google.com/go v0.65.0
+	cloud.google.com/go v0.78.0
 	cloud.google.com/go/storage v1.10.0
 	emperror.dev/errors v0.8.0
 	github.com/Azure/azure-pipeline-go v0.2.2 // indirect
@@ -30,7 +30,7 @@ require (
 	github.com/go-openapi/spec v0.19.8 // indirect
 	github.com/go-openapi/swag v0.19.10 // indirect
 	github.com/golang/snappy v0.0.2 // indirect
-	github.com/google/go-cmp v0.5.2
+	github.com/google/go-cmp v0.5.4
 	github.com/google/go-containerregistry v0.4.0
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20210113221012-4eb508cda163
 	github.com/gopherjs/gopherjs v0.0.0-20191106031601-ce3c9ade29de // indirect
@@ -64,12 +64,10 @@ require (
 	github.com/stretchr/testify v1.6.1
 	go.uber.org/zap v1.14.1 // indirect
 	gocloud.dev v0.19.1-0.20200414210820-bb59d59f26d5
-	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
+	golang.org/x/oauth2 v0.0.0-20210218202405-ba52d332ba99
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
-	golang.org/x/tools v0.0.0-20201008025239-9df69603baec // indirect
-	google.golang.org/api v0.32.0
-	google.golang.org/genproto v0.0.0-20200904004341-0bd0a958aa1d
-	google.golang.org/grpc v1.32.0 // indirect
+	google.golang.org/api v0.40.0
+	google.golang.org/genproto v0.0.0-20210224155714-063164c882e6
 	gopkg.in/ini.v1 v1.57.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 	k8s.io/api v0.19.3

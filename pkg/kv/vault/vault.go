@@ -61,6 +61,7 @@ func (v *vaultStorage) Set(key string, val []byte) error {
 	); err != nil {
 		return errors.Wrapf(err, "error writing key '%s' to vault addr %s and path '%s'", key, v.client.RawClient().Address(), v.path)
 	}
+
 	return nil
 }
 
@@ -73,9 +74,11 @@ func (v *vaultStorage) Get(key string) ([]byte, error) {
 	if secret == nil {
 		return nil, kv.NewNotFoundError("key not found under path: %s", key)
 	}
+
 	data, err := cast.ToStringMapE(secret.Data["data"])
 	if err != nil {
 		return nil, errors.Wrapf(err, "error findind data under path '%s'", key)
 	}
+
 	return base64.StdEncoding.DecodeString(data[key].(string))
 }

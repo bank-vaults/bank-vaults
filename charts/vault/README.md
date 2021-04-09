@@ -120,7 +120,7 @@ The following tables lists the configurable parameters of the vault chart and th
 |-------------------------|-------------------------------------|-----------------------------------------------------|
 | `image.pullPolicy`      | Container pull policy               | `IfNotPresent`                                      |
 | `image.repository`      | Container image to use              | `vault`                                             |
-| `image.tag`             | Container image tag to deploy       | `1.6.1`                                             |
+| `image.tag`             | Container image tag to deploy       | `1.6.2`                                             |
 | `ingress.enabled`       | Enables Ingress                     | `false`                                             |
 | `ingress.annotations`   | Ingress annotations                 | `{}`                                                |
 | `ingress.hosts`         | Ingress accepted hostnames with path| `[]`                                                |
@@ -141,6 +141,10 @@ The following tables lists the configurable parameters of the vault chart and th
 | `affinity`           | Node affinity settings for the pods. https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/                                                          |  If not set it defaults to`podAntiAffinity` to `preferredDuringSchedulingIgnoredDuringExecution` |
 | `labels`                | Additonal labels to be applied to the Vault StatefulSet and Pods | `{}`                   |
 | `tls.secretName`        | Custom TLS certifcate secret name    | `""`                                               |
+| `podDisruptionBudget.enabled`        | enable PodDisruptionBudget                                                   | `true`                             |
+| `podDisruptionBudget.minAvailable`   | represents the number of Pods that must be available (integer or percentage) | `nil`                                |
+| `podDisruptionBudget.maxUnavailable` | represents the number of Pods that can be unavailable (integer or percentage) | `1`                                 |
+| `priorityClassName`     | The PriorityClass to assign to Pods  | `""`                                               |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 

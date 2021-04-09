@@ -68,7 +68,7 @@ func (a *awsKMS) decrypt(cipherText []byte) ([]byte, error) {
 		GrantTokens: []*string{},
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.WrapIf(err, "failed to decrypt with KMS client")
 	}
 
 	return out.Plaintext, nil
@@ -77,7 +77,7 @@ func (a *awsKMS) decrypt(cipherText []byte) ([]byte, error) {
 func (a *awsKMS) Get(key string) ([]byte, error) {
 	cipherText, err := a.store.Get(key)
 	if err != nil {
-		return nil, err
+		return nil, errors.WrapIf(err, "failed to get data for KMS client")
 	}
 
 	return a.decrypt(cipherText)
@@ -93,7 +93,7 @@ func (a *awsKMS) encrypt(plainText []byte) ([]byte, error) {
 		GrantTokens: []*string{},
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.WrapIf(err, "failed to encrypt with KMS client")
 	}
 
 	return out.CiphertextBlob, nil

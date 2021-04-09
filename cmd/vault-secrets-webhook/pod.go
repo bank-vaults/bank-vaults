@@ -20,8 +20,9 @@ import (
 	"strconv"
 	"strings"
 
+	"emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeVer "k8s.io/apimachinery/pkg/version"
@@ -116,13 +117,13 @@ func (mw *mutatingWebhook) mutatePod(ctx context.Context, pod *corev1.Pod, vault
 				if !dryRun {
 					_, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Create(context.Background(), configMap, metav1.CreateOptions{})
 					if err != nil {
-						if errors.IsAlreadyExists(err) {
+						if apierrors.IsAlreadyExists(err) {
 							_, err = mw.k8sClient.CoreV1().ConfigMaps(ns).Update(context.Background(), configMap, metav1.UpdateOptions{})
 							if err != nil {
-								return err
+								return errors.WrapIf(err, "failed to update ConfigMap for config")
 							}
 						} else {
-							return err
+							return errors.WrapIf(err, "failed to create ConfigMap for config")
 						}
 					}
 				}
@@ -547,6 +548,7 @@ mountSearch:
 		for _, mount := range container.VolumeMounts {
 			if mount.MountPath == "/var/run/secrets/kubernetes.io/serviceaccount" {
 				serviceAccountMount = mount
+
 				break mountSearch
 			}
 		}
@@ -555,7 +557,7 @@ mountSearch:
 }
 
 func getInitContainers(originalContainers []corev1.Container, podSecurityContext *corev1.PodSecurityContext, vaultConfig VaultConfig, initContainersMutated bool, containersMutated bool, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
-	var containers = []corev1.Container{}
+	containers := []corev1.Container{}
 
 	if vaultConfig.TokenAuthMount != "" {
 		// vault.security.banzaicloud.io/token-auth-mount: "token:vault-token"
@@ -653,7 +655,7 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 }
 
 func getContainers(vaultConfig VaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
-	var containers = []corev1.Container{}
+	containers := []corev1.Container{}
 	securityContext := &corev1.SecurityContext{
 		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 	}
@@ -710,7 +712,7 @@ func getContainers(vaultConfig VaultConfig, containerEnvVars []corev1.EnvVar, co
 }
 
 func getAgentContainers(originalContainers []corev1.Container, vaultConfig VaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
-	var containers = []corev1.Container{}
+	containers := []corev1.Container{}
 	securityContext := &corev1.SecurityContext{
 		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 		Capabilities: &corev1.Capabilities{
