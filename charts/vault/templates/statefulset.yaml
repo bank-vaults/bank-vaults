@@ -223,6 +223,7 @@ spec:
         {{- end }}
         resources:
 {{ toYaml .Values.vaultConfigurer.resources | indent 10 }}
+{{- if .Values.statsd.metrics.enabled }}
       - name: prometheus-statsd-exporter
         image: "{{ .Values.statsd.image.repository }}:{{ .Values.statsd.image.tag }}"
         imagePullPolicy: {{ .Values.statsd.image.pullPolicy }}
@@ -235,6 +236,7 @@ spec:
           mountPath: /tmp/
         resources:
 {{ toYaml .Values.prometheusStatsdExporter.resources | indent 10 }}
+{{- end }}
 {{- if .Values.nodeSelector }}
       nodeSelector:
 {{ toYaml .Values.nodeSelector | indent 8 }}
@@ -297,6 +299,8 @@ spec:
             {{- else }}
             secretName: "{{ template "vault.fullname" . }}-tls"
             {{- end }}
+        {{- if .Values.statsd.metrics.enabled }}
         - name: statsd-mapping
           configMap:
             name: "{{ template "vault.fullname" . }}-statsd-mapping"
+        {{- end }}

@@ -1,3 +1,4 @@
+{{- if .Values.statsd.metrics.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -11,3 +12,4 @@ metadata:
 data:
   statsd-mapping.conf: |
 {{ toYaml .Values.statsd.config | indent 6 }}
+{{- end }}
