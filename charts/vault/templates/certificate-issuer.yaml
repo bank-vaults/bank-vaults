@@ -3,6 +3,7 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: {{ template "vault.fullname" . }}-server-tls
+  namespace: {{ .Release.Namespace }}
 spec:
   selfSigned: {}
 {{- end }}

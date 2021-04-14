@@ -3,6 +3,7 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: {{ template "vault.fullname" . }}-pvc
+  namespace: {{ .Release.Namespace }}
 spec:
   accessModes:
     - {{ .Values.persistence.accessMode | quote }}
