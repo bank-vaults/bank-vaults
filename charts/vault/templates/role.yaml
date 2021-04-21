@@ -12,7 +12,12 @@ metadata:
 rules:
 - apiGroups: [""]
   resources: ["secrets"]
+  resourceNames: ["bank-vaults"]
   verbs: ["*"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: [""]
+  verbs: ["create"]
 {{- end }}
 {{- if .Values.rbac.psp.enabled }}
 - apiGroups: ["extensions"]
