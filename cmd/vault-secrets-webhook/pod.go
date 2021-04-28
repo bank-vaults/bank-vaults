@@ -105,6 +105,41 @@ func (mw *mutatingWebhook) mutatePod(ctx context.Context, pod *corev1.Pod, vault
 		})
 	}
 
+	if vaultConfig.CtConfigMap != "" {
+		mw.logger.Debug("Consul Template config found")
+
+		mw.addSecretsVolToContainers(vaultConfig, pod.Spec.Containers)
+
+		if vaultConfig.CtShareProcessDefault == "empty" {
+			mw.logger.Debugf("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
+			apiVersion, _ := mw.k8sClient.Discovery().ServerVersion()
+			versionCompared := kubeVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
+			mw.logger.Debugf("Kubernetes API version detected: %s", apiVersion.String())
+
+			if versionCompared >= 0 {
+				vaultConfig.CtShareProcess = true
+			} else {
+				vaultConfig.CtShareProcess = false
+			}
+		}
+
+		if vaultConfig.CtShareProcess {
+			mw.logger.Debugf("Detected shared process namespace")
+			shareProcessNamespace := true
+			pod.Spec.ShareProcessNamespace = &shareProcessNamespace
+		}
+		if !vaultConfig.CtOnce {
+			pod.Spec.Containers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
+		} else {
+			if vaultConfig.CtInjectInInitcontainers {
+				mw.addSecretsVolToContainers(vaultConfig, pod.Spec.InitContainers)
+			} 
+			pod.Spec.InitContainers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.InitContainers...)
+		}
+
+		mw.logger.Debug("Successfully appended pod containers to spec")
+	}
+
 	if initContainersMutated || containersMutated || vaultConfig.CtConfigMap != "" || vaultConfig.AgentConfigMap != "" {
 		var agentConfigMapName string
 
@@ -135,38 +170,6 @@ func (mw *mutatingWebhook) mutatePod(ctx context.Context, pod *corev1.Pod, vault
 
 		pod.Spec.Volumes = append(pod.Spec.Volumes, mw.getVolumes(pod.Spec.Volumes, agentConfigMapName, vaultConfig)...)
 		mw.logger.Debug("Successfully appended pod spec volumes")
-	}
-
-	if vaultConfig.CtConfigMap != "" {
-		mw.logger.Debug("Consul Template config found")
-
-		mw.addSecretsVolToContainers(vaultConfig, pod.Spec.Containers)
-
-		if vaultConfig.CtShareProcessDefault == "empty" {
-			mw.logger.Debugf("Test our Kubernetes API Version and make the final decision on enabling ShareProcessNamespace")
-			apiVersion, _ := mw.k8sClient.Discovery().ServerVersion()
-			versionCompared := kubeVer.CompareKubeAwareVersionStrings("v1.12.0", apiVersion.String())
-			mw.logger.Debugf("Kubernetes API version detected: %s", apiVersion.String())
-
-			if versionCompared >= 0 {
-				vaultConfig.CtShareProcess = true
-			} else {
-				vaultConfig.CtShareProcess = false
-			}
-		}
-
-		if vaultConfig.CtShareProcess {
-			mw.logger.Debugf("Detected shared process namespace")
-			shareProcessNamespace := true
-			pod.Spec.ShareProcessNamespace = &shareProcessNamespace
-		}
-		if !vaultConfig.CtOnce {
-			pod.Spec.Containers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
-		} else {
-			pod.Spec.InitContainers = append(pod.Spec.InitContainers, getContainers(vaultConfig, containerEnvVars, containerVolMounts)...)
-		}
-
-		mw.logger.Debug("Successfully appended pod containers to spec")
 	}
 
 	if vaultConfig.AgentConfigMap != "" && !vaultConfig.UseAgent {
