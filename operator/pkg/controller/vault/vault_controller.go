@@ -40,7 +40,6 @@ import (
 	"github.com/spf13/cast"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -54,9 +53,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
@@ -573,17 +572,17 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-	conditionStatus := v1.ConditionFalse
+	conditionStatus := corev1.ConditionFalse
 	if leader != "" && statusError == "" {
-		conditionStatus = v1.ConditionTrue
+		conditionStatus = corev1.ConditionTrue
 	}
 
 	if !reflect.DeepEqual(podNames, v.Status.Nodes) || !reflect.DeepEqual(leader, v.Status.Leader) || len(v.Status.Conditions) == 0 ||
 		v.Status.Conditions[0].Status != conditionStatus || v.Status.Conditions[0].Error != statusError {
 		v.Status.Nodes = podNames
 		v.Status.Leader = leader
-		v.Status.Conditions = []v1.ComponentCondition{{
-			Type:   v1.ComponentHealthy,
+		v.Status.Conditions = []corev1.ComponentCondition{{
+			Type:   corev1.ComponentHealthy,
 			Status: conditionStatus,
 			Error:  statusError,
 		}}
@@ -1031,7 +1030,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	// merge provided VaultConfigurerPodSpec into the PodSpec defined above
 	// the values in VaultConfigurerPodSpec will never overwrite fields defined in the PodSpec above
 	if v.Spec.VaultConfigurerPodSpec != nil {
-		if err := mergo.Merge(&podSpec, v1.PodSpec(*v.Spec.VaultConfigurerPodSpec)); err != nil {
+		if err := mergo.Merge(&podSpec, corev1.PodSpec(*v.Spec.VaultConfigurerPodSpec)); err != nil {
 			return nil, err
 		}
 	}
@@ -1413,7 +1412,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	// merge provided VaultPodSpec into the PodSpec defined above
 	// the values in VaultPodSpec will never overwrite fields defined in the PodSpec above
 	if v.Spec.VaultPodSpec != nil {
-		if err := mergo.Merge(&podSpec, v1.PodSpec(*v.Spec.VaultPodSpec), mergo.WithOverride); err != nil {
+		if err := mergo.Merge(&podSpec, corev1.PodSpec(*v.Spec.VaultPodSpec), mergo.WithOverride); err != nil {
 			return nil, err
 		}
 	}
@@ -1792,7 +1791,7 @@ func withStatsDContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) 
 				MountPath: "/tmp/",
 			}},
 			Resources: getPrometheusExporterResource(v),
-			Env:       withSidecarEnv(v, []v1.EnvVar{}),
+			Env:       withSidecarEnv(v, []corev1.EnvVar{}),
 		})
 	}
 	return containers
@@ -1849,7 +1848,7 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, containers []corev1.Container
 				},
 			}),
 			Resources: getFluentDResource(v),
-			Env:       withSidecarEnv(v, []v1.EnvVar{}),
+			Env:       withSidecarEnv(v, []corev1.EnvVar{}),
 		})
 	}
 	return containers
@@ -1980,27 +1979,15 @@ func withVaultVolumeMounts(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeM
 }
 
 func withVaultEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
-	for _, env := range v.Spec.VaultEnvsConfig {
-		envs = append(envs, env)
-	}
-
-	return envs
+	return append(envs, v.Spec.VaultEnvsConfig...)
 }
 
 func withCommonEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
-	for _, env := range v.Spec.EnvsConfig {
-		envs = append(envs, env)
-	}
-
-	return envs
+	return append(envs, v.Spec.EnvsConfig...)
 }
 
 func withSidecarEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
-	for _, env := range v.Spec.SidecarEnvsConfig {
-		envs = append(envs, env)
-	}
-
-	return envs
+	return append(envs, v.Spec.SidecarEnvsConfig...)
 }
 
 func withNamespaceEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
@@ -2062,7 +2049,7 @@ func withVaultConfigurerLabels(v *vaultv1alpha1.Vault, labels map[string]string)
 	return l
 }
 
-// podList returns a v1.PodList object
+// podList returns a corev1.PodList object
 func podList() *corev1.PodList {
 	return &corev1.PodList{
 		TypeMeta: metav1.TypeMeta{
@@ -2199,10 +2186,10 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 	}
 
 	// We need the CA certificate only
-	if currentSecret.Type == v1.SecretTypeTLS {
-		currentSecret.Type = v1.SecretTypeOpaque
-		delete(currentSecret.Data, v1.TLSCertKey)
-		delete(currentSecret.Data, v1.TLSPrivateKeyKey)
+	if currentSecret.Type == corev1.SecretTypeTLS {
+		currentSecret.Type = corev1.SecretTypeOpaque
+		delete(currentSecret.Data, corev1.TLSCertKey)
+		delete(currentSecret.Data, corev1.TLSPrivateKeyKey)
 		if err := controllerutil.SetControllerReference(v, &currentSecret, r.scheme); err != nil {
 			return fmt.Errorf("failed to set current secret controller reference: %v", err)
 		}
