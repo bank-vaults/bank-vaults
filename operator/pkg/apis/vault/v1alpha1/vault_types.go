@@ -773,8 +773,8 @@ func (spec *VaultSpec) IsRaftBootstrapFollower() bool {
 // GetIngress the Ingress configuration for Vault if any
 func (vault *Vault) GetIngress() *Ingress {
 	if vault.Spec.Ingress != nil {
-		// Add the Vault Service as the default backend if not specified
-		if vault.Spec.Ingress.Spec.Backend == nil {
+		// Add the Vault Service as the backend if no rules are specified and there is no default backend
+		if len(vault.Spec.Ingress.Spec.Rules) == 0 && vault.Spec.Ingress.Spec.Backend == nil {
 			vault.Spec.Ingress.Spec.Backend = &v1beta1.IngressBackend{
 				ServiceName: vault.Name,
 				ServicePort: intstr.FromInt(8200),
