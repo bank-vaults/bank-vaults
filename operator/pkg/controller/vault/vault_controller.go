@@ -40,7 +40,7 @@ import (
 	"github.com/spf13/cast"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -890,9 +890,9 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 	return service
 }
 
-func ingressForVault(v *vaultv1alpha1.Vault) *v1beta1.Ingress {
+func ingressForVault(v *vaultv1alpha1.Vault) *netv1.Ingress {
 	if ingress := v.GetIngress(); ingress != nil {
-		return &v1beta1.Ingress{
+		return &netv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        v.Name,
 				Namespace:   v.Namespace,

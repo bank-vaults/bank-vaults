@@ -762,7 +762,7 @@ spec:
                     type: object
                   spec:
                     properties:
-                      backend:
+                      defaultBackend:
                         properties:
                           resource:
                             properties:
@@ -776,13 +776,21 @@ spec:
                             - kind
                             - name
                             type: object
-                          serviceName:
-                            type: string
-                          servicePort:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            x-kubernetes-int-or-string: true
+                          service:
+                            properties:
+                              name:
+                                type: string
+                              port:
+                                properties:
+                                  name:
+                                    type: string
+                                  number:
+                                    format: int32
+                                    type: integer
+                                type: object
+                            required:
+                            - name
+                            type: object
                         type: object
                       ingressClassName:
                         type: string
@@ -810,13 +818,21 @@ spec:
                                             - kind
                                             - name
                                             type: object
-                                          serviceName:
-                                            type: string
-                                          servicePort:
-                                            anyOf:
-                                            - type: integer
-                                            - type: string
-                                            x-kubernetes-int-or-string: true
+                                          service:
+                                            properties:
+                                              name:
+                                                type: string
+                                              port:
+                                                properties:
+                                                  name:
+                                                    type: string
+                                                  number:
+                                                    format: int32
+                                                    type: integer
+                                                type: object
+                                            required:
+                                            - name
+                                            type: object
                                         type: object
                                       path:
                                         type: string
@@ -826,11 +842,13 @@ spec:
                                     - backend
                                     type: object
                                   type: array
+                                  x-kubernetes-list-type: atomic
                               required:
                               - paths
                               type: object
                           type: object
                         type: array
+                        x-kubernetes-list-type: atomic
                       tls:
                         items:
                           properties:
@@ -838,10 +856,12 @@ spec:
                               items:
                                 type: string
                               type: array
+                              x-kubernetes-list-type: atomic
                             secretName:
                               type: string
                           type: object
                         type: array
+                        x-kubernetes-list-type: atomic
                     type: object
                 type: object
               istioEnabled:
