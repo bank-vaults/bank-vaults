@@ -29,10 +29,9 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -774,10 +773,14 @@ func (spec *VaultSpec) IsRaftBootstrapFollower() bool {
 func (vault *Vault) GetIngress() *Ingress {
 	if vault.Spec.Ingress != nil {
 		// Add the Vault Service as the backend if no rules are specified and there is no default backend
-		if len(vault.Spec.Ingress.Spec.Rules) == 0 && vault.Spec.Ingress.Spec.Backend == nil {
-			vault.Spec.Ingress.Spec.Backend = &v1beta1.IngressBackend{
-				ServiceName: vault.Name,
-				ServicePort: intstr.FromInt(8200),
+		if len(vault.Spec.Ingress.Spec.Rules) == 0 && vault.Spec.Ingress.Spec.DefaultBackend == nil {
+			vault.Spec.Ingress.Spec.DefaultBackend = &netv1.IngressBackend{
+				Service: &netv1.IngressServiceBackend{
+					Name: vault.Name,
+					Port: netv1.ServiceBackendPort{
+						Number: 8200,
+					},
+				},
 			}
 		}
 
@@ -1122,6 +1125,6 @@ type Resources struct {
 
 // Ingress specification for the Vault cluster
 type Ingress struct {
-	Annotations map[string]string   `json:"annotations,omitempty"`
-	Spec        v1beta1.IngressSpec `json:"spec,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
+	Spec        netv1.IngressSpec `json:"spec,omitempty"`
 }
