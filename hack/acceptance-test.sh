@@ -45,6 +45,7 @@ kubectl create quota bank-vaults --hard=cpu=4,memory=8G,pods=10,services=10,repl
 helm dependency build ./charts/vault-operator
 helm upgrade --install vault-operator ./charts/vault-operator \
     --set image.tag=latest \
+    --set image.bankVaultsTag=latest \
     --set image.pullPolicy=IfNotPresent \
     --set etcd-operator.enabled=true \
     --set etcd-operator.deployments.backupOperator=false \
