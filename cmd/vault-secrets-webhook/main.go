@@ -60,6 +60,7 @@ type VaultConfig struct {
 	TransitPath                 string
 	CtConfigMap                 string
 	CtImage                     string
+	CtInjectInInitcontainers    bool
 	CtOnce                      bool
 	CtImagePullPolicy           corev1.PullPolicy
 	CtShareProcess              bool
@@ -357,6 +358,12 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.AgentImagePullPolicy = getPullPolicy(val)
 	} else {
 		vaultConfig.AgentImagePullPolicy = getPullPolicy(viper.GetString("vault_image_pull_policy"))
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-inject-in-initcontainers"]; ok {
+		vaultConfig.CtInjectInInitcontainers, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.CtInjectInInitcontainers = false
 	}
 
 	return vaultConfig
