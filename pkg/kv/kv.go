@@ -20,26 +20,26 @@ import (
 	"emperror.dev/errors"
 )
 
-// NotFoundError represents an error when a key is not found
-type NotFoundError struct {
+// notFoundError represents an error when a key is not found
+type notFoundError struct {
 	msg string // description of error
 }
 
-func (*NotFoundError) NotFound() bool {
+func (notFoundError) NotFound() bool {
 	return true
 }
 
-func (e *NotFoundError) Error() string { return e.msg }
+func (e notFoundError) Error() string { return e.msg }
 
 // NewNotFoundError creates a new NotFoundError
-func NewNotFoundError(msg string, args ...interface{}) *NotFoundError {
-	return &NotFoundError{
+func NewNotFoundError(msg string, args ...interface{}) error {
+	return notFoundError{
 		msg: fmt.Sprintf(msg, args...),
 	}
 }
 
 func IsNotFoundError(err error) bool {
-	var notFoundErr NotFoundError
+	var notFoundErr notFoundError
 	if errors.As(err, &notFoundErr) && notFoundErr.NotFound() {
 		return true
 	}
