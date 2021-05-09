@@ -7,6 +7,7 @@ require (
 	emperror.dev/errors v0.8.0
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/hashicorp/vault/api v1.0.4
+	github.com/leosayous21/go-azure-msi v0.0.0-20210509193526-19353bedcfc8
 	github.com/spf13/cast v1.3.0
 	golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6
 	google.golang.org/api v0.15.0

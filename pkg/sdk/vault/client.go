@@ -35,6 +35,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iam/v1"
 	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
+	"github.com/leosayous21/go-azure-msi/msi"
 	"k8s.io/client-go/rest"
 )
 
@@ -151,6 +152,11 @@ const (
 	// - https://www.vaultproject.io/docs/auth/kubernetes
 	// - https://www.vaultproject.io/docs/auth/gcp
 	JWTAuthMethod ClientAuthMethod = "jwt"
+
+	// AzureMSIAuthMethod is used for the vault Azure auth method
+	// as described here:
+	// - https://www.vaultproject.io/docs/auth/azure
+	AzureMSIAuthMethod ClientAuthMethod = "azure"
 )
 
 // Client is a Vault client with Kubernetes support, token automatic renewing and
@@ -434,6 +440,27 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 						"role": o.role,
 					}, nil
 				}
+
+			case AzureMSIAuthMethod:
+				loginDataFunc = func() (map[string]interface{}, error) {
+					metadata, err := msi.GetInstanceMetadata()
+					if err != nil {
+						return nil, err
+					}
+					token, err := msi.GetMsiToken()
+					if err != nil {
+						return nil, err
+					}
+					return map[string]interface{}{
+						"role":  o.role,
+						"jwt": token.AccessToken,
+						"subscription_id": metadata.SubscriptionId,
+						"resource_group_name": metadata.ResourceGroupName,
+						"vm_name": metadata.VMName,
+						"vmss_name": metadata.VMssName,
+					}, nil
+				}
+
 
 			default:
 				loginDataFunc = func() (map[string]interface{}, error) {
