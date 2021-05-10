@@ -1195,7 +1195,7 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 
 				shouldUpdate := true
 				if (createOnly || rotate) && mountExists {
-					var sec interface{}
+					secretExists := false
 					if configOption == "root/generate" { // the pki generate call is a different beast
 						req := v.cl.NewRequest("GET", fmt.Sprintf("/v1/%s/ca", path))
 						resp, err := v.cl.RawRequestWithContext(context.Background(), req)
@@ -1206,16 +1206,19 @@ func (v *vault) configureSecretEngines(config *viper.Viper) error {
 							return errors.Wrapf(err, "failed to check pki CA")
 						}
 						if resp.StatusCode == http.StatusOK {
-							sec = true
+							secretExists = true
 						}
 					} else {
-						sec, err = v.cl.Logical().Read(configPath)
+						secret, err := v.cl.Logical().Read(configPath)
 						if err != nil {
 							return errors.Wrapf(err, "error reading configPath %s", configPath)
 						}
+						if secret != nil && secret.Data != nil {
+							secretExists = true
+						}
 					}
 
-					if sec != nil {
+					if secretExists {
 						reason := "rotate"
 						if createOnly {
 							reason = "create_only"
