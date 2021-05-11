@@ -35,7 +35,6 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iam/v1"
 	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
-	"k8s.io/client-go/rest"
 )
 
 const (
@@ -323,17 +322,9 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		if err == nil {
 			rawClient.SetToken(string(token))
 		} else {
-			// If VAULT_TOKEN, VAULT_TOKEN_PATH or ~/.vault-token wasn't provided let's
-			// suppose we are in Kubernetes and try to get one with the Kubernetes ServiceAccount JWT.
-			//
-			// This logic works for for Vault GCP authentication as well, see:
-			// https://www.vaultproject.io/api/auth/gcp#login
-
-			// Check that we are in Kubernetes
-			_, err := rest.InClusterConfig()
-			if err != nil {
-				return nil, err
-			}
+			// If VAULT_TOKEN, VAULT_TOKEN_PATH or ~/.vault-token wasn't provided,
+			// attempt to get one with supported JWT-based authentication methods
+			// (such as Kubernetes ServiceAccount JWT).
 
 			jwtFile := defaultJWTFile
 			if file := os.Getenv("KUBERNETES_SERVICE_ACCOUNT_TOKEN"); file != "" {
