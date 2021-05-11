@@ -32,10 +32,10 @@ import (
 	"emperror.dev/errors"
 	"github.com/fsnotify/fsnotify"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/leosayous21/go-azure-msi/msi"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iam/v1"
 	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
-	"github.com/leosayous21/go-azure-msi/msi"
 	"k8s.io/client-go/rest"
 )
 
@@ -452,15 +452,14 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 						return nil, err
 					}
 					return map[string]interface{}{
-						"role":  o.role,
-						"jwt": token.AccessToken,
-						"subscription_id": metadata.SubscriptionId,
+						"role":                o.role,
+						"jwt":                 token.AccessToken,
+						"subscription_id":     metadata.SubscriptionId,
 						"resource_group_name": metadata.ResourceGroupName,
-						"vm_name": metadata.VMName,
-						"vmss_name": metadata.VMssName,
+						"vm_name":             metadata.VMName,
+						"vmss_name":           metadata.VMssName,
 					}, nil
 				}
-
 
 			default:
 				loginDataFunc = func() (map[string]interface{}, error) {
