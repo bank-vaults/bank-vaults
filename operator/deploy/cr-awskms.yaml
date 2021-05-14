@@ -51,6 +51,12 @@ spec:
         tls_cert_file: /vault/tls/server.crt
         tls_key_file: /vault/tls/server.key
     ui: true
+    # Configure Vault to use AWS KMS seal
+    # See: https://www.vaultproject.io/docs/configuration/seal/awskms for more information.
+    # seal:
+    #   awskms:
+    #     kms_key_id: some-key-id
+    #     region: us-east-1
 
   # See: https://banzaicloud.com/docs/bank-vaults/cli-tool/#example-external-vault-configuration
   # The repository also contains a lot examples in the deploy/ and operator/deploy directories.
