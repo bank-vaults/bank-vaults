@@ -472,10 +472,21 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	}
 
+	vaultConfigSecret, vaultConfigSum, err := secretForVaultConfig(v)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to fabricate Secret: %v", err)
+	}
+
+	err = r.createOrUpdateObject(vaultConfigSecret)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to create/update Secret: %v", err)
+	}
+
 	// Create the StatefulSet if it doesn't exist
-	tlsAnnotations := map[string]string{}
-	tlsAnnotations["vault.banzaicloud.io/tls-expiration-date"] = tlsExpiration.UTC().Format(time.RFC3339)
-	statefulSet, err := statefulSetForVault(v, externalSecretsToWatchItems, tlsAnnotations, service)
+	restartAnnotations := map[string]string{}
+	restartAnnotations["vault.banzaicloud.io/tls-expiration-date"] = tlsExpiration.UTC().Format(time.RFC3339)
+	restartAnnotations["vault.banzaicloud.io/vault-config"] = vaultConfigSum
+	statefulSet, err := statefulSetForVault(v, externalSecretsToWatchItems, restartAnnotations, service)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to fabricate StatefulSet: %v", err)
 	}
@@ -505,7 +516,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	// Create configurer if there is any external config
 	if len(v.Spec.ExternalConfig.Raw) != 0 {
-		err := r.deployConfigurer(v, tlsAnnotations)
+		err := r.deployConfigurer(v, restartAnnotations)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -540,15 +551,18 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	var leader string
 	var statusError string
 	for i := 0; i < int(v.Spec.Size); i++ {
-		client, err := vault.NewInsecureRawClient()
+		tmpClient, err := vault.NewInsecureRawClient()
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
 		podName := fmt.Sprintf("%s-%d", v.Name, i)
-		client.SetAddress(fmt.Sprintf("%s://%s.%s:8200", strings.ToLower(string(getVaultURIScheme(v))), podName, v.Namespace))
+		err = tmpClient.SetAddress(fmt.Sprintf("%s://%s.%s:8200", strings.ToLower(string(getVaultURIScheme(v))), podName, v.Namespace))
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 
-		health, err := client.Sys().Health()
+		health, err := tmpClient.Sys().Health()
 		if err != nil {
 			statusError = err.Error()
 			break
@@ -605,6 +619,23 @@ func newHTTPClient() *http.Client {
 			},
 		},
 	}
+}
+
+func secretForVaultConfig(v *vaultv1alpha1.Vault) (*corev1.Secret, string, error) {
+	configJSON, err := v.ConfigJSON()
+	if err != nil {
+		return nil, "", err
+	}
+
+	secret := corev1.Secret{}
+	secret.Name = v.Name + "-raw-config"
+	secret.Namespace = v.Namespace
+	secret.Labels = v.LabelsForVault()
+	secret.Data = map[string][]byte{
+		"vault-config.json": configJSON,
+	}
+
+	return &secret, fmt.Sprintf("%x", sha256.Sum256(configJSON)), nil
 }
 
 func secretForEtcd(v *vaultv1alpha1.Vault, e *etcdv1beta2.EtcdCluster) (*corev1.Secret, error) {
@@ -1185,7 +1216,7 @@ func populateTLSSecret(v *vaultv1alpha1.Vault, service *corev1.Service, secret *
 }
 
 // statefulSetForVault returns a Vault StatefulSet object
-func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []corev1.Secret, tlsAnnotations map[string]string, service *corev1.Service) (*appsv1.StatefulSet, error) {
+func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []corev1.Secret, restartAnnotations map[string]string, service *corev1.Service) (*appsv1.StatefulSet, error) {
 	ls := v.LabelsForVault()
 	replicas := v.Spec.Size
 
@@ -1197,6 +1228,14 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	configSizeLimit := resource.MustParse("1Mi")
 
 	volumes := withTLSVolume(v, withCredentialsVolume(v, []corev1.Volume{
+		{
+			Name: "vault-raw-config",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: v.Name + "-raw-config",
+				},
+			},
+		},
 		{
 			Name: "vault-config",
 			VolumeSource: corev1.VolumeSource{
@@ -1270,11 +1309,6 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		}
 	} else if v.Spec.IsRaftHAStorage() {
 		unsealCommand = append(unsealCommand, "--raft-ha-storage")
-	}
-
-	configJSON, err := v.ConfigJSON()
-	if err != nil {
-		return nil, err
 	}
 
 	_, containerPorts := getServicePorts(v)
@@ -1382,12 +1416,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Image:           v.Spec.GetBankVaultsImage(),
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Name:            "config-templating",
-				Command:         []string{"template", "-file", "/vault/config/vault.json"},
+				Command:         []string{"template", "-template", "/tmp/vault-config.json:/vault/config/vault.json"},
 				Env: withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
-					{
-						Name:  "VAULT_LOCAL_CONFIG",
-						Value: configJSON,
-					},
 					{
 						Name: "POD_NAME",
 						ValueFrom: &corev1.EnvVarSource{
@@ -1397,8 +1427,11 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						},
 					},
 				})),
-				VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
-				Resources:    getVaultResource(v),
+				VolumeMounts: withVaultVolumeMounts(v, append(volumeMounts, corev1.VolumeMount{
+					Name:      "vault-raw-config",
+					MountPath: "/tmp",
+				})),
+				Resources: getVaultResource(v),
 			},
 		}),
 
@@ -1448,7 +1481,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: withVaultLabels(v, ls),
 					Annotations: withVeleroAnnotations(v,
-						withTLSExpirationAnnotations(tlsAnnotations,
+						withRestartAnnotations(restartAnnotations,
 							withVaultAnnotations(v,
 								withVaultWatchedExternalSecrets(v, externalSecretsToWatchItems,
 									withPrometheusAnnotations("9102",
@@ -1522,7 +1555,7 @@ func withVaultWatchedExternalSecrets(v *vaultv1alpha1.Vault, secrets []corev1.Se
 		return annotations
 	}
 
-	// Calucalte SHASUM of all data fields in all secrets
+	// Calculate SHASUM of all data fields in all secrets
 	secretValues := []string{}
 	for _, secret := range secrets {
 		for key, value := range secret.Data {
@@ -1541,8 +1574,8 @@ func withVaultWatchedExternalSecrets(v *vaultv1alpha1.Vault, secrets []corev1.Se
 	return annotations
 }
 
-func withTLSExpirationAnnotations(tlsAnnotations, annotations map[string]string) map[string]string {
-	for key, value := range tlsAnnotations {
+func withRestartAnnotations(restartAnnotations, annotations map[string]string) map[string]string {
+	for key, value := range restartAnnotations {
 		annotations[key] = value
 	}
 
