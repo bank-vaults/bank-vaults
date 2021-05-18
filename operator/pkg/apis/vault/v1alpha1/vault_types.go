@@ -691,12 +691,12 @@ func (spec *VaultSpec) IsStatsDDisabled() bool {
 }
 
 // ConfigJSON returns the Config field as a JSON string
-func (v *Vault) ConfigJSON() (string, error) {
+func (v *Vault) ConfigJSON() ([]byte, error) {
 	config := map[string]interface{}{}
 
 	err := json.Unmarshal(v.Spec.Config.Raw, &config)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if v.Spec.ServiceRegistrationEnabled && v.Spec.HasHAStorage() {
@@ -709,7 +709,7 @@ func (v *Vault) ConfigJSON() (string, error) {
 		}
 
 		if err := mergo.Merge(&config, serviceRegistration); err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
@@ -730,16 +730,16 @@ func (v *Vault) ConfigJSON() (string, error) {
 		}
 
 		if err := mergo.Merge(&config, etcdStorage); err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
 	configJSON, err := json.Marshal(config)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(configJSON), nil
+	return configJSON, nil
 }
 
 // ExternalConfigJSON returns the ExternalConfig field as a JSON string
