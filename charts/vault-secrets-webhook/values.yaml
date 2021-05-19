@@ -62,6 +62,11 @@ env:
   # # define the webhook's role in Vault used for authentication,
   # # if not defined individually in resources by annotations.
   # VAULT_ROLE: vault-secrets-webhook
+  # Resource requests and limits for init containers
+  # VAULT_ENV_CPU_REQUEST:
+  # VAULT_ENV_MEMORY_REQUEST:
+  # VAULT_ENV_CPU_LIMIT:
+  # VAULT_ENV_MEMORY_LIMIT
 
 metrics:
   enabled: false

@@ -88,6 +88,10 @@ type VaultConfig struct {
 	Skip                        bool
 	VaultEnvFromPath            string
 	TokenAuthMount              string
+	EnvCPURequest               resource.Quantity
+	EnvMemoryRequest            resource.Quantity
+	EnvCPULimit                 resource.Quantity
+	EnvMemoryLimit              resource.Quantity
 }
 
 func init() {
@@ -122,6 +126,10 @@ func init() {
 	viper.SetDefault("enable_json_log", "false")
 	viper.SetDefault("log_level", "info")
 	viper.SetDefault("vault_agent_share_process_namespace", "")
+	viper.SetDefault("VAULT_ENV_CPU_REQUEST", "")
+	viper.SetDefault("VAULT_ENV_MEMORY_REQUEST", "")
+	viper.SetDefault("VAULT_ENV_CPU_LIMIT", "")
+	viper.SetDefault("VAULT_ENV_MEMORY_LIMIT", "")
 	viper.AutomaticEnv()
 }
 
@@ -364,6 +372,30 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.CtInjectInInitcontainers, _ = strconv.ParseBool(val)
 	} else {
 		vaultConfig.CtInjectInInitcontainers = false
+	}
+
+	if val, err := resource.ParseQuantity(viper.GetString("VAULT_ENV_CPU_REQUEST")); err == nil {
+		vaultConfig.EnvCPURequest = val
+	} else {
+		vaultConfig.EnvCPURequest = resource.MustParse("50m")
+	}
+
+	if val, err := resource.ParseQuantity(viper.GetString("VAULT_ENV_MEMORY_REQUEST")); err == nil {
+		vaultConfig.EnvMemoryRequest = val
+	} else {
+		vaultConfig.EnvMemoryRequest = resource.MustParse("64Mi")
+	}
+
+	if val, err := resource.ParseQuantity(viper.GetString("VAULT_ENV_CPU_LIMIT")); err == nil {
+		vaultConfig.EnvCPULimit = val
+	} else {
+		vaultConfig.EnvCPULimit = resource.MustParse("250m")
+	}
+
+	if val, err := resource.ParseQuantity(viper.GetString("VAULT_ENV_MEMORY_LIMIT")); err == nil {
+		vaultConfig.EnvMemoryLimit = val
+	} else {
+		vaultConfig.EnvMemoryLimit = resource.MustParse("64Mi")
 	}
 
 	return vaultConfig
