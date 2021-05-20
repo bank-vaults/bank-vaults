@@ -79,6 +79,7 @@ var sanitizeEnvmap = map[string]envType{
 	"VAULT_REVOKE_TOKEN":           {login: false},
 	"VAULT_ENV_DAEMON":             {login: false},
 	"VAULT_ENV_FROM_PATH":          {login: false},
+	"VAULT_ENV_DELAY":              {login: false},
 }
 
 // Appends variable an entry (name=value) into the environ list.
@@ -148,6 +149,7 @@ func main() {
 	}
 
 	daemonMode := cast.ToBool(os.Getenv("VAULT_ENV_DAEMON"))
+	delayExec := cast.ToDuration(os.Getenv("VAULT_ENV_DELAY"))
 
 	sigs := make(chan os.Signal, 1)
 
@@ -262,6 +264,11 @@ func main() {
 		}
 
 		client.Close()
+	}
+
+	if delayExec > 0 {
+		logger.Infof("sleeping for %s...", delayExec)
+		time.Sleep(delayExec)
 	}
 
 	logger.Infoln("spawning process:", entrypointCmd)
