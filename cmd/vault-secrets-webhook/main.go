@@ -27,10 +27,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
-	whhttp "github.com/slok/kubewebhook/pkg/http"
-	"github.com/slok/kubewebhook/pkg/observability/metrics"
-	whcontext "github.com/slok/kubewebhook/pkg/webhook/context"
-	"github.com/slok/kubewebhook/pkg/webhook/mutating"
+	whhttp "github.com/slok/kubewebhook/v2/pkg/http"
+	whlog "github.com/slok/kubewebhook/v2/pkg/log/logrus"
+	whmetrics "github.com/slok/kubewebhook/v2/pkg/metrics/prometheus"
+	"github.com/slok/kubewebhook/v2/pkg/model"
+	whwebhook "github.com/slok/kubewebhook/v2/pkg/webhook"
+	"github.com/slok/kubewebhook/v2/pkg/webhook/mutating"
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -428,28 +430,28 @@ type mutatingWebhook struct {
 	logger    *logrus.Entry
 }
 
-func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, obj metav1.Object) (bool, error) {
+func (mw *mutatingWebhook) vaultSecretsMutator(ctx context.Context, ar *model.AdmissionReview, obj metav1.Object) (*mutating.MutatorResult, error) {
 	vaultConfig := parseVaultConfig(obj)
 
 	if vaultConfig.Skip {
-		return false, nil
+		return &mutating.MutatorResult{}, nil
 	}
 
 	switch v := obj.(type) {
 	case *corev1.Pod:
-		return false, mw.mutatePod(ctx, v, vaultConfig, whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.IsAdmissionRequestDryRun(ctx))
+		return &mutating.MutatorResult{MutatedObject: v}, mw.mutatePod(ctx, v, vaultConfig, ar.Namespace, ar.DryRun)
 
 	case *corev1.Secret:
-		return false, mw.mutateSecret(v, vaultConfig)
+		return &mutating.MutatorResult{MutatedObject: v}, mw.mutateSecret(v, vaultConfig)
 
 	case *corev1.ConfigMap:
-		return false, mw.mutateConfigMap(v, vaultConfig)
+		return &mutating.MutatorResult{MutatedObject: v}, mw.mutateConfigMap(v, vaultConfig)
 
 	case *unstructured.Unstructured:
-		return false, mw.mutateObject(v, vaultConfig)
+		return &mutating.MutatorResult{MutatedObject: v}, mw.mutateObject(v, vaultConfig)
 
 	default:
-		return false, nil
+		return &mutating.MutatorResult{}, nil
 	}
 }
 
@@ -609,13 +611,15 @@ func healthzHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }
 
-func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, recorder metrics.Recorder, logger logrus.FieldLogger) http.Handler {
-	webhook, err := mutating.NewWebhook(config, mutator, nil, recorder, logger)
+func handlerFor(config mutating.WebhookConfig, recorder whwebhook.MetricsRecorder) http.Handler {
+	webhook, err := mutating.NewWebhook(config)
 	if err != nil {
-		logger.Fatalf("error creating webhook: %s", err)
+		panic("error creating webhook: " + err.Error())
 	}
 
-	return whhttp.MustHandlerFor(webhook)
+	whwebhook.NewMeasuredWebhook(recorder, webhook)
+
+	return whhttp.MustHandlerFor(whhttp.HandlerConfig{Webhook: webhook, Logger: config.Logger})
 }
 
 func (mw *mutatingWebhook) serveMetrics(addr string) {
@@ -666,12 +670,17 @@ func main() {
 
 	mutator := mutating.MutatorFunc(mutatingWebhook.vaultSecretsMutator)
 
-	metricsRecorder := metrics.NewPrometheus(prometheus.DefaultRegisterer)
+	whLogger := whlog.NewLogrus(logger)
 
-	podHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-pods", Obj: &corev1.Pod{}}, mutator, metricsRecorder, logger)
-	secretHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-secret", Obj: &corev1.Secret{}}, mutator, metricsRecorder, logger)
-	configMapHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-configmap", Obj: &corev1.ConfigMap{}}, mutator, metricsRecorder, logger)
-	objectHandler := handlerFor(mutating.WebhookConfig{Name: "vault-secrets-object", Obj: &unstructured.Unstructured{}}, mutator, metricsRecorder, logger)
+	metricsRecorder, err := whmetrics.NewRecorder(whmetrics.RecorderConfig{Registry: prometheus.NewRegistry()})
+	if err != nil {
+		logger.Fatalf("error creating metrics recorder: %s", err)
+	}
+
+	podHandler := handlerFor(mutating.WebhookConfig{ID: "vault-secrets-pods", Obj: &corev1.Pod{}, Logger: whLogger, Mutator: mutator}, metricsRecorder)
+	secretHandler := handlerFor(mutating.WebhookConfig{ID: "vault-secrets-secret", Obj: &corev1.Secret{}, Logger: whLogger, Mutator: mutator}, metricsRecorder)
+	configMapHandler := handlerFor(mutating.WebhookConfig{ID: "vault-secrets-configmap", Obj: &corev1.ConfigMap{}, Logger: whLogger, Mutator: mutator}, metricsRecorder)
+	objectHandler := handlerFor(mutating.WebhookConfig{ID: "vault-secrets-object", Obj: &unstructured.Unstructured{}, Logger: whLogger, Mutator: mutator}, metricsRecorder)
 
 	mux := http.NewServeMux()
 	mux.Handle("/pods", podHandler)
