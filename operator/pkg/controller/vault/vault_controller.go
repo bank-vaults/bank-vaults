@@ -123,19 +123,16 @@ type ReconcileVault struct {
 	httpClient          *http.Client
 }
 
-func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
+func (r *ReconcileVault) createOrUpdateObject(o client.Object) error {
 	return createOrUpdateObjectWithClient(r.client, o)
 }
 
-func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
-	key, err := client.ObjectKeyFromObject(o)
-	if err != nil {
-		return err
-	}
+func createOrUpdateObjectWithClient(c client.Client, o client.Object) error {
+	key := client.ObjectKeyFromObject(o)
 
-	current := o.DeepCopyObject()
+	current := o.DeepCopyObject().(client.Object)
 
-	err = c.Get(context.TODO(), key, current)
+	err := c.Get(context.TODO(), key, current)
 	if apierrors.IsNotFound(err) {
 		err := patch.DefaultAnnotator.SetLastAppliedAnnotation(o)
 		if err != nil {
@@ -233,15 +230,12 @@ func secretMatchLabelsOrAnnotations(s corev1.Secret, labelsSelectors []map[strin
 	return false
 }
 
-func (r *ReconcileVault) createObjectIfNotExists(o runtime.Object) error {
-	key, err := client.ObjectKeyFromObject(o)
-	if err != nil {
-		return err
-	}
+func (r *ReconcileVault) createObjectIfNotExists(o client.Object) error {
+	key := client.ObjectKeyFromObject(o)
 
-	current := o.DeepCopyObject()
+	current := o.DeepCopyObject().(client.Object)
 
-	err = r.client.Get(context.TODO(), key, current)
+	err := r.client.Get(context.TODO(), key, current)
 	if apierrors.IsNotFound(err) {
 		return r.client.Create(context.TODO(), o)
 	}
@@ -254,7 +248,7 @@ func (r *ReconcileVault) createObjectIfNotExists(o runtime.Object) error {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Vault")
 
@@ -321,10 +315,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	// If we are using a LoadBalancer let the cloud-provider code fill in the hostname or IP of it,
 	// so we have a more stable certificate generation process.
 	if service.Spec.Type == corev1.ServiceTypeLoadBalancer && !v.Spec.IsTLSDisabled() && v.Spec.ExistingTLSSecretName == "" {
-		key, err := client.ObjectKeyFromObject(service)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to get object key for service: %v", err)
-		}
+		key := client.ObjectKeyFromObject(service)
 
 		err = r.client.Get(context.Background(), key, service)
 		if err != nil {
