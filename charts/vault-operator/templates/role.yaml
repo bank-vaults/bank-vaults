@@ -92,6 +92,12 @@ rules:
   - get
   - create
   - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - "*"
 {{- end }}
 {{- if .Values.psp.enabled }}
 ---
