@@ -489,6 +489,10 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					CtMemory:             resource.MustParse("128Mi"),
 					AgentImage:           "vault:latest",
 					AgentImagePullPolicy: "IfNotPresent",
+					EnvCPURequest:        resource.MustParse("50m"),
+					EnvMemoryRequest:     resource.MustParse("64Mi"),
+					EnvCPULimit:          resource.MustParse("250m"),
+					EnvMemoryLimit:       resource.MustParse("64Mi"),
 				},
 			},
 			wantedPod: &corev1.Pod{
@@ -680,6 +684,10 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					CtMemory:             resource.MustParse("128Mi"),
 					AgentImage:           "vault:latest",
 					AgentImagePullPolicy: "IfNotPresent",
+					EnvCPURequest:        resource.MustParse("50m"),
+					EnvMemoryRequest:     resource.MustParse("64Mi"),
+					EnvCPULimit:          resource.MustParse("250m"),
+					EnvMemoryLimit:       resource.MustParse("64Mi"),
 				},
 			},
 			wantedPod: &corev1.Pod{
@@ -1030,6 +1038,10 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					CtMemory:                 resource.MustParse("128Mi"),
 					AgentImage:               "vault:latest",
 					AgentImagePullPolicy:     "IfNotPresent",
+					EnvCPURequest:            resource.MustParse("50m"),
+					EnvMemoryRequest:         resource.MustParse("64Mi"),
+					EnvCPULimit:              resource.MustParse("250m"),
+					EnvMemoryLimit:           resource.MustParse("64Mi"),
 				},
 			},
 			wantedPod: &corev1.Pod{
@@ -1246,6 +1258,10 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					CtMemory:                 resource.MustParse("128Mi"),
 					AgentImage:               "vault:latest",
 					AgentImagePullPolicy:     "IfNotPresent",
+					EnvCPURequest:            resource.MustParse("50m"),
+					EnvMemoryRequest:         resource.MustParse("64Mi"),
+					EnvCPULimit:              resource.MustParse("250m"),
+					EnvMemoryLimit:           resource.MustParse("64Mi"),
 				},
 			},
 			wantedPod: &corev1.Pod{
