@@ -620,12 +620,12 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 			VolumeMounts:    containerVolMounts,
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("250m"),
-					corev1.ResourceMemory: resource.MustParse("64Mi"),
+					corev1.ResourceCPU:    vaultConfig.EnvCPULimit,
+					corev1.ResourceMemory: vaultConfig.EnvMemoryLimit,
 				},
 				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("50m"),
-					corev1.ResourceMemory: resource.MustParse("64Mi"),
+					corev1.ResourceCPU:    vaultConfig.EnvCPURequest,
+					corev1.ResourceMemory: vaultConfig.EnvMemoryRequest,
 				},
 			},
 		})
@@ -647,12 +647,12 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 			SecurityContext: getSecurityContext(podSecurityContext, vaultConfig),
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("250m"),
-					corev1.ResourceMemory: resource.MustParse("64Mi"),
+					corev1.ResourceCPU:    vaultConfig.EnvCPULimit,
+					corev1.ResourceMemory: vaultConfig.EnvMemoryLimit,
 				},
 				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("50m"),
-					corev1.ResourceMemory: resource.MustParse("64Mi"),
+					corev1.ResourceCPU:    vaultConfig.EnvCPURequest,
+					corev1.ResourceMemory: vaultConfig.EnvMemoryRequest,
 				},
 			},
 		})

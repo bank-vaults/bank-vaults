@@ -117,6 +117,10 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | rbac.psp.enabled                 | use pod security policy                                                      | `false`                             |
 | rbac.authDelegatorRole.enabled    | bind `system:auth-delegator` to the ServiceAccount                          | `false`                             |
 | env.VAULT_IMAGE                  | vault image                                                                  | `vault:1.6.2`                       |
+| env.VAULT_ENV_CPU_REQUEST        | cpu requests for init-containers vault-env and copy-vault-env                | `50m`                               |
+| env.VAULT_ENV_MEMORY_REQUEST     | memory requests for init-containers vault-env and copy-vault-env             | `64Mi`                              |
+| env.VAULT_ENV_CPU_LIMIT          | cpu limits for init-containers vault-env and copy-vault-env                  | `250m`                              |
+| env.VAULT_ENV_MEMORY_LIMIT       | memory limits for init-containers vault-env and copy-vault-env               | `64Mi`                              |
 | volumes                          | extra volume definitions                                                     | `[]`                                |
 | volumeMounts                     | extra volume mounts                                                          | `[]`                                |
 | configMapMutation                | enable injecting values from Vault to ConfigMaps                             | `false`                             |
