@@ -25,7 +25,6 @@ require (
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200706150819-a40b877fbb9e+incompatible
 	github.com/frankban/quicktest v1.4.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/go-logr/zapr v0.2.0 // indirect
 	github.com/go-openapi/spec v0.19.8 // indirect
 	github.com/go-openapi/swag v0.19.10 // indirect
 	github.com/golang/snappy v0.0.2 // indirect
@@ -38,7 +37,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/hashicorp/vault/sdk v0.1.13
-	github.com/imdario/mergo v0.3.9
+	github.com/imdario/mergo v0.3.11
 	github.com/jpillora/backoff v1.0.0
 	github.com/json-iterator/go v1.1.10
 	github.com/kr/pretty v0.2.1 // indirect
@@ -46,7 +45,6 @@ require (
 	github.com/mattn/go-ieproxy v0.0.0-20191113090002-7c0f6868bffe // indirect
 	github.com/miekg/pkcs11 v1.0.3
 	github.com/mitchellh/mapstructure v1.2.2
-	github.com/onsi/ginkgo v1.14.0 // indirect
 	github.com/opencontainers/runc v0.1.1 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pelletier/go-toml v1.4.0 // indirect
@@ -58,25 +56,23 @@ require (
 	github.com/slok/kubewebhook/v2 v2.1.0
 	github.com/smartystreets/assertions v1.0.1 // indirect
 	github.com/spf13/cast v1.3.1
-	github.com/spf13/cobra v1.0.0
+	github.com/spf13/cobra v1.1.1
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
-	go.uber.org/zap v1.14.1 // indirect
 	gocloud.dev v0.19.1-0.20200414210820-bb59d59f26d5
 	golang.org/x/oauth2 v0.0.0-20210218202405-ba52d332ba99
 	google.golang.org/api v0.40.0
 	google.golang.org/genproto v0.0.0-20210224155714-063164c882e6
 	gopkg.in/ini.v1 v1.57.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 	k8s.io/api v0.21.1
-	k8s.io/apiextensions-apiserver v0.19.3
+	k8s.io/apiextensions-apiserver v0.21.1
 	k8s.io/apimachinery v0.21.1
 	k8s.io/client-go v0.21.1
-	k8s.io/code-generator v0.20.1
+	k8s.io/code-generator v0.21.1
 	k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
-	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
+	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009
 	logur.dev/adapter/logrus v0.5.0
-	sigs.k8s.io/controller-runtime v0.6.2
+	sigs.k8s.io/controller-runtime v0.9.0-beta.5
 )
 
 replace (

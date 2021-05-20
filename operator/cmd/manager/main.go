@@ -24,14 +24,14 @@ import (
 	"github.com/banzaicloud/bank-vaults/operator/pkg/controller"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 )
 
-var log = logf.Log.WithName("cmd")
+var log = ctrl.Log.WithName("cmd")
 
 const (
 	operatorNamespace      = "OPERATOR_NAMESPACE"
@@ -51,7 +51,7 @@ func main() {
 	// implementing the logr.Logger interface. This logger will
 	// be propagated through the whole operator, generating
 	// uniform and structured logs.
-	logf.SetLogger(logf.ZapLogger(*verbose))
+	ctrl.SetLogger(zap.New(zap.UseDevMode(*verbose)))
 
 	var namespace string
 	var err error
@@ -95,8 +95,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	mgr.AddReadyzCheck("ping", healthz.Ping)
-	mgr.AddHealthzCheck("ping", healthz.Ping)
+	err = mgr.AddReadyzCheck("ping", healthz.Ping)
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+	err = mgr.AddHealthzCheck("ping", healthz.Ping)
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
 
 	log.Info("Registering Components.")
 
@@ -115,7 +123,7 @@ func main() {
 	log.Info("Starting the Cmd.")
 
 	// Start the Cmd
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		log.Error(err, "manager exited non-zero")
 		os.Exit(1)
 	}

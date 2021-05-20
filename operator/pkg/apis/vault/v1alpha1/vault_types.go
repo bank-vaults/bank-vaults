@@ -33,10 +33,10 @@ import (
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-var log = logf.Log.WithName("controller_vault")
+var log = ctrl.Log.WithName("controller_vault")
 
 var bankVaultsImage string
 
