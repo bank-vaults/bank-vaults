@@ -166,7 +166,7 @@ type Client struct {
 
 	client       *vaultapi.Client
 	logical      *vaultapi.Logical
-	tokenRenewer *vaultapi.Renewer
+	tokenWatcher *vaultapi.Renewer
 	closed       bool
 	watch        *fsnotify.Watcher
 	mu           sync.Mutex
@@ -266,7 +266,7 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		logger:  noopLogger{},
 	}
 
-	var tokenRenewer *vaultapi.Renewer
+	var tokenWatcher *vaultapi.Renewer
 
 	o := &clientOptions{}
 
@@ -513,19 +513,19 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					}
 
 					// Start the renewing process
-					tokenRenewer, err = rawClient.NewRenewer(&vaultapi.RenewerInput{Secret: secret})
+					tokenWatcher, err = rawClient.NewLifetimeWatcher(&vaultapi.LifetimeWatcherInput{Secret: secret})
 					if err != nil {
-						client.logger.Error("failed to renew Vault token", map[string]interface{}{"err": err})
+						client.logger.Error("failed to watch Vault token", map[string]interface{}{"err": err})
 						continue
 					}
 
 					client.mu.Lock()
-					client.tokenRenewer = tokenRenewer
+					client.tokenWatcher = tokenWatcher
 					client.mu.Unlock()
 
-					go tokenRenewer.Renew()
+					go tokenWatcher.Start()
 
-					client.runRenewChecker(tokenRenewer)
+					client.runRenewChecker(tokenWatcher)
 				}
 
 				client.logger.Info("Vault token renewal closed")
@@ -545,15 +545,15 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 	return client, nil
 }
 
-func (client *Client) runRenewChecker(tokenRenewer *vaultapi.Renewer) {
+func (client *Client) runRenewChecker(tokenWatcher *vaultapi.Renewer) {
 	for {
 		select {
-		case err := <-tokenRenewer.DoneCh():
+		case err := <-tokenWatcher.DoneCh():
 			if err != nil {
 				client.logger.Error("error in Vault token renewal", map[string]interface{}{"err": err})
 			}
 			return
-		case o := <-tokenRenewer.RenewCh():
+		case o := <-tokenWatcher.RenewCh():
 			ttl, _ := o.Secret.TokenTTL()
 			client.logger.Info("renewed Vault token", map[string]interface{}{"ttl": ttl})
 		}
@@ -578,8 +578,8 @@ func (client *Client) Close() {
 
 	client.closed = true
 
-	if client.tokenRenewer != nil {
-		client.tokenRenewer.Stop()
+	if client.tokenWatcher != nil {
+		client.tokenWatcher.Stop()
 	}
 
 	if client.watch != nil {
