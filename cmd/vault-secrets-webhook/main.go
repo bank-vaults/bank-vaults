@@ -19,6 +19,7 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -40,6 +41,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	logrusadapter "logur.dev/adapter/logrus"
 	kubernetesConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -656,14 +658,18 @@ func main() {
 		logger.Fatalf("error creating k8s client: %s", err)
 	}
 
-	namespace, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-	if err != nil {
-		logger.Fatalf("error reading k8s namespace: %s", err)
+	namespace := os.Getenv("KUBERNETES_NAMESPACE") // only for kurun
+	if namespace == "" {
+		namespaceBytes, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+		if err != nil {
+			logger.Fatalf("error reading k8s namespace: %s", err)
+		}
+		namespace = string(namespaceBytes)
 	}
 
 	mutatingWebhook := mutatingWebhook{
 		k8sClient: k8sClient,
-		namespace: string(namespace),
+		namespace: namespace,
 		registry:  registry.NewRegistry(),
 		logger:    logger,
 	}
