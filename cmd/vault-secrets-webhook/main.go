@@ -56,6 +56,7 @@ type VaultConfig struct {
 	ClientTimeout               time.Duration
 	UseAgent                    bool
 	VaultEnvDaemon              bool
+	VaultEnvDelay               time.Duration
 	TransitKeyID                string
 	TransitPath                 string
 	CtConfigMap                 string
@@ -204,6 +205,12 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.VaultEnvDaemon, _ = strconv.ParseBool(val)
 	} else {
 		vaultConfig.VaultEnvDaemon, _ = strconv.ParseBool(viper.GetString("vault_env_daemon"))
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-env-delay"]; ok {
+		vaultConfig.VaultEnvDelay, _ = time.ParseDuration(val)
+	} else {
+		vaultConfig.VaultEnvDelay, _ = time.ParseDuration(viper.GetString("vault_env_delay"))
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-configmap"]; ok {

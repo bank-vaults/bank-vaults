@@ -369,6 +369,13 @@ func (mw *mutatingWebhook) mutateContainers(ctx context.Context, containers []co
 			})
 		}
 
+		if vaultConfig.VaultEnvDelay > 0 {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  "VAULT_ENV_DELAY",
+				Value: vaultConfig.VaultEnvDelay.String(),
+			})
+		}
+
 		if vaultConfig.VaultEnvFromPath != "" {
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  "VAULT_ENV_FROM_PATH",
