@@ -617,16 +617,16 @@ func handlerFor(config mutating.WebhookConfig, recorder whwebhook.MetricsRecorde
 		panic("error creating webhook: " + err.Error())
 	}
 
-	whwebhook.NewMeasuredWebhook(recorder, webhook)
+	webhook = whwebhook.NewMeasuredWebhook(recorder, webhook)
 
 	return whhttp.MustHandlerFor(whhttp.HandlerConfig{Webhook: webhook, Logger: config.Logger})
 }
 
-func (mw *mutatingWebhook) serveMetrics(addr string) {
+func (mw *mutatingWebhook) serveMetrics(addr string, handler http.Handler) {
 	mw.logger.Infof("Telemetry on http://%s", addr)
 
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/metrics", handler)
 	err := http.ListenAndServe(addr, mux)
 	if err != nil {
 		mw.logger.Fatalf("error serving telemetry: %s", err)
@@ -672,11 +672,13 @@ func main() {
 
 	whLogger := whlog.NewLogrus(logger)
 
-	metricsRecorder, err := whmetrics.NewRecorder(whmetrics.RecorderConfig{Registry: prometheus.NewRegistry()})
+	promRegistry := prometheus.NewRegistry()
+	metricsRecorder, err := whmetrics.NewRecorder(whmetrics.RecorderConfig{Registry: promRegistry})
 	if err != nil {
 		logger.Fatalf("error creating metrics recorder: %s", err)
 	}
 
+	promHandler := promhttp.HandlerFor(promRegistry, promhttp.HandlerOpts{})
 	podHandler := handlerFor(mutating.WebhookConfig{ID: "vault-secrets-pods", Obj: &corev1.Pod{}, Logger: whLogger, Mutator: mutator}, metricsRecorder)
 	secretHandler := handlerFor(mutating.WebhookConfig{ID: "vault-secrets-secret", Obj: &corev1.Secret{}, Logger: whLogger, Mutator: mutator}, metricsRecorder)
 	configMapHandler := handlerFor(mutating.WebhookConfig{ID: "vault-secrets-configmap", Obj: &corev1.ConfigMap{}, Logger: whLogger, Mutator: mutator}, metricsRecorder)
@@ -696,9 +698,9 @@ func main() {
 
 	if len(telemetryAddress) > 0 {
 		// Serving metrics without TLS on separated address
-		go mutatingWebhook.serveMetrics(telemetryAddress)
+		go mutatingWebhook.serveMetrics(telemetryAddress, promHandler)
 	} else {
-		mux.Handle("/metrics", promhttp.Handler())
+		mux.Handle("/metrics", promHandler)
 	}
 
 	if tlsCertFile == "" && tlsPrivateKeyFile == "" {
