@@ -97,20 +97,21 @@ type daemonSecretRenewer struct {
 }
 
 func (r daemonSecretRenewer) Renew(path string, secret *vaultapi.Secret) error {
-	renewerInput := vaultapi.RenewerInput{Secret: secret}
-	renewer, err := r.client.RawClient().NewRenewer(&renewerInput)
+	watcherInput := vaultapi.LifetimeWatcherInput{Secret: secret}
+	watcher, err := r.client.RawClient().NewLifetimeWatcher(&watcherInput)
 	if err != nil {
-		return errors.Wrap(err, "failed to create secret renewer")
+		return errors.Wrap(err, "failed to create secret watcher")
 	}
 
-	go renewer.Renew()
+	go watcher.Start()
 
 	go func() {
+		defer watcher.Stop()
 		for {
 			select {
-			case renewOutput := <-renewer.RenewCh():
+			case renewOutput := <-watcher.RenewCh():
 				r.logger.Infof("secret %s renewed for %ds", path, renewOutput.Secret.LeaseDuration)
-			case doneError := <-renewer.DoneCh():
+			case doneError := <-watcher.DoneCh():
 				if !secret.Renewable {
 					time.Sleep(time.Duration(secret.LeaseDuration) * time.Second)
 					r.logger.Infof("secret lease for %s has expired", path)
@@ -148,17 +149,15 @@ func main() {
 		logger = log.WithField("app", "vault-env")
 	}
 
-	daemonMode := cast.ToBool(os.Getenv("VAULT_ENV_DAEMON"))
-	delayExec := cast.ToDuration(os.Getenv("VAULT_ENV_DELAY"))
-
-	sigs := make(chan os.Signal, 1)
-
-	var entrypointCmd []string
 	if len(os.Args) == 1 {
 		logger.Fatalln("no command is given, vault-env can't determine the entrypoint (command), please specify it explicitly or let the webhook query it (see documentation)")
-	} else {
-		entrypointCmd = os.Args[1:]
 	}
+
+	daemonMode := cast.ToBool(os.Getenv("VAULT_ENV_DAEMON"))
+	delayExec := cast.ToDuration(os.Getenv("VAULT_ENV_DELAY"))
+	sigs := make(chan os.Signal, 1)
+
+	entrypointCmd := os.Args[1:]
 
 	binary, err := exec.LookPath(entrypointCmd[0])
 	if err != nil {
@@ -184,7 +183,7 @@ func main() {
 		clientOptions = append(clientOptions, vault.ClientToken(originalVaultTokenEnvVar))
 	} else {
 		if isLogin {
-			os.Unsetenv("VAULT_TOKEN")
+			_ = os.Unsetenv("VAULT_TOKEN")
 		}
 		// use role/path based authentication
 		clientOptions = append(clientOptions,
@@ -202,7 +201,7 @@ func main() {
 	passthroughEnvVars := strings.Split(os.Getenv("VAULT_ENV_PASSTHROUGH"), ",")
 
 	if isLogin {
-		os.Setenv("VAULT_TOKEN", vaultLogin)
+		_ = os.Setenv("VAULT_TOKEN", vaultLogin)
 		passthroughEnvVars = append(passthroughEnvVars, "VAULT_TOKEN")
 	}
 
