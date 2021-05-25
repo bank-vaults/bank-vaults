@@ -1,4 +1,4 @@
-// Copyright © 2020 Banzai Cloud
+// Copyright © 2021 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package webhook
 
 import (
 	"strings"
@@ -119,7 +119,7 @@ func traverseObject(o interface{}, vaultClient *vault.Client, vaultConfig VaultC
 	return nil
 }
 
-func (mw *mutatingWebhook) mutateObject(object *unstructured.Unstructured, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) mutateObject(object *unstructured.Unstructured, vaultConfig VaultConfig) error {
 	mw.logger.Debugf("mutating object: %s.%s", object.GetNamespace(), object.GetName())
 
 	vaultClient, err := mw.newVaultClient(vaultConfig)

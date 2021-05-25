@@ -1,4 +1,4 @@
-// Copyright © 2020 Banzai Cloud
+// Copyright © 2021 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package webhook
 
 import (
 	"encoding/base64"
@@ -42,7 +42,7 @@ func configMapNeedsMutation(configMap *corev1.ConfigMap, vaultConfig VaultConfig
 	return false
 }
 
-func (mw *mutatingWebhook) mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig VaultConfig) error {
 	// do an early exit and don't construct the Vault client if not needed
 	if !configMapNeedsMutation(configMap, vaultConfig) {
 		return nil
@@ -90,7 +90,7 @@ func (mw *mutatingWebhook) mutateConfigMap(configMap *corev1.ConfigMap, vaultCon
 	return nil
 }
 
-func (mw *mutatingWebhook) mutateConfigMapData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) mutateConfigMapData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
 	mapData, err := getDataFromVault(data, vaultClient, vaultConfig, mw.logger)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (mw *mutatingWebhook) mutateConfigMapData(configMap *corev1.ConfigMap, data
 	return nil
 }
 
-func (mw *mutatingWebhook) mutateInlineConfigMapData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) mutateInlineConfigMapData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
 	for key, value := range data {
 		for _, vaultSecretReference := range findInlineVaultDelimiters(value) {
 			mapData, err := getDataFromVault(map[string]string{key: vaultSecretReference[1]}, vaultClient, vaultConfig, mw.logger)
@@ -119,7 +119,7 @@ func (mw *mutatingWebhook) mutateInlineConfigMapData(configMap *corev1.ConfigMap
 	return nil
 }
 
-func (mw *mutatingWebhook) mutateConfigMapBinaryData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) mutateConfigMapBinaryData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
 	mapData, err := getDataFromVault(data, vaultClient, vaultConfig, mw.logger)
 	if err != nil {
 		return err

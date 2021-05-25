@@ -1,4 +1,4 @@
-// Copyright © 2020 Banzai Cloud
+// Copyright © 2021 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package webhook
 
 import (
 	"context"
@@ -26,8 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
 	fake "k8s.io/client-go/kubernetes/fake"
-
-	"github.com/banzaicloud/bank-vaults/cmd/vault-secrets-webhook/registry"
 )
 
 var vaultConfig = VaultConfig{
@@ -58,7 +56,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 
 	type fields struct {
 		k8sClient kubernetes.Interface
-		registry  registry.ImageRegistry
+		registry  ImageRegistry
 	}
 	type args struct {
 		containers  []corev1.Container
@@ -408,21 +406,21 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 		t.Run(ttp.name, func(t *testing.T) {
 			t.Parallel()
 
-			mw := &mutatingWebhook{
+			mw := &MutatingWebhook{
 				k8sClient: ttp.fields.k8sClient,
 				registry:  ttp.fields.registry,
 				logger:    logrus.NewEntry(logrus.New()),
 			}
 			got, err := mw.mutateContainers(context.Background(), ttp.args.containers, ttp.args.podSpec, ttp.args.vaultConfig, ttp.args.ns)
 			if (err != nil) != ttp.wantErr {
-				t.Errorf("mutatingWebhook.mutateContainers() error = %v, wantErr %v", err, ttp.wantErr)
+				t.Errorf("MutatingWebhook.mutateContainers() error = %v, wantErr %v", err, ttp.wantErr)
 				return
 			}
 			if got != ttp.mutated {
-				t.Errorf("mutatingWebhook.mutateContainers() = %v, want %v", got, ttp.mutated)
+				t.Errorf("MutatingWebhook.mutateContainers() = %v, want %v", got, ttp.mutated)
 			}
 			if !cmp.Equal(ttp.args.containers, ttp.wantedContainers) {
-				t.Errorf("mutatingWebhook.mutateContainers() = diff %v", cmp.Diff(ttp.args.containers, ttp.wantedContainers))
+				t.Errorf("MutatingWebhook.mutateContainers() = diff %v", cmp.Diff(ttp.args.containers, ttp.wantedContainers))
 			}
 		})
 	}
@@ -433,7 +431,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 
 	type fields struct {
 		k8sClient kubernetes.Interface
-		registry  registry.ImageRegistry
+		registry  ImageRegistry
 	}
 	type args struct {
 		pod         *corev1.Pod
@@ -1435,19 +1433,19 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 		t.Run(ttp.name, func(t *testing.T) {
 			t.Parallel()
 
-			mw := &mutatingWebhook{
+			mw := &MutatingWebhook{
 				k8sClient: ttp.fields.k8sClient,
 				registry:  ttp.fields.registry,
 				logger:    logrus.NewEntry(logrus.New()),
 			}
 			err := mw.mutatePod(context.Background(), ttp.args.pod, ttp.args.vaultConfig, ttp.args.ns, false)
 			if (err != nil) != ttp.wantErr {
-				t.Errorf("mutatingWebhook.mutatePod() error = %v, wantErr %v", err, ttp.wantErr)
+				t.Errorf("MutatingWebhook.mutatePod() error = %v, wantErr %v", err, ttp.wantErr)
 				return
 			}
 
 			if !cmp.Equal(ttp.args.pod, ttp.wantedPod) {
-				t.Errorf("mutatingWebhook.mutatePod() = diff %v", cmp.Diff(ttp.args.pod, ttp.wantedPod))
+				t.Errorf("MutatingWebhook.mutatePod() = diff %v", cmp.Diff(ttp.args.pod, ttp.wantedPod))
 			}
 		})
 	}

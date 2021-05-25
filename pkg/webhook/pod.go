@@ -1,4 +1,4 @@
-// Copyright © 2020 Banzai Cloud
+// Copyright © 2021 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package webhook
 
 import (
 	"context"
@@ -46,7 +46,7 @@ auto_auth {
         }
 }`
 
-func (mw *mutatingWebhook) mutatePod(ctx context.Context, pod *corev1.Pod, vaultConfig VaultConfig, ns string, dryRun bool) error {
+func (mw *MutatingWebhook) mutatePod(ctx context.Context, pod *corev1.Pod, vaultConfig VaultConfig, ns string, dryRun bool) error {
 	mw.logger.Debug("Successfully connected to the API")
 
 	initContainersMutated, err := mw.mutateContainers(ctx, pod.Spec.InitContainers, &pod.Spec, vaultConfig, ns)
@@ -203,7 +203,7 @@ func (mw *mutatingWebhook) mutatePod(ctx context.Context, pod *corev1.Pod, vault
 	return nil
 }
 
-func (mw *mutatingWebhook) mutateContainers(ctx context.Context, containers []corev1.Container, podSpec *corev1.PodSpec, vaultConfig VaultConfig, ns string) (bool, error) {
+func (mw *MutatingWebhook) mutateContainers(ctx context.Context, containers []corev1.Container, podSpec *corev1.PodSpec, vaultConfig VaultConfig, ns string) (bool, error) {
 	mutated := false
 
 	for i, container := range containers {
@@ -389,7 +389,7 @@ func (mw *mutatingWebhook) mutateContainers(ctx context.Context, containers []co
 	return mutated, nil
 }
 
-func (mw *mutatingWebhook) addSecretsVolToContainers(vaultConfig VaultConfig, containers []corev1.Container) {
+func (mw *MutatingWebhook) addSecretsVolToContainers(vaultConfig VaultConfig, containers []corev1.Container) {
 	for i, container := range containers {
 		mw.logger.Debugf("Add secrets VolumeMount to container %s", container.Name)
 
@@ -404,7 +404,7 @@ func (mw *mutatingWebhook) addSecretsVolToContainers(vaultConfig VaultConfig, co
 	}
 }
 
-func (mw *mutatingWebhook) addAgentSecretsVolToContainers(vaultConfig VaultConfig, containers []corev1.Container) {
+func (mw *MutatingWebhook) addAgentSecretsVolToContainers(vaultConfig VaultConfig, containers []corev1.Container) {
 	for i, container := range containers {
 		mw.logger.Debugf("Add secrets VolumeMount to container %s", container.Name)
 
@@ -419,7 +419,7 @@ func (mw *mutatingWebhook) addAgentSecretsVolToContainers(vaultConfig VaultConfi
 	}
 }
 
-func (mw *mutatingWebhook) getVolumes(existingVolumes []corev1.Volume, agentConfigMapName string, vaultConfig VaultConfig) []corev1.Volume {
+func (mw *MutatingWebhook) getVolumes(existingVolumes []corev1.Volume, agentConfigMapName string, vaultConfig VaultConfig) []corev1.Volume {
 	mw.logger.Debug("Add generic volumes to podspec")
 
 	volumes := []corev1.Volume{
