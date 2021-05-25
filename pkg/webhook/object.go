@@ -119,7 +119,7 @@ func traverseObject(o interface{}, vaultClient *vault.Client, vaultConfig VaultC
 	return nil
 }
 
-func (mw *MutatingWebhook) mutateObject(object *unstructured.Unstructured, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) MutateObject(object *unstructured.Unstructured, vaultConfig VaultConfig) error {
 	mw.logger.Debugf("mutating object: %s.%s", object.GetNamespace(), object.GetName())
 
 	vaultClient, err := mw.newVaultClient(vaultConfig)

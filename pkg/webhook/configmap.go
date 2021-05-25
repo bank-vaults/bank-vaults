@@ -42,7 +42,7 @@ func configMapNeedsMutation(configMap *corev1.ConfigMap, vaultConfig VaultConfig
 	return false
 }
 
-func (mw *MutatingWebhook) mutateConfigMap(configMap *corev1.ConfigMap, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) MutateConfigMap(configMap *corev1.ConfigMap, vaultConfig VaultConfig) error {
 	// do an early exit and don't construct the Vault client if not needed
 	if !configMapNeedsMutation(configMap, vaultConfig) {
 		return nil

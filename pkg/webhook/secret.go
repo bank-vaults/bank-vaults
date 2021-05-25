@@ -60,7 +60,7 @@ func secretNeedsMutation(secret *corev1.Secret, vaultConfig VaultConfig) (bool, 
 	return false, nil
 }
 
-func (mw *MutatingWebhook) mutateSecret(secret *corev1.Secret, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) MutateSecret(secret *corev1.Secret, vaultConfig VaultConfig) error {
 	// do an early exit and don't construct the Vault client if not needed
 	requiredToMutate, err := secretNeedsMutation(secret, vaultConfig)
 	if err != nil {

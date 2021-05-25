@@ -46,7 +46,7 @@ auto_auth {
         }
 }`
 
-func (mw *MutatingWebhook) mutatePod(ctx context.Context, pod *corev1.Pod, vaultConfig VaultConfig, ns string, dryRun bool) error {
+func (mw *MutatingWebhook) MutatePod(ctx context.Context, pod *corev1.Pod, vaultConfig VaultConfig, ns string, dryRun bool) error {
 	mw.logger.Debug("Successfully connected to the API")
 
 	initContainersMutated, err := mw.mutateContainers(ctx, pod.Spec.InitContainers, &pod.Spec, vaultConfig, ns)
