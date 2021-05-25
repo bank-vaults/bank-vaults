@@ -1,4 +1,4 @@
-// Copyright © 2020 Banzai Cloud
+// Copyright © 2021 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package webhook
 
 import (
 	"encoding/base64"
@@ -60,7 +60,7 @@ func secretNeedsMutation(secret *corev1.Secret, vaultConfig VaultConfig) (bool, 
 	return false, nil
 }
 
-func (mw *mutatingWebhook) mutateSecret(secret *corev1.Secret, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) mutateSecret(secret *corev1.Secret, vaultConfig VaultConfig) error {
 	// do an early exit and don't construct the Vault client if not needed
 	requiredToMutate, err := secretNeedsMutation(secret, vaultConfig)
 	if err != nil {
@@ -111,7 +111,7 @@ func (mw *mutatingWebhook) mutateSecret(secret *corev1.Secret, vaultConfig Vault
 	return nil
 }
 
-func (mw *mutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultClient *vault.Client, vaultConfig VaultConfig) error {
 	assembled := dockerCreds{Auths: map[string]dockerTypes.AuthConfig{}}
 
 	for key, creds := range dc.Auths {
@@ -160,7 +160,7 @@ func (mw *mutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCr
 	return nil
 }
 
-func (mw *mutatingWebhook) mutateInlineSecretData(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) mutateInlineSecretData(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
 	for key, value := range sc {
 		for _, vaultSecretReference := range findInlineVaultDelimiters(value) {
 			mapData, err := getDataFromVault(map[string]string{key: vaultSecretReference[1]}, vaultClient, vaultConfig, mw.logger)
@@ -175,7 +175,7 @@ func (mw *mutatingWebhook) mutateInlineSecretData(secret *corev1.Secret, sc map[
 	return nil
 }
 
-func (mw *mutatingWebhook) mutateSecretData(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) mutateSecretData(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
 	secCreds, err := getDataFromVault(sc, vaultClient, vaultConfig, mw.logger)
 	if err != nil {
 		return err
