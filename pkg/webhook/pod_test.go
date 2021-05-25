@@ -1438,14 +1438,14 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 				registry:  ttp.fields.registry,
 				logger:    logrus.NewEntry(logrus.New()),
 			}
-			err := mw.mutatePod(context.Background(), ttp.args.pod, ttp.args.vaultConfig, ttp.args.ns, false)
+			err := mw.MutatePod(context.Background(), ttp.args.pod, ttp.args.vaultConfig, ttp.args.ns, false)
 			if (err != nil) != ttp.wantErr {
-				t.Errorf("MutatingWebhook.mutatePod() error = %v, wantErr %v", err, ttp.wantErr)
+				t.Errorf("MutatingWebhook.MutatePod() error = %v, wantErr %v", err, ttp.wantErr)
 				return
 			}
 
 			if !cmp.Equal(ttp.args.pod, ttp.wantedPod) {
-				t.Errorf("MutatingWebhook.mutatePod() = diff %v", cmp.Diff(ttp.args.pod, ttp.wantedPod))
+				t.Errorf("MutatingWebhook.MutatePod() = diff %v", cmp.Diff(ttp.args.pod, ttp.wantedPod))
 			}
 		})
 	}

@@ -52,16 +52,16 @@ func (mw *MutatingWebhook) VaultSecretsMutator(ctx context.Context, ar *model.Ad
 
 	switch v := obj.(type) {
 	case *corev1.Pod:
-		return &mutating.MutatorResult{MutatedObject: v}, mw.mutatePod(ctx, v, vaultConfig, ar.Namespace, ar.DryRun)
+		return &mutating.MutatorResult{MutatedObject: v}, mw.MutatePod(ctx, v, vaultConfig, ar.Namespace, ar.DryRun)
 
 	case *corev1.Secret:
-		return &mutating.MutatorResult{MutatedObject: v}, mw.mutateSecret(v, vaultConfig)
+		return &mutating.MutatorResult{MutatedObject: v}, mw.MutateSecret(v, vaultConfig)
 
 	case *corev1.ConfigMap:
-		return &mutating.MutatorResult{MutatedObject: v}, mw.mutateConfigMap(v, vaultConfig)
+		return &mutating.MutatorResult{MutatedObject: v}, mw.MutateConfigMap(v, vaultConfig)
 
 	case *unstructured.Unstructured:
-		return &mutating.MutatorResult{MutatedObject: v}, mw.mutateObject(v, vaultConfig)
+		return &mutating.MutatorResult{MutatedObject: v}, mw.MutateObject(v, vaultConfig)
 
 	default:
 		return &mutating.MutatorResult{}, nil
