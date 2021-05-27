@@ -307,12 +307,15 @@ func main() {
 
 		close(sigs)
 
-		var eerr exec.ExitError
-		if errors.As(err, &eerr) {
-			os.Exit(cmd.ProcessState.ExitCode())
-		} else if err != nil {
-			logger.Fatalln("failed to exec process", entrypointCmd, err.Error())
-			os.Exit(-1)
+		if err != nil {
+			exitCode := -1
+			// try to get the original exit code if possible
+			var exitError exec.ExitError
+			if errors.As(err, &exitError) {
+				exitCode = exitError.ExitCode()
+			}
+			logger.Errorln("failed to exec process", entrypointCmd, err.Error())
+			os.Exit(exitCode)
 		} else {
 			os.Exit(cmd.ProcessState.ExitCode())
 		}
