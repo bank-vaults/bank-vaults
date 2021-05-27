@@ -15,7 +15,7 @@ require (
 	github.com/Microsoft/hcsshim v0.8.10 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.193
 	github.com/aliyun/aliyun-oss-go-sdk v2.0.4+incompatible
-	github.com/aws/aws-sdk-go v1.35.5
+	github.com/aws/aws-sdk-go v1.35.24
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/banzaicloud/bank-vaults/pkg/sdk v0.2.1
 	github.com/banzaicloud/k8s-objectmatcher v1.5.0
@@ -28,8 +28,8 @@ require (
 	github.com/go-openapi/swag v0.19.10 // indirect
 	github.com/golang/snappy v0.0.2 // indirect
 	github.com/google/go-cmp v0.5.4
-	github.com/google/go-containerregistry v0.4.0
-	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20210113221012-4eb508cda163
+	github.com/google/go-containerregistry v0.5.1
+	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20210521160948-0233fcda5d53
 	github.com/gopherjs/gopherjs v0.0.0-20191106031601-ce3c9ade29de // indirect
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/api v1.1.0
@@ -55,7 +55,7 @@ require (
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
 	gocloud.dev v0.19.1-0.20200414210820-bb59d59f26d5
-	golang.org/x/oauth2 v0.0.0-20210218202405-ba52d332ba99
+	golang.org/x/oauth2 v0.0.0-20210427180440-81ed05c6b58c
 	google.golang.org/api v0.40.0
 	google.golang.org/genproto v0.0.0-20210224155714-063164c882e6
 	gopkg.in/ini.v1 v1.57.0 // indirect
