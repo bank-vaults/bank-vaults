@@ -21,6 +21,7 @@ require (
 	github.com/banzaicloud/k8s-objectmatcher v1.5.0
 	github.com/containerd/continuity v0.0.0-20201119173150-04c754faca46 // indirect
 	github.com/coreos/etcd-operator v0.9.4
+	github.com/cristalhq/jwt/v3 v3.0.14 // indirect
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200706150819-a40b877fbb9e+incompatible
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-openapi/spec v0.19.8 // indirect
