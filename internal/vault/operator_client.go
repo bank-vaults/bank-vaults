@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"emperror.dev/errors"
+	"github.com/cristalhq/jwt/v3"
 	"github.com/hashicorp/hcl"
 	hclPrinter "github.com/hashicorp/hcl/hcl/printer"
 	"github.com/hashicorp/vault/api"
@@ -510,10 +511,21 @@ func (v *vault) kubernetesAuthConfigDefault() (map[string]interface{}, error) {
 	if err != nil {
 		return nil, errors.WrapIf(err, "failed to read serviceaccount token")
 	}
+	token, err := jwt.Parse(tokenReviewerJWT)
+	if err != nil {
+		return nil, errors.WrapIf(err, "failed to parse serviceaccount token")
+	}
+	var claims jwt.StandardClaims
+	err = json.Unmarshal(token.RawClaims(), &claims)
+	if err != nil {
+		return nil, errors.WrapIf(err, "failed to get serviceaccount token claims")
+	}
+
 	config := map[string]interface{}{
 		"kubernetes_host":    fmt.Sprint("https://", os.Getenv("KUBERNETES_SERVICE_HOST")),
 		"kubernetes_ca_cert": string(kubernetesCACert),
 		"token_reviewer_jwt": string(tokenReviewerJWT),
+		"issuer":             claims.Issuer,
 	}
 
 	return config, nil
