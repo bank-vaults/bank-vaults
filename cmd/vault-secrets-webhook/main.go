@@ -66,19 +66,19 @@ func handlerFor(config mutating.WebhookConfig, recorder whwebhook.MetricsRecorde
 func main() {
 	var logger *logrus.Entry
 	{
-		log := logrus.New()
+		l := logrus.New()
 
 		if viper.GetBool("enable_json_log") {
-			log.SetFormatter(&logrus.JSONFormatter{})
+			l.SetFormatter(&logrus.JSONFormatter{})
 		}
 
 		lvl, err := logrus.ParseLevel(viper.GetString("log_level"))
 		if err != nil {
 			lvl = logrus.InfoLevel
 		}
-		log.SetLevel(lvl)
+		l.SetLevel(lvl)
 
-		logger = log.WithField("app", "vault-secrets-webhook")
+		logger = l.WithField("app", "vault-secrets-webhook")
 	}
 
 	k8sClient, err := newK8SClient()
@@ -91,9 +91,9 @@ func main() {
 		logger.Fatalf("error creating mutating webhook: %s", err)
 	}
 
-	mutator := mutating.MutatorFunc(mutatingWebhook.VaultSecretsMutator)
-
 	whLogger := whlog.NewLogrus(logger)
+
+	mutator := webhook.ErrorLoggerMutator(mutatingWebhook.VaultSecretsMutator, whLogger)
 
 	promRegistry := prometheus.NewRegistry()
 	metricsRecorder, err := whmetrics.NewRecorder(whmetrics.RecorderConfig{Registry: promRegistry})

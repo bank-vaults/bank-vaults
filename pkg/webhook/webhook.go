@@ -24,6 +24,7 @@ import (
 	"emperror.dev/errors"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
+	"github.com/slok/kubewebhook/v2/pkg/log"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	"github.com/slok/kubewebhook/v2/pkg/webhook/mutating"
 	corev1 "k8s.io/api/core/v1"
@@ -238,4 +239,16 @@ func NewMutatingWebhook(logger *logrus.Entry, k8sClient kubernetes.Interface) (*
 		registry:  NewRegistry(),
 		logger:    logger,
 	}, nil
+}
+
+func ErrorLoggerMutator(mutator mutating.MutatorFunc, logger log.Logger) mutating.MutatorFunc {
+	return func(ctx context.Context, ar *model.AdmissionReview, obj metav1.Object) (result *mutating.MutatorResult, err error) {
+		r, err := mutator(ctx, ar, obj)
+		if err != nil {
+			logger.WithCtxValues(ctx).WithValues(log.Kv{
+				"error": err,
+			}).Errorf("Admission review request failed")
+		}
+		return r, err
+	}
 }
