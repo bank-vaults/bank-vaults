@@ -502,7 +502,11 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 						continue
 					}
 
-					client.logger.Info("received new Vault token")
+					client.logger.Info("received new Vault token", map[string]interface{}{
+						"addr": o.url,
+						"role": o.role,
+						"path": o.authPath,
+					})
 
 					// Set the first token from the response
 					rawClient.SetToken(secret.Auth.ClientToken)
