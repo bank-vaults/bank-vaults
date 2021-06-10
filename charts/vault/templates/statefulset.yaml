@@ -262,8 +262,10 @@ spec:
                   app.kubernetes.io/instance: {{ .Release.Name | quote }}
 {{- end }}
       serviceAccountName: {{ template "vault.serviceAccountName" . }}
+      {{- if not .Values.global.openshift }}
       securityContext:
         fsGroup: 65534
+      {{- end }}
       {{- with .Values.priorityClassName }}
       priorityClassName: {{ . }}
       {{- end }}

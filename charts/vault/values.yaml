@@ -1,6 +1,10 @@
 # Default values for vault.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
+global:
+  # If deploying to OpenShift
+  openshift: false
+
 replicaCount: 1
 strategy:
   type: RollingUpdate
