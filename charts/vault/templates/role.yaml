@@ -13,7 +13,7 @@ rules:
 - apiGroups: [""]
   resources: ["secrets"]
   resourceNames: ["bank-vaults"]
-  verbs: ["*"]
+  verbs: ["create", "get", "list", "watch", "update", "patch", "delete", "deletecollection"]
 - apiGroups: [""]
   resources: ["secrets"]
   resourceNames: [""]
