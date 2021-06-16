@@ -14,7 +14,7 @@ RUN go install ./cmd/template
 RUN go install ./cmd/bank-vaults
 
 
-FROM alpine:3.13.5
+FROM alpine:3.14.0
 
 RUN apk add --no-cache ca-certificates curl \
                        ccid opensc pcsc-lite-libs softhsm
