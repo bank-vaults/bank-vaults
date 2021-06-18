@@ -105,3 +105,7 @@ spec:
       securityContext:
 {{ toYaml .Values.podSecurityContext | indent 8 }}
   {{- end }}
+  {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+{{ toYaml .Values.topologySpreadConstraints | indent 8 }}
+  {{- end }}

@@ -114,6 +114,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | service.name                     | webhook service name                                                         | `vault-secrets-webhook`             |
 | service.type                     | webhook service type                                                         | `ClusterIP`                         |
 | tolerations                      | tolerations to add                                                           | `[]`                                |
+| topologySpreadConstraints        | topologySpreadConstraints to add                                                           | `{}`                                |
 | rbac.psp.enabled                 | use pod security policy                                                      | `false`                             |
 | rbac.authDelegatorRole.enabled    | bind `system:auth-delegator` to the ServiceAccount                          | `false`                             |
 | env.VAULT_IMAGE                  | vault image                                                                  | `vault:1.6.2`                       |
