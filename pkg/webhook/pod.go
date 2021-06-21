@@ -308,6 +308,10 @@ func (mw *MutatingWebhook) mutateContainers(ctx context.Context, containers []co
 				Name:  "VAULT_CLIENT_TIMEOUT",
 				Value: vaultConfig.ClientTimeout.String(),
 			},
+			{
+				Name:  "VAULT_NAMESPACE",
+				Value: vaultConfig.VaultNamespace,
+			},
 		}...)
 
 		if vaultConfig.LogLevel != "" {
