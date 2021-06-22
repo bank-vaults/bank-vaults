@@ -404,6 +404,6 @@ func SetConfigDefaults() {
 	viper.SetDefault("VAULT_ENV_MEMORY_REQUEST", "")
 	viper.SetDefault("VAULT_ENV_CPU_LIMIT", "")
 	viper.SetDefault("VAULT_ENV_MEMORY_LIMIT", "")
-	viper.SetDefault("VAULT_NAMESPACE", "")
+	viper.SetDefault("VAULT_NAMESPACE", "root")
 	viper.AutomaticEnv()
 }
