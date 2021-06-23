@@ -319,7 +319,7 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-namespace"]; ok {
 		vaultConfig.VaultNamespace = val
 	} else {
-		vaultConfig.VaultNamespace = viper.GetString(viper.GetString("VAULT_NAMESPACE"))
+		vaultConfig.VaultNamespace = viper.GetString("VAULT_NAMESPACE")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-inject-in-initcontainers"]; ok {
