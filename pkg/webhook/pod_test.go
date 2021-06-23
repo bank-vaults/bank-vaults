@@ -489,6 +489,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					ConfigfilePath:       "/vault/secrets",
 					Addr:                 "test",
 					SkipVerify:           false,
+					VaultNamespace:       "root",
 					CtCPU:                resource.MustParse("50m"),
 					CtMemory:             resource.MustParse("128Mi"),
 					AgentImage:           "vault:latest",
@@ -692,7 +693,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					EnvMemoryRequest:     resource.MustParse("64Mi"),
 					EnvCPULimit:          resource.MustParse("250m"),
 					EnvMemoryLimit:       resource.MustParse("64Mi"),
-					VaultNamespace:       "",
+					VaultNamespace:       "root",
 				},
 			},
 			wantedPod: &corev1.Pod{
@@ -883,7 +884,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					AgentMemory:          resource.MustParse("128Mi"),
 					AgentImage:           "vault:latest",
 					AgentImagePullPolicy: "IfNotPresent",
-					VaultNamespace:       "",
+					VaultNamespace:       "root",
 				},
 			},
 			wantedPod: &corev1.Pod{
@@ -1048,7 +1049,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					EnvMemoryRequest:         resource.MustParse("64Mi"),
 					EnvCPULimit:              resource.MustParse("250m"),
 					EnvMemoryLimit:           resource.MustParse("64Mi"),
-					VaultNamespace:           "",
+					VaultNamespace:           "root",
 				},
 			},
 			wantedPod: &corev1.Pod{
@@ -1269,7 +1270,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					EnvMemoryRequest:         resource.MustParse("64Mi"),
 					EnvCPULimit:              resource.MustParse("250m"),
 					EnvMemoryLimit:           resource.MustParse("64Mi"),
-					VaultNamespace:           "",
+					VaultNamespace:           "root",
 				},
 			},
 			wantedPod: &corev1.Pod{
