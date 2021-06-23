@@ -510,6 +510,10 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									Name:  "VAULT_SKIP_VERIFY",
 									Value: "false",
 								},
+								{
+									Name:  "VAULT_NAMESPACE",
+									Value: "buddy",
+								},
 							},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
@@ -555,6 +559,10 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								{
 									Name:  "VAULT_SKIP_VERIFY",
 									Value: "false",
+								},
+								{
+									Name:  "VAULT_NAMESPACE",
+									Value: "root",
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
