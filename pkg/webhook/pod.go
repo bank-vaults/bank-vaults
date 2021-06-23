@@ -308,10 +308,6 @@ func (mw *MutatingWebhook) mutateContainers(ctx context.Context, containers []co
 				Name:  "VAULT_CLIENT_TIMEOUT",
 				Value: vaultConfig.ClientTimeout.String(),
 			},
-			{
-				Name:  "VAULT_NAMESPACE",
-				Value: vaultConfig.VaultNamespace,
-			},
 		}...)
 
 		if vaultConfig.LogLevel != "" {
@@ -328,6 +324,14 @@ func (mw *MutatingWebhook) mutateContainers(ctx context.Context, containers []co
 				{
 					Name:  "VAULT_TRANSIT_KEY_ID",
 					Value: vaultConfig.TransitKeyID,
+				},
+			}...)
+		}
+		if len(vaultConfig.VaultNamespace) > 0 {
+			container.Env = append(container.Env, []corev1.EnvVar{
+				{
+					Name:  "VAULT_NAMESPACE",
+					Value: vaultConfig.VaultNamespace,
 				},
 			}...)
 		}
