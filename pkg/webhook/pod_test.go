@@ -512,7 +512,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								},
 								{
 									Name:  "VAULT_NAMESPACE",
-									Value: "buddy",
+									Value: "root",
 								},
 							},
 							Resources: corev1.ResourceRequirements{
