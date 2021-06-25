@@ -72,6 +72,7 @@ type VaultConfig struct {
 	EnvMemoryRequest            resource.Quantity
 	EnvCPULimit                 resource.Quantity
 	EnvMemoryLimit              resource.Quantity
+	VaultNamespace              string
 }
 
 func parseVaultConfig(obj metav1.Object) VaultConfig {
@@ -315,6 +316,12 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.AgentImagePullPolicy = getPullPolicy(viper.GetString("vault_image_pull_policy"))
 	}
 
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-namespace"]; ok {
+		vaultConfig.VaultNamespace = val
+	} else {
+		vaultConfig.VaultNamespace = viper.GetString("VAULT_NAMESPACE")
+	}
+
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-inject-in-initcontainers"]; ok {
 		vaultConfig.CtInjectInInitcontainers, _ = strconv.ParseBool(val)
 	} else {
@@ -397,5 +404,6 @@ func SetConfigDefaults() {
 	viper.SetDefault("VAULT_ENV_MEMORY_REQUEST", "")
 	viper.SetDefault("VAULT_ENV_CPU_LIMIT", "")
 	viper.SetDefault("VAULT_ENV_MEMORY_LIMIT", "")
+	viper.SetDefault("VAULT_NAMESPACE", "")
 	viper.AutomaticEnv()
 }
