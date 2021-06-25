@@ -94,10 +94,10 @@ type Vault interface {
 	Active() (bool, error)
 	Unseal() error
 	Leader() (bool, error)
+	LeaderAddress() (string, error)
 	Configure(config *viper.Viper) error
 }
 
-//
 type KVService interface {
 	Set(key string, value []byte) error
 	Get(key string) ([]byte, error)
@@ -164,6 +164,15 @@ func (v *vault) Leader() (bool, error) {
 	}
 
 	return resp.IsSelf, nil
+}
+
+func (v *vault) LeaderAddress() (string, error) {
+	resp, err := v.cl.Sys().Leader()
+	if err != nil {
+		return "", errors.Wrap(err, "error checking leader address")
+	}
+
+	return resp.LeaderAddress, nil
 }
 
 // Unseal will attempt to unseal vault by retrieving keys from the kms service
