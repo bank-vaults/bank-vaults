@@ -371,7 +371,9 @@ var HAStorageTypes = map[string]bool{
 func (spec *VaultSpec) HasHAStorage() bool {
 	storageType := spec.GetStorageType()
 	if _, ok := HAStorageTypes[storageType]; ok {
-		return spec.HasStorageHAEnabled()
+		if spec.HasStorageHAEnabled() {
+			return true
+		}
 	}
 	if spec.hasHAStorageStanza() {
 		return true

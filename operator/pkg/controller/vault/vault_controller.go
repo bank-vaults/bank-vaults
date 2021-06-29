@@ -460,15 +460,19 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 				externalSecretsToWatchItems = append(externalSecretsToWatchItems, secret)
 			}
 		}
-
 	}
 
-	vaultConfigSecret, vaultConfigSum, err := secretForVaultConfig(v)
+	rawConfigSecret, rawConfigSum, err := secretForRawVaultConfig(v)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to fabricate Secret: %v", err)
 	}
 
-	err = r.createOrUpdateObject(vaultConfigSecret)
+	// Set Vault instance as the owner and controller
+	if err := controllerutil.SetControllerReference(v, rawConfigSecret, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	err = r.createOrUpdateObject(rawConfigSecret)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to create/update Secret: %v", err)
 	}
@@ -476,7 +480,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 	// Create the StatefulSet if it doesn't exist
 	restartAnnotations := map[string]string{}
 	restartAnnotations["vault.banzaicloud.io/tls-expiration-date"] = tlsExpiration.UTC().Format(time.RFC3339)
-	restartAnnotations["vault.banzaicloud.io/vault-config"] = vaultConfigSum
+	restartAnnotations["vault.banzaicloud.io/vault-config"] = rawConfigSum
 	statefulSet, err := statefulSetForVault(v, externalSecretsToWatchItems, restartAnnotations, service)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to fabricate StatefulSet: %v", err)
@@ -612,7 +616,7 @@ func newHTTPClient() *http.Client {
 	}
 }
 
-func secretForVaultConfig(v *vaultv1alpha1.Vault) (*corev1.Secret, string, error) {
+func secretForRawVaultConfig(v *vaultv1alpha1.Vault) (*corev1.Secret, string, error) {
 	configJSON, err := v.ConfigJSON()
 	if err != nil {
 		return nil, "", err
