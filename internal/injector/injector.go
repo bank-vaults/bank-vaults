@@ -52,7 +52,7 @@ func NewSecretInjector(config Config, client *vault.Client, renewer SecretRenewe
 	return SecretInjector{config: config, client: client, renewer: renewer, logger: logger}
 }
 
-var InlineMutationRegex = regexp.MustCompile(`\${([>]{0,2}vault:.*?)}`)
+var inlineMutationRegex = regexp.MustCompile(`\${([>]{0,2}vault:.*?)}`)
 
 func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inject SecretInjectorFunc) error {
 	transitCache := map[string][]byte{}
@@ -61,8 +61,8 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 	templater := configuration.NewTemplater(configuration.DefaultLeftDelimiter, configuration.DefaultRightDelimiter)
 
 	for name, value := range references {
-		if hasInlineVaultDelimiters(value) {
-			for _, vaultSecretReference := range findInlineVaultDelimiters(value) {
+		if HasInlineVaultDelimiters(value) {
+			for _, vaultSecretReference := range FindInlineVaultDelimiters(value) {
 				mapData, err := getDataFromVault(map[string]string{name: vaultSecretReference[1]}, i)
 				if err != nil {
 					return err
@@ -296,12 +296,12 @@ func (i SecretInjector) readVaultPath(path, versionOrData string, update bool) (
 	return secretData, nil
 }
 
-func hasInlineVaultDelimiters(value string) bool {
-	return len(findInlineVaultDelimiters(value)) > 0
+func HasInlineVaultDelimiters(value string) bool {
+	return len(FindInlineVaultDelimiters(value)) > 0
 }
 
-func findInlineVaultDelimiters(value string) [][]string {
-	return InlineMutationRegex.FindAllStringSubmatch(value, -1)
+func FindInlineVaultDelimiters(value string) [][]string {
+	return inlineMutationRegex.FindAllStringSubmatch(value, -1)
 }
 
 func getDataFromVault(data map[string]string, secretInjector SecretInjector) (map[string]string, error) {

@@ -34,6 +34,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	logrusadapter "logur.dev/adapter/logrus"
 
+	"github.com/banzaicloud/bank-vaults/internal/injector"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
@@ -99,7 +100,7 @@ func (mw *MutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns str
 				}
 			}
 			for key, value := range data {
-				if hasVaultPrefix(value) {
+				if hasVaultPrefix(value) || injector.HasInlineVaultDelimiters(value) {
 					envFromCM := corev1.EnvVar{
 						Name:  key,
 						Value: value,
@@ -117,11 +118,12 @@ func (mw *MutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns str
 					return envVars, err
 				}
 			}
-			for key, value := range data {
-				if hasVaultPrefix(string(value)) {
+			for name, v := range data {
+				value := string(v)
+				if hasVaultPrefix(value) || injector.HasInlineVaultDelimiters(value) {
 					envFromSec := corev1.EnvVar{
-						Name:  key,
-						Value: string(value),
+						Name:  name,
+						Value: value,
 					}
 					envVars = append(envVars, envFromSec)
 				}
@@ -140,10 +142,11 @@ func (mw *MutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*core
 			}
 			return nil, err
 		}
-		if hasVaultPrefix(data[env.ValueFrom.ConfigMapKeyRef.Key]) {
+		value := data[env.ValueFrom.ConfigMapKeyRef.Key]
+		if hasVaultPrefix(value) || injector.HasInlineVaultDelimiters(value) {
 			fromCM := corev1.EnvVar{
 				Name:  env.Name,
-				Value: data[env.ValueFrom.ConfigMapKeyRef.Key],
+				Value: value,
 			}
 			return &fromCM, nil
 		}
@@ -156,10 +159,11 @@ func (mw *MutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*core
 			}
 			return nil, err
 		}
-		if hasVaultPrefix(string(data[env.ValueFrom.SecretKeyRef.Key])) {
+		value := string(data[env.ValueFrom.SecretKeyRef.Key])
+		if hasVaultPrefix(value) || injector.HasInlineVaultDelimiters(value) {
 			fromSecret := corev1.EnvVar{
 				Name:  env.Name,
-				Value: string(data[env.ValueFrom.SecretKeyRef.Key]),
+				Value: value,
 			}
 			return &fromSecret, nil
 		}
