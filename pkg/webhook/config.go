@@ -382,7 +382,6 @@ func SetConfigDefaults() {
 	viper.SetDefault("vault_ignore_missing_secrets", "false")
 	viper.SetDefault("vault_env_passthrough", "")
 	viper.SetDefault("mutate_configmap", "false")
-	viper.SetDefault("inline_mutation", "false")
 	viper.SetDefault("tls_cert_file", "")
 	viper.SetDefault("tls_private_key_file", "")
 	viper.SetDefault("listen_address", ":8443")
