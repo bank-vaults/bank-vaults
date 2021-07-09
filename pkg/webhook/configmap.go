@@ -24,12 +24,9 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
-func configMapNeedsMutation(configMap *corev1.ConfigMap, vaultConfig VaultConfig) bool {
+func configMapNeedsMutation(configMap *corev1.ConfigMap) bool {
 	for _, value := range configMap.Data {
-		if hasVaultPrefix(value) {
-			return true
-		}
-		if vaultConfig.InlineMutation && hasInlineVaultDelimiters(value) {
+		if hasVaultPrefix(value) || hasInlineVaultDelimiters(value) {
 			return true
 		}
 	}
@@ -44,7 +41,7 @@ func configMapNeedsMutation(configMap *corev1.ConfigMap, vaultConfig VaultConfig
 
 func (mw *MutatingWebhook) MutateConfigMap(configMap *corev1.ConfigMap, vaultConfig VaultConfig) error {
 	// do an early exit and don't construct the Vault client if not needed
-	if !configMapNeedsMutation(configMap, vaultConfig) {
+	if !configMapNeedsMutation(configMap) {
 		return nil
 	}
 

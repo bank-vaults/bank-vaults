@@ -52,7 +52,6 @@ type VaultConfig struct {
 	VaultEnvPassThrough         string
 	ConfigfilePath              string
 	MutateConfigMap             bool
-	InlineMutation              bool
 	EnableJSONLog               string
 	LogLevel                    string
 	AgentConfigMap              string
@@ -228,12 +227,6 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.MutateConfigMap, _ = strconv.ParseBool(viper.GetString("mutate_configmap"))
 	}
 
-	if val, ok := annotations["vault.security.banzaicloud.io/inline-mutation"]; ok {
-		vaultConfig.InlineMutation, _ = strconv.ParseBool(val)
-	} else {
-		vaultConfig.InlineMutation, _ = strconv.ParseBool(viper.GetString("inline_mutation"))
-	}
-
 	if val, ok := annotations["vault.security.banzaicloud.io/log-level"]; ok {
 		vaultConfig.LogLevel = val
 	} else {
@@ -389,7 +382,6 @@ func SetConfigDefaults() {
 	viper.SetDefault("vault_ignore_missing_secrets", "false")
 	viper.SetDefault("vault_env_passthrough", "")
 	viper.SetDefault("mutate_configmap", "false")
-	viper.SetDefault("inline_mutation", "false")
 	viper.SetDefault("tls_cert_file", "")
 	viper.SetDefault("tls_private_key_file", "")
 	viper.SetDefault("listen_address", ":8443")
