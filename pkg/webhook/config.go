@@ -52,7 +52,6 @@ type VaultConfig struct {
 	VaultEnvPassThrough         string
 	ConfigfilePath              string
 	MutateConfigMap             bool
-	InlineMutation              bool
 	EnableJSONLog               string
 	LogLevel                    string
 	AgentConfigMap              string
@@ -226,12 +225,6 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.MutateConfigMap, _ = strconv.ParseBool(val)
 	} else {
 		vaultConfig.MutateConfigMap, _ = strconv.ParseBool(viper.GetString("mutate_configmap"))
-	}
-
-	if val, ok := annotations["vault.security.banzaicloud.io/inline-mutation"]; ok {
-		vaultConfig.InlineMutation, _ = strconv.ParseBool(val)
-	} else {
-		vaultConfig.InlineMutation, _ = strconv.ParseBool(viper.GetString("inline_mutation"))
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/log-level"]; ok {

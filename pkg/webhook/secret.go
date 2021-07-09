@@ -31,7 +31,7 @@ type dockerCreds struct {
 	Auths map[string]dockerTypes.AuthConfig `json:"auths"`
 }
 
-func secretNeedsMutation(secret *corev1.Secret, vaultConfig VaultConfig) (bool, error) {
+func secretNeedsMutation(secret *corev1.Secret) (bool, error) {
 	for key, value := range secret.Data {
 		if key == corev1.DockerConfigJsonKey {
 			var dc dockerCreds
@@ -53,7 +53,7 @@ func secretNeedsMutation(secret *corev1.Secret, vaultConfig VaultConfig) (bool, 
 			}
 		} else if hasVaultPrefix(string(value)) {
 			return true, nil
-		} else if vaultConfig.InlineMutation && hasInlineVaultDelimiters(string(value)) {
+		} else if hasInlineVaultDelimiters(string(value)) {
 			return true, nil
 		}
 	}
@@ -62,7 +62,7 @@ func secretNeedsMutation(secret *corev1.Secret, vaultConfig VaultConfig) (bool, 
 
 func (mw *MutatingWebhook) MutateSecret(secret *corev1.Secret, vaultConfig VaultConfig) error {
 	// do an early exit and don't construct the Vault client if not needed
-	requiredToMutate, err := secretNeedsMutation(secret, vaultConfig)
+	requiredToMutate, err := secretNeedsMutation(secret)
 	if err != nil {
 		return errors.Wrap(err, "failed to check if secret needs to be mutated")
 	}
