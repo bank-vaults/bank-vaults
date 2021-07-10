@@ -15,8 +15,9 @@
 package webhook
 
 import (
-	"emperror.dev/errors"
 	"encoding/base64"
+
+	"emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/banzaicloud/bank-vaults/internal/injector"
