@@ -26,6 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeVer "k8s.io/apimachinery/pkg/version"
+
+	"github.com/banzaicloud/bank-vaults/internal/injector"
 )
 
 const vaultAgentConfig = `
@@ -217,10 +219,7 @@ func (mw *MutatingWebhook) mutateContainers(ctx context.Context, containers []co
 		}
 
 		for _, env := range container.Env {
-			if hasVaultPrefix(env.Value) {
-				envVars = append(envVars, env)
-			}
-			if hasInlineVaultDelimiters(env.Value) {
+			if hasVaultPrefix(env.Value) || injector.HasInlineVaultDelimiters(env.Value) {
 				envVars = append(envVars, env)
 			}
 			if env.ValueFrom != nil {

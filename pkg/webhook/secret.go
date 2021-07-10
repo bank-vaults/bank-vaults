@@ -24,6 +24,7 @@ import (
 	dockerTypes "github.com/docker/docker/api/types"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/banzaicloud/bank-vaults/internal/injector"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
@@ -53,7 +54,7 @@ func secretNeedsMutation(secret *corev1.Secret) (bool, error) {
 			}
 		} else if hasVaultPrefix(string(value)) {
 			return true, nil
-		} else if hasInlineVaultDelimiters(string(value)) {
+		} else if injector.HasInlineVaultDelimiters(string(value)) {
 			return true, nil
 		}
 	}
@@ -89,7 +90,7 @@ func (mw *MutatingWebhook) MutateSecret(secret *corev1.Secret, vaultConfig Vault
 			if err != nil {
 				return errors.Wrap(err, "mutate dockerconfig json failed")
 			}
-		} else if hasInlineVaultDelimiters(string(value)) {
+		} else if injector.HasInlineVaultDelimiters(string(value)) {
 			data := map[string]string{
 				key: string(value),
 			}
@@ -162,7 +163,7 @@ func (mw *MutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCr
 
 func (mw *MutatingWebhook) mutateInlineSecretData(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
 	for key, value := range sc {
-		for _, vaultSecretReference := range findInlineVaultDelimiters(value) {
+		for _, vaultSecretReference := range injector.FindInlineVaultDelimiters(value) {
 			mapData, err := getDataFromVault(map[string]string{key: vaultSecretReference[1]}, vaultClient, vaultConfig, mw.logger)
 			if err != nil {
 				return err

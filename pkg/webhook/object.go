@@ -21,6 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/banzaicloud/bank-vaults/internal/injector"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
@@ -97,9 +98,9 @@ func traverseObject(o interface{}, vaultClient *vault.Client, vaultConfig VaultC
 				}
 
 				e.Set(dataFromVault["data"])
-			} else if hasInlineVaultDelimiters(s) {
+			} else if injector.HasInlineVaultDelimiters(s) {
 				dataFromVault := s
-				for _, vaultSecretReference := range findInlineVaultDelimiters(s) {
+				for _, vaultSecretReference := range injector.FindInlineVaultDelimiters(s) {
 					mapData, err := getDataFromVault(map[string]string{"data": vaultSecretReference[1]}, vaultClient, vaultConfig, logger)
 					if err != nil {
 						return err

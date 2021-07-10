@@ -16,17 +16,17 @@ package webhook
 
 import (
 	"encoding/base64"
-	"strings"
 
 	"emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/banzaicloud/bank-vaults/internal/injector"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 func configMapNeedsMutation(configMap *corev1.ConfigMap) bool {
 	for _, value := range configMap.Data {
-		if hasVaultPrefix(value) || hasInlineVaultDelimiters(value) {
+		if hasVaultPrefix(value) || injector.HasInlineVaultDelimiters(value) {
 			return true
 		}
 	}
@@ -52,24 +52,9 @@ func (mw *MutatingWebhook) MutateConfigMap(configMap *corev1.ConfigMap, vaultCon
 
 	defer vaultClient.Close()
 
-	for key, value := range configMap.Data {
-		if hasInlineVaultDelimiters(value) {
-			data := map[string]string{
-				key: value,
-			}
-			err := mw.mutateInlineConfigMapData(configMap, data, vaultClient, vaultConfig)
-			if err != nil {
-				return err
-			}
-		} else if hasVaultPrefix(value) {
-			data := map[string]string{
-				key: value,
-			}
-			err := mw.mutateConfigMapData(configMap, data, vaultClient, vaultConfig)
-			if err != nil {
-				return err
-			}
-		}
+	configMap.Data, err = getDataFromVault(configMap.Data, vaultClient, vaultConfig, mw.logger)
+	if err != nil {
+		return err
 	}
 
 	for key, value := range configMap.BinaryData {
@@ -80,35 +65,6 @@ func (mw *MutatingWebhook) MutateConfigMap(configMap *corev1.ConfigMap, vaultCon
 			err := mw.mutateConfigMapBinaryData(configMap, binaryData, vaultClient, vaultConfig)
 			if err != nil {
 				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func (mw *MutatingWebhook) mutateConfigMapData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
-	mapData, err := getDataFromVault(data, vaultClient, vaultConfig, mw.logger)
-	if err != nil {
-		return err
-	}
-
-	for key, value := range mapData {
-		configMap.Data[key] = value
-	}
-
-	return nil
-}
-
-func (mw *MutatingWebhook) mutateInlineConfigMapData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
-	for key, value := range data {
-		for _, vaultSecretReference := range findInlineVaultDelimiters(value) {
-			mapData, err := getDataFromVault(map[string]string{key: vaultSecretReference[1]}, vaultClient, vaultConfig, mw.logger)
-			if err != nil {
-				return err
-			}
-			for key, value := range mapData {
-				configMap.Data[key] = strings.Replace(configMap.Data[key], vaultSecretReference[0], value, -1)
 			}
 		}
 	}
