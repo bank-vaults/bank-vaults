@@ -118,7 +118,7 @@ Kudos to HashiCorp for open sourcing Vault and making secret management easier a
 
 ## License
 
-Copyright (c) 2017-2020 [Banzai Cloud, Inc.](https://banzaicloud.com)
+Copyright (c) 2017-2021 [Banzai Cloud, Inc.](https://banzaicloud.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
