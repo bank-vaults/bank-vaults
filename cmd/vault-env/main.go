@@ -310,7 +310,7 @@ func main() {
 		if err != nil {
 			exitCode := -1
 			// try to get the original exit code if possible
-			var exitError exec.ExitError
+			var exitError *exec.ExitError
 			if errors.As(err, &exitError) {
 				exitCode = exitError.ExitCode()
 			}
