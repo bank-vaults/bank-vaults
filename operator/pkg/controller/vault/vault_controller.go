@@ -1085,17 +1085,27 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	return dep, nil
 }
 
-func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
+func deprecatedConfigMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	ls := v.LabelsForVaultConfigurer()
-	cm := &corev1.ConfigMap{
+	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name + "-configurer",
 			Namespace: v.Namespace,
 			Labels:    withVaultConfigurerLabels(v, ls),
 		},
-		Data: map[string]string{internalVault.DefaultConfigFile: v.Spec.ExternalConfigJSON()},
 	}
-	return cm
+}
+
+func secretForConfigurer(v *vaultv1alpha1.Vault) *corev1.Secret {
+	ls := v.LabelsForVaultConfigurer()
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v.Name + "-configurer",
+			Namespace: v.Namespace,
+			Labels:    withVaultConfigurerLabels(v, ls),
+		},
+		Data: map[string][]byte{internalVault.DefaultConfigFile: v.Spec.ExternalConfigJSON()},
+	}
 }
 
 func hostsForService(svc, namespace string) []string {
@@ -2270,16 +2280,23 @@ func certHostsAndIPsChanged(v *vaultv1alpha1.Vault, service *corev1.Service, cer
 }
 
 func (r *ReconcileVault) deployConfigurer(v *vaultv1alpha1.Vault, tlsAnnotations map[string]string) error {
-	// Create the configmap if it doesn't exist
-	cm := configMapForConfigurer(v)
+	// Create the default config secret if it doesn't exist
+	configSecret := secretForConfigurer(v)
 
 	// Set Vault instance as the owner and controller
-	err := controllerutil.SetControllerReference(v, cm, r.scheme)
+	err := controllerutil.SetControllerReference(v, configSecret, r.scheme)
 	if err != nil {
 		return err
 	}
 
-	err = r.createOrUpdateObject(cm)
+	// Since the default config type has changed to Secret now,
+	// we need to delete the old ConfigMap of the configurer config.
+	err = r.client.Delete(context.TODO(), deprecatedConfigMapForConfigurer(v))
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to delete deprecated configurer configmap: %v", err)
+	}
+
+	err = r.createOrUpdateObject(configSecret)
 	if err != nil {
 		return fmt.Errorf("failed to create/update configurer configmap: %v", err)
 	}
