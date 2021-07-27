@@ -745,8 +745,8 @@ func (v *Vault) ConfigJSON() ([]byte, error) {
 }
 
 // ExternalConfigJSON returns the ExternalConfig field as a JSON string
-func (spec *VaultSpec) ExternalConfigJSON() string {
-	return string(spec.ExternalConfig.Raw)
+func (spec *VaultSpec) ExternalConfigJSON() []byte {
+	return spec.ExternalConfig.Raw
 }
 
 // IsAutoUnseal checks if auto-unseal is configured
