@@ -213,7 +213,8 @@ func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 		vault.ClientAuthPath(vaultConfig.Path),
 		vault.ClientAuthMethod(vaultConfig.AuthMethod),
 		vault.ClientLogger(logrusadapter.NewFromEntry(mw.logger)),
-	)
+		vault.ExistingJWT(vaultConfig.ServiceAccountJWT),
+	), nil
 }
 
 func (mw *MutatingWebhook) ServeMetrics(addr string, handler http.Handler) {

@@ -60,6 +60,7 @@ type clientOptions struct {
 	timeout    time.Duration
 	logger     Logger
 	authMethod ClientAuthMethod
+	jwt 	   string
 }
 
 // ClientOption configures a Vault client using the functional options paradigm popularized by Rob Pike and Dave Cheney.
@@ -132,6 +133,12 @@ func (co ClientAuthMethod) apply(o *clientOptions) {
 	o.authMethod = co
 }
 
+type ExistingJWT string
+
+func (co ExistingJWT) apply(o *clientOptions){
+	o.jwt = string(co)
+}
+
 const (
 	// AWSEC2AuthMethod is used for the Vault AWS EC2 auth method
 	// as described here: https://www.vaultproject.io/docs/auth/aws#ec2-auth-method
@@ -156,6 +163,9 @@ const (
 	// as described here:
 	// - https://www.vaultproject.io/docs/auth/azure
 	AzureMSIAuthMethod ClientAuthMethod = "azure"
+
+	// ExistingJWTAuthMethod is used to use the service account of the namespaced resource (configmap/secret)
+	ExistingJWTAuthMethod ClientAuthMethod = "namespaced"
 )
 
 // Client is a Vault client with Kubernetes support, token automatic renewing and
@@ -449,6 +459,14 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 						"resource_group_name": metadata.ResourceGroupName,
 						"vm_name":             metadata.VMName,
 						"vmss_name":           metadata.VMssName,
+					}, nil
+				}
+
+			case ExistingJWTAuthMethod:
+				loginDataFunc = func()(map[string]interface{}, error){
+					return map[string]interface{}{
+						"role":                o.role,
+						"jwt":                 o.jwt,
 					}, nil
 				}
 
