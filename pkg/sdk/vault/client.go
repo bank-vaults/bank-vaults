@@ -132,7 +132,6 @@ func (co ClientAuthMethod) apply(o *clientOptions) {
 	o.authMethod = co
 }
 
-
 const (
 	// AWSEC2AuthMethod is used for the Vault AWS EC2 auth method
 	// as described here: https://www.vaultproject.io/docs/auth/aws#ec2-auth-method
@@ -157,7 +156,6 @@ const (
 	// as described here:
 	// - https://www.vaultproject.io/docs/auth/azure
 	AzureMSIAuthMethod ClientAuthMethod = "azure"
-
 )
 
 // Client is a Vault client with Kubernetes support, token automatic renewing and
