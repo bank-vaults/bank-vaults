@@ -72,7 +72,7 @@ type VaultConfig struct {
 	EnvCPULimit                 resource.Quantity
 	EnvMemoryLimit              resource.Quantity
 	VaultNamespace              string
-	VaultServiceAccount              string
+	VaultServiceAccount         string
 }
 
 func parseVaultConfig(obj metav1.Object) VaultConfig {
