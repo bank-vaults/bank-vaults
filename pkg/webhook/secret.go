@@ -72,7 +72,7 @@ func (mw *MutatingWebhook) MutateSecret(secret *corev1.Secret, vaultConfig Vault
 		return nil
 	}
 
-	vaultClient, err := mw.newVaultClient(vaultConfig, mw.k8sClient)
+	vaultClient, err := mw.newVaultClient(vaultConfig)
 	if err != nil {
 		return errors.Wrap(err, "failed to create vault client")
 	}

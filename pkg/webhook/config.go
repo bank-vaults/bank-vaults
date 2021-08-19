@@ -16,14 +16,12 @@ package webhook
 
 import (
 	"strconv"
-	"context"
 	"time"
 
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 // VaultConfig represents vault options
@@ -74,10 +72,10 @@ type VaultConfig struct {
 	EnvCPULimit                 resource.Quantity
 	EnvMemoryLimit              resource.Quantity
 	VaultNamespace              string
-	ServiceAccountJWT              string
+	VaultServiceAccount              string
 }
 
-func parseVaultConfig(ctx context.Context, obj metav1.Object, k8s_client kubernetes.Interface) VaultConfig {
+func parseVaultConfig(obj metav1.Object) VaultConfig {
 	var vaultConfig VaultConfig
 	annotations := obj.GetAnnotations()
 
@@ -122,22 +120,10 @@ func parseVaultConfig(ctx context.Context, obj metav1.Object, k8s_client kuberne
 
 	// TODO: Check for flag to verify we want to use namespace-local SAs instead of the vault webhook namespaces SA
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-serviceaccount"]; ok {
-		vaultConfig.AuthMethod = "namespaced"
-		sa, err := k8s_client.CoreV1().ServiceAccounts(obj.GetNamespace()).Get(ctx,val, metav1.GetOptions{})
-		if err != nil {
-			logger.Error("Error retrieving specified service account")
-			return vaultConfig
-		}
-		secret, err := k8s_client.CoreV1().Secrets(obj.GetNamespace()).Get(ctx, sa.Name, metav1.GetOptions{})
-
-		if err != nil {
-			logger.Error("Error retrieving secret for specified service account")
-			return vaultConfig
-		}
-		vaultConfig.ServiceAccountJWT = string(secret.Data["token"])
+		vaultConfig.VaultServiceAccount = val
 
 	} else {
-		vaultConfig.ServiceAccount = viper.GetString("vault_serviceaccount")
+		vaultConfig.VaultServiceAccount = viper.GetString("vault_serviceaccount")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-skip-verify"]; ok {
