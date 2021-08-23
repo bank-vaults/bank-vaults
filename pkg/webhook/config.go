@@ -121,7 +121,6 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 	// TODO: Check for flag to verify we want to use namespace-local SAs instead of the vault webhook namespaces SA
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-serviceaccount"]; ok {
 		vaultConfig.VaultServiceAccount = val
-
 	} else {
 		vaultConfig.VaultServiceAccount = viper.GetString("vault_serviceaccount")
 	}
