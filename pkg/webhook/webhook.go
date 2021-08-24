@@ -212,6 +212,7 @@ func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to retrieve specified service account")
 		}
+
 		secret, err := mw.k8sClient.CoreV1().Secrets(mw.namespace).Get(context.Background(), sa.Secrets[0].Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to retrieve secret for specified service account")
@@ -225,15 +226,15 @@ func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 			vault.ClientLogger(logrusadapter.NewFromEntry(mw.logger)),
 			vault.ExistingSecret(secret.Data["token"]),
 		)
-	} else {
-		return vault.NewClientFromConfig(
-			clientConfig,
-			vault.ClientRole(vaultConfig.Role),
-			vault.ClientAuthPath(vaultConfig.Path),
-			vault.ClientAuthMethod(vaultConfig.AuthMethod),
-			vault.ClientLogger(logrusadapter.NewFromEntry(mw.logger)),
-		)
 	}
+
+	return vault.NewClientFromConfig(
+		clientConfig,
+		vault.ClientRole(vaultConfig.Role),
+		vault.ClientAuthPath(vaultConfig.Path),
+		vault.ClientAuthMethod(vaultConfig.AuthMethod),
+		vault.ClientLogger(logrusadapter.NewFromEntry(mw.logger)),
+	)
 }
 
 func (mw *MutatingWebhook) ServeMetrics(addr string, handler http.Handler) {
