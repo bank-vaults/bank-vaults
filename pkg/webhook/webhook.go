@@ -207,6 +207,27 @@ func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 		clientTLSConfig.RootCAs = pool
 	}
 
+	if vaultConfig.VaultServiceAccount != "" {
+		sa, err := mw.k8sClient.CoreV1().ServiceAccounts(mw.namespace).Get(context.Background(), vaultConfig.VaultServiceAccount, metav1.GetOptions{})
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed to retrieve specified service account")
+		}
+
+		secret, err := mw.k8sClient.CoreV1().Secrets(mw.namespace).Get(context.Background(), sa.Secrets[0].Name, metav1.GetOptions{})
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed to retrieve secret for specified service account")
+		}
+
+		return vault.NewClientFromConfig(
+			clientConfig,
+			vault.ClientRole(vaultConfig.Role),
+			vault.ClientAuthPath(vaultConfig.Path),
+			vault.NamespacedSecretAuthMethod,
+			vault.ClientLogger(logrusadapter.NewFromEntry(mw.logger)),
+			vault.ExistingSecret(secret.Data["token"]),
+		)
+	}
+
 	return vault.NewClientFromConfig(
 		clientConfig,
 		vault.ClientRole(vaultConfig.Role),

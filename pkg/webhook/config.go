@@ -72,6 +72,7 @@ type VaultConfig struct {
 	EnvCPULimit                 resource.Quantity
 	EnvMemoryLimit              resource.Quantity
 	VaultNamespace              string
+	VaultServiceAccount         string
 }
 
 func parseVaultConfig(obj metav1.Object) VaultConfig {
@@ -115,6 +116,13 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.Path = val
 	} else {
 		vaultConfig.Path = viper.GetString("vault_path")
+	}
+
+	// TODO: Check for flag to verify we want to use namespace-local SAs instead of the vault webhook namespaces SA
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-serviceaccount"]; ok {
+		vaultConfig.VaultServiceAccount = val
+	} else {
+		vaultConfig.VaultServiceAccount = viper.GetString("vault_serviceaccount")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-skip-verify"]; ok {
