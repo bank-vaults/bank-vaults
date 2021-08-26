@@ -52,14 +52,14 @@ func NewData(cas int, data map[string]interface{}) map[string]interface{} {
 }
 
 type clientOptions struct {
-	url        string
-	role       string
-	authPath   string
-	tokenPath  string
-	token      string
-	timeout    time.Duration
-	logger     Logger
-	authMethod ClientAuthMethod
+	url            string
+	role           string
+	authPath       string
+	tokenPath      string
+	token          string
+	timeout        time.Duration
+	logger         Logger
+	authMethod     ClientAuthMethod
 	existingSecret string
 }
 
@@ -133,9 +133,9 @@ func (co ClientAuthMethod) apply(o *clientOptions) {
 	o.authMethod = co
 }
 
-
 type ExistingSecret string
-func (co ExistingSecret) apply(o *clientOptions){
+
+func (co ExistingSecret) apply(o *clientOptions) {
 	o.existingSecret = string(co)
 }
 
