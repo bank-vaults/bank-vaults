@@ -247,9 +247,7 @@ func stringInSlice(list []string, match string) bool {
 }
 
 func init() {
-	configBoolVar(configureCmd, cfgOnce, false, "Run configure only once")
 	configBoolVar(configureCmd, cfgFatal, false, "Make configuration errors fatal to the configurator")
-	configDurationVar(configureCmd, cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the Vault instance")
 	configStringSliceVar(configureCmd, cfgVaultConfigFile, []string{internalVault.DefaultConfigFile}, "The filename of the YAML/JSON Vault configuration")
 	configBoolVar(configureCmd, cfgDisableMetrics, false, "Disable configurer metrics")
 

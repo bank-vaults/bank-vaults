@@ -26,9 +26,7 @@ import (
 )
 
 const (
-	cfgUnsealPeriod      = "unseal-period"
 	cfgInit              = "init"
-	cfgOnce              = "once"
 	cfgAuto              = "auto"
 	cfgRaft              = "raft"
 	cfgRaftLeaderAddress = "raft-leader-address"
@@ -194,9 +192,7 @@ func exitIfNecessary(unsealConfig unsealCfg, code int) {
 }
 
 func init() {
-	configDurationVar(unsealCmd, cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the vault instance")
 	configBoolVar(unsealCmd, cfgInit, false, "Initialize vault instance if not yet initialized")
-	configBoolVar(unsealCmd, cfgOnce, false, "Run unseal only once")
 	configBoolVar(unsealCmd, cfgRaft, false, "Join leader vault instance in raft mode")
 	configStringVar(unsealCmd, cfgRaftLeaderAddress, "", "Address of leader vault instance in raft mode")
 	configBoolVar(unsealCmd, cfgRaftSecondary, false, "This instance should always join a raft leader")

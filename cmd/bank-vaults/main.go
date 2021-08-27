@@ -110,6 +110,11 @@ const (
 
 const cfgFilePath = "file-path"
 
+const (
+	cfgUnsealPeriod = "unseal-period"
+	cfgOnce         = "once"
+)
+
 // We need to pre-create a value and bind the the flag to this until
 // https://github.com/spf13/viper/issues/608 gets fixed.
 var k8sSecretLabels map[string]string
@@ -262,6 +267,10 @@ func init() {
 
 	// File flags
 	configStringVar(rootCmd, cfgFilePath, "", "The path prefix of the files where to store values in")
+
+	// Misc common flags
+	configBoolVar(rootCmd, cfgOnce, false, "Run configure/unsela only once")
+	configDurationVar(configureCmd, cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the Vault instance")
 }
 
 func main() {
