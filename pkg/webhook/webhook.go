@@ -39,14 +39,17 @@ import (
 )
 
 type MutatingWebhook struct {
-	k8sClient kubernetes.Interface
-	namespace string
-	registry  ImageRegistry
-	logger    *logrus.Entry
+	k8sClient         kubernetes.Interface
+	namespace         string
+	mutationNamespace string
+	registry          ImageRegistry
+	logger            *logrus.Entry
 }
 
 func (mw *MutatingWebhook) VaultSecretsMutator(ctx context.Context, ar *model.AdmissionReview, obj metav1.Object) (*mutating.MutatorResult, error) {
 	vaultConfig := parseVaultConfig(obj)
+
+	mw.mutationNamespace = ar.Namespace
 
 	if vaultConfig.Skip {
 		return &mutating.MutatorResult{}, nil
@@ -208,14 +211,14 @@ func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 	}
 
 	if vaultConfig.VaultServiceAccount != "" {
-		sa, err := mw.k8sClient.CoreV1().ServiceAccounts(mw.namespace).Get(context.Background(), vaultConfig.VaultServiceAccount, metav1.GetOptions{})
+		sa, err := mw.k8sClient.CoreV1().ServiceAccounts(mw.mutationNamespace).Get(context.Background(), vaultConfig.VaultServiceAccount, metav1.GetOptions{})
 		if err != nil {
-			return nil, errors.Wrap(err, "Failed to retrieve specified service account")
+			return nil, errors.Wrap(err, "Failed to retrieve specified service account on namespace "+mw.mutationNamespace)
 		}
 
-		secret, err := mw.k8sClient.CoreV1().Secrets(mw.namespace).Get(context.Background(), sa.Secrets[0].Name, metav1.GetOptions{})
+		secret, err := mw.k8sClient.CoreV1().Secrets(mw.mutationNamespace).Get(context.Background(), sa.Secrets[0].Name, metav1.GetOptions{})
 		if err != nil {
-			return nil, errors.Wrap(err, "Failed to retrieve secret for specified service account")
+			return nil, errors.Wrap(err, "Failed to retrieve secret for service account "+sa.Secrets[0].Name+" in namespace "+mw.mutationNamespace)
 		}
 
 		return vault.NewClientFromConfig(
