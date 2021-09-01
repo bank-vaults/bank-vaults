@@ -1,4 +1,3 @@
-{{- if .Values.serviceAccount.create }}
 {{- if .Values.serviceAccount.createClusterRoleBinding }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -17,8 +16,9 @@ subjects:
 - kind: ServiceAccount
   name: {{ template "vault.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
----
 {{- end }}
+{{- if .Values.serviceAccount.create }}
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
