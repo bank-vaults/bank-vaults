@@ -262,7 +262,7 @@ rbac:
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
-  # Specifies whether the system:auth-delegator ClusterRoleBinding should be bound to the created serviceAccount
+  # Specifies whether the system:auth-delegator ClusterRoleBinding will be bound to the created/attached serviceAccount
   createClusterRoleBinding: true
   # Annotations to add to the service account
   annotations: {}
