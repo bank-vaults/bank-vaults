@@ -105,7 +105,7 @@ func (r *Registry) GetImageConfig(
 	// The pod imagePullSecrets did not contained any credentials.
 	// Try to find matching registry credentials in the default imagePullSecret if one was provided.
 	// Otherwise cloud credential providers will be tried.
-	if containerInfo.Namespace == "" && len(containerInfo.ImagePullSecrets) == 0 {
+	if len(containerInfo.ImagePullSecrets) == 0 {
 		containerInfo.Namespace = viper.GetString("default_image_pull_secret_namespace")
 		containerInfo.ImagePullSecrets = []string{viper.GetString("default_image_pull_secret")}
 	}
