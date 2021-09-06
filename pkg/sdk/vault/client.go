@@ -464,7 +464,13 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 
 			case NamespacedSecretAuthMethod:
 				loginDataFunc = func() (map[string]interface{}, error) {
-					// Projected SA JWTs do expire, so we need to move the reading logic into the loop
+					if len(o.existingSecret) > 0 {
+						return map[string]interface{}{
+							"jwt":  o.existingSecret,
+							"role": o.role,
+						}, nil
+					}
+
 					jwt, err := ioutil.ReadFile(jwtFile)
 					if err != nil {
 						return nil, err
