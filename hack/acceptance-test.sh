@@ -54,7 +54,7 @@ kubectl apply -f operator/deploy/rbac.yaml
 
 # 1. test: test the external secrets watcher work and match as expected
 kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
-kubectl wait --for=condition=healthy --timeout=120s vault/vault
+kubectl wait --for=condition=healthy --timeout=180s vault/vault
 test x`kubectl get pod vault-0 -o jsonpath='{.metadata.annotations.vault\.banzaicloud\.io/watched-secrets-sum}'` = "x"
 kubectl delete -f deploy/test-external-secrets-watch-deployment.yaml
 kubectl delete secret vault-unseal-keys
