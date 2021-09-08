@@ -30,14 +30,6 @@ spec:
       {{- if .Values.priorityClassName }}
       priorityClassName: {{ .Values.priorityClassName }}
       {{- end }}
-      initContainers:
-      {{- if index .Values "etcd-operator" "enabled" }}
-      - name: check-etcd-crd
-        image: lachlanevenson/k8s-kubectl
-        command: ['kubectl', 'get', 'customresourcedefinitions', 'etcdclusters.etcd.database.coreos.com']
-        resources:
-{{ toYaml .Values.resources | indent 10 }}
-      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ include "vault-operator.vault-operator.version" . }}"

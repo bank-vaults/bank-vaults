@@ -65,13 +65,6 @@ readinessProbe:
   successThreshold: 1
   timeoutSeconds: 1
 
-etcd-operator:
-  enabled: false
-  etcdOperator:
-    commandArgs:
-      cluster-wide: true
-      create-crd: false
-
 psp:
   enabled: false
   vaultSA: "vault"
