@@ -35,7 +35,7 @@ data:
   ca.crt:  {{ $caCrt }}
 {{- end }}
 ---
-{{- if semverCompare ">=1.16-0" .Capabilities.KubeVersion.GitVersion }}
+{{- if semverCompare ">=1.16-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
 apiVersion: admissionregistration.k8s.io/v1
 {{- else }}
 apiVersion: admissionregistration.k8s.io/v1beta1
@@ -53,7 +53,7 @@ metadata:
 {{- end }}
 webhooks:
 - name: pods.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
-  {{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion }}
+  {{- if semverCompare ">=1.14-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   admissionReviewVersions: ["v1beta1"]
   {{- if .Values.timeoutSeconds }}
   timeoutSeconds: {{ .Values.timeoutSeconds }}
@@ -92,7 +92,7 @@ webhooks:
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
-{{- if semverCompare ">=1.15-0" .Capabilities.KubeVersion.GitVersion }}
+{{- if semverCompare ">=1.15-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   objectSelector:
   {{- if .Values.objectSelector.matchLabels }}
     matchLabels:
@@ -107,11 +107,11 @@ webhooks:
       values:
       - skip
 {{- end }}
-{{- if semverCompare ">=1.12-0" .Capabilities.KubeVersion.GitVersion }}
+{{- if semverCompare ">=1.12-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   sideEffects: {{ .Values.apiSideEffectValue }}
 {{- end }}
 - name: secrets.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
-  {{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion }}
+  {{- if semverCompare ">=1.14-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   admissionReviewVersions: ["v1beta1"]
   {{- if .Values.timeoutSeconds }}
   timeoutSeconds: {{ .Values.timeoutSeconds }}
@@ -151,7 +151,7 @@ webhooks:
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
-{{- if semverCompare ">=1.15-0" .Capabilities.KubeVersion.GitVersion }}
+{{- if semverCompare ">=1.15-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   objectSelector:
   {{- if .Values.objectSelector.matchLabels }}
     matchLabels:
@@ -170,12 +170,12 @@ webhooks:
       values:
       - skip
 {{- end }}
-{{- if semverCompare ">=1.12-0" .Capabilities.KubeVersion.GitVersion }}
+{{- if semverCompare ">=1.12-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   sideEffects: {{ .Values.apiSideEffectValue }}
 {{- end }}
 {{- if .Values.configMapMutation }}
 - name: configmaps.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
-  {{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion }}
+  {{- if semverCompare ">=1.14-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   admissionReviewVersions: ["v1beta1"]
   {{- if .Values.timeoutSeconds }}
   timeoutSeconds: {{ .Values.timeoutSeconds }}
@@ -215,7 +215,7 @@ webhooks:
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
-{{- if semverCompare ">=1.15-0" .Capabilities.KubeVersion.GitVersion }}
+{{- if semverCompare ">=1.15-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   objectSelector:
   {{- if .Values.objectSelector.matchLabels }}
     matchLabels:
@@ -234,13 +234,13 @@ webhooks:
       values:
       - skip
 {{- end }}
-{{- if semverCompare ">=1.12-0" .Capabilities.KubeVersion.GitVersion }}
+{{- if semverCompare ">=1.12-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   sideEffects: {{ .Values.apiSideEffectValue }}
 {{- end }}
 {{- end }}
 {{- if .Values.customResourceMutations }}
 - name: objects.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
-  {{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion }}
+  {{- if semverCompare ">=1.14-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   admissionReviewVersions: ["v1beta1"]
   {{- if .Values.timeoutSeconds }}
   timeoutSeconds: {{ .Values.timeoutSeconds }}
@@ -280,7 +280,7 @@ webhooks:
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
-{{- if semverCompare ">=1.15-0" .Capabilities.KubeVersion.GitVersion }}
+{{- if semverCompare ">=1.15-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   objectSelector:
   {{- if .Values.objectSelector.matchLabels }}
     matchLabels:
@@ -295,7 +295,7 @@ webhooks:
       values:
       - skip
 {{- end }}
-{{- if semverCompare ">=1.12-0" .Capabilities.KubeVersion.GitVersion }}
+{{- if semverCompare ">=1.12-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   sideEffects: {{ .Values.apiSideEffectValue }}
 {{- end }}
 {{- end }}
