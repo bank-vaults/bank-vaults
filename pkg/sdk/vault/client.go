@@ -144,7 +144,7 @@ func (co ExistingSecret) apply(o *clientOptions) {
 type VaultNamespace string
 
 func (co VaultNamespace) apply(o *clientOptions) {
-	o.vaultNamespace = co
+	o.vaultNamespace = string(co)
 }
 
 const (
@@ -329,10 +329,7 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 
 	// Set vault namespace if defined
 	if o.vaultNamespace != "" {
-		err := rawClient.SetNamespace(o.vaultNamespace)
-		if err != nil {
-			return nil, err
-		}
+		rawClient.SetNamespace(o.vaultNamespace)
 	}
 
 	// Default timeout
