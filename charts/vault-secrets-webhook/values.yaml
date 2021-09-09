@@ -173,3 +173,6 @@ podDisruptionBudget:
 timeoutSeconds: false
 
 hostNetwork: false
+
+# Override cluster version
+kubeVersion: ""
