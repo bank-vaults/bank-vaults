@@ -61,6 +61,7 @@ type clientOptions struct {
 	logger         Logger
 	authMethod     ClientAuthMethod
 	existingSecret string
+	vaultNamespace string
 }
 
 // ClientOption configures a Vault client using the functional options paradigm popularized by Rob Pike and Dave Cheney.
@@ -137,6 +138,13 @@ type ExistingSecret string
 
 func (co ExistingSecret) apply(o *clientOptions) {
 	o.existingSecret = string(co)
+}
+
+// Vault Enterprise Namespace (not Kubernetes namespace)
+type VaultNamespace string
+
+func (co VaultNamespace) apply(o *clientOptions) {
+	o.vaultNamespace = string(co)
 }
 
 const (
@@ -317,6 +325,11 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		if env, ok := os.LookupEnv("VAULT_TOKEN_PATH"); ok {
 			o.tokenPath = env
 		}
+	}
+
+	// Set vault namespace if defined
+	if o.vaultNamespace != "" {
+		rawClient.SetNamespace(o.vaultNamespace)
 	}
 
 	// Default timeout
