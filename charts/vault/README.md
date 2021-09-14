@@ -116,35 +116,35 @@ helm install --name vault banzaicloud-stable/vault \
 
 The following tables lists the configurable parameters of the vault chart and their default values.
 
-|       Parameter         |           Description               |                         Default                     |
-|-------------------------|-------------------------------------|-----------------------------------------------------|
-| `image.pullPolicy`      | Container pull policy               | `IfNotPresent`                                      |
-| `image.repository`      | Container image to use              | `vault`                                             |
-| `image.tag`             | Container image tag to deploy       | `1.6.2`                                             |
-| `ingress.enabled`       | Enables Ingress                     | `false`                                             |
-| `ingress.annotations`   | Ingress annotations                 | `{}`                                                |
-| `ingress.hosts`         | Ingress accepted hostnames with path| `[]`                                                |
-| `ingress.tls`           | Ingress TLS configuration           | `[]`                                                |
-| `vault.envs`            | Custom environment variables available to Vault | `[]`                                    |
-| `vault.customSecrets`   | Custom secrets available to Vault   | `[]`                                                |
-| `vault.envSecrets`      | Custom secrets available to Vault as env vars | `[]`                                      |
-| `vault.config`          | Vault configuration                 | No default backend                                  |
-| `vault.externalConfig`  | Vault API based configuration       | No default backend                                  |
-| `replicaCount`          | k8s replicas                        | `1`                                                 |
-| `resources.limits.cpu`  | Container requested CPU             | `nil`                                               |
-| `resources.limits.memory` | Container requested memory        | `nil`                                               |
-| `unsealer.args`         | Bank Vaults args                    | `["--mode", "k8s", "--k8s-secret-namespace", "default", "--k8s-secret-name", "bank-vaults"]` |
-| `unsealer.image.tag`    | Bank Vaults image tag               | `.Chart.AppVersion`                                 |
-| `rbac.psp.enabled`      | Use pod security policy             | `false`                                             |
-| `nodeSelector`          | Node labels for pod assignment. https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector                                                   | `{}`                                                |
-| `tolerations`           | List of node tolerations for the pods. https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                                           | `[]`                                |
-| `affinity`           | Node affinity settings for the pods. https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/                                                          |  If not set it defaults to`podAntiAffinity` to `preferredDuringSchedulingIgnoredDuringExecution` |
-| `labels`                | Additonal labels to be applied to the Vault StatefulSet and Pods | `{}`                   |
-| `tls.secretName`        | Custom TLS certifcate secret name    | `""`                                               |
-| `podDisruptionBudget.enabled`        | enable PodDisruptionBudget                                                   | `true`                             |
-| `podDisruptionBudget.minAvailable`   | represents the number of Pods that must be available (integer or percentage) | `nil`                                |
-| `podDisruptionBudget.maxUnavailable` | represents the number of Pods that can be unavailable (integer or percentage) | `1`                                 |
-| `priorityClassName`     | The PriorityClass to assign to Pods  | `""`                                               |
+| Parameter                            | Description                                                                                                     | Default                                                                                         |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `image.pullPolicy`                   | Container pull policy                                                                                           | `IfNotPresent`                                                                                  |
+| `image.repository`                   | Container image to use                                                                                          | `vault`                                                                                         |
+| `image.tag`                          | Container image tag to deploy                                                                                   | `1.6.2`                                                                                         |
+| `ingress.enabled`                    | Enables Ingress                                                                                                 | `false`                                                                                         |
+| `ingress.annotations`                | Ingress annotations                                                                                             | `{}`                                                                                            |
+| `ingress.hosts`                      | Ingress accepted hostnames with path                                                                            | `[]`                                                                                            |
+| `ingress.tls`                        | Ingress TLS configuration                                                                                       | `[]`                                                                                            |
+| `vault.envs`                         | Custom environment variables available to Vault                                                                 | `[]`                                                                                            |
+| `vault.customSecrets`                | Custom secrets available to Vault                                                                               | `[]`                                                                                            |
+| `vault.envSecrets`                   | Custom secrets available to Vault as env vars                                                                   | `[]`                                                                                            |
+| `vault.config`                       | Vault configuration                                                                                             | No default backend                                                                              |
+| `vault.externalConfig`               | Vault API based configuration                                                                                   | No default backend                                                                              |
+| `replicaCount`                       | k8s replicas                                                                                                    | `1`                                                                                             |
+| `resources.limits.cpu`               | Container requested CPU                                                                                         | `nil`                                                                                           |
+| `resources.limits.memory`            | Container requested memory                                                                                      | `nil`                                                                                           |
+| `unsealer.args`                      | Bank Vaults args                                                                                                | `["--mode", "k8s", "--k8s-secret-namespace", "default", "--k8s-secret-name", "bank-vaults"]`    |
+| `unsealer.image.tag`                 | Bank Vaults image tag                                                                                           | `.Chart.AppVersion`                                                                             |
+| `rbac.psp.enabled`                   | Use pod security policy                                                                                         | `false`                                                                                         |
+| `nodeSelector`                       | Node labels for pod assignment. https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector | `{}`                                                                                            |
+| `tolerations`                        | List of node tolerations for the pods. https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/  | `[]`                                                                                            |
+| `affinity`                           | Node affinity settings for the pods. https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/   | If not set it defaults to`podAntiAffinity` to `preferredDuringSchedulingIgnoredDuringExecution` |
+| `labels`                             | Additonal labels to be applied to the Vault StatefulSet and Pods                                                | `{}`                                                                                            |
+| `tls.secretName`                     | Custom TLS certifcate secret name                                                                               | `""`                                                                                            |
+| `podDisruptionBudget.enabled`        | enable PodDisruptionBudget                                                                                      | `true`                                                                                          |
+| `podDisruptionBudget.minAvailable`   | represents the number of Pods that must be available (integer or percentage)                                    | `nil`                                                                                           |
+| `podDisruptionBudget.maxUnavailable` | represents the number of Pods that can be unavailable (integer or percentage)                                   | `1`                                                                                             |
+| `priorityClassName`                  | The PriorityClass to assign to Pods                                                                             | `""`                                                                                            |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
