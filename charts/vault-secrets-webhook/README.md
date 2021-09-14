@@ -93,53 +93,53 @@ You can read more information on how to add firewall rules for the GKE control p
 
 The following tables lists configurable parameters of the vault-secrets-webhook chart and their default values:
 
-| Parameter                        | Description                                                                  | Default                             |
-|----------------------------------|------------------------------------------------------------------------------|-------------------------------------|
-| affinity                         | affinities to use                                                            | `{}`                                |
-| debug                            | debug logs for webhook                                                       | `false`                             |
-| image.pullPolicy                 | image pull policy                                                            | `IfNotPresent`                      |
-| image.repository                 | image repo that contains the admission server                                | `ghcr.io/banzaicloud/vault-secrets-webhook` |
-| image.tag                        | image tag                                                                    | `.Chart.AppVersion`                 |
-| image.imagePullSecrets           | image pull secrets for private repositories                                  | `[]`                                |
-| vaultEnv.repository              | image repo that contains the vault-env container                             | `ghcr.io/banzaicloud/vault-env`     |
-| vaultEnv.tag                     | image tag for the vault-env container                                        | `.Chart.AppVersion`                 |
-| namespaceSelector                | namespace selector to use, will limit webhook scope                          | `{}`                                |
-| objectSelector                | object selector to use, will limit webhook scope (K8s version 1.15+)            | `{}`                                |
-| nodeSelector                     | node selector to use                                                         | `{}`                                |
-| labels                           | extra labels to add to the deployment and pods                               | `{}`                                |
-| podAnnotations                   | extra annotations to add to pod metadata                                     | `{}`                                |
-| replicaCount                     | number of replicas                                                           | `2`                                 |
-| resources                        | resources to request                                                         | `{}`                                |
-| service.externalPort             | webhook service external port                                                | `443`                               |
-| service.name                     | webhook service name                                                         | `vault-secrets-webhook`             |
-| service.type                     | webhook service type                                                         | `ClusterIP`                         |
-| tolerations                      | tolerations to add                                                           | `[]`                                |
-| topologySpreadConstraints        | topologySpreadConstraints to add                                                           | `{}`                                |
-| rbac.psp.enabled                 | use pod security policy                                                      | `false`                             |
-| rbac.authDelegatorRole.enabled    | bind `system:auth-delegator` to the ServiceAccount                          | `false`                             |
-| env.VAULT_IMAGE                  | vault image                                                                  | `vault:1.6.2`                       |
-| env.VAULT_ENV_CPU_REQUEST        | cpu requests for init-containers vault-env and copy-vault-env                | `50m`                               |
-| env.VAULT_ENV_MEMORY_REQUEST     | memory requests for init-containers vault-env and copy-vault-env             | `64Mi`                              |
-| env.VAULT_ENV_CPU_LIMIT          | cpu limits for init-containers vault-env and copy-vault-env                  | `250m`                              |
-| env.VAULT_ENV_MEMORY_LIMIT       | memory limits for init-containers vault-env and copy-vault-env               | `64Mi`                              |
-| volumes                          | extra volume definitions                                                     | `[]`                                |
-| volumeMounts                     | extra volume mounts                                                          | `[]`                                |
-| configMapMutation                | enable injecting values from Vault to ConfigMaps                             | `false`                             |
-| customResourceMutations         | list of CustomResources to inject values from Vault                           | `[]`                                |
-| podDisruptionBudget.enabled      | enable PodDisruptionBudget                                                   | `true `                             |
-| podDisruptionBudget.minAvailable | represents the number of Pods that must be available (integer or percentage) | `1`                                 |
-| podDisruptionBudget.maxUnavailable | represents the number of Pods that can be unavailable (integer or percentage) | ``                               |
-| certificate.generate             | should a new CA and TLS certificate be generated for the webhook             | `true`                              |
-| certificate.useCertManager       | should request cert-manager for getting a new CA and TLS certificate         | `false`                             |
-| certificate.servingCertificate   | should use an already externally defined Certificate by cert-manager         | `null`                              |
-| certificate.ca.crt               | Base64 encoded CA certificate                                                | ``                                  |
-| certificate.server.tls.crt       | Base64 encoded TLS certificate signed by the CA                              | ``                                  |
-| certificate.server.tls.key       | Base64 encoded  private key of TLS certificate signed by the CA              | ``                                  |
-| apiSideEffectValue               | Webhook sideEffect value                                                     | `NoneOnDryRun`                      |
-| securityContext                  | Container security context for webhook deployment                            | `{ runAsUser: 65534, allowPrivaledgeEscalation: false }` |
-| podSecurityContext               | Pod security context for webhook deployment                                  | `{}`                                |
-| timeoutSeconds                   | Webhook timeoutSeconds value                                                 | ``                                  |
-| hostNetwork                      | allow pod to use the node network namespace                                  | `false`                             |
+| Parameter                          | Description                                                                   | Default                                                  |
+| ---------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------- |
+| affinity                           | affinities to use                                                             | `{}`                                                     |
+| debug                              | debug logs for webhook                                                        | `false`                                                  |
+| image.pullPolicy                   | image pull policy                                                             | `IfNotPresent`                                           |
+| image.repository                   | image repo that contains the admission server                                 | `ghcr.io/banzaicloud/vault-secrets-webhook`              |
+| image.tag                          | image tag                                                                     | `.Chart.AppVersion`                                      |
+| image.imagePullSecrets             | image pull secrets for private repositories                                   | `[]`                                                     |
+| vaultEnv.repository                | image repo that contains the vault-env container                              | `ghcr.io/banzaicloud/vault-env`                          |
+| vaultEnv.tag                       | image tag for the vault-env container                                         | `.Chart.AppVersion`                                      |
+| namespaceSelector                  | namespace selector to use, will limit webhook scope                           | `{}`                                                     |
+| objectSelector                     | object selector to use, will limit webhook scope (K8s version 1.15+)          | `{}`                                                     |
+| nodeSelector                       | node selector to use                                                          | `{}`                                                     |
+| labels                             | extra labels to add to the deployment and pods                                | `{}`                                                     |
+| podAnnotations                     | extra annotations to add to pod metadata                                      | `{}`                                                     |
+| replicaCount                       | number of replicas                                                            | `2`                                                      |
+| resources                          | resources to request                                                          | `{}`                                                     |
+| service.externalPort               | webhook service external port                                                 | `443`                                                    |
+| service.name                       | webhook service name                                                          | `vault-secrets-webhook`                                  |
+| service.type                       | webhook service type                                                          | `ClusterIP`                                              |
+| tolerations                        | tolerations to add                                                            | `[]`                                                     |
+| topologySpreadConstraints          | topologySpreadConstraints to add                                              | `{}`                                                     |
+| rbac.psp.enabled                   | use pod security policy                                                       | `false`                                                  |
+| rbac.authDelegatorRole.enabled     | bind `system:auth-delegator` to the ServiceAccount                            | `false`                                                  |
+| env.VAULT_IMAGE                    | vault image                                                                   | `vault:1.6.2`                                            |
+| env.VAULT_ENV_CPU_REQUEST          | cpu requests for init-containers vault-env and copy-vault-env                 | `50m`                                                    |
+| env.VAULT_ENV_MEMORY_REQUEST       | memory requests for init-containers vault-env and copy-vault-env              | `64Mi`                                                   |
+| env.VAULT_ENV_CPU_LIMIT            | cpu limits for init-containers vault-env and copy-vault-env                   | `250m`                                                   |
+| env.VAULT_ENV_MEMORY_LIMIT         | memory limits for init-containers vault-env and copy-vault-env                | `64Mi`                                                   |
+| volumes                            | extra volume definitions                                                      | `[]`                                                     |
+| volumeMounts                       | extra volume mounts                                                           | `[]`                                                     |
+| configMapMutation                  | enable injecting values from Vault to ConfigMaps                              | `false`                                                  |
+| customResourceMutations            | list of CustomResources to inject values from Vault                           | `[]`                                                     |
+| podDisruptionBudget.enabled        | enable PodDisruptionBudget                                                    | `true`                                                   |
+| podDisruptionBudget.minAvailable   | represents the number of Pods that must be available (integer or percentage)  | `1`                                                      |
+| podDisruptionBudget.maxUnavailable | represents the number of Pods that can be unavailable (integer or percentage) | ` `                                                      |
+| certificate.generate               | should a new CA and TLS certificate be generated for the webhook              | `true`                                                   |
+| certificate.useCertManager         | should request cert-manager for getting a new CA and TLS certificate          | `false`                                                  |
+| certificate.servingCertificate     | should use an already externally defined Certificate by cert-manager          | `null`                                                   |
+| certificate.ca.crt                 | Base64 encoded CA certificate                                                 | ``                                                       |
+| certificate.server.tls.crt         | Base64 encoded TLS certificate signed by the CA                               | ``                                                       |
+| certificate.server.tls.key         | Base64 encoded private key of TLS certificate signed by the CA                | ``                                                       |
+| apiSideEffectValue                 | Webhook sideEffect value                                                      | `NoneOnDryRun`                                           |
+| securityContext                    | Container security context for webhook deployment                             | `{ runAsUser: 65534, allowPrivaledgeEscalation: false }` |
+| podSecurityContext                 | Pod security context for webhook deployment                                   | `{}`                                                     |
+| timeoutSeconds                     | Webhook timeoutSeconds value                                                  | ``                                                       |
+| hostNetwork                        | allow pod to use the node network namespace                                   | `false`                                                  |
 
 ### Certificate options
 
