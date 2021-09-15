@@ -1,5 +1,5 @@
 {{- if .Values.podDisruptionBudget.enabled }}
-apiVersion: policy/v1
+apiVersion: {{ include "vault.capabilities.policy.apiVersion" . }}
 kind: PodDisruptionBudget
 metadata:
   name: {{ template "vault.fullname" . }}
