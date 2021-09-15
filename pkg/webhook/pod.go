@@ -48,8 +48,15 @@ auto_auth {
         }
 }`
 
+const VaultEnvVolumeName = "vault-env"
+
 func (mw *MutatingWebhook) MutatePod(ctx context.Context, pod *corev1.Pod, vaultConfig VaultConfig, dryRun bool) error {
 	mw.logger.Debug("Successfully connected to the API")
+
+	if isPodAlreadyMutated(pod) {
+		mw.logger.Infof("Pod %s is already mutated, skipping mutation.", pod.Name)
+		return nil
+	}
 
 	initContainersMutated, err := mw.mutateContainers(ctx, pod.Spec.InitContainers, &pod.Spec, vaultConfig)
 	if err != nil {
@@ -85,7 +92,7 @@ func (mw *MutatingWebhook) MutatePod(ctx context.Context, pod *corev1.Pod, vault
 	}
 	containerVolMounts := []corev1.VolumeMount{
 		{
-			Name:      "vault-env",
+			Name:      VaultEnvVolumeName,
 			MountPath: "/vault/",
 		},
 	}
@@ -205,6 +212,15 @@ func (mw *MutatingWebhook) MutatePod(ctx context.Context, pod *corev1.Pod, vault
 	return nil
 }
 
+func isPodAlreadyMutated(pod *corev1.Pod) bool {
+	for _, volume := range pod.Spec.Volumes {
+		if volume.Name == VaultEnvVolumeName {
+			return true
+		}
+	}
+	return false
+}
+
 func (mw *MutatingWebhook) mutateContainers(ctx context.Context, containers []corev1.Container, podSpec *corev1.PodSpec, vaultConfig VaultConfig) (bool, error) {
 	mutated := false
 
@@ -265,7 +281,7 @@ func (mw *MutatingWebhook) mutateContainers(ctx context.Context, containers []co
 
 		container.VolumeMounts = append(container.VolumeMounts, []corev1.VolumeMount{
 			{
-				Name:      "vault-env",
+				Name:      VaultEnvVolumeName,
 				MountPath: "/vault/",
 			},
 		}...)
@@ -431,7 +447,7 @@ func (mw *MutatingWebhook) getVolumes(existingVolumes []corev1.Volume, agentConf
 
 	volumes := []corev1.Volume{
 		{
-			Name: "vault-env",
+			Name: VaultEnvVolumeName,
 			VolumeSource: corev1.VolumeSource{
 				EmptyDir: &corev1.EmptyDirVolumeSource{
 					Medium: corev1.StorageMediumMemory,
@@ -601,7 +617,7 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				{
-					Name:      "vault-env",
+					Name:      VaultEnvVolumeName,
 					MountPath: "/vault/",
 				},
 				{
@@ -653,7 +669,7 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 			Command:         []string{"sh", "-c", "cp /usr/local/bin/vault-env /vault/"},
 			VolumeMounts: []corev1.VolumeMount{
 				{
-					Name:      "vault-env",
+					Name:      VaultEnvVolumeName,
 					MountPath: "/vault/",
 				},
 			},
@@ -696,7 +712,7 @@ func getContainers(vaultConfig VaultConfig, containerEnvVars []corev1.EnvVar, co
 		Name:      "ct-secrets",
 		MountPath: "/vault/secrets",
 	}, corev1.VolumeMount{
-		Name:      "vault-env",
+		Name:      VaultEnvVolumeName,
 		MountPath: "/home/consul-template",
 	}, corev1.VolumeMount{
 		Name:      "ct-configmap",
