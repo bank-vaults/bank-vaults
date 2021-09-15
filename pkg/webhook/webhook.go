@@ -39,17 +39,14 @@ import (
 )
 
 type MutatingWebhook struct {
-	k8sClient         kubernetes.Interface
-	namespace         string
-	mutationNamespace string
-	registry          ImageRegistry
-	logger            *logrus.Entry
+	k8sClient kubernetes.Interface
+	namespace string
+	registry  ImageRegistry
+	logger    *logrus.Entry
 }
 
 func (mw *MutatingWebhook) VaultSecretsMutator(ctx context.Context, ar *model.AdmissionReview, obj metav1.Object) (*mutating.MutatorResult, error) {
-	vaultConfig := parseVaultConfig(obj)
-
-	mw.mutationNamespace = ar.Namespace
+	vaultConfig := parseVaultConfig(obj, ar)
 
 	if vaultConfig.Skip {
 		return &mutating.MutatorResult{}, nil
@@ -57,7 +54,7 @@ func (mw *MutatingWebhook) VaultSecretsMutator(ctx context.Context, ar *model.Ad
 
 	switch v := obj.(type) {
 	case *corev1.Pod:
-		return &mutating.MutatorResult{MutatedObject: v}, mw.MutatePod(ctx, v, vaultConfig, ar.Namespace, ar.DryRun)
+		return &mutating.MutatorResult{MutatedObject: v}, mw.MutatePod(ctx, v, vaultConfig, ar.DryRun)
 
 	case *corev1.Secret:
 		return &mutating.MutatorResult{MutatedObject: v}, mw.MutateSecret(v, vaultConfig)
@@ -211,14 +208,14 @@ func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 	}
 
 	if vaultConfig.VaultServiceAccount != "" {
-		sa, err := mw.k8sClient.CoreV1().ServiceAccounts(mw.mutationNamespace).Get(context.Background(), vaultConfig.VaultServiceAccount, metav1.GetOptions{})
+		sa, err := mw.k8sClient.CoreV1().ServiceAccounts(vaultConfig.ObjectNamespace).Get(context.Background(), vaultConfig.VaultServiceAccount, metav1.GetOptions{})
 		if err != nil {
-			return nil, errors.Wrap(err, "Failed to retrieve specified service account on namespace "+mw.mutationNamespace)
+			return nil, errors.Wrap(err, "Failed to retrieve specified service account on namespace "+vaultConfig.ObjectNamespace)
 		}
 
-		secret, err := mw.k8sClient.CoreV1().Secrets(mw.mutationNamespace).Get(context.Background(), sa.Secrets[0].Name, metav1.GetOptions{})
+		secret, err := mw.k8sClient.CoreV1().Secrets(vaultConfig.ObjectNamespace).Get(context.Background(), sa.Secrets[0].Name, metav1.GetOptions{})
 		if err != nil {
-			return nil, errors.Wrap(err, "Failed to retrieve secret for service account "+sa.Secrets[0].Name+" in namespace "+mw.mutationNamespace)
+			return nil, errors.Wrap(err, "Failed to retrieve secret for service account "+sa.Secrets[0].Name+" in namespace "+vaultConfig.ObjectNamespace)
 		}
 
 		return vault.NewClientFromConfig(

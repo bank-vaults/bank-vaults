@@ -62,7 +62,6 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 		containers  []corev1.Container
 		podSpec     *corev1.PodSpec
 		vaultConfig VaultConfig
-		ns          string
 	}
 	tests := []struct {
 		name             string
@@ -411,7 +410,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 				registry:  ttp.fields.registry,
 				logger:    logrus.NewEntry(logrus.New()),
 			}
-			got, err := mw.mutateContainers(context.Background(), ttp.args.containers, ttp.args.podSpec, ttp.args.vaultConfig, ttp.args.ns)
+			got, err := mw.mutateContainers(context.Background(), ttp.args.containers, ttp.args.podSpec, ttp.args.vaultConfig)
 			if (err != nil) != ttp.wantErr {
 				t.Errorf("MutatingWebhook.mutateContainers() error = %v, wantErr %v", err, ttp.wantErr)
 				return
@@ -436,7 +435,6 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 	type args struct {
 		pod         *corev1.Pod
 		vaultConfig VaultConfig
-		ns          string
 	}
 	defaultMode := int32(420)
 	runAsUser := int64(100)
@@ -1438,7 +1436,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 				registry:  ttp.fields.registry,
 				logger:    logrus.NewEntry(logrus.New()),
 			}
-			err := mw.MutatePod(context.Background(), ttp.args.pod, ttp.args.vaultConfig, ttp.args.ns, false)
+			err := mw.MutatePod(context.Background(), ttp.args.pod, ttp.args.vaultConfig, false)
 			if (err != nil) != ttp.wantErr {
 				t.Errorf("MutatingWebhook.MutatePod() error = %v, wantErr %v", err, ttp.wantErr)
 				return

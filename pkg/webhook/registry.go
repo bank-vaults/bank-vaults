@@ -102,12 +102,15 @@ func (r *Registry) GetImageConfig(
 		containerInfo.ImagePullSecrets = append(containerInfo.ImagePullSecrets, imagePullSecret.Name)
 	}
 
-	// The pod imagePullSecrets did not contained any credentials.
+	// The pod imagePullSecrets did not contain any credentials.
 	// Try to find matching registry credentials in the default imagePullSecret if one was provided.
-	// Otherwise cloud credential providers will be tried.
-	if len(containerInfo.ImagePullSecrets) == 0 {
-		containerInfo.Namespace = viper.GetString("default_image_pull_secret_namespace")
-		containerInfo.ImagePullSecrets = []string{viper.GetString("default_image_pull_secret")}
+	// Otherwise, cloud credential providers will be tried.
+	defaultImagePullSecretNamespace := viper.GetString("default_image_pull_secret_namespace")
+	defaultImagePullSecret := viper.GetString("default_image_pull_secret")
+	if len(containerInfo.ImagePullSecrets) == 0 &&
+		defaultImagePullSecretNamespace != "" && defaultImagePullSecret != "" {
+		containerInfo.Namespace = defaultImagePullSecretNamespace
+		containerInfo.ImagePullSecrets = []string{defaultImagePullSecret}
 	}
 
 	imageConfig, err := getImageConfig(ctx, client, containerInfo)
@@ -122,17 +125,19 @@ func (r *Registry) GetImageConfig(
 func getImageConfig(ctx context.Context, client kubernetes.Interface, container containerInfo) (*v1.Config, error) {
 	registrySkipVerify := viper.GetBool("registry_skip_verify")
 
+	chainOpts := k8schain.Options{
+		Namespace:          container.Namespace,
+		ServiceAccountName: container.ServiceAccountName,
+		ImagePullSecrets:   container.ImagePullSecrets,
+	}
+
 	authChain, err := k8schain.New(
 		ctx,
 		client,
-		k8schain.Options{
-			Namespace:          container.Namespace,
-			ServiceAccountName: container.ServiceAccountName,
-			ImagePullSecrets:   container.ImagePullSecrets,
-		},
+		chainOpts,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create k8schain authentication")
+		return nil, errors.Wrapf(err, "failed to create k8schain authentication, opts: %+v", chainOpts)
 	}
 
 	options := []remote.Option{

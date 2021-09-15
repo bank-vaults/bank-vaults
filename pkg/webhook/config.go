@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/slok/kubewebhook/v2/pkg/model"
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -73,10 +74,14 @@ type VaultConfig struct {
 	EnvMemoryLimit              resource.Quantity
 	VaultNamespace              string
 	VaultServiceAccount         string
+	ObjectNamespace             string
 }
 
-func parseVaultConfig(obj metav1.Object) VaultConfig {
-	var vaultConfig VaultConfig
+func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig {
+	vaultConfig := VaultConfig{
+		ObjectNamespace: ar.Namespace,
+	}
+
 	annotations := obj.GetAnnotations()
 
 	if val := annotations["vault.security.banzaicloud.io/mutate"]; val == "skip" {
