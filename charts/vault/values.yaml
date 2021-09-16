@@ -309,3 +309,6 @@ podDisruptionBudget:
 
 ## Assign a PriorityClassName to pods if set
 priorityClassName: ""
+
+# Override cluster version
+kubeVersion: ""
