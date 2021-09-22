@@ -238,7 +238,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 						LivenessProbe: &corev1.Probe{
 							Handler: corev1.Handler{
 								Exec: &corev1.ExecAction{
-									Command: []string{"/true"}},
+									Command: []string{"/bin/bash"}},
 							},
 						},
 						Env: []corev1.EnvVar{
@@ -263,7 +263,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 					LivenessProbe: &corev1.Probe{
 						Handler: corev1.Handler{
 							Exec: &corev1.ExecAction{
-								Command: []string{"/vault/vault-env", "/true"}},
+								Command: []string{"/vault/vault-env", "/bin/bash"}},
 						},
 					},
 					Env: []corev1.EnvVar{
