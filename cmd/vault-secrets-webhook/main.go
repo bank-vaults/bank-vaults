@@ -87,6 +87,7 @@ type VaultConfig struct {
 	Skip                        bool
 	VaultEnvFromPath            string
 	TokenAuthMount              string
+	MutateProbes                bool
 }
 
 func init() {
@@ -121,6 +122,7 @@ func init() {
 	viper.SetDefault("enable_json_log", "false")
 	viper.SetDefault("log_level", "info")
 	viper.SetDefault("vault_agent_share_process_namespace", "")
+	viper.SetDefault("mutate_probes", "false")
 	viper.AutomaticEnv()
 }
 
@@ -357,6 +359,12 @@ func parseVaultConfig(obj metav1.Object) VaultConfig {
 		vaultConfig.AgentImagePullPolicy = getPullPolicy(val)
 	} else {
 		vaultConfig.AgentImagePullPolicy = getPullPolicy(viper.GetString("vault_image_pull_policy"))
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/mutate-probes"]; ok {
+		vaultConfig.MutateProbes, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.MutateProbes = false
 	}
 
 	return vaultConfig
