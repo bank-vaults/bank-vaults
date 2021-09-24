@@ -64,7 +64,7 @@ Bank-Vaults is a core part of [Banzai Cloud Pipeline](https://github.com/banzaic
 
 ## Installing
 
-You usually don't need to use the CLI directly, rather you should install the charts and create Vault instances with the operator and use the webhook inside Kubernetes.
+You usually don't need to use the CLI directly, rather you should install the charts and create Vault instances with the operator and use the webhook inside Kubernetes to mutate Kubernetes resources.
 
 To grab the CLI binary go to the [releases](https://github.com/banzaicloud/bank-vaults/releases) page and download it.
 
