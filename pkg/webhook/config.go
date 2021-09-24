@@ -75,6 +75,7 @@ type VaultConfig struct {
 	VaultNamespace              string
 	VaultServiceAccount         string
 	ObjectNamespace             string
+	MutateProbes                bool
 }
 
 func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig {
@@ -356,6 +357,12 @@ func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig 
 		vaultConfig.EnvMemoryLimit = val
 	} else {
 		vaultConfig.EnvMemoryLimit = resource.MustParse("64Mi")
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/mutate-probes"]; ok {
+		vaultConfig.MutateProbes, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.MutateProbes = false
 	}
 
 	return vaultConfig
