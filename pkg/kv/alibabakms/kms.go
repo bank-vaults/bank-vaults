@@ -15,6 +15,7 @@
 package alibabakms
 
 import (
+	"emperror.dev/errors"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/kms"
 
@@ -34,7 +35,7 @@ var _ kv.Service = &alibabaKMS{}
 func New(regionID, accessKeyID, accessKeySecret, kmsID string, store kv.Service) (kv.Service, error) {
 	client, err := kms.NewClientWithAccessKey(regionID, accessKeyID, accessKeySecret)
 	if err != nil {
-		return nil, err
+		return nil, errors.WrapIf(err, "failed to create KMS client")
 	}
 
 	client.GetConfig().Scheme = requests.HTTPS
@@ -47,7 +48,7 @@ func (a *alibabaKMS) decrypt(cipherText []byte) ([]byte, error) {
 	request.CiphertextBlob = string(cipherText)
 	response, err := a.kmsClient.Decrypt(request)
 	if err != nil {
-		return nil, err
+		return nil, errors.WrapIf(err, "failed to decrypt with KMS client")
 	}
 
 	return []byte(response.Plaintext), nil
@@ -56,7 +57,7 @@ func (a *alibabaKMS) decrypt(cipherText []byte) ([]byte, error) {
 func (a *alibabaKMS) Get(key string) ([]byte, error) {
 	cipherText, err := a.store.Get(key)
 	if err != nil {
-		return nil, err
+		return nil, errors.WrapIf(err, "failed to get first with KMS client")
 	}
 
 	return a.decrypt(cipherText)
@@ -68,7 +69,7 @@ func (a *alibabaKMS) encrypt(plainText []byte) ([]byte, error) {
 	request.Plaintext = string(plainText)
 	response, err := a.kmsClient.Encrypt(request)
 	if err != nil {
-		return nil, err
+		return nil, errors.WrapIf(err, "failed to encrypt with KMS client")
 	}
 
 	return []byte(response.CiphertextBlob), nil

@@ -40,19 +40,19 @@ type s3Storage struct {
 // New creates a new kv.Service backed by AWS S3
 func New(region, bucket, prefix, sseAlgo, sseKeyID string) (kv.Service, error) {
 	if region == "" {
-		return nil, errors.New("region must be specified") // nolint:goerr113
+		return nil, errors.New("region must be specified")
 	}
 
 	if bucket == "" {
-		return nil, errors.New("bucket must be specified") // nolint:goerr113
+		return nil, errors.New("bucket must be specified")
 	}
 
 	if sseAlgo == awskms.SseAES256 && sseKeyID != "" {
-		return nil, errors.New("can't set a keyID when using AES256 as the encryption algorithm") // nolint:goerr113
+		return nil, errors.New("can't set a keyID when using AES256 as the encryption algorithm")
 	}
 
 	if sseAlgo == awskms.SseKMS && sseKeyID == "" {
-		return nil, errors.New("you need to provide a CMK KeyID when using aws:kms for SSE") // nolint:goerr113
+		return nil, errors.New("you need to provide a CMK KeyID when using aws:kms for SSE")
 	}
 
 	sess := session.Must(session.NewSession(aws.NewConfig().WithRegion(region)))
@@ -93,9 +93,11 @@ func (s3 *s3Storage) Get(key string) ([]byte, error) {
 
 	r, err := s3.client.GetObject(&input)
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == awss3.ErrCodeNoSuchKey {
+		var aerr awserr.Error
+		if errors.As(err, &aerr) && aerr.Code() == awss3.ErrCodeNoSuchKey {
 			return nil, kv.NewNotFoundError("error getting object for key '%s': %s", n, aerr.Error())
 		}
+
 		return nil, errors.Wrapf(err, "error getting object for key '%s'", n)
 	}
 

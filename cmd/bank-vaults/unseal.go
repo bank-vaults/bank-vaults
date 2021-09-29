@@ -25,14 +25,14 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
-const cfgUnsealPeriod = "unseal-period"
-const cfgInit = "init"
-const cfgOnce = "once"
-const cfgAuto = "auto"
-const cfgRaft = "raft"
-const cfgRaftLeaderAddress = "raft-leader-address"
-const cfgRaftSecondary = "raft-secondary"
-const cfgRaftHAStorage = "raft-ha-storage"
+const (
+	cfgInit              = "init"
+	cfgAuto              = "auto"
+	cfgRaft              = "raft"
+	cfgRaftLeaderAddress = "raft-leader-address"
+	cfgRaftSecondary     = "raft-secondary"
+	cfgRaftHAStorage     = "raft-ha-storage"
+)
 
 type unsealCfg struct {
 	unsealPeriod      time.Duration
@@ -121,9 +121,14 @@ from one of the followings:
 			}
 		}
 
+		raftEstablished := false
 		for {
 			if !unsealConfig.auto {
 				unseal(unsealConfig, v)
+			}
+
+			if unsealConfig.raftHAStorage && !raftEstablished {
+				raftEstablished = raftJoin(v)
 			}
 
 			// wait unsealPeriod before trying again
@@ -156,18 +161,28 @@ func unseal(unsealConfig unsealCfg, v internalVault.Vault) {
 		return
 	}
 
-	if unsealConfig.raftHAStorage {
-		if err = v.RaftJoin(""); err != nil {
-			logrus.Fatalf("error joining leader vault: %s", err.Error())
-			return
-		}
-
-		logrus.Info("successfully joined raft")
-	}
-
 	logrus.Info("successfully unsealed vault")
 
 	exitIfNecessary(unsealConfig, 0)
+}
+
+func raftJoin(v internalVault.Vault) bool {
+	leaderAddress, err := v.LeaderAddress()
+	if err != nil {
+		logrus.Errorf("error checking leader vault: %s", err.Error())
+		return false
+	}
+
+	// If this instance can't tell the leaderAddress, it is not part of the cluster,
+	// so we should ask it join.
+	if leaderAddress == "" {
+		if err = v.RaftJoin(""); err != nil {
+			logrus.Errorf("error joining leader vault: %s", err.Error())
+			return false
+		}
+	}
+
+	return true
 }
 
 func exitIfNecessary(unsealConfig unsealCfg, code int) {
@@ -177,9 +192,7 @@ func exitIfNecessary(unsealConfig unsealCfg, code int) {
 }
 
 func init() {
-	configDurationVar(unsealCmd, cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the vault instance")
 	configBoolVar(unsealCmd, cfgInit, false, "Initialize vault instance if not yet initialized")
-	configBoolVar(unsealCmd, cfgOnce, false, "Run unseal only once")
 	configBoolVar(unsealCmd, cfgRaft, false, "Join leader vault instance in raft mode")
 	configStringVar(unsealCmd, cfgRaftLeaderAddress, "", "Address of leader vault instance in raft mode")
 	configBoolVar(unsealCmd, cfgRaftSecondary, false, "This instance should always join a raft leader")

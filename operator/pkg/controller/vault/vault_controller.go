@@ -40,8 +40,7 @@ import (
 	"github.com/spf13/cast"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -54,9 +53,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
@@ -124,19 +123,16 @@ type ReconcileVault struct {
 	httpClient          *http.Client
 }
 
-func (r *ReconcileVault) createOrUpdateObject(o runtime.Object) error {
+func (r *ReconcileVault) createOrUpdateObject(o client.Object) error {
 	return createOrUpdateObjectWithClient(r.client, o)
 }
 
-func createOrUpdateObjectWithClient(c client.Client, o runtime.Object) error {
-	key, err := client.ObjectKeyFromObject(o)
-	if err != nil {
-		return err
-	}
+func createOrUpdateObjectWithClient(c client.Client, o client.Object) error {
+	key := client.ObjectKeyFromObject(o)
 
-	current := o.DeepCopyObject()
+	current := o.DeepCopyObject().(client.Object)
 
-	err = c.Get(context.TODO(), key, current)
+	err := c.Get(context.TODO(), key, current)
 	if apierrors.IsNotFound(err) {
 		err := patch.DefaultAnnotator.SetLastAppliedAnnotation(o)
 		if err != nil {
@@ -234,15 +230,12 @@ func secretMatchLabelsOrAnnotations(s corev1.Secret, labelsSelectors []map[strin
 	return false
 }
 
-func (r *ReconcileVault) createObjectIfNotExists(o runtime.Object) error {
-	key, err := client.ObjectKeyFromObject(o)
-	if err != nil {
-		return err
-	}
+func (r *ReconcileVault) createObjectIfNotExists(o client.Object) error {
+	key := client.ObjectKeyFromObject(o)
 
-	current := o.DeepCopyObject()
+	current := o.DeepCopyObject().(client.Object)
 
-	err = r.client.Get(context.TODO(), key, current)
+	err := r.client.Get(context.TODO(), key, current)
 	if apierrors.IsNotFound(err) {
 		return r.client.Create(context.TODO(), o)
 	}
@@ -255,7 +248,7 @@ func (r *ReconcileVault) createObjectIfNotExists(o runtime.Object) error {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Vault")
 
@@ -322,10 +315,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	// If we are using a LoadBalancer let the cloud-provider code fill in the hostname or IP of it,
 	// so we have a more stable certificate generation process.
 	if service.Spec.Type == corev1.ServiceTypeLoadBalancer && !v.Spec.IsTLSDisabled() && v.Spec.ExistingTLSSecretName == "" {
-		key, err := client.ObjectKeyFromObject(service)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to get object key for service: %v", err)
-		}
+		key := client.ObjectKeyFromObject(service)
 
 		err = r.client.Get(context.Background(), key, service)
 		if err != nil {
@@ -470,13 +460,28 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 				externalSecretsToWatchItems = append(externalSecretsToWatchItems, secret)
 			}
 		}
+	}
 
+	rawConfigSecret, rawConfigSum, err := secretForRawVaultConfig(v)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to fabricate Secret: %v", err)
+	}
+
+	// Set Vault instance as the owner and controller
+	if err := controllerutil.SetControllerReference(v, rawConfigSecret, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	err = r.createOrUpdateObject(rawConfigSecret)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to create/update Secret: %v", err)
 	}
 
 	// Create the StatefulSet if it doesn't exist
-	tlsAnnotations := map[string]string{}
-	tlsAnnotations["vault.banzaicloud.io/tls-expiration-date"] = tlsExpiration.UTC().Format(time.RFC3339)
-	statefulSet, err := statefulSetForVault(v, externalSecretsToWatchItems, tlsAnnotations, service)
+	restartAnnotations := map[string]string{}
+	restartAnnotations["vault.banzaicloud.io/tls-expiration-date"] = tlsExpiration.UTC().Format(time.RFC3339)
+	restartAnnotations["vault.banzaicloud.io/vault-config"] = rawConfigSum
+	statefulSet, err := statefulSetForVault(v, externalSecretsToWatchItems, restartAnnotations, service)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to fabricate StatefulSet: %v", err)
 	}
@@ -506,7 +511,7 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	// Create configurer if there is any external config
 	if len(v.Spec.ExternalConfig.Raw) != 0 {
-		err := r.deployConfigurer(v, tlsAnnotations)
+		err := r.deployConfigurer(v, restartAnnotations)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -541,15 +546,18 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 	var leader string
 	var statusError string
 	for i := 0; i < int(v.Spec.Size); i++ {
-		client, err := vault.NewInsecureRawClient()
+		tmpClient, err := vault.NewInsecureRawClient()
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
 		podName := fmt.Sprintf("%s-%d", v.Name, i)
-		client.SetAddress(fmt.Sprintf("%s://%s.%s:8200", strings.ToLower(string(getVaultURIScheme(v))), podName, v.Namespace))
+		err = tmpClient.SetAddress(fmt.Sprintf("%s://%s.%s:8200", strings.ToLower(string(getVaultURIScheme(v))), podName, v.Namespace))
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 
-		health, err := client.Sys().Health()
+		health, err := tmpClient.Sys().Health()
 		if err != nil {
 			statusError = err.Error()
 			break
@@ -573,17 +581,17 @@ func (r *ReconcileVault) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-	conditionStatus := v1.ConditionFalse
+	conditionStatus := corev1.ConditionFalse
 	if leader != "" && statusError == "" {
-		conditionStatus = v1.ConditionTrue
+		conditionStatus = corev1.ConditionTrue
 	}
 
 	if !reflect.DeepEqual(podNames, v.Status.Nodes) || !reflect.DeepEqual(leader, v.Status.Leader) || len(v.Status.Conditions) == 0 ||
 		v.Status.Conditions[0].Status != conditionStatus || v.Status.Conditions[0].Error != statusError {
 		v.Status.Nodes = podNames
 		v.Status.Leader = leader
-		v.Status.Conditions = []v1.ComponentCondition{{
-			Type:   v1.ComponentHealthy,
+		v.Status.Conditions = []corev1.ComponentCondition{{
+			Type:   corev1.ComponentHealthy,
 			Status: conditionStatus,
 			Error:  statusError,
 		}}
@@ -606,6 +614,23 @@ func newHTTPClient() *http.Client {
 			},
 		},
 	}
+}
+
+func secretForRawVaultConfig(v *vaultv1alpha1.Vault) (*corev1.Secret, string, error) {
+	configJSON, err := v.ConfigJSON()
+	if err != nil {
+		return nil, "", err
+	}
+
+	secret := corev1.Secret{}
+	secret.Name = v.Name + "-raw-config"
+	secret.Namespace = v.Namespace
+	secret.Labels = v.LabelsForVault()
+	secret.Data = map[string][]byte{
+		"vault-config.json": configJSON,
+	}
+
+	return &secret, fmt.Sprintf("%x", sha256.Sum256(configJSON)), nil
 }
 
 func secretForEtcd(v *vaultv1alpha1.Vault, e *etcdv1beta2.EtcdCluster) (*corev1.Secret, error) {
@@ -891,9 +916,9 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 	return service
 }
 
-func ingressForVault(v *vaultv1alpha1.Vault) *v1beta1.Ingress {
+func ingressForVault(v *vaultv1alpha1.Vault) *netv1.Ingress {
 	if ingress := v.GetIngress(); ingress != nil {
-		return &v1beta1.Ingress{
+		return &netv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        v.Name,
 				Namespace:   v.Namespace,
@@ -1031,7 +1056,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	// merge provided VaultConfigurerPodSpec into the PodSpec defined above
 	// the values in VaultConfigurerPodSpec will never overwrite fields defined in the PodSpec above
 	if v.Spec.VaultConfigurerPodSpec != nil {
-		if err := mergo.Merge(&podSpec, v1.PodSpec(*v.Spec.VaultConfigurerPodSpec)); err != nil {
+		if err := mergo.Merge(&podSpec, corev1.PodSpec(*v.Spec.VaultConfigurerPodSpec)); err != nil {
 			return nil, err
 		}
 	}
@@ -1060,17 +1085,27 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	return dep, nil
 }
 
-func configMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
+func deprecatedConfigMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	ls := v.LabelsForVaultConfigurer()
-	cm := &corev1.ConfigMap{
+	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name + "-configurer",
 			Namespace: v.Namespace,
 			Labels:    withVaultConfigurerLabels(v, ls),
 		},
-		Data: map[string]string{internalVault.DefaultConfigFile: v.Spec.ExternalConfigJSON()},
 	}
-	return cm
+}
+
+func secretForConfigurer(v *vaultv1alpha1.Vault) *corev1.Secret {
+	ls := v.LabelsForVaultConfigurer()
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v.Name + "-configurer",
+			Namespace: v.Namespace,
+			Labels:    withVaultConfigurerLabels(v, ls),
+		},
+		Data: map[string][]byte{internalVault.DefaultConfigFile: v.Spec.ExternalConfigJSON()},
+	}
 }
 
 func hostsForService(svc, namespace string) []string {
@@ -1150,7 +1185,7 @@ func populateTLSSecret(v *vaultv1alpha1.Vault, service *corev1.Service, secret *
 	err = certMgr.LoadCA(caCrt, caKey, v.Spec.GetTLSExpiryThreshold())
 
 	// If the CA is expired, empty or not valid but not errored - create a new chain
-	if err == bvtls.ExpiredCAError || err == bvtls.EmptyCAError {
+	if err == bvtls.ErrExpiredCA || err == bvtls.ErrEmptyCA {
 		log.Info("TLS CA will be regenerated due to: ", "error", err.Error())
 
 		err = certMgr.NewChain()
@@ -1186,7 +1221,7 @@ func populateTLSSecret(v *vaultv1alpha1.Vault, service *corev1.Service, secret *
 }
 
 // statefulSetForVault returns a Vault StatefulSet object
-func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []corev1.Secret, tlsAnnotations map[string]string, service *corev1.Service) (*appsv1.StatefulSet, error) {
+func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []corev1.Secret, restartAnnotations map[string]string, service *corev1.Service) (*appsv1.StatefulSet, error) {
 	ls := v.LabelsForVault()
 	replicas := v.Spec.Size
 
@@ -1198,6 +1233,14 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	configSizeLimit := resource.MustParse("1Mi")
 
 	volumes := withTLSVolume(v, withCredentialsVolume(v, []corev1.Volume{
+		{
+			Name: "vault-raw-config",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: v.Name + "-raw-config",
+				},
+			},
+		},
 		{
 			Name: "vault-config",
 			VolumeSource: corev1.VolumeSource{
@@ -1271,11 +1314,6 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		}
 	} else if v.Spec.IsRaftHAStorage() {
 		unsealCommand = append(unsealCommand, "--raft-ha-storage")
-	}
-
-	configJSON, err := v.ConfigJSON()
-	if err != nil {
-		return nil, err
 	}
 
 	_, containerPorts := getServicePorts(v)
@@ -1383,12 +1421,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Image:           v.Spec.GetBankVaultsImage(),
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Name:            "config-templating",
-				Command:         []string{"template", "-file", "/vault/config/vault.json"},
+				Command:         []string{"template", "-template", "/tmp/vault-config.json:/vault/config/vault.json"},
 				Env: withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
-					{
-						Name:  "VAULT_LOCAL_CONFIG",
-						Value: configJSON,
-					},
 					{
 						Name: "POD_NAME",
 						ValueFrom: &corev1.EnvVarSource{
@@ -1398,8 +1432,11 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						},
 					},
 				})),
-				VolumeMounts: withVaultVolumeMounts(v, volumeMounts),
-				Resources:    getVaultResource(v),
+				VolumeMounts: withVaultVolumeMounts(v, append(volumeMounts, corev1.VolumeMount{
+					Name:      "vault-raw-config",
+					MountPath: "/tmp",
+				})),
+				Resources: getVaultResource(v),
 			},
 		}),
 
@@ -1413,7 +1450,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	// merge provided VaultPodSpec into the PodSpec defined above
 	// the values in VaultPodSpec will never overwrite fields defined in the PodSpec above
 	if v.Spec.VaultPodSpec != nil {
-		if err := mergo.Merge(&podSpec, v1.PodSpec(*v.Spec.VaultPodSpec), mergo.WithOverride); err != nil {
+		if err := mergo.Merge(&podSpec, corev1.PodSpec(*v.Spec.VaultPodSpec), mergo.WithOverride); err != nil {
 			return nil, err
 		}
 	}
@@ -1449,7 +1486,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: withVaultLabels(v, ls),
 					Annotations: withVeleroAnnotations(v,
-						withTLSExpirationAnnotations(tlsAnnotations,
+						withRestartAnnotations(restartAnnotations,
 							withVaultAnnotations(v,
 								withVaultWatchedExternalSecrets(v, externalSecretsToWatchItems,
 									withPrometheusAnnotations("9102",
@@ -1523,7 +1560,7 @@ func withVaultWatchedExternalSecrets(v *vaultv1alpha1.Vault, secrets []corev1.Se
 		return annotations
 	}
 
-	// Calucalte SHASUM of all data fields in all secrets
+	// Calculate SHASUM of all data fields in all secrets
 	secretValues := []string{}
 	for _, secret := range secrets {
 		for key, value := range secret.Data {
@@ -1542,8 +1579,8 @@ func withVaultWatchedExternalSecrets(v *vaultv1alpha1.Vault, secrets []corev1.Se
 	return annotations
 }
 
-func withTLSExpirationAnnotations(tlsAnnotations, annotations map[string]string) map[string]string {
-	for key, value := range tlsAnnotations {
+func withRestartAnnotations(restartAnnotations, annotations map[string]string) map[string]string {
+	for key, value := range restartAnnotations {
 		annotations[key] = value
 	}
 
@@ -1792,7 +1829,7 @@ func withStatsDContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) 
 				MountPath: "/tmp/",
 			}},
 			Resources: getPrometheusExporterResource(v),
-			Env:       withSidecarEnv(v, []v1.EnvVar{}),
+			Env:       withSidecarEnv(v, []corev1.EnvVar{}),
 		})
 	}
 	return containers
@@ -1849,7 +1886,7 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, containers []corev1.Container
 				},
 			}),
 			Resources: getFluentDResource(v),
-			Env:       withSidecarEnv(v, []v1.EnvVar{}),
+			Env:       withSidecarEnv(v, []corev1.EnvVar{}),
 		})
 	}
 	return containers
@@ -1980,27 +2017,15 @@ func withVaultVolumeMounts(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeM
 }
 
 func withVaultEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
-	for _, env := range v.Spec.VaultEnvsConfig {
-		envs = append(envs, env)
-	}
-
-	return envs
+	return append(envs, v.Spec.VaultEnvsConfig...)
 }
 
 func withCommonEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
-	for _, env := range v.Spec.EnvsConfig {
-		envs = append(envs, env)
-	}
-
-	return envs
+	return append(envs, v.Spec.EnvsConfig...)
 }
 
 func withSidecarEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
-	for _, env := range v.Spec.SidecarEnvsConfig {
-		envs = append(envs, env)
-	}
-
-	return envs
+	return append(envs, v.Spec.SidecarEnvsConfig...)
 }
 
 func withNamespaceEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
@@ -2019,7 +2044,7 @@ func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContex
 	}
 	return &corev1.SecurityContext{
 		Capabilities: &corev1.Capabilities{
-			Add: []corev1.Capability{"IPC_LOCK"},
+			Add: []corev1.Capability{"IPC_LOCK", "SETFCAP"},
 		},
 	}
 }
@@ -2062,7 +2087,7 @@ func withVaultConfigurerLabels(v *vaultv1alpha1.Vault, labels map[string]string)
 	return l
 }
 
-// podList returns a v1.PodList object
+// podList returns a corev1.PodList object
 func podList() *corev1.PodList {
 	return &corev1.PodList{
 		TypeMeta: metav1.TypeMeta{
@@ -2074,7 +2099,7 @@ func podList() *corev1.PodList {
 
 // getPodNames returns the pod names of the array of pods passed in
 func getPodNames(pods []corev1.Pod) []string {
-	var podNames []string
+	podNames := []string{}
 	for _, pod := range pods {
 		podNames = append(podNames, pod.Name)
 	}
@@ -2199,10 +2224,10 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 	}
 
 	// We need the CA certificate only
-	if currentSecret.Type == v1.SecretTypeTLS {
-		currentSecret.Type = v1.SecretTypeOpaque
-		delete(currentSecret.Data, v1.TLSCertKey)
-		delete(currentSecret.Data, v1.TLSPrivateKeyKey)
+	if currentSecret.Type == corev1.SecretTypeTLS {
+		currentSecret.Type = corev1.SecretTypeOpaque
+		delete(currentSecret.Data, corev1.TLSCertKey)
+		delete(currentSecret.Data, corev1.TLSPrivateKeyKey)
 		if err := controllerutil.SetControllerReference(v, &currentSecret, r.scheme); err != nil {
 			return fmt.Errorf("failed to set current secret controller reference: %v", err)
 		}
@@ -2255,16 +2280,23 @@ func certHostsAndIPsChanged(v *vaultv1alpha1.Vault, service *corev1.Service, cer
 }
 
 func (r *ReconcileVault) deployConfigurer(v *vaultv1alpha1.Vault, tlsAnnotations map[string]string) error {
-	// Create the configmap if it doesn't exist
-	cm := configMapForConfigurer(v)
+	// Create the default config secret if it doesn't exist
+	configSecret := secretForConfigurer(v)
 
 	// Set Vault instance as the owner and controller
-	err := controllerutil.SetControllerReference(v, cm, r.scheme)
+	err := controllerutil.SetControllerReference(v, configSecret, r.scheme)
 	if err != nil {
 		return err
 	}
 
-	err = r.createOrUpdateObject(cm)
+	// Since the default config type has changed to Secret now,
+	// we need to delete the old ConfigMap of the configurer config.
+	err = r.client.Delete(context.TODO(), deprecatedConfigMapForConfigurer(v))
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to delete deprecated configurer configmap: %v", err)
+	}
+
+	err = r.createOrUpdateObject(configSecret)
 	if err != nil {
 		return fmt.Errorf("failed to create/update configurer configmap: %v", err)
 	}

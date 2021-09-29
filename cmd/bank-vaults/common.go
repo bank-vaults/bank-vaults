@@ -56,6 +56,7 @@ func all(flags []string, target string) bool {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -70,6 +71,7 @@ func correctValues(flags, choices []string) bool {
 			return false
 		}
 	}
+
 	return true
 }
 

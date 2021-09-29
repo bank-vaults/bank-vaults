@@ -38,46 +38,55 @@ import (
 // which was acquired during the new Vault client creation
 const vaultLogin = "vault:login"
 
-type sanitizedEnviron []string
+type sanitizedEnviron struct {
+	env   []string
+	login bool
+}
 
-var (
-	sanitizeEnvmap = map[string]bool{
-		"VAULT_TOKEN":                  true,
-		"VAULT_ADDR":                   true,
-		"VAULT_CACERT":                 true,
-		"VAULT_CAPATH":                 true,
-		"VAULT_CLIENT_CERT":            true,
-		"VAULT_CLIENT_KEY":             true,
-		"VAULT_CLIENT_TIMEOUT":         true,
-		"VAULT_CLUSTER_ADDR":           true,
-		"VAULT_MAX_RETRIES":            true,
-		"VAULT_REDIRECT_ADDR":          true,
-		"VAULT_SKIP_VERIFY":            true,
-		"VAULT_TLS_SERVER_NAME":        true,
-		"VAULT_CLI_NO_COLOR":           true,
-		"VAULT_RATE_LIMIT":             true,
-		"VAULT_NAMESPACE":              true,
-		"VAULT_MFA":                    true,
-		"VAULT_ROLE":                   true,
-		"VAULT_PATH":                   true,
-		"VAULT_AUTH_METHOD":            true,
-		"VAULT_TRANSIT_KEY_ID":         true,
-		"VAULT_TRANSIT_PATH":           true,
-		"VAULT_IGNORE_MISSING_SECRETS": true,
-		"VAULT_ENV_PASSTHROUGH":        true,
-		"VAULT_JSON_LOG":               true,
-		"VAULT_LOG_LEVEL":              true,
-		"VAULT_REVOKE_TOKEN":           true,
-		"VAULT_ENV_DAEMON":             true,
-		"VAULT_ENV_FROM_PATH":          true,
-	}
-)
+type envType struct {
+	login bool
+}
+
+var sanitizeEnvmap = map[string]envType{
+	"VAULT_TOKEN":                  {login: true},
+	"VAULT_ADDR":                   {login: true},
+	"VAULT_AGENT_ADDR":             {login: true},
+	"VAULT_CACERT":                 {login: true},
+	"VAULT_CAPATH":                 {login: true},
+	"VAULT_CLIENT_CERT":            {login: true},
+	"VAULT_CLIENT_KEY":             {login: true},
+	"VAULT_CLIENT_TIMEOUT":         {login: true},
+	"VAULT_SRV_LOOKUP":             {login: true},
+	"VAULT_SKIP_VERIFY":            {login: true},
+	"VAULT_NAMESPACE":              {login: true},
+	"VAULT_TLS_SERVER_NAME":        {login: true},
+	"VAULT_WRAP_TTL":               {login: true},
+	"VAULT_MFA":                    {login: true},
+	"VAULT_MAX_RETRIES":            {login: true},
+	"VAULT_CLUSTER_ADDR":           {login: false},
+	"VAULT_REDIRECT_ADDR":          {login: false},
+	"VAULT_CLI_NO_COLOR":           {login: false},
+	"VAULT_RATE_LIMIT":             {login: false},
+	"VAULT_ROLE":                   {login: false},
+	"VAULT_PATH":                   {login: false},
+	"VAULT_AUTH_METHOD":            {login: false},
+	"VAULT_TRANSIT_KEY_ID":         {login: false},
+	"VAULT_TRANSIT_PATH":           {login: false},
+	"VAULT_IGNORE_MISSING_SECRETS": {login: false},
+	"VAULT_ENV_PASSTHROUGH":        {login: false},
+	"VAULT_JSON_LOG":               {login: false},
+	"VAULT_LOG_LEVEL":              {login: false},
+	"VAULT_REVOKE_TOKEN":           {login: false},
+	"VAULT_ENV_DAEMON":             {login: false},
+	"VAULT_ENV_FROM_PATH":          {login: false},
+	"VAULT_ENV_DELAY":              {login: false},
+}
 
 // Appends variable an entry (name=value) into the environ list.
-// VAULT_* variables are not populated into this list.
-func (environ *sanitizedEnviron) append(name string, value string) {
-	if _, ok := sanitizeEnvmap[name]; !ok {
-		*environ = append(*environ, fmt.Sprintf("%s=%s", name, value))
+// VAULT_* variables are not populated into this list if this is not a login scenario.
+func (e *sanitizedEnviron) append(name string, value string) {
+	if envType, ok := sanitizeEnvmap[name]; !ok || (e.login && envType.login) {
+		e.env = append(e.env, fmt.Sprintf("%s=%s", name, value))
 	}
 }
 
@@ -88,20 +97,21 @@ type daemonSecretRenewer struct {
 }
 
 func (r daemonSecretRenewer) Renew(path string, secret *vaultapi.Secret) error {
-	renewerInput := vaultapi.RenewerInput{Secret: secret}
-	renewer, err := r.client.RawClient().NewRenewer(&renewerInput)
+	watcherInput := vaultapi.LifetimeWatcherInput{Secret: secret}
+	watcher, err := r.client.RawClient().NewLifetimeWatcher(&watcherInput)
 	if err != nil {
-		return errors.Wrap(err, "failed to create secret renewer")
+		return errors.Wrap(err, "failed to create secret watcher")
 	}
 
-	go renewer.Renew()
+	go watcher.Start()
 
 	go func() {
+		defer watcher.Stop()
 		for {
 			select {
-			case renewOutput := <-renewer.RenewCh():
+			case renewOutput := <-watcher.RenewCh():
 				r.logger.Infof("secret %s renewed for %ds", path, renewOutput.Secret.LeaseDuration)
-			case doneError := <-renewer.DoneCh():
+			case doneError := <-watcher.DoneCh():
 				if !secret.Renewable {
 					time.Sleep(time.Duration(secret.LeaseDuration) * time.Second)
 					r.logger.Infof("secret lease for %s has expired", path)
@@ -139,16 +149,15 @@ func main() {
 		logger = log.WithField("app", "vault-env")
 	}
 
-	daemonMode := cast.ToBool(os.Getenv("VAULT_ENV_DAEMON"))
-
-	sigs := make(chan os.Signal, 1)
-
-	var entrypointCmd []string
 	if len(os.Args) == 1 {
 		logger.Fatalln("no command is given, vault-env can't determine the entrypoint (command), please specify it explicitly or let the webhook query it (see documentation)")
-	} else {
-		entrypointCmd = os.Args[1:]
 	}
+
+	daemonMode := cast.ToBool(os.Getenv("VAULT_ENV_DAEMON"))
+	delayExec := cast.ToDuration(os.Getenv("VAULT_ENV_DELAY"))
+	sigs := make(chan os.Signal, 1)
+
+	entrypointCmd := os.Args[1:]
 
 	binary, err := exec.LookPath(entrypointCmd[0])
 	if err != nil {
@@ -163,6 +172,7 @@ func main() {
 	// or requests one for itself (Kubernetes Auth, or GCP, etc...),
 	// so if we got a VAULT_TOKEN for the special value with "vault:login"
 	originalVaultTokenEnvVar := os.Getenv("VAULT_TOKEN")
+	isLogin := originalVaultTokenEnvVar == vaultLogin
 	if tokenFile := os.Getenv("VAULT_TOKEN_FILE"); tokenFile != "" {
 		// load token from vault-agent .vault-token or injected webhook
 		if b, err := ioutil.ReadFile(tokenFile); err == nil {
@@ -172,8 +182,8 @@ func main() {
 		}
 		clientOptions = append(clientOptions, vault.ClientToken(originalVaultTokenEnvVar))
 	} else {
-		if originalVaultTokenEnvVar == vaultLogin {
-			os.Unsetenv("VAULT_TOKEN")
+		if isLogin {
+			_ = os.Unsetenv("VAULT_TOKEN")
 		}
 		// use role/path based authentication
 		clientOptions = append(clientOptions,
@@ -190,8 +200,8 @@ func main() {
 
 	passthroughEnvVars := strings.Split(os.Getenv("VAULT_ENV_PASSTHROUGH"), ",")
 
-	if originalVaultTokenEnvVar == vaultLogin {
-		os.Setenv("VAULT_TOKEN", vaultLogin)
+	if isLogin {
+		_ = os.Setenv("VAULT_TOKEN", vaultLogin)
 		passthroughEnvVars = append(passthroughEnvVars, "VAULT_TOKEN")
 	}
 
@@ -204,7 +214,7 @@ func main() {
 
 	// initial and sanitized environs
 	environ := make(map[string]string, len(os.Environ()))
-	sanitized := make(sanitizedEnviron, 0, len(environ))
+	sanitized := sanitizedEnviron{login: isLogin}
 
 	config := injector.Config{
 		TransitKeyID:         os.Getenv("VAULT_TRANSIT_KEY_ID"),
@@ -255,12 +265,17 @@ func main() {
 		client.Close()
 	}
 
+	if delayExec > 0 {
+		logger.Infof("sleeping for %s...", delayExec)
+		time.Sleep(delayExec)
+	}
+
 	logger.Infoln("spawning process:", entrypointCmd)
 
 	if daemonMode {
 		logger.Infoln("in daemon mode...")
 		cmd := exec.Command(binary, entrypointCmd[1:]...)
-		cmd.Env = append(os.Environ(), sanitized...)
+		cmd.Env = append(os.Environ(), sanitized.env...)
 		cmd.Stdin = os.Stdin
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
@@ -292,16 +307,20 @@ func main() {
 
 		close(sigs)
 
-		if _, ok := err.(*exec.ExitError); ok {
-			os.Exit(cmd.ProcessState.ExitCode())
-		} else if err != nil {
-			logger.Fatalln("failed to exec process", entrypointCmd, err.Error())
-			os.Exit(-1)
+		if err != nil {
+			exitCode := -1
+			// try to get the original exit code if possible
+			var exitError *exec.ExitError
+			if errors.As(err, &exitError) {
+				exitCode = exitError.ExitCode()
+			}
+			logger.Errorln("failed to exec process", entrypointCmd, err.Error())
+			os.Exit(exitCode)
 		} else {
 			os.Exit(cmd.ProcessState.ExitCode())
 		}
 	} else {
-		err = syscall.Exec(binary, entrypointCmd, sanitized)
+		err = syscall.Exec(binary, entrypointCmd, sanitized.env)
 		if err != nil {
 			logger.Fatalln("failed to exec process", entrypointCmd, err.Error())
 		}

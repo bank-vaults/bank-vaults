@@ -1,4 +1,4 @@
-// Copyright © 2020 Banzai Cloud
+// Copyright © 2021 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registry
+package webhook
 
 import (
 	"testing"
@@ -21,6 +21,8 @@ import (
 )
 
 func TestIsAllowedToCache(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		container    *corev1.Container
 		allowToCache bool
@@ -55,6 +57,7 @@ func TestIsAllowedToCache(t *testing.T) {
 			allowToCache: false,
 		},
 	}
+
 	for _, test := range tests {
 		allowToCache := IsAllowedToCache(test.container)
 		if test.allowToCache != allowToCache {

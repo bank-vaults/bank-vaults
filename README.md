@@ -59,17 +59,12 @@ We use Vault across our large Kubernetes deployments and all the projects were `
 
 >We take bank-vaults' security and our users' trust very seriously. If you believe you have found a security issue in bank-vaults, please contact us at security@banzaicloud.com.
 
-Bank-Vaults is a core part of [Banzai Cloud Pipeline](https://banzaicloud.com/), a Cloud Native application and devops platform that natively supports multi- and hybrid-cloud deployments. Check out the developer beta:
-<p align="center">
-  <a href="https://beta.banzaicloud.io">
-  <img src="https://camo.githubusercontent.com/a487fb3128bcd1ef9fc1bf97ead8d6d6a442049a/68747470733a2f2f62616e7a6169636c6f75642e636f6d2f696d672f7472795f706970656c696e655f627574746f6e2e737667">
-  </a>
-</p>
+Bank-Vaults is a core part of [Banzai Cloud Pipeline](https://github.com/banzaicloud/pipeline), a Cloud Native application and devops platform that natively supports multi- and hybrid-cloud deployments.
 
 
 ## Installing
 
-You usually don't need to use the CLI directly, rather you should install the charts and create Vault instances with the operator and use the webhook inside Kubernetes.
+You usually don't need to use the CLI directly, rather you should install the charts and create Vault instances with the operator and use the webhook inside Kubernetes to mutate Kubernetes resources.
 
 To grab the CLI binary go to the [releases](https://github.com/banzaicloud/bank-vaults/releases) page and download it.
 
@@ -123,7 +118,7 @@ Kudos to HashiCorp for open sourcing Vault and making secret management easier a
 
 ## License
 
-Copyright (c) 2017-2020 [Banzai Cloud, Inc.](https://banzaicloud.com)
+Copyright (c) 2017-2021 [Banzai Cloud, Inc.](https://banzaicloud.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

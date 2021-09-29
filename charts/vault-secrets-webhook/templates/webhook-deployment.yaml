@@ -70,7 +70,7 @@ spec:
               value: "debug"
             {{- end }}
             - name: VAULT_ENV_IMAGE
-              value: "{{ .Values.vaultEnv.repository }}:{{ include "vault-secrets-webhook.bank-vaults.version" . }}"
+              value: "{{ .Values.vaultEnv.repository }}:{{ include "vault-secrets-webhook.vault-env.version" . }}"
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
@@ -107,4 +107,8 @@ spec:
   {{- if .Values.podSecurityContext }}
       securityContext:
 {{ toYaml .Values.podSecurityContext | indent 8 }}
+  {{- end }}
+  {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+{{ toYaml .Values.topologySpreadConstraints | indent 8 }}
   {{- end }}

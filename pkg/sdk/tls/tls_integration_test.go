@@ -15,6 +15,7 @@
 package tls
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"net/http"
@@ -43,7 +44,7 @@ func TestWildCardValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			err := sHosts.Validate()
 			if err != nil {
-				if err.Error() != InvalidHostNameError.Error() {
+				if err.Error() != ErrInvalidHostName.Error() {
 					t.Fatal(err)
 				}
 			}
@@ -117,7 +118,7 @@ func TestGenerateTLS(t *testing.T) {
 		test := test
 
 		t.Run(strings.Split(test, ":")[0], func(t *testing.T) {
-			req, err := http.NewRequest("GET", "https://"+test, nil)
+			req, err := http.NewRequestWithContext(context.Background(), "GET", "https://"+test, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -223,7 +224,7 @@ func TestLoadAndRegenerateTLS(t *testing.T) {
 		test := test
 
 		t.Run(strings.Split(test, ":")[0], func(t *testing.T) {
-			req, err := http.NewRequest("GET", "https://"+test, nil)
+			req, err := http.NewRequestWithContext(context.Background(), "GET", "https://"+test, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

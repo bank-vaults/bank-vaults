@@ -3,6 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ template "vault.fullname" . }}-secret-access
+  namespace: {{ .Release.Namespace }}
   labels:
     helm.sh/chart: {{ template "vault.chart" . }}
     app.kubernetes.io/name: {{ template "vault.name" . }}
@@ -11,7 +12,12 @@ metadata:
 rules:
 - apiGroups: [""]
   resources: ["secrets"]
-  verbs: ["*"]
+  resourceNames: ["bank-vaults"]
+  verbs: ["create", "get", "list", "watch", "update", "patch", "delete", "deletecollection"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: [""]
+  verbs: ["create"]
 {{- end }}
 {{- if .Values.rbac.psp.enabled }}
 - apiGroups: ["extensions"]

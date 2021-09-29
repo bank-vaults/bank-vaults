@@ -1,7 +1,9 @@
+{{- if .Values.statsd.metrics.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: "{{ template "vault.fullname" . }}-statsd-mapping"
+  namespace: {{ .Release.Namespace }}
   labels:
     helm.sh/chart: {{ template "vault.chart" . }}
     app.kubernetes.io/name: "{{ template "vault.name" . }}"
@@ -10,3 +12,4 @@ metadata:
 data:
   statsd-mapping.conf: |
 {{ toYaml .Values.statsd.config | indent 6 }}
+{{- end }}

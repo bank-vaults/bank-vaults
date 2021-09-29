@@ -18,8 +18,16 @@ linters:
         - nestif
         - wsl
         - lll
+        - interfacer
+        - exhaustivestruct
+        - nlreturn
 
         # TODO: fixme
+        - paralleltest
+        - forcetypeassert
+        - wrapcheck
+        - exportloopref
+        - cyclop
         - godox
         - godot
         - gomnd

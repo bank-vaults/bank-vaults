@@ -1,0 +1,23 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+apiVersion: {{ include "vault.capabilities.policy.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "vault.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    helm.sh/chart: {{ template "vault.chart" . }}
+    app.kubernetes.io/name: {{ template "vault.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  {{- with .Values.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ . }}
+  {{- end }}
+  {{- with .Values.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ . }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ template "vault.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

@@ -22,11 +22,9 @@ import (
 	vaultapi "github.com/hashicorp/vault/api"
 )
 
-var (
-	// Example: vault:v1:8SDd3WHDOjf7mq69CyCqYjBXAiQQAVZRkFM13ok481zoCmHnSeDX9vyf7w==
-	// ref: https://www.vaultproject.io/docs/secrets/transit/index.html#usage
-	transitEncryptedVariable = regexp.MustCompile(`^vault:v\d+:.+$`)
-)
+// Example: vault:v1:8SDd3WHDOjf7mq69CyCqYjBXAiQQAVZRkFM13ok481zoCmHnSeDX9vyf7w==
+// ref: https://www.vaultproject.io/docs/secrets/transit/index.html#usage
+var transitEncryptedVariable = regexp.MustCompile(`^vault:v\d+:.+$`)
 
 // Transit is a wrapper for Transit Secret Engine
 // ref: https://www.vaultproject.io/docs/secrets/transit/index.html

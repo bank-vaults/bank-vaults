@@ -1,7 +1,7 @@
 name: CI
 on: [pull_request]
 env:
-  GO_VERSION: 1.15
+  GO_VERSION: 1.16
 jobs:
 
   build:
@@ -55,7 +55,7 @@ jobs:
     name: Acceptance test
     runs-on: ubuntu-latest
     env:
-      KURUN_VERSION: "0.4.1"
+      KURUN_VERSION: "0.5.3"
       DOCKER_LATEST: 1
       VERSION: latest
 
@@ -70,7 +70,9 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Start kind cluster
-      run: kind create cluster --config hack/kind.yaml
+      run: |
+        kind version
+        kind create cluster --config hack/kind.yaml
 
     - name: Build Docker images
       run: |

@@ -29,15 +29,14 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-var log = logf.Log.WithName("controller_vault")
+var log = ctrl.Log.WithName("controller_vault")
 
 var bankVaultsImage string
 
@@ -372,7 +371,9 @@ var HAStorageTypes = map[string]bool{
 func (spec *VaultSpec) HasHAStorage() bool {
 	storageType := spec.GetStorageType()
 	if _, ok := HAStorageTypes[storageType]; ok {
-		return spec.HasStorageHAEnabled()
+		if spec.HasStorageHAEnabled() {
+			return true
+		}
 	}
 	if spec.hasHAStorageStanza() {
 		return true
@@ -692,12 +693,12 @@ func (spec *VaultSpec) IsStatsDDisabled() bool {
 }
 
 // ConfigJSON returns the Config field as a JSON string
-func (v *Vault) ConfigJSON() (string, error) {
+func (v *Vault) ConfigJSON() ([]byte, error) {
 	config := map[string]interface{}{}
 
 	err := json.Unmarshal(v.Spec.Config.Raw, &config)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if v.Spec.ServiceRegistrationEnabled && v.Spec.HasHAStorage() {
@@ -710,7 +711,7 @@ func (v *Vault) ConfigJSON() (string, error) {
 		}
 
 		if err := mergo.Merge(&config, serviceRegistration); err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
@@ -731,21 +732,21 @@ func (v *Vault) ConfigJSON() (string, error) {
 		}
 
 		if err := mergo.Merge(&config, etcdStorage); err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
 	configJSON, err := json.Marshal(config)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(configJSON), nil
+	return configJSON, nil
 }
 
 // ExternalConfigJSON returns the ExternalConfig field as a JSON string
-func (spec *VaultSpec) ExternalConfigJSON() string {
-	return string(spec.ExternalConfig.Raw)
+func (spec *VaultSpec) ExternalConfigJSON() []byte {
+	return spec.ExternalConfig.Raw
 }
 
 // IsAutoUnseal checks if auto-unseal is configured
@@ -773,11 +774,15 @@ func (spec *VaultSpec) IsRaftBootstrapFollower() bool {
 // GetIngress the Ingress configuration for Vault if any
 func (vault *Vault) GetIngress() *Ingress {
 	if vault.Spec.Ingress != nil {
-		// Add the Vault Service as the default backend if not specified
-		if vault.Spec.Ingress.Spec.Backend == nil {
-			vault.Spec.Ingress.Spec.Backend = &v1beta1.IngressBackend{
-				ServiceName: vault.Name,
-				ServicePort: intstr.FromInt(8200),
+		// Add the Vault Service as the backend if no rules are specified and there is no default backend
+		if len(vault.Spec.Ingress.Spec.Rules) == 0 && vault.Spec.Ingress.Spec.DefaultBackend == nil {
+			vault.Spec.Ingress.Spec.DefaultBackend = &netv1.IngressBackend{
+				Service: &netv1.IngressServiceBackend{
+					Name: vault.Name,
+					Port: netv1.ServiceBackendPort{
+						Number: 8200,
+					},
+				},
 			}
 		}
 
@@ -1076,10 +1081,10 @@ type AzureUnsealConfig struct {
 // AWSUnsealConfig holds the parameters for AWS KMS based unsealing
 type AWSUnsealConfig struct {
 	KMSKeyID  string `json:"kmsKeyId"`
-	KMSRegion string `json:"kmsRegion"`
+	KMSRegion string `json:"kmsRegion,omitempty"`
 	S3Bucket  string `json:"s3Bucket"`
 	S3Prefix  string `json:"s3Prefix"`
-	S3Region  string `json:"s3Region"`
+	S3Region  string `json:"s3Region,omitempty"`
 	S3SSE     string `json:"s3SSE,omitempty"`
 }
 
@@ -1122,6 +1127,6 @@ type Resources struct {
 
 // Ingress specification for the Vault cluster
 type Ingress struct {
-	Annotations map[string]string   `json:"annotations,omitempty"`
-	Spec        v1beta1.IngressSpec `json:"spec,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
+	Spec        netv1.IngressSpec `json:"spec,omitempty"`
 }

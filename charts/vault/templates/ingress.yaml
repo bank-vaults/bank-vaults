@@ -1,10 +1,11 @@
 {{- if .Values.ingress.enabled -}}
 {{- $serviceName := include "vault.fullname" . -}}
 {{- $servicePort := .Values.service.port -}}
-apiVersion: extensions/v1beta1
+apiVersion: {{ include "vault.capabilities.ingress.apiVersion" . }}
 kind: Ingress
 metadata:
   name: {{ template "vault.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     helm.sh/chart: {{ template "vault.chart" . }}
     app.kubernetes.io/name: {{ template "vault.name" . }}
@@ -21,10 +22,13 @@ spec:
     - host: {{ first $url }}
       http:
         paths:
-          - path: /{{ rest $url | join "/" }}
-            backend:
-              serviceName: {{ $serviceName }}
-              servicePort: {{ $servicePort }}
+        - path: /{{ rest $url | join "/" }}
+          pathType: ImplementationSpecific
+          backend:
+            service:
+              name: {{ $serviceName }}
+              port:
+                number: {{ $servicePort }}
     {{- end -}}
   {{- if .Values.ingress.tls }}
   tls:

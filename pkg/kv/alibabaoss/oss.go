@@ -65,14 +65,12 @@ func (o *ossStorage) Get(key string) ([]byte, error) {
 	}
 
 	body, err := bucket.GetObject(objectKey)
-
 	if err != nil {
-		switch err := err.(type) {
-		case oss.ServiceError:
-			if err.StatusCode == 404 && err.Code == "NoSuchKey" {
-				return nil, kv.NewNotFoundError("error getting object for key '%s': %s", objectKey, err.Error())
-			}
+		var serviceErr oss.ServiceError
+		if errors.As(err, &serviceErr) && serviceErr.StatusCode == 404 && serviceErr.Code == "NoSuchKey" {
+			return nil, kv.NewNotFoundError("error getting object for key '%s': %s", objectKey, err.Error())
 		}
+
 		return nil, errors.Wrapf(err, "error getting object for key '%s'", objectKey)
 	}
 

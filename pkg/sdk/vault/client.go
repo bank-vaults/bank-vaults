@@ -17,6 +17,7 @@ package vault
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -26,13 +27,15 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/compute/metadata"
+	credentials "cloud.google.com/go/iam/credentials/apiv1"
 	"emperror.dev/errors"
 	"github.com/fsnotify/fsnotify"
-	"github.com/hashicorp/vault/api"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/leosayous21/go-azure-msi/msi"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iam/v1"
-	"k8s.io/client-go/rest"
+	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
 )
 
 const (
@@ -49,14 +52,16 @@ func NewData(cas int, data map[string]interface{}) map[string]interface{} {
 }
 
 type clientOptions struct {
-	url        string
-	role       string
-	authPath   string
-	tokenPath  string
-	token      string
-	timeout    time.Duration
-	logger     Logger
-	authMethod ClientAuthMethod
+	url            string
+	role           string
+	authPath       string
+	tokenPath      string
+	token          string
+	timeout        time.Duration
+	logger         Logger
+	authMethod     ClientAuthMethod
+	existingSecret string
+	vaultNamespace string
 }
 
 // ClientOption configures a Vault client using the functional options paradigm popularized by Rob Pike and Dave Cheney.
@@ -110,7 +115,7 @@ func (co ClientTimeout) apply(o *clientOptions) {
 }
 
 // ClientLogger wraps a logur.Logger compatible logger to be used in the client.
-func ClientLogger(logger Logger) clientLogger {
+func ClientLogger(logger Logger) clientLogger { // nolint:revive
 	return clientLogger{logger: logger}
 }
 
@@ -129,6 +134,19 @@ func (co ClientAuthMethod) apply(o *clientOptions) {
 	o.authMethod = co
 }
 
+type ExistingSecret string
+
+func (co ExistingSecret) apply(o *clientOptions) {
+	o.existingSecret = string(co)
+}
+
+// Vault Enterprise Namespace (not Kubernetes namespace)
+type VaultNamespace string
+
+func (co VaultNamespace) apply(o *clientOptions) {
+	o.vaultNamespace = string(co)
+}
+
 const (
 	// AWSEC2AuthMethod is used for the Vault AWS EC2 auth method
 	// as described here: https://www.vaultproject.io/docs/auth/aws#ec2-auth-method
@@ -138,12 +156,24 @@ const (
 	// as described here: https://www.vaultproject.io/docs/auth/gcp#gce-login
 	GCPGCEAuthMethod ClientAuthMethod = "gcp-gce"
 
+	// GCPIAMAuthMethod is used for the Vault GCP IAM auth method
+	// as described here: https://www.vaultproject.io/docs/auth/gcp#iam
+	GCPIAMAuthMethod ClientAuthMethod = "gcp-iam"
+
 	// JWTAuthMethod is used for the Vault JWT/OIDC/GCP/Kubernetes auth methods
 	// as describe here:
 	// - https://www.vaultproject.io/docs/auth/jwt
 	// - https://www.vaultproject.io/docs/auth/kubernetes
 	// - https://www.vaultproject.io/docs/auth/gcp
 	JWTAuthMethod ClientAuthMethod = "jwt"
+
+	// AzureMSIAuthMethod is used for the vault Azure auth method
+	// as described here:
+	// - https://www.vaultproject.io/docs/auth/azure
+	AzureMSIAuthMethod ClientAuthMethod = "azure"
+
+	// NamespacedSecretAuthMethod is used for per namespace secrets
+	NamespacedSecretAuthMethod ClientAuthMethod = "namespaced"
 )
 
 // Client is a Vault client with Kubernetes support, token automatic renewing and
@@ -154,7 +184,7 @@ type Client struct {
 
 	client       *vaultapi.Client
 	logical      *vaultapi.Logical
-	tokenRenewer *vaultapi.Renewer
+	tokenWatcher *vaultapi.Renewer
 	closed       bool
 	watch        *fsnotify.Watcher
 	mu           sync.Mutex
@@ -254,7 +284,7 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		logger:  noopLogger{},
 	}
 
-	var tokenRenewer *vaultapi.Renewer
+	var tokenWatcher *vaultapi.Renewer
 
 	o := &clientOptions{}
 
@@ -297,6 +327,11 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		}
 	}
 
+	// Set vault namespace if defined
+	if o.vaultNamespace != "" {
+		rawClient.SetNamespace(o.vaultNamespace)
+	}
+
 	// Default timeout
 	if o.timeout == 0 {
 		o.timeout = 10 * time.Second
@@ -316,17 +351,9 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 		if err == nil {
 			rawClient.SetToken(string(token))
 		} else {
-			// If VAULT_TOKEN, VAULT_TOKEN_PATH or ~/.vault-token wasn't provided let's
-			// suppose we are in Kubernetes and try to get one with the Kubernetes ServiceAccount JWT.
-			//
-			// This logic works for for Vault GCP authentication as well, see:
-			// https://www.vaultproject.io/api/auth/gcp#login
-
-			// Check that we are in Kubernetes
-			_, err := rest.InClusterConfig()
-			if err != nil {
-				return nil, err
-			}
+			// If VAULT_TOKEN, VAULT_TOKEN_PATH or ~/.vault-token wasn't provided,
+			// attempt to get one with supported JWT-based authentication methods
+			// (such as Kubernetes ServiceAccount JWT).
 
 			jwtFile := defaultJWTFile
 			if file := os.Getenv("KUBERNETES_SERVICE_ACCOUNT_TOKEN"); file != "" {
@@ -337,10 +364,10 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 
 			var loginDataFunc func() (map[string]interface{}, error)
 
-			switch o.authMethod {
+			switch o.authMethod { // nolint:exhaustive
 			case AWSEC2AuthMethod:
 				loginDataFunc = func() (map[string]interface{}, error) {
-					resp, err := http.Get(awsEC2PKCS7Url)
+					resp, err := http.Get(awsEC2PKCS7Url) // nolint:noctx
 					if err != nil {
 						return nil, err
 					}
@@ -389,9 +416,87 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					}, nil
 				}
 
+			case GCPIAMAuthMethod:
+				loginDataFunc = func() (map[string]interface{}, error) {
+					c, err := credentials.NewIamCredentialsClient(context.TODO())
+					if err != nil {
+						return nil, err
+					}
+
+					metadataClient := metadata.NewClient(nil)
+					serviceAccountEmail, err := metadataClient.Email("default")
+					if err != nil {
+						return nil, err
+					}
+
+					jwtPayload := map[string]interface{}{
+						"aud": fmt.Sprintf("vault/%s", o.role),
+						"sub": serviceAccountEmail,
+						"exp": time.Now().Add(time.Minute * 10).Unix(),
+					}
+
+					payloadBytes, err := json.Marshal(jwtPayload)
+					if err != nil {
+						return nil, err
+					}
+
+					req := &credentialspb.SignJwtRequest{
+						Name:    fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccountEmail),
+						Payload: string(payloadBytes),
+					}
+					resp, err := c.SignJwt(context.TODO(), req)
+					if err != nil {
+						return nil, err
+					}
+
+					return map[string]interface{}{
+						"jwt":  resp.SignedJwt,
+						"role": o.role,
+					}, nil
+				}
+
+			case AzureMSIAuthMethod:
+				loginDataFunc = func() (map[string]interface{}, error) {
+					metadata, err := msi.GetInstanceMetadata()
+					if err != nil {
+						return nil, err
+					}
+					token, err := msi.GetMsiToken()
+					if err != nil {
+						return nil, err
+					}
+					return map[string]interface{}{
+						"role":                o.role,
+						"jwt":                 token.AccessToken,
+						"subscription_id":     metadata.SubscriptionId,
+						"resource_group_name": metadata.ResourceGroupName,
+						"vm_name":             metadata.VMName,
+						"vmss_name":           metadata.VMssName,
+					}, nil
+				}
+
+			case NamespacedSecretAuthMethod:
+				loginDataFunc = func() (map[string]interface{}, error) {
+					if len(o.existingSecret) > 0 {
+						return map[string]interface{}{
+							"jwt":  o.existingSecret,
+							"role": o.role,
+						}, nil
+					}
+
+					jwt, err := ioutil.ReadFile(jwtFile)
+					if err != nil {
+						return nil, err
+					}
+
+					return map[string]interface{}{
+						"jwt":  string(jwt),
+						"role": o.role,
+					}, nil
+				}
+
 			default:
 				loginDataFunc = func() (map[string]interface{}, error) {
-					// Projected SA JWTs do expire, so we need to move the reading logic into the loop
 					jwt, err := ioutil.ReadFile(jwtFile)
 					if err != nil {
 						return nil, err
@@ -439,7 +544,11 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 						continue
 					}
 
-					client.logger.Info("received new Vault token")
+					client.logger.Info("received new Vault token", map[string]interface{}{
+						"addr": o.url,
+						"role": o.role,
+						"path": o.authPath,
+					})
 
 					// Set the first token from the response
 					rawClient.SetToken(secret.Auth.ClientToken)
@@ -450,19 +559,19 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					}
 
 					// Start the renewing process
-					tokenRenewer, err = rawClient.NewRenewer(&vaultapi.RenewerInput{Secret: secret})
+					tokenWatcher, err = rawClient.NewLifetimeWatcher(&vaultapi.LifetimeWatcherInput{Secret: secret})
 					if err != nil {
-						client.logger.Error("failed to renew Vault token", map[string]interface{}{"err": err})
+						client.logger.Error("failed to watch Vault token", map[string]interface{}{"err": err})
 						continue
 					}
 
 					client.mu.Lock()
-					client.tokenRenewer = tokenRenewer
+					client.tokenWatcher = tokenWatcher
 					client.mu.Unlock()
 
-					go tokenRenewer.Renew()
+					go tokenWatcher.Start()
 
-					client.runRenewChecker(tokenRenewer)
+					client.runRenewChecker(tokenWatcher)
 				}
 
 				client.logger.Info("Vault token renewal closed")
@@ -482,15 +591,15 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 	return client, nil
 }
 
-func (client *Client) runRenewChecker(tokenRenewer *vaultapi.Renewer) {
+func (client *Client) runRenewChecker(tokenWatcher *vaultapi.Renewer) {
 	for {
 		select {
-		case err := <-tokenRenewer.DoneCh():
+		case err := <-tokenWatcher.DoneCh():
 			if err != nil {
 				client.logger.Error("error in Vault token renewal", map[string]interface{}{"err": err})
 			}
 			return
-		case o := <-tokenRenewer.RenewCh():
+		case o := <-tokenWatcher.RenewCh():
 			ttl, _ := o.Secret.TokenTTL()
 			client.logger.Info("renewed Vault token", map[string]interface{}{"ttl": ttl})
 		}
@@ -515,8 +624,8 @@ func (client *Client) Close() {
 
 	client.closed = true
 
-	if client.tokenRenewer != nil {
-		client.tokenRenewer.Stop()
+	if client.tokenWatcher != nil {
+		client.tokenWatcher.Stop()
 	}
 
 	if client.watch != nil {
@@ -525,7 +634,7 @@ func (client *Client) Close() {
 }
 
 // NewRawClient creates a new raw Vault client.
-func NewRawClient() (*api.Client, error) {
+func NewRawClient() (*vaultapi.Client, error) {
 	config := vaultapi.DefaultConfig()
 	if config.Error != nil {
 		return nil, config.Error
@@ -537,7 +646,7 @@ func NewRawClient() (*api.Client, error) {
 }
 
 // NewInsecureRawClient creates a new raw Vault client with insecure TLS.
-func NewInsecureRawClient() (*api.Client, error) {
+func NewInsecureRawClient() (*vaultapi.Client, error) {
 	config := vaultapi.DefaultConfig()
 	if config.Error != nil {
 		return nil, config.Error

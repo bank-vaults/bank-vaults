@@ -49,6 +49,7 @@ webhookClientConfig:
 
 vaultEnv:
   repository: ghcr.io/banzaicloud/vault-env
+  # tag: ""
 
 env:
   VAULT_IMAGE: vault:1.6.2
@@ -61,6 +62,11 @@ env:
   # # define the webhook's role in Vault used for authentication,
   # # if not defined individually in resources by annotations.
   # VAULT_ROLE: vault-secrets-webhook
+  # Resource requests and limits for init containers
+  # VAULT_ENV_CPU_REQUEST:
+  # VAULT_ENV_MEMORY_REQUEST:
+  # VAULT_ENV_CPU_LIMIT:
+  # VAULT_ENV_MEMORY_LIMIT
 
 metrics:
   enabled: false
@@ -98,6 +104,8 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+topologySpreadConstraints: {}
 
 ## Assign a PriorityClassName to pods if set
 priorityClassName: ""
@@ -154,10 +162,13 @@ objectSelector: {}
   #   operator: NotIn
   #   values:
   #   - skip
+  # matchLabels:
+  #   vault-injection: enabled
 
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
+  # maxUnavailable: 1
 
 timeoutSeconds: false
 
@@ -166,3 +177,6 @@ hostNetwork: false
 # If you're using celium (CNI) and you are required to set hostNetwork to true
 # then pods with webhooks must set the dnsPolicy to "ClusterFirstWithHostNet"
 dnsPolicy: Default
+
+# Override cluster version
+kubeVersion: ""

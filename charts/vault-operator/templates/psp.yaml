@@ -46,6 +46,7 @@ spec:
   allowPrivilegeEscalation: true
   allowedCapabilities:
     - IPC_LOCK
+    - SETFCAP
   volumes:
     - 'configMap'
     - 'emptyDir'

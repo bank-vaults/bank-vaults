@@ -41,3 +41,13 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "100m"
+      # Try a container without explicit command to exercise the registry lookup feature
+      - name: redis
+        image: redis
+        env:
+          - name: AWS_SECRET_ACCESS_KEY
+            value: vault:secret/data/accounts/aws#AWS_SECRET_ACCESS_KEY
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "100m"

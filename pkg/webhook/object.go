@@ -1,4 +1,4 @@
-// Copyright © 2020 Banzai Cloud
+// Copyright © 2021 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package webhook
 
 import (
 	"strings"
@@ -21,6 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/banzaicloud/bank-vaults/internal/injector"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
@@ -97,15 +98,16 @@ func traverseObject(o interface{}, vaultClient *vault.Client, vaultConfig VaultC
 				}
 
 				e.Set(dataFromVault["data"])
-			} else if hasInlineVaultDelimiters(s) {
+			} else if injector.HasInlineVaultDelimiters(s) {
 				dataFromVault := s
-				for _, vaultSecretReference := range findInlineVaultDelimiters(s) {
+				for _, vaultSecretReference := range injector.FindInlineVaultDelimiters(s) {
 					mapData, err := getDataFromVault(map[string]string{"data": vaultSecretReference[1]}, vaultClient, vaultConfig, logger)
 					if err != nil {
 						return err
 					}
 					dataFromVault = strings.Replace(dataFromVault, vaultSecretReference[0], mapData["data"], -1)
 				}
+				e.Set(dataFromVault)
 			}
 		case map[string]interface{}, []interface{}:
 			err := traverseObject(e.Get(), vaultClient, vaultConfig, logger)
@@ -118,7 +120,7 @@ func traverseObject(o interface{}, vaultClient *vault.Client, vaultConfig VaultC
 	return nil
 }
 
-func (mw *mutatingWebhook) mutateObject(object *unstructured.Unstructured, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) MutateObject(object *unstructured.Unstructured, vaultConfig VaultConfig) error {
 	mw.logger.Debugf("mutating object: %s.%s", object.GetNamespace(), object.GetName())
 
 	vaultClient, err := mw.newVaultClient(vaultConfig)

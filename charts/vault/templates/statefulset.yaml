@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: {{ template "vault.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     helm.sh/chart: {{ template "vault.chart" . }}
     app.kubernetes.io/name: {{ template "vault.name" . }}
@@ -29,7 +30,9 @@ spec:
         {{- end }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
-{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- with .Values.podAnnotations }}
+{{ toYaml . | indent 8 }}
+{{- end }}
     spec:
       initContainers:
       - name: vault-config
@@ -222,6 +225,7 @@ spec:
         {{- end }}
         resources:
 {{ toYaml .Values.vaultConfigurer.resources | indent 10 }}
+{{- if .Values.statsd.metrics.enabled }}
       - name: prometheus-statsd-exporter
         image: "{{ .Values.statsd.image.repository }}:{{ .Values.statsd.image.tag }}"
         imagePullPolicy: {{ .Values.statsd.image.pullPolicy }}
@@ -234,6 +238,7 @@ spec:
           mountPath: /tmp/
         resources:
 {{ toYaml .Values.prometheusStatsdExporter.resources | indent 10 }}
+{{- end }}
 {{- if .Values.nodeSelector }}
       nodeSelector:
 {{ toYaml .Values.nodeSelector | indent 8 }}
@@ -257,8 +262,13 @@ spec:
                   app.kubernetes.io/instance: {{ .Release.Name | quote }}
 {{- end }}
       serviceAccountName: {{ template "vault.serviceAccountName" . }}
+      {{- if not .Values.global.openshift }}
       securityContext:
         fsGroup: 65534
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
       volumes:
         - name: vault-raw-config
           secret:
@@ -293,6 +303,8 @@ spec:
             {{- else }}
             secretName: "{{ template "vault.fullname" . }}-tls"
             {{- end }}
+        {{- if .Values.statsd.metrics.enabled }}
         - name: statsd-mapping
           configMap:
             name: "{{ template "vault.fullname" . }}-statsd-mapping"
+        {{- end }}
