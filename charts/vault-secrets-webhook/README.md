@@ -141,7 +141,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | timeoutSeconds                     | Webhook timeoutSeconds value                                                  | ``                                                       |
 | hostNetwork                        | allow pod to use the node network namespace                                   | `false`                                                  |
 | dnsPolicy                          | The dns policy desired for the deployment                                     | `Default`                                                |
-| kerbVersion                        | Override cluster version                                                      | ``                                                       |
+| kubeVersion                        | Override cluster version                                                      | ``                                                       |
 
 ### Certificate options
 
