@@ -122,6 +122,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | env.VAULT_ENV_MEMORY_REQUEST       | memory requests for init-containers vault-env and copy-vault-env              | `64Mi`                                                   |
 | env.VAULT_ENV_CPU_LIMIT            | cpu limits for init-containers vault-env and copy-vault-env                   | `250m`                                                   |
 | env.VAULT_ENV_MEMORY_LIMIT         | memory limits for init-containers vault-env and copy-vault-env                | `64Mi`                                                   |
+| env.VAULT_ENV_LOG_SERVER           | define remote log server for vault-env                                        | ``                                                   |
 | volumes                            | extra volume definitions                                                      | `[]`                                                     |
 | volumeMounts                       | extra volume mounts                                                           | `[]`                                                     |
 | configMapMutation                  | enable injecting values from Vault to ConfigMaps                              | `false`                                                  |
