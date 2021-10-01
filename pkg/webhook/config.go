@@ -65,6 +65,7 @@ type VaultConfig struct {
 	AgentImagePullPolicy        corev1.PullPolicy
 	EnvImage                    string
 	EnvImagePullPolicy          corev1.PullPolicy
+	EnvLogServer                string
 	Skip                        bool
 	VaultEnvFromPath            string
 	TokenAuthMount              string
@@ -306,6 +307,9 @@ func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig 
 	} else {
 		vaultConfig.EnvImage = viper.GetString("vault_env_image")
 	}
+
+	vaultConfig.EnvLogServer = viper.GetString("VAULT_ENV_LOG_SERVER")
+
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-env-image-pull-policy"]; ok {
 		vaultConfig.EnvImagePullPolicy = getPullPolicy(val)
 	} else {
@@ -416,6 +420,7 @@ func SetConfigDefaults() {
 	viper.SetDefault("VAULT_ENV_MEMORY_REQUEST", "")
 	viper.SetDefault("VAULT_ENV_CPU_LIMIT", "")
 	viper.SetDefault("VAULT_ENV_MEMORY_LIMIT", "")
+	viper.SetDefault("VAULT_ENV_LOG_SERVER", "")
 	viper.SetDefault("VAULT_NAMESPACE", "")
 	viper.AutomaticEnv()
 }
