@@ -46,7 +46,7 @@ jobs:
         VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
 
     - name: Lint Helm charts
-      uses: helm/chart-testing-action@v1.1.0
+      uses: helm/chart-testing-action@v2.1.0
       with:
         command: lint
         config: charts/testing.yaml
