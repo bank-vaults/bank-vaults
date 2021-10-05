@@ -17,7 +17,7 @@ require (
 	github.com/aliyun/aliyun-oss-go-sdk v2.0.4+incompatible
 	github.com/aws/aws-sdk-go v1.35.24
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
-	github.com/banzaicloud/bank-vaults/pkg/sdk v0.2.1
+	github.com/banzaicloud/bank-vaults/pkg/sdk v0.8.0
 	github.com/banzaicloud/k8s-objectmatcher v1.5.0
 	github.com/containerd/continuity v0.0.0-20201119173150-04c754faca46 // indirect
 	github.com/coreos/etcd-operator v0.9.4
