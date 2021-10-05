@@ -422,6 +422,13 @@ func (mw *MutatingWebhook) mutateContainers(ctx context.Context, containers []co
 			})
 		}
 
+		if vaultConfig.EnvLogServer != "" {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  "VAULT_ENV_LOG_SERVER",
+				Value: vaultConfig.EnvLogServer,
+			})
+		}
+
 		containers[i] = container
 	}
 

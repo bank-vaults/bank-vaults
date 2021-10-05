@@ -17,6 +17,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log/syslog"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -27,6 +28,7 @@ import (
 	"emperror.dev/errors"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
+	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
 	"github.com/spf13/cast"
 	logrusadapter "logur.dev/adapter/logrus"
 
@@ -147,6 +149,14 @@ func main() {
 			log.SetFormatter(&logrus.JSONFormatter{})
 		}
 		logger = log.WithField("app", "vault-env")
+
+		envLogServer := os.Getenv("VAULT_ENV_LOG_SERVER")
+		if envLogServer != "" {
+			hook, err := logrus_syslog.NewSyslogHook("udp", envLogServer, syslog.LOG_INFO, "")
+			if err == nil {
+				log.Hooks.Add(hook)
+			}
+		}
 	}
 
 	if len(os.Args) == 1 {

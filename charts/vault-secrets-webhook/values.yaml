@@ -67,6 +67,7 @@ env:
   # VAULT_ENV_MEMORY_REQUEST:
   # VAULT_ENV_CPU_LIMIT:
   # VAULT_ENV_MEMORY_LIMIT
+  # VAULT_ENV_LOG_SERVER:
 
 metrics:
   enabled: false
