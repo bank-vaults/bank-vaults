@@ -175,5 +175,9 @@ timeoutSeconds: false
 
 hostNetwork: false
 
+# If you're using celium (CNI) and you are required to set hostNetwork to true
+# then pods with webhooks must set the dnsPolicy to "ClusterFirstWithHostNet"
+dnsPolicy: Default
+
 # Override cluster version
 kubeVersion: ""

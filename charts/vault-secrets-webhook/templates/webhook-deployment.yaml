@@ -36,6 +36,9 @@ spec:
       {{- if .Values.hostNetwork}}
       hostNetwork: {{ .Values.hostNetwork}}
       {{- end }}
+      {{- with .Values.dnsPolicy }}
+      dnsPolicy: {{ . }}
+      {{- end }}
       serviceAccountName: {{ template "vault-secrets-webhook.serviceAccountName" . }}
       {{- if .Values.priorityClassName }}
       priorityClassName: {{ .Values.priorityClassName }}
