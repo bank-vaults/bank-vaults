@@ -69,6 +69,18 @@ env:
   # VAULT_ENV_MEMORY_LIMIT
   # VAULT_ENV_LOG_SERVER:
 
+initContainer:
+  # -- This is the init-container configuration
+  enabled: false
+  # name: initContainerName
+  # image:
+  #   repository: my-custom-repository/init-container
+  #   version: 1.0.0
+  # command: 
+  #   - /usr/bin/bash
+  # args: 
+  #   - -i
+
 metrics:
   enabled: false
   port: 8443
