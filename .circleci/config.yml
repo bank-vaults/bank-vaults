@@ -57,13 +57,13 @@ jobs:
             # helm
             curl -L https://git.io/get_helm.sh | DESIRED_VERSION=${HELM_VERSION} bash
             # kind
-            go get sigs.k8s.io/kind@${KIND_VERSION}
+            go install sigs.k8s.io/kind@${KIND_VERSION}
             sudo mv /go/bin/kind /usr/local/bin/kind
             # envtpl
-            go get github.com/subfuzion/envtpl/...
+            go install github.com/subfuzion/envtpl/...
             sudo mv /go/bin/envtpl /usr/local/bin/envtpl
             # cidr
-            go get github.com/hankjacobs/cidr
+            go install github.com/hankjacobs/cidr
             sudo mv /go/bin/cidr /usr/local/bin/cidr
 
       - run:
