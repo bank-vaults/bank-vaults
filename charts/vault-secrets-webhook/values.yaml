@@ -69,17 +69,11 @@ env:
   # VAULT_ENV_MEMORY_LIMIT
   # VAULT_ENV_LOG_SERVER:
 
-initContainer:
-  # -- This is the init-container configuration
-  enabled: false
-  # name: initContainerName
-  # image:
-  #   repository: my-custom-repository/init-container
-  #   version: 1.0.0
-  # command: 
-  #   - /usr/bin/bash
-  # args: 
-  #   - -i
+initContainers: []
+  ## Containers, which are run before the app containers are started.
+  # - name: init-myservice
+  #   image: busybox
+  #   command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
 
 metrics:
   enabled: false
