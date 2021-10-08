@@ -6,8 +6,8 @@ orbs:
 jobs:
   multi-cluster-acceptance-test:
     machine:
-      image: cimg/base:2021.04
-      docker_layer_caching: true
+      image: ubuntu-2004:202107-02
+#      docker_layer_caching: true
 
     resource_class: large
 
