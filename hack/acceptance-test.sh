@@ -96,7 +96,6 @@ sleep 20
 # Run an internal client which tries to read from Vault with the configured Kubernetes auth backend
 kurun run cmd/examples/main.go
 
-# Only kind is configured to be able to run this test
 kubectl delete -f operator/deploy/cr-priority.yaml
 kubectl delete -f operator/deploy/priorityclass.yaml
 kubectl delete secret vault-unseal-keys
@@ -110,6 +109,7 @@ kubectl wait --for=condition=healthy --timeout=120s vault/vault
 
 kurun apply -f hack/oidc-pod.yaml
 waitfor "kubectl get pod/oidc -o json | jq -e '.status.phase == \"Succeeded\"'"
+kubectl delete -f hack/oidc-pod.yaml
 
 # Run the webhook test, the hello-secrets deployment should be successfully mutated
 helm upgrade --install vault-secrets-webhook ./charts/vault-secrets-webhook \
@@ -119,7 +119,7 @@ helm upgrade --install vault-secrets-webhook ./charts/vault-secrets-webhook \
     --set configmapFailurePolicy=Fail \
     --set podsFailurePolicy=Fail \
     --set secretsFailurePolicy=Fail \
-    --set env.VAULT_ENV_IMAGE=ghcr.io/banzaicloud/vault-env:latest \
+    --set vaultEnv.tag=latest \
     --namespace vswh \
     --wait
 
@@ -141,3 +141,5 @@ kubectl delete -f deploy/test-deployment-seccontext.yaml
 
 kubectl apply -f deploy/test-deployment.yaml
 kubectl wait --for=condition=available deployment/hello-secrets --timeout=120s
+
+echo "Test has finished"
