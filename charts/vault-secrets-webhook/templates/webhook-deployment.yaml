@@ -55,31 +55,9 @@ spec:
       imagePullSecrets:
 {{ toYaml .Values.image.imagePullSecrets | indent 8 }}
       {{- end }}
-{{- if .Values.initContainer.enabled }}
+{{- if .Values.initContainers }}
       initContainers:
-        - name: {{ .Values.initContainer.name }}
-          image: "{{ .Values.initContainer.image.repository }}:{{ .Values.initContainer.image.version }}"
-          imagePullPolicy: {{ .Values.initContainer.image.pullPolicy }}
-          {{- if .Values.initContainer.command }}
-          command:
-          {{-  range .Values.initContainer.command }}
-            - {{ . }}
-          {{- end }}
-          {{- end }}
-          {{- if .Values.initContainer.args }}
-          args:
-          {{-  range .Values.initContainer.args }}
-            - {{ . }}
-          {{- end }}
-          {{- end }}
-          {{- with .Values.initContainer.volumeMounts }}
-          volumeMounts:
-            {{- toYaml . | nindent 10 }}
-          {{- end }}
-          {{- with .Values.initContainer.env }}
-          env:
-            {{- toYaml . | nindent 10 }}
-          {{- end }}
+{{ toYaml .Values.initContainers | indent 8}}
 {{- end }}
       containers:
         - name: {{ .Chart.Name }}
