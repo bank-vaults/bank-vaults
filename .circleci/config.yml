@@ -6,17 +6,17 @@ orbs:
 jobs:
   multi-cluster-acceptance-test:
     machine:
-      image: ubuntu-1604:202004-01
+      image: cimg/base:2021.04
       docker_layer_caching: true
 
     resource_class: large
 
     environment:
-      GO_VERSION: "1.16.2"
-      K8S_VERSION: v1.19.2
-      HELM_VERSION: v3.3.1
+      GO_VERSION: "1.17.1"
+      K8S_VERSION: v1.21.1
+      HELM_VERSION: v3.7.0
       KUBECONFIG: /home/circleci/.kube/config
-      KIND_VERSION: v0.8.1
+      KIND_VERSION: v0.11.1
       GOPATH: /go
       DOCKER_LATEST: 1
 
