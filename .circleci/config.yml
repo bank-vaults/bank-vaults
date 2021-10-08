@@ -58,13 +58,10 @@ jobs:
             curl -L https://git.io/get_helm.sh | DESIRED_VERSION=${HELM_VERSION} bash
             # kind
             go install sigs.k8s.io/kind@${KIND_VERSION}
-            sudo mv /go/bin/kind /usr/local/bin/kind
             # envtpl
-            go install github.com/subfuzion/envtpl/...
-            sudo mv /go/bin/envtpl /usr/local/bin/envtpl
+            go install github.com/subfuzion/envtpl/...@master
             # cidr
-            go install github.com/hankjacobs/cidr
-            sudo mv /go/bin/cidr /usr/local/bin/cidr
+            go install github.com/hankjacobs/cidr@master
 
       - run:
           name: Build the Helm charts
