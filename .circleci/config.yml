@@ -6,17 +6,17 @@ orbs:
 jobs:
   multi-cluster-acceptance-test:
     machine:
-      image: ubuntu-1604:202004-01
-      docker_layer_caching: true
+      image: ubuntu-2004:202107-02
+#      docker_layer_caching: true
 
     resource_class: large
 
     environment:
-      GO_VERSION: "1.16.2"
-      K8S_VERSION: v1.19.2
-      HELM_VERSION: v3.3.1
+      GO_VERSION: "1.17.1"
+      K8S_VERSION: v1.21.1
+      HELM_VERSION: v3.7.0
       KUBECONFIG: /home/circleci/.kube/config
-      KIND_VERSION: v0.8.1
+      KIND_VERSION: v0.11.1
       GOPATH: /go
       DOCKER_LATEST: 1
 
@@ -57,14 +57,11 @@ jobs:
             # helm
             curl -L https://git.io/get_helm.sh | DESIRED_VERSION=${HELM_VERSION} bash
             # kind
-            go get sigs.k8s.io/kind@${KIND_VERSION}
-            sudo mv /go/bin/kind /usr/local/bin/kind
+            go install sigs.k8s.io/kind@${KIND_VERSION}
             # envtpl
-            go get github.com/subfuzion/envtpl/...
-            sudo mv /go/bin/envtpl /usr/local/bin/envtpl
+            go install github.com/subfuzion/envtpl/...@master
             # cidr
-            go get github.com/hankjacobs/cidr
-            sudo mv /go/bin/cidr /usr/local/bin/cidr
+            go install github.com/hankjacobs/cidr@master
 
       - run:
           name: Build the Helm charts
