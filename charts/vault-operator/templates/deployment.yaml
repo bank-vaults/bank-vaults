@@ -54,6 +54,10 @@ spec:
           ports:
           - containerPort: {{ .Values.service.internalPort }}
           - containerPort: 8383
+          {{- if .Values.securityContext }}
+          securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- end }}
           livenessProbe:
             httpGet:
               path: "/"
@@ -80,6 +84,10 @@ spec:
 {{- if .Values.nodeSelector }}
       nodeSelector:
 {{ toYaml .Values.nodeSelector | indent 8 }}
+{{- end }}
+{{- if .Values.podSecurityContext }}
+      securityContext:
+{{ toYaml .Values.podSecurityContext | indent 8 }}
 {{- end }}
       serviceAccountName: {{ include "vault-operator.serviceAccountName" . }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
