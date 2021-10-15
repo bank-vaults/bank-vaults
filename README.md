@@ -9,7 +9,7 @@
   <a href="https://hub.docker.com/r/banzaicloud/bank-vaults/">
     <img src="https://img.shields.io/docker/pulls/banzaicloud/bank-vaults.svg?style=shield" alt="Docker Pulls">
   </a>
-  
+
   <a href="https://godoc.org/github.com/banzaicloud/bank-vaults">
     <img src="https://godoc.org/github.com/banzaicloud/bank-vaults?status.svg" alt="GoDoc">
   </a>
@@ -74,13 +74,6 @@ On macOS, you can directly Homebrew the CLI:
 $ brew install banzaicloud/tap/bank-vaults
 ```
 
-Alternatively, fetch the source and compile it using `go get`:
-
-```shell
-go get github.com/banzaicloud/bank-vaults/cmd/bank-vaults
-go get github.com/banzaicloud/bank-vaults/cmd/vault-env
-```
-
 ## Documentation
 
 Read more about the usage of bank-vaults in the [detailed
@@ -100,9 +93,9 @@ If you encounter any problems that is not addressed in our documentation, [open 
 If you find this project useful, help us:
 
 - Support the development of this project and star this repo! :star:
-- If you use Bank-Vaults in a production environment, add yourself to the list of production [adopters](https://github.com/banzaicloud/bank-vaults/blob/master/ADOPTERS.md).:metal: <br> 
+- If you use Bank-Vaults in a production environment, add yourself to the list of production [adopters](https://github.com/banzaicloud/bank-vaults/blob/master/ADOPTERS.md).:metal: <br>
 - Help new users with issues they may encounter :muscle:
-- Send a pull request with your new features and bug fixes :rocket: 
+- Send a pull request with your new features and bug fixes :rocket:
 
 ### Commercial Support
 
