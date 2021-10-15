@@ -45,11 +45,11 @@ jobs:
       env:
         VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
 
-    - name: Lint Helm charts
+    - name: Set up chart-testing
       uses: helm/chart-testing-action@v2.1.0
-      with:
-        command: lint
-        config: charts/testing.yaml
+
+    - name: Run chart-testing
+      run: ct lint --config charts/testing.yaml
 
   acceptance-test:
     name: Acceptance test
