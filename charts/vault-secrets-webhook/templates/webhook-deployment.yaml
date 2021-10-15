@@ -55,6 +55,10 @@ spec:
       imagePullSecrets:
 {{ toYaml .Values.image.imagePullSecrets | indent 8 }}
       {{- end }}
+{{- if .Values.initContainers }}
+      initContainers:
+{{ toYaml .Values.initContainers | indent 8}}
+{{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ include "vault-secrets-webhook.bank-vaults.version" . }}"

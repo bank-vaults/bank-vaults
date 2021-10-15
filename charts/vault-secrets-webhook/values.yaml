@@ -69,6 +69,12 @@ env:
   # VAULT_ENV_MEMORY_LIMIT
   # VAULT_ENV_LOG_SERVER:
 
+initContainers: []
+  ## Containers, which are run before the app containers are started.
+  # - name: init-myservice
+  #   image: busybox
+  #   command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
+
 metrics:
   enabled: false
   port: 8443
