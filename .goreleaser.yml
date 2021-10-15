@@ -23,7 +23,7 @@ builds:
             # This would be better if it could be ./cmd/bank-vaults instead of github.com/banzaicloud/bank-vaults/cmd/bank-vaults
             # Since this is pulling the source code directly from GitHub so what we would like to build has to be pushed there first
             - xgo --targets={{ .Os }}/{{ .Arch }} --dest=dist github.com/banzaicloud/bank-vaults/cmd/bank-vaults
-            - bash -c "mv dist/bank-vaults-* dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
+            - bash -c "mv dist/bank-vaults-{{ .Os }}*-{{ .Arch }} dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
 
     -   id: vault-env
         main: ./cmd/vault-env
@@ -38,7 +38,7 @@ builds:
             - amd64
             - arm64
 archives:
-    -   id: bank-vaults-targz
+    -   id: bank-vaults
         name_template: "{{ .Binary }}-{{ .Os }}-{{ .Arch }}"
         builds:
             - bank-vaults
@@ -60,7 +60,9 @@ changelog:
     skip: false
 
 brews:
-    -   tap:
+    -   ids:
+            - bank-vaults
+        tap:
             owner: banzaicloud
             name: homebrew-tap
         folder: Formula

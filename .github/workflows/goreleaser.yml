@@ -1,0 +1,30 @@
+name: Goreleaser
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+env:
+    GO_VERSION: 1.17
+jobs:
+  docker:
+    name: Goreleaser
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2.1.4
+        with:
+            go-version: ${{ env.GO_VERSION }}
+
+      - name: Install xgo
+        run: go install github.com/crazy-max/xgo@latest
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+            version: latest
+            args: release --rm-dist --timeout 2h
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
