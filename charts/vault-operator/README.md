@@ -69,22 +69,24 @@ helm upgrade --install vault-operator banzaicloud-stable/charts/vault-operator
 
 The following table lists the configurable parameters of the vault chart and their default values.
 
-| Parameter                    | Description                                  | Default                      |
-| ---------------------------- | -------------------------------------------- | ---------------------------- |
-| `image.pullPolicy`           | Container pull policy                        | `IfNotPresent`               |
-| `image.repository`           | Container image to use                       | `banzaicloud/vault-operator` |
-| `image.bankVaultsRepository` | Container image to use for Bank-Vaults       | `banzaicloud/bank-vaults`    |
-| `image.tag`                  | Container image tag to deploy operator in    | `.Chart.AppVersion`          |
-| `image.bankVaultsTag`        | Container image tag to deploy bank-vaults in | `.Chart.AppVersion`          |
-| `image.imagePullSecrets`     | Image pull secrets for private repositories  | `[]`                         |
-| `replicaCount`               | k8s replicas                                 | `1`                          |
-| `resources.requests.cpu`     | Container requested CPU                      | `100m`                       |
-| `resources.requests.memory`  | Container requested memory                   | `128Mi`                      |
-| `resources.limits.cpu`       | Container CPU limit                          | `100m`                       |
-| `resources.limits.memory`    | Container memory limit                       | `256Mi`                      |
-| `crdAnnotations`             | Annotations for the Vault CRD                | `{}`                         |
-| `psp.enabled`                | Deploy PSP resources                         | `false`                      |
-| `psp.vaultSA`                | Used service account for vault               | `vault`                      |
+| Parameter                    | Description                                              | Default                      |
+| ---------------------------- | -------------------------------------------------------- | ---------------------------- |
+| `image.pullPolicy`           | Container pull policy                                    | `IfNotPresent`               |
+| `image.repository`           | Container image to use                                   | `banzaicloud/vault-operator` |
+| `image.bankVaultsRepository` | Container image to use for Bank-Vaults                   | `banzaicloud/bank-vaults`    |
+| `image.tag`                  | Container image tag to deploy operator in                | `.Chart.AppVersion`          |
+| `image.bankVaultsTag`        | Container image tag to deploy bank-vaults in             | `.Chart.AppVersion`          |
+| `image.imagePullSecrets`     | Image pull secrets for private repositories              | `[]`                         |
+| `replicaCount`               | k8s replicas                                             | `1`                          |
+| `resources.requests.cpu`     | Container requested CPU                                  | `100m`                       |
+| `resources.requests.memory`  | Container requested memory                               | `128Mi`                      |
+| `resources.limits.cpu`       | Container CPU limit                                      | `100m`                       |
+| `resources.limits.memory`    | Container memory limit                                   | `256Mi`                      |
+| `crdAnnotations`             | Annotations for the Vault CRD                            | `{}`                         |
+| `securityContext`            | Container security context for vault-operator deployment | `{}`                         |
+| `podSecurityContext`         | Pod security context for vault-operator deployment       | `{}`                         |
+| `psp.enabled`                | Deploy PSP resources                                     | `false`                      |
+| `psp.vaultSA`                | Used service account for vault                           | `vault`                      |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
