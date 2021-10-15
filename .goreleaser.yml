@@ -11,6 +11,7 @@ builds:
             - windows
         goarch:
             - amd64
+            - arm64
 
 archives:
     -
@@ -29,7 +30,7 @@ changelog:
 
 brews:
     -
-        github:
+        tap:
             owner: banzaicloud
             name: homebrew-tap
         folder: Formula
