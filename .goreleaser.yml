@@ -58,16 +58,3 @@ checksum:
 
 changelog:
     skip: false
-
-brews:
-    -   ids:
-            - bank-vaults
-        tap:
-            owner: banzaicloud
-            name: homebrew-tap
-        folder: Formula
-        homepage: https://banzaicloud.com/products/bank-vaults/
-        description: A Vault swiss-army knife CLI with Kubernetes support
-        test: |
-            system "#{bin}/bank-vaults"
-            system "#{bin}/vault-env"
