@@ -23,9 +23,11 @@ import (
 	syslogformat "gopkg.in/mcuadros/go-syslog.v2/format"
 )
 
-var logParserRegexp = regexp.MustCompile("(level=[a-z]+) (msg=\\\".*\\\")( app=.*)")
-var pathNotFoundRegexp = regexp.MustCompile("(path not found:) ([a-z]+/[a-z]+/.*)(\\\")")
-var keyNotFoundRegexp = regexp.MustCompile("('.*') (not found under path:) ([a-z]+/[a-z]+/.*)(\\\")")
+var (
+	logParserRegexp    = regexp.MustCompile("(level=[a-z]+) (msg=\\\".*\\\")( app=.*)")
+	pathNotFoundRegexp = regexp.MustCompile("(path not found:) ([a-z]+/[a-z]+/.*)(\\\")")
+	keyNotFoundRegexp  = regexp.MustCompile("('.*') (not found under path:) ([a-z]+/[a-z]+/.*)(\\\")")
+)
 
 func GetClientFromLog(logParts syslogformat.LogParts) (string, error) {
 	ip := strings.Split(fmt.Sprintf("%s", logParts["client"]), ":")
