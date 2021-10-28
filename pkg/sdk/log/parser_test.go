@@ -161,7 +161,7 @@ func TestLogParser_ParseLogMessage(t *testing.T) {
 			name: "vault path not found",
 			args: args{
 				content: []string{
-					"level=fatal msg=\"failed to inject secrets from vault: key 'value' not found under path: secret/data/dynamodbToken\" app=vault-env facility:0 hostname:10.124.1.33 priority:2 severity:2 tag: timestamp:2021-10-28 09:31:18 +0000 UTC tls_peer:",
+					"level=fatal msg=\"failed to inject secrets from vault: path not found: secret/data/dynamodbToken\" app=vault-env facility:0 hostname:10.124.1.33 priority:2 severity:2 tag: timestamp:2021-10-28 09:31:18 +0000 UTC tls_peer:",
 					"level=fatal",
 					"msg=\"failed to inject secrets from vault: path not found: secret/data/dynamodbToken\"",
 					" app=vault-env facility:0 hostname:10.124.1.33 priority:2 severity:2 tag: timestamp:2021-10-28 09:31:18 +0000 UTC tls_peer:",
