@@ -23,19 +23,11 @@ import (
 	syslogformat "gopkg.in/mcuadros/go-syslog.v2/format"
 )
 
-type LogParser struct {
-	logParserRegexp, pathNotFoundRegexp, keyNotFoundRegexp *regexp.Regexp
-}
+var logParserRegexp = regexp.MustCompile("(level=[a-z]+) (msg=\\\".*\\\")( app=.*)")
+var pathNotFoundRegexp = regexp.MustCompile("(path not found:) ([a-z]+/[a-z]+/.*)(\\\")")
+var keyNotFoundRegexp = regexp.MustCompile("('.*') (not found under path:) ([a-z]+/[a-z]+/.*)(\\\")")
 
-func CreateLogParsers() *LogParser {
-	return &LogParser{
-		logParserRegexp:    regexp.MustCompile("(level=[a-z]+) (msg=\\\".*\\\")( app=.*)"),
-		pathNotFoundRegexp: regexp.MustCompile("(path not found:) ([a-z]+/[a-z]+/.*)(\\\")"),
-		keyNotFoundRegexp:  regexp.MustCompile("('.*') (not found under path:) ([a-z]+/[a-z]+/.*)(\\\")"),
-	}
-}
-
-func (p *LogParser) GetClientFromLog(logParts syslogformat.LogParts) (string, error) {
+func GetClientFromLog(logParts syslogformat.LogParts) (string, error) {
 	ip := strings.Split(fmt.Sprintf("%s", logParts["client"]), ":")
 	if len(ip) < 2 {
 		return "", errors.New("failed to get client ip from error message")
@@ -43,22 +35,22 @@ func (p *LogParser) GetClientFromLog(logParts syslogformat.LogParts) (string, er
 	return ip[0], nil
 }
 
-func (p *LogParser) GetContentFromLog(logParts syslogformat.LogParts) ([]string, error) {
-	content := p.logParserRegexp.FindStringSubmatch(fmt.Sprintf("%v", logParts["content"]))
+func GetContentFromLog(logParts syslogformat.LogParts) ([]string, error) {
+	content := logParserRegexp.FindStringSubmatch(fmt.Sprintf("%v", logParts["content"]))
 	if content == nil {
 		return nil, errors.New("parse error message failed")
 	}
 	return content, nil
 }
 
-func (p *LogParser) ParseLogMessage(content []string) map[string]string {
+func ParseLogMessage(content []string) map[string]string {
 	parsedError := make(map[string]string)
 	if !(strings.Contains(content[1], "error") || strings.Contains(content[1], "fatal")) {
 		return nil
 	}
-	if path := p.pathNotFoundRegexp.FindStringSubmatch(content[2]); path != nil {
+	if path := pathNotFoundRegexp.FindStringSubmatch(content[2]); path != nil {
 		parsedError[path[2]] = content[2]
-	} else if path := p.keyNotFoundRegexp.FindStringSubmatch(content[2]); path != nil {
+	} else if path := keyNotFoundRegexp.FindStringSubmatch(content[2]); path != nil {
 		parsedError[fmt.Sprintf("%s#%s", path[3], strings.Trim(path[1], "'"))] = content[2]
 	} else {
 		parsedError["connection_error"] = fmt.Sprintf("%v %v", content[2], content[3])

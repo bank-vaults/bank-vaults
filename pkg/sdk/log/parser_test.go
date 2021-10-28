@@ -41,7 +41,7 @@ func generateTestLogparts() (format.LogParts, format.LogParts) {
 	return logPartsOK, logPartsFailed
 }
 
-func TestLogParser_GetClientFromLog(t *testing.T) {
+func TestGetClientFromLog(t *testing.T) {
 	logPartsOK, logPartsFailed := generateTestLogparts()
 	type args struct {
 		logParts format.LogParts
@@ -79,8 +79,7 @@ func TestLogParser_GetClientFromLog(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := CreateLogParsers()
-			got, err := p.GetClientFromLog(tt.args.logParts)
+			got, err := GetClientFromLog(tt.args.logParts)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetClientFromLog() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -92,7 +91,7 @@ func TestLogParser_GetClientFromLog(t *testing.T) {
 	}
 }
 
-func TestLogParser_GetContentFromLog(t *testing.T) {
+func TestGetContentFromLog(t *testing.T) {
 	logPartsOK, logPartsFailed := generateTestLogparts()
 	type args struct {
 		logParts format.LogParts
@@ -135,8 +134,7 @@ func TestLogParser_GetContentFromLog(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := CreateLogParsers()
-			got, err := p.GetContentFromLog(tt.args.logParts)
+			got, err := GetContentFromLog(tt.args.logParts)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetContentFromLog() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -148,7 +146,7 @@ func TestLogParser_GetContentFromLog(t *testing.T) {
 	}
 }
 
-func TestLogParser_ParseLogMessage(t *testing.T) {
+func TestParseLogMessage(t *testing.T) {
 	type args struct {
 		content []string
 	}
@@ -202,8 +200,7 @@ func TestLogParser_ParseLogMessage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := CreateLogParsers()
-			if got := p.ParseLogMessage(tt.args.content); !reflect.DeepEqual(got, tt.want) {
+			if got := ParseLogMessage(tt.args.content); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ParseLogMessage() = %v, want %v", got, tt.want)
 			}
 		})
