@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"strings"
 
+	"emperror.dev/errors"
 	syslogformat "gopkg.in/mcuadros/go-syslog.v2/format"
 )
 
@@ -37,7 +38,7 @@ func CreateLogParsers() *LogParser {
 func (p *LogParser) GetClientFromLog(logParts syslogformat.LogParts) (string, error) {
 	ip := strings.Split(fmt.Sprintf("%s", logParts["client"]), ":")
 	if len(ip) < 2 {
-		return "", fmt.Errorf("failed to get client from error message")
+		return "", errors.New("failed to get client ip from error message")
 	}
 	return ip[0], nil
 }
@@ -45,7 +46,7 @@ func (p *LogParser) GetClientFromLog(logParts syslogformat.LogParts) (string, er
 func (p *LogParser) GetContentFromLog(logParts syslogformat.LogParts) ([]string, error) {
 	content := p.logParserRegexp.FindStringSubmatch(fmt.Sprintf("%v", logParts["content"]))
 	if content == nil {
-		return nil, fmt.Errorf("parse error message failed")
+		return nil, errors.New("parse error message failed")
 	}
 	return content, nil
 }
