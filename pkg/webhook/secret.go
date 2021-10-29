@@ -21,21 +21,41 @@ import (
 	"strings"
 
 	"emperror.dev/errors"
-	dockerTypes "github.com/docker/docker/api/types"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/banzaicloud/bank-vaults/internal/injector"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
-type dockerCreds struct {
-	Auths map[string]dockerTypes.AuthConfig `json:"auths"`
+type dockerCredentials struct {
+	Auths map[string]dockerAuthConfig `json:"auths"`
+}
+
+// dockerAuthConfig contains authorization information for connecting to a Registry
+type dockerAuthConfig struct {
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+	Auth     string `json:"auth,omitempty"`
+
+	// Email is an optional value associated with the username.
+	// This field is deprecated and will be removed in a later
+	// version of docker.
+	Email string `json:"email,omitempty"`
+
+	ServerAddress string `json:"serveraddress,omitempty"`
+
+	// IdentityToken is used to authenticate the user and get
+	// an access token for the registry.
+	IdentityToken string `json:"identitytoken,omitempty"`
+
+	// RegistryToken is a bearer token to be sent to a registry
+	RegistryToken string `json:"registrytoken,omitempty"`
 }
 
 func secretNeedsMutation(secret *corev1.Secret) (bool, error) {
 	for key, value := range secret.Data {
 		if key == corev1.DockerConfigJsonKey {
-			var dc dockerCreds
+			var dc dockerCredentials
 			err := json.Unmarshal(value, &dc)
 			if err != nil {
 				return false, errors.Wrap(err, "unmarshal dockerconfig json failed")
@@ -81,7 +101,7 @@ func (mw *MutatingWebhook) MutateSecret(secret *corev1.Secret, vaultConfig Vault
 
 	for key, value := range secret.Data {
 		if key == corev1.DockerConfigJsonKey {
-			var dc dockerCreds
+			var dc dockerCredentials
 			err := json.Unmarshal(value, &dc)
 			if err != nil {
 				return errors.Wrap(err, "unmarshal dockerconfig json failed")
@@ -112,8 +132,8 @@ func (mw *MutatingWebhook) MutateSecret(secret *corev1.Secret, vaultConfig Vault
 	return nil
 }
 
-func (mw *MutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCreds, vaultClient *vault.Client, vaultConfig VaultConfig) error {
-	assembled := dockerCreds{Auths: map[string]dockerTypes.AuthConfig{}}
+func (mw *MutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCredentials, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+	assembled := dockerCredentials{Auths: map[string]dockerAuthConfig{}}
 
 	for key, creds := range dc.Auths {
 		authBytes, err := base64.StdEncoding.DecodeString(creds.Auth)
@@ -140,7 +160,7 @@ func (mw *MutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCr
 				return err
 			}
 			auth = fmt.Sprintf("%s:%s", dcCreds["username"], dcCreds["password"])
-			dockerAuth := dockerTypes.AuthConfig{
+			dockerAuth := dockerAuthConfig{
 				Auth: base64.StdEncoding.EncodeToString([]byte(auth)),
 			}
 			if creds.Username != "" && creds.Password != "" {
