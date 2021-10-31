@@ -17,19 +17,18 @@ require (
 	github.com/banzaicloud/k8s-objectmatcher v1.5.0
 	github.com/coreos/etcd-operator v0.9.4
 	github.com/cristalhq/jwt/v3 v3.0.14
-	github.com/docker/docker v17.12.0-ce-rc1.0.20200706150819-a40b877fbb9e+incompatible
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-containerregistry v0.5.1
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20210521160948-0233fcda5d53
 	github.com/hashicorp/hcl v1.0.0
-	github.com/hashicorp/vault/api v1.1.0
-	github.com/hashicorp/vault/sdk v0.2.0
+	github.com/hashicorp/vault/api v1.3.0
+	github.com/hashicorp/vault/sdk v0.3.0
 	github.com/imdario/mergo v0.3.12
 	github.com/jpillora/backoff v1.0.0
 	github.com/json-iterator/go v1.1.11
 	github.com/miekg/pkcs11 v1.0.3
-	github.com/mitchellh/mapstructure v1.3.2
+	github.com/mitchellh/mapstructure v1.4.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.43.0
 	github.com/prometheus/client_golang v1.11.0
