@@ -16,6 +16,7 @@ metadata:
   {{- if .Values.serviceAccount.labels }}
 {{ toYaml .Values.serviceAccount.labels | indent 4 }}
   {{- end }}
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -81,4 +82,4 @@ subjects:
     name: {{ template "vault-secrets-webhook.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
 {{- end }}
-{{- end }}
+
