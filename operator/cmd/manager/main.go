@@ -69,7 +69,7 @@ func main() {
 	// Get a config to talk to the apiserver
 	k8sConfig, err := config.GetConfig()
 	if err != nil {
-		log.Error(err, "")
+		log.Error(err, "Unable to get k8s config")
 		os.Exit(1)
 	}
 
@@ -91,18 +91,18 @@ func main() {
 		MetricsBindAddress:      metricsBindAddress,
 	})
 	if err != nil {
-		log.Error(err, "")
+		log.Error(err, "Unable to create manager as defined")
 		os.Exit(1)
 	}
 
 	err = mgr.AddReadyzCheck("ping", healthz.Ping)
 	if err != nil {
-		log.Error(err, "")
+		log.Error(err, "Add Readyz Check failed")
 		os.Exit(1)
 	}
 	err = mgr.AddHealthzCheck("ping", healthz.Ping)
 	if err != nil {
-		log.Error(err, "")
+		log.Error(err, "Unable to add heatlh check")
 		os.Exit(1)
 	}
 
@@ -110,13 +110,13 @@ func main() {
 
 	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
+		log.Error(err, "Failed to use api to add scheme")
 		os.Exit(1)
 	}
 
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
-		log.Error(err, "")
+		log.Error(err, "Unable to add manager to controller")
 		os.Exit(1)
 	}
 
