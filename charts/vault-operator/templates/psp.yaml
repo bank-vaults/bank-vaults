@@ -42,7 +42,7 @@ metadata:
     seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'docker/default,runtime/default'
     seccomp.security.alpha.kubernetes.io/defaultProfileName:  'runtime/default'
 spec:
-  privileged: false
+  privileged: true
   allowPrivilegeEscalation: true
   allowedCapabilities:
     - IPC_LOCK
