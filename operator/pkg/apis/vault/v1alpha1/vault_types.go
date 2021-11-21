@@ -111,6 +111,10 @@ type VaultSpec struct {
 	// default: "/fluentd/etc"
 	FleuntDConfLocation string `json:"fleuntdConfLocation,omitempty"`
 
+	// FluentDConfFile specifices the FluentD configuration file name to use for Vault log exportation
+	// default:
+	FluentDConfFile string `json:"fluentdConfFile,omitempty"`
+
 	// FluentDConfig specifices the FluentD configuration to use for Vault log exportation
 	// default:
 	FluentDConfig string `json:"fluentdConfig,omitempty"`

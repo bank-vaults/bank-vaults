@@ -1683,13 +1683,17 @@ func configMapForStatsD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 
 func configMapForFluentD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	ls := v.LabelsForVault()
+	fluentdConfFile := v.Spec.FluentDConfFile
+	if fluentdConfFile != "" {
+		fluentdConfFile = "fluent.conf"
+	}
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name + "-fluentd-config",
 			Namespace: v.Namespace,
 			Labels:    ls,
 		},
-		Data: map[string]string{"fluent.conf": v.Spec.FluentDConfig},
+		Data: map[string]string{fluentdConfFile: v.Spec.FluentDConfig},
 	}
 	return cm
 }

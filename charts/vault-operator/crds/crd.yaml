@@ -746,6 +746,8 @@ spec:
                 x-kubernetes-preserve-unknown-fields: true
               fleuntdConfLocation:
                 type: string
+              fluentdConfFile:
+                type: string
               fluentdConfig:
                 type: string
               fluentdEnabled:
