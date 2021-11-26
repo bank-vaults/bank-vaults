@@ -159,6 +159,11 @@ namespaceSelector:
       operator: NotIn
       values:
         - kube-system
+    # https://kubernetes.io/docs/reference/labels-annotations-taints/#kubernetes-io-metadata-name
+    - key: kubernetes.io/metadata.name
+      operator: NotIn
+      values:
+        - kube-system
   # matchLabels:
   #   vault-injection: enabled
 
