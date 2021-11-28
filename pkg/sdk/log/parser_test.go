@@ -194,7 +194,7 @@ func TestParseLogMessage(t *testing.T) {
 				},
 			},
 			want: map[string]string{
-				"connection_error": "msg=\"failed to request new Vault token\"  app=vault-env err=\"Put \\\"https://vault.securecn-vault:8200/v1/auth/kubernetes/login\\\": x509: certificate signed by unknown authority (possibly because of \\\"crypto/rsa: verification error\\\" while trying to verify candidate authority certificate \\\"Root CA\\\")\"",
+				ConnectionError: "msg=\"failed to request new Vault token\"  app=vault-env err=\"Put \\\"https://vault.securecn-vault:8200/v1/auth/kubernetes/login\\\": x509: certificate signed by unknown authority (possibly because of \\\"crypto/rsa: verification error\\\" while trying to verify candidate authority certificate \\\"Root CA\\\")\"",
 			},
 		},
 	}
