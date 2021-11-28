@@ -23,6 +23,8 @@ import (
 	syslogformat "gopkg.in/mcuadros/go-syslog.v2/format"
 )
 
+const ConnectionError = "connection_error"
+
 var (
 	logParserRegexp    = regexp.MustCompile("(level=[a-z]+) (msg=\\\".*\\\")( app=.*)")
 	pathNotFoundRegexp = regexp.MustCompile("(path not found:) ([a-z]+/[a-z]+/.*)(\\\")")
@@ -55,7 +57,7 @@ func ParseLogMessage(content []string) map[string]string {
 	} else if path := keyNotFoundRegexp.FindStringSubmatch(content[2]); path != nil {
 		parsedError[fmt.Sprintf("%s#%s", path[3], strings.Trim(path[1], "'"))] = content[2]
 	} else {
-		parsedError["connection_error"] = fmt.Sprintf("%v %v", content[2], content[3])
+		parsedError[ConnectionError] = fmt.Sprintf("%v %v", content[2], content[3])
 	}
 
 	return parsedError
