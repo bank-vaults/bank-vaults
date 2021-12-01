@@ -97,7 +97,7 @@ If you are using Bank-Vaults in a production environment and [require commercial
 
 ### Engineering Blog
 
-To be up-to-date with Bank-Vaults and the other open source and commercial [products of Banzai Cloud, subscribe to our blog](https://pages.banzaicloud.com/sign-up-for-the-banzai-cloud-newsletter/).
+To be up-to-date with Bank-Vaults and the other open source and commercial [products of Banzai Cloud, read our blog](https://banzaicloud.com/blog/).
 
 ## Credits
 
