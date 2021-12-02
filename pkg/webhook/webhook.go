@@ -225,6 +225,7 @@ func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 			vault.NamespacedSecretAuthMethod,
 			vault.ClientLogger(logrusadapter.NewFromEntry(mw.logger)),
 			vault.ExistingSecret(secret.Data["token"]),
+			vault.VaultNamespace(vaultConfig.VaultNamespace),
 		)
 	}
 
