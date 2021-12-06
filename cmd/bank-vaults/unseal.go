@@ -18,7 +18,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -111,10 +110,7 @@ from one of the followings:
 				}
 			} else {
 				logrus.Info("joining raft cluster...")
-				if err := v.RaftJoin(
-					&api.RaftJoinRequest{
-						LeaderAPIAddr: unsealConfig.raftLeaderAddress,
-					}); err != nil {
+				if err := v.RaftJoin(unsealConfig.raftLeaderAddress); err != nil {
 					logrus.Fatalf("error joining leader vault: %s", err.Error())
 				}
 			}
@@ -180,7 +176,7 @@ func raftJoin(v internalVault.Vault) bool {
 	// If this instance can't tell the leaderAddress, it is not part of the cluster,
 	// so we should ask it join.
 	if leaderAddress == "" {
-		if err = v.RaftJoin(&api.RaftJoinRequest{}); err != nil {
+		if err = v.RaftJoin(""); err != nil {
 			logrus.Errorf("error joining leader vault: %s", err.Error())
 			return false
 		}

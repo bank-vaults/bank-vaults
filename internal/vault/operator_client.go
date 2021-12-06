@@ -90,7 +90,7 @@ var _ Vault = &vault{}
 type Vault interface {
 	Init() error
 	RaftInitialized() (bool, error)
-	RaftJoin(rjr *api.RaftJoinRequest) error
+	RaftJoin(string) error
 	Sealed() (bool, error)
 	Active() (bool, error)
 	Unseal() error
@@ -392,9 +392,9 @@ func (v *vault) RaftInitialized() (bool, error) {
 }
 
 // RaftJoin joins Vault raft cluster if is not initialized already
-func (v *vault) RaftJoin(rjr *api.RaftJoinRequest) error {
+func (v *vault) RaftJoin(leaderAPIAddr string) error {
 	// raft storage mode
-	if rjr.LeaderAPIAddr != "" {
+	if leaderAPIAddr != "" {
 		initialized, err := v.cl.Sys().InitStatus()
 		if err != nil {
 			return errors.Wrap(err, "error testing if vault is initialized")
@@ -411,6 +411,10 @@ func (v *vault) RaftJoin(rjr *api.RaftJoinRequest) error {
 		return nil
 	}
 
+	request := api.RaftJoinRequest{
+		LeaderAPIAddr: leaderAPIAddr,
+	}
+
 	raftCacertFile := os.Getenv("VAULT_RAFT_CACERT")
 	if raftCacertFile == "" {
 		raftCacertFile = os.Getenv(api.EnvVaultCACert)
@@ -422,16 +426,22 @@ func (v *vault) RaftJoin(rjr *api.RaftJoinRequest) error {
 			return errors.Wrap(err, "error reading vault raft CA certificate")
 		}
 
-		rjr.LeaderCACert = string(leaderCACert)
+		request.LeaderCACert = string(leaderCACert)
 	}
 
-	raftReadOnlyReplica, err := strconv.ParseBool(os.Getenv("VAULT_NON_VOTER"))
-	if err != nil {
-		return errors.Wrap(err, "Error conversation VAULT_NON_VOTER to boolean value")
+	vaultNonVoter := os.Getenv("VAULT_NON_VOTER")
+	if len(vaultNonVoter) == 0 {
+		logrus.Debug("Unable to determine VAULT_NON_VOTER values. Defaulting to false.")
+		request.NonVoter = false
+	} else {
+		nonVoterBool, err := strconv.ParseBool(vaultNonVoter)
+		request.NonVoter = nonVoterBool
+		if err != nil {
+			return errors.Wrap(err, "Unable to convert env VAULT_NON_VOTER to boolean.")
+		}
 	}
-	rjr.NonVoter = raftReadOnlyReplica
 
-	response, err := v.cl.Sys().RaftJoin(rjr)
+	response, err := v.cl.Sys().RaftJoin(&request)
 	if err != nil {
 		return errors.Wrap(err, "error joining raft cluster")
 	}
