@@ -90,7 +90,7 @@ var _ Vault = &vault{}
 type Vault interface {
 	Init() error
 	RaftInitialized() (bool, error)
-	RaftJoin(rjo *api.RaftJoinRequest) error
+	RaftJoin(rjr *api.RaftJoinRequest) error
 	Sealed() (bool, error)
 	Active() (bool, error)
 	Unseal() error
@@ -392,9 +392,9 @@ func (v *vault) RaftInitialized() (bool, error) {
 }
 
 // RaftJoin joins Vault raft cluster if is not initialized already
-func (v *vault) RaftJoin(rjo *api.RaftJoinRequest) error {
+func (v *vault) RaftJoin(rjr *api.RaftJoinRequest) error {
 	// raft storage mode
-	if rjo.LeaderAPIAddr != "" {
+	if rjr.LeaderAPIAddr != "" {
 		initialized, err := v.cl.Sys().InitStatus()
 		if err != nil {
 			return errors.Wrap(err, "error testing if vault is initialized")
@@ -422,16 +422,16 @@ func (v *vault) RaftJoin(rjo *api.RaftJoinRequest) error {
 			return errors.Wrap(err, "error reading vault raft CA certificate")
 		}
 
-		rjo.LeaderCACert = string(leaderCACert)
+		rjr.LeaderCACert = string(leaderCACert)
 	}
 
 	raftReadOnlyReplica, err := strconv.ParseBool(os.Getenv("VAULT_NON_VOTER"))
 	if err != nil {
 		return errors.Wrap(err, "Error conversation VAULT_NON_VOTER to boolean value")
 	}
-	rjo.NonVoter = raftReadOnlyReplica
+	rjr.NonVoter = raftReadOnlyReplica
 
-	response, err := v.cl.Sys().RaftJoin(rjo)
+	response, err := v.cl.Sys().RaftJoin(rjr)
 	if err != nil {
 		return errors.Wrap(err, "error joining raft cluster")
 	}
