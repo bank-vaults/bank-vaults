@@ -101,6 +101,9 @@ spec:
           secretKeyRef:
             name: aws
             key: AWS_SECRET_ACCESS_KEY
+    # Example of running a VAULT as a non-voter: https://www.vaultproject.io/api/system/storage/raft#non_voter
+    - name: VAULT_NON_VOTER
+      value: "true"
 
   volumes:
     - name: vault-primary-tls

@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -423,6 +424,12 @@ func (v *vault) RaftJoin(rjo *api.RaftJoinRequest) error {
 
 		rjo.LeaderCACert = string(leaderCACert)
 	}
+
+	raftReadOnlyReplica, err := strconv.ParseBool(os.Getenv("VAULT_NON_VOTER"))
+	if err != nil {
+		return errors.Wrap(err, "Error conversation VAULT_NON_VOTER to boolean value")
+	}
+	rjo.NonVoter = raftReadOnlyReplica
 
 	response, err := v.cl.Sys().RaftJoin(rjo)
 	if err != nil {
