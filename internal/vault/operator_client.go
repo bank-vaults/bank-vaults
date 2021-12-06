@@ -89,7 +89,7 @@ var _ Vault = &vault{}
 type Vault interface {
 	Init() error
 	RaftInitialized() (bool, error)
-	RaftJoin(string) error
+	RaftJoin(rjo *api.RaftJoinRequest) error
 	Sealed() (bool, error)
 	Active() (bool, error)
 	Unseal() error
@@ -391,9 +391,9 @@ func (v *vault) RaftInitialized() (bool, error) {
 }
 
 // RaftJoin joins Vault raft cluster if is not initialized already
-func (v *vault) RaftJoin(leaderAPIAddr string) error {
+func (v *vault) RaftJoin(rjo *api.RaftJoinRequest) error {
 	// raft storage mode
-	if leaderAPIAddr != "" {
+	if rjo.LeaderAPIAddr != "" {
 		initialized, err := v.cl.Sys().InitStatus()
 		if err != nil {
 			return errors.Wrap(err, "error testing if vault is initialized")
@@ -410,10 +410,6 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 		return nil
 	}
 
-	request := api.RaftJoinRequest{
-		LeaderAPIAddr: leaderAPIAddr,
-	}
-
 	raftCacertFile := os.Getenv("VAULT_RAFT_CACERT")
 	if raftCacertFile == "" {
 		raftCacertFile = os.Getenv(api.EnvVaultCACert)
@@ -425,10 +421,10 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 			return errors.Wrap(err, "error reading vault raft CA certificate")
 		}
 
-		request.LeaderCACert = string(leaderCACert)
+		rjo.LeaderCACert = string(leaderCACert)
 	}
 
-	response, err := v.cl.Sys().RaftJoin(&request)
+	response, err := v.cl.Sys().RaftJoin(rjo)
 	if err != nil {
 		return errors.Wrap(err, "error joining raft cluster")
 	}
