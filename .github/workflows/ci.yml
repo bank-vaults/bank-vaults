@@ -55,7 +55,7 @@ jobs:
     name: Acceptance test
     runs-on: ubuntu-latest
     env:
-      KURUN_VERSION: "0.5.3"
+      KURUN_VERSION: "0.5.5"
       DOCKER_LATEST: 1
       VERSION: latest
 
