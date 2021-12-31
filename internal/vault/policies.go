@@ -94,7 +94,7 @@ func (v *vault) configurePolicies() error {
 	}
 
 	// Remove unmanaged policies.
-	if extConfig.RemoveUnmanagedConfiguration {
+	if extConfig.PurgeUnmanagedConfig.Enabled && !extConfig.PurgeUnmanagedConfig.Exclude.Policies {
 		unmanagedPolicies := v.getUnmanagedPolicies(managedPolicies)
 		logrus.Debugf("remove unmanged policies %v", unmanagedPolicies)
 		for policyName := range unmanagedPolicies {

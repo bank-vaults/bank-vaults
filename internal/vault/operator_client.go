@@ -96,10 +96,17 @@ type Vault interface {
 	Configure(config *viper.Viper) error
 }
 
+type purgeUnmanagedConfig struct {
+	Enabled bool `json:"enabled,omitempty"`
+	Exclude struct {
+		Policies bool `json:"policies,omitempty"`
+	} `json:"exclude,omitempty"`
+}
+
 // WIP: This should hold all externalConfig when all sections refactord.
 type externalConfig struct {
-	RemoveUnmanagedConfiguration bool     `json:"removeUnmanagedConfiguration,omitempty"`
-	Policies                     []policy `json:"policies,omitempty"`
+	PurgeUnmanagedConfig purgeUnmanagedConfig `json:"purgeUnmanagedConfig,omitempty"`
+	Policies             []policy             `json:"policies,omitempty"`
 }
 
 var extConfig externalConfig
