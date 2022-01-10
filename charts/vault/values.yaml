@@ -95,6 +95,35 @@ tolerations: []
 ## Add affinity (defaults sets podAntiAffinity to preferredDuringSchedulingIgnoredDuringExecution)
 affinity: {}
 
+## This is meant to allow adding init containers
+extraInitContainers: []
+# - name: waiter
+#   image: busybox
+#   args:
+#   - sleep
+#   - 10
+
+## This is meant to allow adding sidecar containers
+extraContainers: []
+# - name: consul-agent
+#   image: consul:1.10.4
+#   args:
+#   - -log-level=debug
+#   - -advertise="${POD_IP}"
+#   - -bind=0.0.0.0
+#   - -grpc-port=8502
+#   - -datacenter=dc1
+#   - -data-dir=/consul/data
+#   - -config-dir=/consul/config
+
+## This is meant to allow adding volumes for sidecar and init containers
+extraContainerVolumes: []
+# - name: volume-from-secret
+#   secret:
+#     secretName: secret-to-mount
+# - name: empty-dir-volume
+#   emptyDir: {}
+
 # Specify a secret which holds your custom TLS certificate.
 # If not specified Helm will generate one for you.
 # See templates/secret.yaml for the exact format.
