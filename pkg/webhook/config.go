@@ -49,6 +49,10 @@ type VaultConfig struct {
 	CtCPU                       resource.Quantity
 	CtMemory                    resource.Quantity
 	PspAllowPrivilegeEscalation bool
+	RunAsNonRoot                bool
+	RunAsUser                   int64
+	RunAsGroup                  int64
+	ReadOnlyRootFilesystem      bool
 	IgnoreMissingSecrets        string
 	VaultEnvPassThrough         string
 	ConfigfilePath              string
@@ -236,6 +240,30 @@ func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig 
 		vaultConfig.PspAllowPrivilegeEscalation, _ = strconv.ParseBool(viper.GetString("psp_allow_privilege_escalation"))
 	}
 
+	if val, ok := annotations["vault.security.banzaicloud.io/run-as-non-root"]; ok {
+		vaultConfig.RunAsNonRoot, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.RunAsNonRoot, _ = strconv.ParseBool(viper.GetString("run_as_non_root"))
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/run-as-user"]; ok {
+		vaultConfig.RunAsUser, _ = strconv.ParseInt(val, 10, 64)
+	} else {
+		vaultConfig.RunAsUser, _ = strconv.ParseInt(viper.GetString("run_as_user"), 0, 64)
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/run-as-group"]; ok {
+		vaultConfig.RunAsGroup, _ = strconv.ParseInt(val, 10, 64)
+	} else {
+		vaultConfig.RunAsGroup, _ = strconv.ParseInt(viper.GetString("run_as_group"), 0, 64)
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/readonly-root-fs"]; ok {
+		vaultConfig.ReadOnlyRootFilesystem, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.ReadOnlyRootFilesystem, _ = strconv.ParseBool(viper.GetString("readonly_root_fs"))
+	}
+
 	if val, ok := annotations["vault.security.banzaicloud.io/mutate-configmap"]; ok {
 		vaultConfig.MutateConfigMap, _ = strconv.ParseBool(val)
 	} else {
@@ -403,6 +431,10 @@ func SetConfigDefaults() {
 	viper.SetDefault("vault_env_daemon", "false")
 	viper.SetDefault("vault_ct_share_process_namespace", "")
 	viper.SetDefault("psp_allow_privilege_escalation", "false")
+	viper.SetDefault("run_as_non_root", "false")
+	viper.SetDefault("run_as_user", "0")
+	viper.SetDefault("run_as_group", "0")
+	viper.SetDefault("readonly_root_fs", "false")
 	viper.SetDefault("vault_ignore_missing_secrets", "false")
 	viper.SetDefault("vault_env_passthrough", "")
 	viper.SetDefault("mutate_configmap", "false")
