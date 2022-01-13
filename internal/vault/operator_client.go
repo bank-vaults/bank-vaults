@@ -26,8 +26,6 @@ import (
 
 	"emperror.dev/errors"
 	"github.com/cristalhq/jwt/v3"
-	"github.com/hashicorp/hcl"
-	hclPrinter "github.com/hashicorp/hcl/hcl/printer"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	json "github.com/json-iterator/go"
@@ -97,6 +95,21 @@ type Vault interface {
 	LeaderAddress() (string, error)
 	Configure(config *viper.Viper) error
 }
+
+type purgeUnmanagedConfig struct {
+	Enabled bool `json:"enabled,omitempty"`
+	Exclude struct {
+		Policies bool `json:"policies,omitempty"`
+	} `json:"exclude,omitempty"`
+}
+
+// WIP: This should hold all externalConfig when all sections refactord.
+type externalConfig struct {
+	PurgeUnmanagedConfig purgeUnmanagedConfig `json:"purgeUnmanagedConfig,omitempty"`
+	Policies             []policy             `json:"policies,omitempty"`
+}
+
+var extConfig externalConfig
 
 type KVService interface {
 	Set(key string, value []byte) error
@@ -457,13 +470,17 @@ func (v *vault) Configure(config *viper.Viper) error {
 	defer v.cl.SetToken("")
 	defer func() { rootToken = nil }()
 
+	err = config.Unmarshal(&extConfig)
+	if err != nil {
+		return errors.Wrap(err, "error loading externalConfig")
+	}
+
 	err = v.configureAuthMethods(config)
 	if err != nil {
 		return errors.Wrap(err, "error configuring auth methods for vault")
 	}
 
-	err = v.configurePolicies(config)
-	if err != nil {
+	if err = v.configurePolicies(); err != nil {
 		return errors.Wrap(err, "error configuring policies for vault")
 	}
 
@@ -838,40 +855,6 @@ func (v *vault) configureAuthMethods(config *viper.Viper) error {
 			if err != nil {
 				return errors.Wrap(err, "error configuring azure auth roles for vault")
 			}
-		}
-	}
-
-	return nil
-}
-
-func (v *vault) configurePolicies(config *viper.Viper) error {
-	policies := []map[string]string{}
-
-	err := config.UnmarshalKey("policies", &policies)
-	if err != nil {
-		return errors.Wrap(err, "error unmarshalling vault policy config")
-	}
-
-	for _, policy := range policies {
-		policyName := policy["name"]
-
-		// Try to format rules (HCL only)
-		policyRules, err := hclPrinter.Format([]byte(policy["rules"]))
-		if err != nil {
-			// Check if rules parse (HCL or JSON)
-			_, parseErr := hcl.Parse(policy["rules"])
-			if parseErr != nil {
-				return errors.Wrapf(err, "error parsing %s policy rules", policyName)
-			}
-
-			// Policies are parsable but couldn't be HCL formatted (most likely JSON)
-			policyRules = []byte(policy["rules"])
-			logrus.Debugf("error HCL-formatting %s policy rules (ignore if rules are JSON-formatted): %s", policyName, err.Error())
-		}
-
-		err = v.cl.Sys().PutPolicy(policyName, string(policyRules))
-		if err != nil {
-			return errors.Wrapf(err, "error putting %s policy into vault", policyName)
 		}
 	}
 
