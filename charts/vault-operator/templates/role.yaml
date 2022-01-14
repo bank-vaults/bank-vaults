@@ -47,12 +47,6 @@ rules:
   verbs:
   - "*"
 - apiGroups:
-  - etcd.database.coreos.com
-  resources:
-  - "*"
-  verbs:
-  - "*"
-- apiGroups:
   - apiextensions.k8s.io
   resources:
   - customresourcedefinitions

@@ -32,16 +32,7 @@ helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com
 helm upgrade --install vault-operator banzaicloud-stable/vault-operator
 ```
 
-To install the chart backed with a cluster-wide Etcd Operator, use the following:
-
-**Please note that the etcd-operator has been deprecated for a long time (chart and code as well), and the last version of the chart is not installable on Kubernetes 1.22 and onwards. We don't offer any kind of support for etcd-operator.**
-
-```bash
-helm upgrade --install vault-operator banzaicloud-stable/vault-operator
-
-helm repo add stable https://charts.helm.sh/stable
-helm upgrade --install etcd-operator stable/etcd-operator --set=etcdOperator.commandArgs.cluster-wide=true
-```
+**Please note that the etcd-operator has been deprecated for a long time (chart and code as well), and the last version of the chart is not installable on Kubernetes 1.22 and onwards. We don't offer any kind of support for etcd-operator and automated etcd installations from now.**
 
 ### Helm2 -> Helm3 migration
 
@@ -95,7 +86,7 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 To deploy different Vault configurations (single node, HA, with AWS unsealing, with etcd backend, ...) see: https://github.com/banzaicloud/bank-vaults/tree/master/operator/deploy for more examples.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/banzaicloud/bank-vaults/master/operator/deploy/cr-etcd-ha.yaml
+kubectl apply -f https://raw.githubusercontent.com/banzaicloud/bank-vaults/master/operator/deploy/cr-raft.yaml
 ```
 
 Once the Vault pods are ready (in HA setup always one is ready), it can be accessed using a `kubectl port-forward`:

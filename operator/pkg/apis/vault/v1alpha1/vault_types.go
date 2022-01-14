@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
 	"github.com/imdario/mergo"
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
@@ -200,42 +199,6 @@ type VaultSpec struct {
 	// default:
 	SecurityContext v1.PodSecurityContext `json:"securityContext,omitempty"`
 
-	// EtcdVersion is the ETCD version of the automatically provisioned ETCD cluster
-	// default: "3.3.17"
-	EtcdVersion string `json:"etcdVersion,omitempty"`
-
-	// EtcdSize is the size of the automatically provisioned ETCD cluster, -1 will disable automatic cluster provisioning.
-	// The cluster is only provisioned if it is detected from the Vault configuration that it would like to use
-	// ETCD as the storage backend. If not odd it will be changed always to the next (< etcdSize) odd number.
-	// default: 3
-	EtcdSize int `json:"etcdSize,omitempty"`
-
-	// EtcdRepository is the repository used to pull the etcd imaegs
-	// default:
-	EtcdRepository string `json:"etcdRepository,omitempty"`
-
-	// BusyBox image used for the etcd pod init container
-	// default:
-	EtcdPodBusyBoxImage string `json:"etcdPodBusyBoxImage,omitempty"`
-
-	// EtcdAnnotations define a set of Kubernetes annotations that will be added to ETCD Cluster CR.
-	// default:
-	EtcdAnnotations map[string]string `json:"etcdAnnotations,omitempty"`
-
-	// EtcdPodAnnotations define a set of Kubernetes annotations that will be added to ETCD Pods.
-	// default:
-	EtcdPodAnnotations map[string]string `json:"etcdPodAnnotations,omitempty"`
-
-	// EtcdPVCSpec is a Kuberrnetes PersistentVolumeClaimSpec that will be used by the ETCD Pods.
-	// emptyDir is used if not defined (no persistence).
-	// default:
-	EtcdPVCSpec *v1.PersistentVolumeClaimSpec `json:"etcdPVCSpec,omitempty"`
-
-	// EtcdAffinity is a Kubernetes Affinity that will be used by the ETCD Pods.
-	// If not defined PodAntiAffinity will be use.  If both are empty no Affinity is used
-	// default:
-	EtcdAffinity *v1.Affinity `json:"etcdAffinity,omitempty"`
-
 	// ServiceType is a Kubernetes Service type of the Vault Service.
 	// default: ClusterIP
 	ServiceType string `json:"serviceType,omitempty"`
@@ -389,14 +352,6 @@ func (spec *VaultSpec) hasHAStorageStanza() bool {
 	return len(spec.getHAStorage()) != 0
 }
 
-// HasEtcdStorage detects if Vault is configured to use etcd as storage or ha_storage backend
-func (spec *VaultSpec) HasEtcdStorage() bool {
-	if spec.hasHAStorageStanza() && spec.GetHAStorageType() == "etcd" {
-		return true
-	}
-	return spec.GetStorageType() == "etcd"
-}
-
 // GetStorage returns Vault's storage stanza
 func (spec *VaultSpec) GetStorage() map[string]interface{} {
 	storage := spec.getStorage()
@@ -427,17 +382,6 @@ func (spec *VaultSpec) GetVaultConfig() map[string]interface{} {
 	return config
 }
 
-// GetEtcdStorage returns the etcd storage if configured or nil
-func (spec *VaultSpec) GetEtcdStorage() map[string]interface{} {
-	if spec.hasHAStorageStanza() && spec.GetHAStorageType() == "etcd" {
-		return spec.GetHAStorage()
-	}
-	if spec.GetStorageType() == "etcd" {
-		return spec.GetStorage()
-	}
-	return nil
-}
-
 // GetStorageType returns the type of Vault's storage stanza
 func (spec *VaultSpec) GetStorageType() string {
 	storage := spec.getStorage()
@@ -462,39 +406,12 @@ func (spec *VaultSpec) GetVersion() (*semver.Version, error) {
 	return semver.NewVersion(version[1])
 }
 
-// GetEtcdVersion returns the etcd version to use
-func (spec *VaultSpec) GetEtcdVersion() string {
-	if spec.EtcdVersion == "" {
-		return "3.3.17"
-	}
-	return spec.EtcdVersion
-}
-
 // GetServiceAccount returns the Kubernetes Service Account to use for Vault
 func (spec *VaultSpec) GetServiceAccount() string {
 	if spec.ServiceAccount != "" {
 		return spec.ServiceAccount
 	}
 	return "default"
-}
-
-// GetEtcdSize returns the number of etcd pods to use
-func (spec *VaultSpec) GetEtcdSize() int {
-	// Default value of EctdSize is 0. So if < 0 will assume use existing etcd
-	if spec.EtcdSize < 0 {
-		return -1
-	}
-
-	if spec.EtcdSize < 1 {
-		return 3
-	}
-	// check if size given is even. If even, subtract 1. Reasoning: Because of raft consensus protocol,
-	// an odd-size cluster tolerates the same number of failures as an even-size cluster but with fewer nodes
-	// See https://github.com/etcd-io/etcd/blob/master/Documentation/faq.md#what-is-failure-tolerance
-	if spec.EtcdSize%2 == 0 {
-		return spec.EtcdSize - 1
-	}
-	return spec.EtcdSize
 }
 
 // HasStorageHAEnabled detects if the ha_enabled field is set to true in Vault's storage stanza
@@ -715,27 +632,6 @@ func (v *Vault) ConfigJSON() ([]byte, error) {
 		}
 
 		if err := mergo.Merge(&config, serviceRegistration); err != nil {
-			return nil, err
-		}
-	}
-
-	// Overwrite Vault config with the generated TLS certificate's settings
-	if v.Spec.HasEtcdStorage() && v.Spec.GetEtcdSize() > 0 {
-		storageKey := "storage"
-		if v.Spec.hasHAStorageStanza() && v.Spec.GetHAStorageType() == "etcd" {
-			storageKey = "ha_storage"
-		}
-		etcdStorage := map[string]interface{}{
-			storageKey: map[string]interface{}{
-				"etcd": map[string]interface{}{
-					"tls_ca_file":   "/etcd/tls/" + etcdutil.CliCAFile,
-					"tls_cert_file": "/etcd/tls/" + etcdutil.CliCertFile,
-					"tls_key_file":  "/etcd/tls/" + etcdutil.CliKeyFile,
-				},
-			},
-		}
-
-		if err := mergo.Merge(&config, etcdStorage); err != nil {
 			return nil, err
 		}
 	}
@@ -1124,7 +1020,6 @@ type Resources struct {
 	Vault              *v1.ResourceRequirements `json:"vault,omitempty"`
 	BankVaults         *v1.ResourceRequirements `json:"bankVaults,omitempty"`
 	HSMDaemon          *v1.ResourceRequirements `json:"hsmDaemon,omitempty"`
-	Etcd               *v1.ResourceRequirements `json:"etcd,omitempty"`
 	PrometheusExporter *v1.ResourceRequirements `json:"prometheusExporter,omitempty"`
 	FluentD            *v1.ResourceRequirements `json:"fluentd,omitempty"`
 }
