@@ -66,19 +66,20 @@ func (v *vault) configureAuthMethods() error {
 	managedAuths := extConfig.Auth
 	existingAuths, _ := v.getExistingAuthMethods()
 	unManagedAuths := v.getUnmanagedAuthMethods(existingAuths, managedAuths)
-	if len(managedAuths) == 0 {
-		return nil
-	}
 
-	err := v.syncManagedAuthMethods(managedAuths, existingAuths)
-	if err != nil {
-		return errors.Wrap(err, "error configuring managed auth methods")
+	if len(managedAuths) > 0 {
+		err := v.syncManagedAuthMethods(managedAuths, existingAuths)
+		if err != nil {
+			return errors.Wrap(err, "error configuring managed auth methods")
+		}
 	}
 
 	if extConfig.PurgeUnmanagedConfig.Enabled && !extConfig.PurgeUnmanagedConfig.Exclude.Auths {
-		err := v.disableUnmanagedAuthMethods(unManagedAuths)
-		if err != nil {
-			return errors.Wrap(err, "disabling unmanaged auth methods")
+		if len(unManagedAuths) > 0 {
+			err := v.disableUnmanagedAuthMethods(unManagedAuths)
+			if err != nil {
+				return errors.Wrap(err, "disabling unmanaged auth methods")
+			}
 		}
 	}
 
@@ -128,7 +129,7 @@ func (v *vault) syncManagedAuthMethods(managedAuths []auth, existingAuths map[st
 			}
 		}
 
-		if existingAuths[authMethod.Type] != nil {
+		if existingAuths[authMethod.Type] == nil {
 			logrus.Debugf("enabling %s auth backend in vault...", authMethod.Type)
 			err := v.cl.Sys().EnableAuthWithOptions(path, &options)
 			if err != nil {
