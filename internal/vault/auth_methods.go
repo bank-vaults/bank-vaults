@@ -51,7 +51,9 @@ func (v *vault) getExistingAuthMethods() (map[string]*api.MountOutput, error) {
 }
 
 // getUnmanagedAuthMethods gets unmanaged auth methods by comparing what's already in Vault and what's in the externalConfig
-func (v *vault) getUnmanagedAuthMethods(unmangedAuths map[string]*api.MountOutput, managedAuthMethods []auth) map[string]*api.MountOutput {
+func (v *vault) getUnmanagedAuthMethods(managedAuthMethods []auth) map[string]*api.MountOutput {
+	// TODO: remove this line and just use passed value
+	unmangedAuths, _ := v.getExistingAuthMethods()
 	// Remove managed auth methods form the items since the rest will be disabled.
 	for _, mangedAuthMethod := range managedAuthMethods {
 		delete(unmangedAuths, mangedAuthMethod.Type)
@@ -65,22 +67,16 @@ func (v *vault) getUnmanagedAuthMethods(unmangedAuths map[string]*api.MountOutpu
 func (v *vault) configureAuthMethods() error {
 	managedAuths := extConfig.Auth
 	existingAuths, _ := v.getExistingAuthMethods()
-	unManagedAuths := v.getUnmanagedAuthMethods(existingAuths, managedAuths)
+	unManagedAuths := v.getUnmanagedAuthMethods(managedAuths)
 
-	if len(managedAuths) > 0 {
-		err := v.syncManagedAuthMethods(managedAuths, existingAuths)
-		if err != nil {
-			return errors.Wrap(err, "error configuring managed auth methods")
-		}
+	err := v.syncManagedAuthMethods(managedAuths, existingAuths)
+	if err != nil {
+		return errors.Wrap(err, "error configuring managed auth methods")
 	}
 
-	if extConfig.PurgeUnmanagedConfig.Enabled && !extConfig.PurgeUnmanagedConfig.Exclude.Auths {
-		if len(unManagedAuths) > 0 {
-			err := v.disableUnmanagedAuthMethods(unManagedAuths)
-			if err != nil {
-				return errors.Wrap(err, "disabling unmanaged auth methods")
-			}
-		}
+	err = v.disableUnmanagedAuthMethods(unManagedAuths)
+	if err != nil {
+		return errors.Wrap(err, "error while disabling unmanaged auth methods")
 	}
 
 	return nil
@@ -88,6 +84,10 @@ func (v *vault) configureAuthMethods() error {
 
 // Disables any auth method that's not managed if purgeUnmanagedConfig option is enabled
 func (v *vault) disableUnmanagedAuthMethods(unManagedAuths map[string]*api.MountOutput) error {
+	if len(unManagedAuths) == 0 || !extConfig.PurgeUnmanagedConfig.Enabled || extConfig.PurgeUnmanagedConfig.Exclude.Auths {
+		return nil
+	}
+
 	for authMethod := range unManagedAuths {
 		err := v.cl.Sys().DisableAuth(authMethod)
 		if err != nil {
@@ -98,6 +98,10 @@ func (v *vault) disableUnmanagedAuthMethods(unManagedAuths map[string]*api.Mount
 }
 
 func (v *vault) syncManagedAuthMethods(managedAuths []auth, existingAuths map[string]*api.MountOutput) error {
+	if len(managedAuths) > 0 {
+		return nil
+	}
+
 	for _, authMethod := range managedAuths {
 		path := authMethod.Path
 		if len(path) == 0 {
@@ -138,14 +142,30 @@ func (v *vault) syncManagedAuthMethods(managedAuths []auth, existingAuths map[st
 		}
 
 		// If auth method exists but has additional mount options
-		// if hasMountOptions {
-		// 	logrus.Debugf("tuning existing %s auth backend in vault...", path)
-		// 	// all auth methods are mounted below auth/
-		// 	tunePath := fmt.Sprintf("auth/%s", path)
-		// 	err = v.cl.Sys().TuneMount(tunePath, authConfigInput)
+		if hasMountOptions {
+			logrus.Debugf("tuning existing %s auth backend in vault...", path)
+			// all auth methods are mounted below auth/
+			tunePath := fmt.Sprintf("auth/%s", path)
+			err := v.cl.Sys().TuneMount(tunePath, authConfigInput)
+			if err != nil {
+				return errors.Wrapf(err, "error tuning %s auth method in vault", path)
+			}
+		}
+		// config data can have a child dict. But it will cause:
+		// `json: unsupported type: map[interface {}]interface {}`
+		// So check and replace by `map[string]interface{}` before using it.
+		// if authMethod.Config != nil {
+		// 	config, err := cast.ToStringMapE(authMethod.Config)
 		// 	if err != nil {
-		// 		return errors.Wrapf(err, "error tuning %s auth method in vault", path)
+		// 		return errors.Wrapf(err, "error type fixing config block for %s", authMethod.Type)
 		// 	}
+		// 	for k, v := range config {
+		// 		switch val := v.(type) {
+		// 		case map[interface{}]interface{}:
+		// 			config[k] = cast.ToStringMap(val)
+		// 		}
+		// 	}
+		// 	authMethod.Config = config
 		// }
 	}
 	// TODO:
