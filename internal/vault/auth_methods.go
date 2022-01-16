@@ -30,7 +30,7 @@ type auth struct {
 	Description string                 `json:"description"`
 	Options     []interface{}          `json:"options"`
 	Config      map[string]interface{} `json:"config"`
-	Roles       map[string]interface{} `json:"roles"`
+	Roles       []interface{}          `json:"roles"`
 	Users       map[string]interface{} `json:"users"`
 }
 
@@ -197,15 +197,11 @@ func (v *vault) addAdditionalAuthConfig(authMethod auth) error {
 			}
 			config = defaultConfig
 		}
-		err := v.configureGenericAuthConfig(authMethod.Type, authMethod.Path, config)
+		err := v.configureGenericAuthConfig(authMethod.Type, authMethod.Type, config)
 		if err != nil {
 			return errors.Wrap(err, "error configuring kubernetes auth for vault")
 		}
-		roles, err := cast.ToSliceE(authMethod.Roles)
-		if err != nil {
-			return errors.Wrap(err, "error finding roles block for kubernetes")
-		}
-		err = v.configureGenericAuthRoles(authMethod.Type, authMethod.Path, "role", roles)
+		err = v.configureGenericAuthRoles(authMethod.Type, authMethod.Type, "role", authMethod.Roles)
 		if err != nil {
 			return errors.Wrap(err, "error configuring kubernetes auth roles for vault")
 		}
