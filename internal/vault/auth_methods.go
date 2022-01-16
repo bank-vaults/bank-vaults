@@ -25,29 +25,30 @@ import (
 )
 
 type auth struct {
-	Type        string        `json:"type"`
-	Path        string        `json:"path"`
-	Description string        `json:"description"`
-	Options     []interface{} `json:"options"`
-	Config      []interface{} `json:"config"`
-	Roles       []interface{} `json:"roles"`
+	Type        string                 `json:"type"`
+	Path        string                 `json:"path"`
+	Description string                 `json:"description"`
+	Options     []interface{}          `json:"options"`
+	Config      map[string]interface{} `json:"config"`
+	Roles       map[string]interface{} `json:"roles"`
+	Users       map[string]interface{} `json:"users"`
 }
 
 // getExistingAuthMethods gets all auth methods that are already in Vault.
 // The existing auth methods are in a map to make it easy to disable easily from it with "O(n)" complexity.
 func (v *vault) getExistingAuthMethods() (map[string]*api.MountOutput, error) {
-	existingAuthMethods := make(map[string]*api.MountOutput)
+	existingAuths := make(map[string]*api.MountOutput)
 
-	existingAuthMethodsList, err := v.cl.Sys().ListAuth()
+	existingAuthList, err := v.cl.Sys().ListAuth()
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to list existing auth methods")
 	}
 
-	for _, existingAuthMethod := range existingAuthMethodsList {
-		existingAuthMethods[existingAuthMethod.Type] = existingAuthMethod
+	for _, existingAuthMethod := range existingAuthList {
+		existingAuths[existingAuthMethod.Type] = existingAuthMethod
 	}
 
-	return existingAuthMethods, nil
+	return existingAuths, nil
 }
 
 // getUnmanagedAuthMethods gets unmanaged auth methods by comparing what's already in Vault and what's in the externalConfig
@@ -98,7 +99,7 @@ func (v *vault) disableUnmanagedAuthMethods(unManagedAuths map[string]*api.Mount
 }
 
 func (v *vault) syncManagedAuthMethods(managedAuths []auth, existingAuths map[string]*api.MountOutput) error {
-	if len(managedAuths) > 0 {
+	if len(managedAuths) == 0 {
 		return nil
 	}
 
@@ -142,15 +143,15 @@ func (v *vault) syncManagedAuthMethods(managedAuths []auth, existingAuths map[st
 		}
 
 		// If auth method exists but has additional mount options
-		if hasMountOptions {
-			logrus.Debugf("tuning existing %s auth backend in vault...", path)
-			// all auth methods are mounted below auth/
-			tunePath := fmt.Sprintf("auth/%s", path)
-			err := v.cl.Sys().TuneMount(tunePath, authConfigInput)
-			if err != nil {
-				return errors.Wrapf(err, "error tuning %s auth method in vault", path)
-			}
-		}
+		// if hasMountOptions {
+		// 	logrus.Debugf("tuning existing %s auth backend in vault...", path)
+		// 	// all auth methods are mounted below auth/
+		// 	tunePath := fmt.Sprintf("auth/%s", path)
+		// 	err := v.cl.Sys().TuneMount(tunePath, authConfigInput)
+		// 	if err != nil {
+		// 		return errors.Wrapf(err, "error tuning %s auth method in vault", path)
+		// 	}
+		// }
 		// config data can have a child dict. But it will cause:
 		// `json: unsupported type: map[interface {}]interface {}`
 		// So check and replace by `map[string]interface{}` before using it.
@@ -167,6 +168,10 @@ func (v *vault) syncManagedAuthMethods(managedAuths []auth, existingAuths map[st
 		// 	}
 		// 	authMethod.Config = config
 		// }
+		err := v.addAdditionalAuthConfig(authMethod)
+		if err != nil {
+			return errors.Wrapf(err, "error while adding auth method config")
+		}
 	}
 	// TODO:
 	// If purge option is enabled then disable unmanaged auth methods
@@ -175,199 +180,199 @@ func (v *vault) syncManagedAuthMethods(managedAuths []auth, existingAuths map[st
 	return nil
 }
 
-// func (v *vault) addAdditionalAuthMethodConfig(authMethod auth) {
-// 	switch authMethod {
-// 	case "kubernetes":
-// 		config, err := getOrDefaultStringMap(authMethod, "config")
-// 		if err != nil {
-// 			return errors.Wrap(err, "error finding config block for kubernetes")
-// 		}
-// 		// If kubernetes_host is defined we are probably out of cluster, so don't read the default config
-// 		if _, ok := config["kubernetes_host"]; !ok {
-// 			defaultConfig, err := v.kubernetesAuthConfigDefault()
-// 			if err != nil {
-// 				return errors.Wrap(err, "error getting default kubernetes auth config for vault")
-// 			}
-// 			// merge the config blocks
-// 			for k, v := range config {
-// 				defaultConfig[k] = v
-// 			}
-// 			config = defaultConfig
-// 		}
-// 		err = v.configureGenericAuthConfig(authMethodType, path, config)
-// 		if err != nil {
-// 			return errors.Wrap(err, "error configuring kubernetes auth for vault")
-// 		}
-// 		roles, err := cast.ToSliceE(authMethod["roles"])
-// 		if err != nil {
-// 			return errors.Wrap(err, "error finding roles block for kubernetes")
-// 		}
-// 		err = v.configureGenericAuthRoles(authMethodType, path, "role", roles)
-// 		if err != nil {
-// 			return errors.Wrap(err, "error configuring kubernetes auth roles for vault")
-// 		}
-// 	case "github":
-// 		config, err := cast.ToStringMapE(authMethod["config"])
-// 		if err != nil {
-// 			return errors.Wrap(err, "error finding config block for github")
-// 		}
-// 		err = v.configureGenericAuthConfig(authMethodType, path, config)
-// 		if err != nil {
-// 			return errors.Wrap(err, "error configuring github auth for vault")
-// 		}
-// 		mappings, err := cast.ToStringMapE(authMethod["map"])
-// 		if err != nil {
-// 			return errors.Wrap(err, "error finding map block for github")
-// 		}
-// 		err = v.configureGithubMappings(path, mappings)
-// 		if err != nil {
-// 			return errors.Wrap(err, "error configuring github mappings for vault")
-// 		}
-// 	case "aws":
-// 		config, err := cast.ToStringMapE(authMethod["config"])
-// 		if err != nil {
-// 			return errors.Wrapf(err, "error finding config block for aws")
-// 		}
-// 		err = v.configureAwsConfig(path, config)
-// 		if err != nil {
-// 			return errors.Wrap(err, "error configuring aws auth for vault")
-// 		}
-// 		if crossaccountroleRaw, ok := authMethod["crossaccountrole"]; ok {
-// 			crossaccountrole, err := cast.ToSliceE(crossaccountroleRaw)
-// 			if err != nil {
-// 				return errors.Wrap(err, "error finding crossaccountrole block for aws")
-// 			}
-// 			err = v.configureAWSCrossAccountRoles(path, crossaccountrole)
-// 			if err != nil {
-// 				return errors.Wrap(err, "error configuring aws auth cross account roles for vault")
-// 			}
-// 		}
-// 		roles, err := cast.ToSliceE(authMethod["roles"])
-// 		if err != nil {
-// 			return errors.Wrap(err, "error finding roles block for aws")
-// 		}
-// 		err = v.configureGenericAuthRoles(authMethodType, path, "role", roles)
-// 		if err != nil {
-// 			return errors.Wrap(err, "error configuring aws auth roles for vault")
-// 		}
-// 	case "gcp", "oci":
-// 		config, err := cast.ToStringMapE(authMethod["config"])
-// 		if err != nil {
-// 			return errors.Wrapf(err, "error finding config block for %s", authMethodType)
-// 		}
-// 		err = v.configureGenericAuthConfig(authMethodType, path, config)
-// 		if err != nil {
-// 			return errors.Wrapf(err, "error configuring %s auth for vault", authMethodType)
-// 		}
-// 		roles, err := cast.ToSliceE(authMethod["roles"])
-// 		if err != nil {
-// 			return errors.Wrapf(err, "error finding roles block for %s", authMethodType)
-// 		}
-// 		err = v.configureGenericAuthRoles(authMethodType, path, "role", roles)
-// 		if err != nil {
-// 			return errors.Wrapf(err, "error configuring %s auth roles for vault", authMethodType)
-// 		}
-// 	case "approle":
-// 		roles, err := cast.ToSliceE(authMethod["roles"])
-// 		if err != nil {
-// 			return errors.Wrap(err, "error finding role block for approle")
-// 		}
-// 		err = v.configureGenericAuthRoles(authMethodType, path, "role", roles)
-// 		if err != nil {
-// 			return errors.Wrap(err, "error configuring approle auth for vault")
-// 		}
-// 	case "jwt", "oidc":
-// 		config, err := cast.ToStringMapE(authMethod["config"])
-// 		if err != nil {
-// 			return errors.Wrapf(err, "error finding config block for %s", authMethodType)
-// 		}
-// 		err = v.configureGenericAuthConfig(authMethodType, path, config)
-// 		if err != nil {
-// 			return errors.Wrapf(err, "error configuring %s auth on path %s for vault", authMethodType, path)
-// 		}
-// 		roles, err := cast.ToSliceE(authMethod["roles"])
-// 		if err != nil {
-// 			return errors.Wrapf(err, "error finding roles block for %s", authMethodType)
-// 		}
-// 		err = v.configureJwtRoles(path, roles)
-// 		if err != nil {
-// 			return errors.Wrapf(err, "error configuring %s roles on path %s for vault", authMethodType, path)
-// 		}
-// 	case "token":
-// 		roles, err := cast.ToSliceE(authMethod["roles"])
-// 		if err != nil {
-// 			return errors.Wrap(err, "error finding roles block for token")
-// 		}
-// 		err = v.configureGenericAuthRoles(authMethodType, "token", "roles", roles)
-// 		if err != nil {
-// 			return errors.Wrap(err, "error configuring token roles for vault")
-// 		}
-// 	case "cert":
-// 		config, err := cast.ToStringMapE(authMethod["config"])
-// 		if err != nil {
-// 			return errors.Wrap(err, "error finding config block for cert")
-// 		}
-// 		err = v.configureGenericAuthConfig(authMethodType, path, config)
-// 		if err != nil {
-// 			return errors.Wrap(err, "error configuring cert auth for vault")
-// 		}
-// 		roles, err := cast.ToSliceE(authMethod["roles"])
-// 		if err != nil {
-// 			return errors.Wrap(err, "error finding roles block for certs")
-// 		}
-// 		err = v.configureGenericAuthRoles(authMethodType, path, "certs", roles)
-// 		if err != nil {
-// 			return errors.Wrap(err, "error configuring certs auth roles for vault")
-// 		}
-// 	case "ldap", "okta":
-// 		config, err := cast.ToStringMapE(authMethod["config"])
-// 		if err != nil {
-// 			return errors.Wrapf(err, "error finding config block for %s", authMethodType)
-// 		}
-// 		err = v.configureGenericAuthConfig(authMethodType, path, config)
-// 		if err != nil {
-// 			return errors.Wrapf(err, "error configuring %s auth on path %s for vault", authMethodType, path)
-// 		}
-// 		for _, usersOrGroupsKey := range []string{"groups", "users"} {
-// 			if userOrGroupRaw, ok := authMethod[usersOrGroupsKey]; ok {
-// 				userOrGroup, err := cast.ToStringMapE(userOrGroupRaw)
-// 				if err != nil {
-// 					return errors.Wrapf(err, "error finding %s block for %s", usersOrGroupsKey, authMethodType)
-// 				}
-// 				err = v.configureGenericUserAndGroupMappings(authMethodType, path, usersOrGroupsKey, userOrGroup)
-// 				if err != nil {
-// 					return errors.Wrapf(err, "error configuring %s %s for vault", authMethodType, usersOrGroupsKey)
-// 				}
-// 			}
-// 		}
-// 	case "userpass":
-// 		users, err := cast.ToSliceE(authMethod["users"])
-// 		if err != nil {
-// 			return errors.Wrapf(err, "error finding users block for %s", authMethodType)
-// 		}
-// 		err = v.configureUserpassUsers(path, users)
-// 		if err != nil {
-// 			return errors.Wrapf(err, "error configuring users for userpass in vault")
-// 		}
-// 	case "azure":
-// 		config, err := cast.ToStringMapE(authMethod["config"])
-// 		if err != nil {
-// 			return errors.Wrap(err, "error finding config block for azure")
-// 		}
-// 		err = v.configureGenericAuthConfig(authMethodType, path, config)
-// 		if err != nil {
-// 			return errors.Wrap(err, "error configuring azure auth for vault")
-// 		}
-// 		roles, err := cast.ToSliceE(authMethod["roles"])
-// 		if err != nil {
-// 			return errors.Wrap(err, "error finding roles block for azure")
-// 		}
-// 		err = v.configureGenericAuthRoles(authMethodType, path, "role", roles)
-// 		if err != nil {
-// 			return errors.Wrap(err, "error configuring azure auth roles for vault")
-// 		}
-// 	}
-// }
+func (v *vault) addAdditionalAuthConfig(authMethod auth) error {
+	switch authMethod.Type {
+	case "kubernetes":
+		config := authMethod.Config
+
+		// If kubernetes_host is defined we are probably out of cluster, so don't read the default config
+		if _, ok := config["kubernetes_host"]; !ok {
+			defaultConfig, err := v.kubernetesAuthConfigDefault()
+			if err != nil {
+				return errors.Wrap(err, "error getting default kubernetes auth config for vault")
+			}
+			// merge the config blocks
+			for k, v := range config {
+				defaultConfig[k] = v
+			}
+			config = defaultConfig
+		}
+		err := v.configureGenericAuthConfig(authMethod.Type, authMethod.Path, config)
+		if err != nil {
+			return errors.Wrap(err, "error configuring kubernetes auth for vault")
+		}
+		roles, err := cast.ToSliceE(authMethod.Roles)
+		if err != nil {
+			return errors.Wrap(err, "error finding roles block for kubernetes")
+		}
+		err = v.configureGenericAuthRoles(authMethod.Type, authMethod.Path, "role", roles)
+		if err != nil {
+			return errors.Wrap(err, "error configuring kubernetes auth roles for vault")
+		}
+	case "github":
+		// config, err := cast.ToStringMapE(authMethod.Config)
+		// if err != nil {
+		// 	return errors.Wrap(err, "error finding config block for github")
+		// }
+		// err = v.configureGenericAuthConfig(authMethod.Type, authMethod.Path, config)
+		// if err != nil {
+		// 	return errors.Wrap(err, "error configuring github auth for vault")
+		// }
+		// mappings, err := cast.ToStringMapE(authMethod["map"])
+		// if err != nil {
+		// 	return errors.Wrap(err, "error finding map block for github")
+		// }
+		// err = v.configureGithubMappings(authMethod.Path, mappings)
+		// if err != nil {
+		// 	return errors.Wrap(err, "error configuring github mappings for vault")
+		// }
+	case "aws":
+		// config, err := cast.ToStringMapE(authMethod.Config)
+		// if err != nil {
+		// 	return errors.Wrapf(err, "error finding config block for aws")
+		// }
+		// err = v.configureAwsConfig(authMethod.Path, config)
+		// if err != nil {
+		// 	return errors.Wrap(err, "error configuring aws auth for vault")
+		// }
+		// if crossaccountroleRaw, ok := authMethod["crossaccountrole"]; ok {
+		// 	crossaccountrole, err := cast.ToSliceE(crossaccountroleRaw)
+		// 	if err != nil {
+		// 		return errors.Wrap(err, "error finding crossaccountrole block for aws")
+		// 	}
+		// 	err = v.configureAWSCrossAccountRoles(authMethod.Path, crossaccountrole)
+		// 	if err != nil {
+		// 		return errors.Wrap(err, "error configuring aws auth cross account roles for vault")
+		// 	}
+		// }
+		// roles, err := cast.ToSliceE(authMethod.Roles)
+		// if err != nil {
+		// 	return errors.Wrap(err, "error finding roles block for aws")
+		// }
+		// err = v.configureGenericAuthRoles(authMethod.Type, authMethod.Path, "role", roles)
+		// if err != nil {
+		// 	return errors.Wrap(err, "error configuring aws auth roles for vault")
+		// }
+	case "gcp", "oci":
+		config, err := cast.ToStringMapE(authMethod.Config)
+		if err != nil {
+			return errors.Wrapf(err, "error finding config block for %s", authMethod.Type)
+		}
+		err = v.configureGenericAuthConfig(authMethod.Type, authMethod.Path, config)
+		if err != nil {
+			return errors.Wrapf(err, "error configuring %s auth for vault", authMethod.Type)
+		}
+		roles, err := cast.ToSliceE(authMethod.Roles)
+		if err != nil {
+			return errors.Wrapf(err, "error finding roles block for %s", authMethod.Type)
+		}
+		err = v.configureGenericAuthRoles(authMethod.Type, authMethod.Path, "role", roles)
+		if err != nil {
+			return errors.Wrapf(err, "error configuring %s auth roles for vault", authMethod.Type)
+		}
+	case "approle":
+		roles, err := cast.ToSliceE(authMethod.Roles)
+		if err != nil {
+			return errors.Wrap(err, "error finding role block for approle")
+		}
+		err = v.configureGenericAuthRoles(authMethod.Type, authMethod.Path, "role", roles)
+		if err != nil {
+			return errors.Wrap(err, "error configuring approle auth for vault")
+		}
+	case "jwt", "oidc":
+		config, err := cast.ToStringMapE(authMethod.Config)
+		if err != nil {
+			return errors.Wrapf(err, "error finding config block for %s", authMethod.Type)
+		}
+		err = v.configureGenericAuthConfig(authMethod.Type, authMethod.Path, config)
+		if err != nil {
+			return errors.Wrapf(err, "error configuring %s auth on path %s for vault", authMethod.Type, authMethod.Path)
+		}
+		roles, err := cast.ToSliceE(authMethod.Roles)
+		if err != nil {
+			return errors.Wrapf(err, "error finding roles block for %s", authMethod.Type)
+		}
+		err = v.configureJwtRoles(authMethod.Path, roles)
+		if err != nil {
+			return errors.Wrapf(err, "error configuring %s roles on path %s for vault", authMethod.Type, authMethod.Path)
+		}
+	case "token":
+		roles, err := cast.ToSliceE(authMethod.Roles)
+		if err != nil {
+			return errors.Wrap(err, "error finding roles block for token")
+		}
+		err = v.configureGenericAuthRoles(authMethod.Type, "token", "roles", roles)
+		if err != nil {
+			return errors.Wrap(err, "error configuring token roles for vault")
+		}
+	case "cert":
+		config, err := cast.ToStringMapE(authMethod.Config)
+		if err != nil {
+			return errors.Wrap(err, "error finding config block for cert")
+		}
+		err = v.configureGenericAuthConfig(authMethod.Type, authMethod.Path, config)
+		if err != nil {
+			return errors.Wrap(err, "error configuring cert auth for vault")
+		}
+		roles, err := cast.ToSliceE(authMethod.Roles)
+		if err != nil {
+			return errors.Wrap(err, "error finding roles block for certs")
+		}
+		err = v.configureGenericAuthRoles(authMethod.Type, authMethod.Path, "certs", roles)
+		if err != nil {
+			return errors.Wrap(err, "error configuring certs auth roles for vault")
+		}
+	case "ldap", "okta":
+		// config, err := cast.ToStringMapE(authMethod.Config)
+		// if err != nil {
+		// 	return errors.Wrapf(err, "error finding config block for %s", authMethod.Type)
+		// }
+		// err = v.configureGenericAuthConfig(authMethod.Type, authMethod.Path, config)
+		// if err != nil {
+		// 	return errors.Wrapf(err, "error configuring %s auth on path %s for vault", authMethod.Type, authMethod.Path)
+		// }
+		// for _, usersOrGroupsKey := range []string{"groups", "users"} {
+		// 	if userOrGroupRaw, ok := authMethod[usersOrGroupsKey]; ok {
+		// 		userOrGroup, err := cast.ToStringMapE(userOrGroupRaw)
+		// 		if err != nil {
+		// 			return errors.Wrapf(err, "error finding %s block for %s", usersOrGroupsKey, authMethod.Type)
+		// 		}
+		// 		err = v.configureGenericUserAndGroupMappings(authMethod.Type, authMethod.Path, usersOrGroupsKey, userOrGroup)
+		// 		if err != nil {
+		// 			return errors.Wrapf(err, "error configuring %s %s for vault", authMethod.Type, usersOrGroupsKey)
+		// 		}
+		// 	}
+		// }
+	case "userpass":
+		// users, err := cast.ToSliceE(authMethod["users"])
+		// if err != nil {
+		// 	return errors.Wrapf(err, "error finding users block for %s", authMethod.Type)
+		// }
+		// err = v.configureUserpassUsers(authMethod.Path, users)
+		// if err != nil {
+		// 	return errors.Wrapf(err, "error configuring users for userpass in vault")
+		// }
+	case "azure":
+		config, err := cast.ToStringMapE(authMethod.Config)
+		if err != nil {
+			return errors.Wrap(err, "error finding config block for azure")
+		}
+		err = v.configureGenericAuthConfig(authMethod.Type, authMethod.Path, config)
+		if err != nil {
+			return errors.Wrap(err, "error configuring azure auth for vault")
+		}
+		roles, err := cast.ToSliceE(authMethod.Roles)
+		if err != nil {
+			return errors.Wrap(err, "error finding roles block for azure")
+		}
+		err = v.configureGenericAuthRoles(authMethod.Type, authMethod.Path, "role", roles)
+		if err != nil {
+			return errors.Wrap(err, "error configuring azure auth roles for vault")
+		}
+	}
+
+	return nil
+}
 
 // configureGenericAuthRoles supports a very generic configuration format for auth roles, which is followed by:
 // https://www.vaultproject.io/api/auth/jwt/index.html partially
