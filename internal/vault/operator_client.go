@@ -35,23 +35,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	crconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
-
-	vaultpkg "github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 // DefaultConfigFile is the name of the default config file
 const DefaultConfigFile = "vault-config.yml"
-
-// secretEnginesWihtoutNameConfig holds the secret engine types where
-// the name shouldn't be part of the config path
-var secretEnginesWihtoutNameConfig = map[string]bool{
-	"ad":       true,
-	"alicloud": true,
-	"azure":    true,
-	"gcp":      true,
-	"gcpkms":   true,
-	"kv":       true,
-}
 
 // Config holds the configuration of the Vault initialization
 type Config struct {
@@ -98,16 +85,18 @@ type Vault interface {
 type purgeUnmanagedConfig struct {
 	Enabled bool `json:"enabled,omitempty"`
 	Exclude struct {
-		Policies bool `json:"policies,omitempty"`
 		Auths    bool `json:"auth,omitempty"`
+		Policies bool `json:"policies,omitempty"`
+		Secrets  bool `json:"secrets,omitempty"`
 	} `json:"exclude,omitempty"`
 }
 
 // WIP: This should hold all externalConfig when all sections refactord.
 type externalConfig struct {
 	PurgeUnmanagedConfig purgeUnmanagedConfig `json:"purgeUnmanagedConfig,omitempty"`
-	Policies             []policy             `json:"policies,omitempty"`
 	Auth                 []auth               `json:"auth,omitempty"`
+	Policies             []policy             `json:"policies,omitempty"`
+	Secrets              []secretEngine       `json:"secrets,omitempty"`
 }
 
 var extConfig externalConfig
@@ -484,14 +473,13 @@ func (v *vault) Configure(config *viper.Viper) error {
 		return errors.Wrap(err, "error configuring policies for vault")
 	}
 
+	if err = v.configureSecretsEngines(); err != nil {
+		return errors.Wrap(err, "error configuring secret engines for vault")
+	}
+
 	err = v.configurePlugins(config)
 	if err != nil {
 		return errors.Wrap(err, "error configuring plugins for vault")
-	}
-
-	err = v.configureSecretEngines(config)
-	if err != nil {
-		return errors.Wrap(err, "error configuring secret engines for vault")
 	}
 
 	err = v.configureAuditDevices(config)
@@ -582,250 +570,6 @@ func (v *vault) configurePlugins(config *viper.Viper) error {
 		}
 
 		logrus.Infoln("registered plugin", pluginName)
-	}
-
-	return nil
-}
-
-func (v *vault) mountExists(path string) (bool, error) {
-	mounts, err := v.cl.Sys().ListMounts()
-	if err != nil {
-		return false, errors.Wrap(err, "error reading mounts from vault")
-	}
-	logrus.Infof("already existing mounts: %+v", mounts)
-
-	return mounts[path+"/"] != nil, nil
-}
-
-func (v *vault) configureSecretEngines(config *viper.Viper) error {
-	secretsEngines := []map[string]interface{}{}
-	err := config.UnmarshalKey("secrets", &secretsEngines)
-	if err != nil {
-		return errors.Wrap(err, "error unmarshalling vault secrets config")
-	}
-
-	for _, secretEngine := range secretsEngines {
-		secretEngineType, err := cast.ToStringE(secretEngine["type"])
-		if err != nil {
-			return errors.Wrap(err, "error finding type for secret engine")
-		}
-
-		path := secretEngineType
-		if pathOverwrite, ok := secretEngine["path"]; ok {
-			path, err = cast.ToStringE(pathOverwrite)
-			if err != nil {
-				return errors.Wrap(err, "error converting path for secret engine")
-			}
-			path = strings.Trim(path, "/")
-		}
-
-		mountExists, err := v.mountExists(path)
-		if err != nil {
-			return err
-		}
-
-		if !mountExists {
-			description, err := getOrDefaultString(secretEngine, "description")
-			if err != nil {
-				return errors.Wrap(err, "error getting description for secret engine")
-			}
-			pluginName, err := getOrDefaultString(secretEngine, "plugin_name")
-			if err != nil {
-				return errors.Wrap(err, "error getting plugin_name for secret engine")
-			}
-			local, err := getOrDefaultBool(secretEngine, "local")
-			if err != nil {
-				return errors.Wrap(err, "error getting local for secret engine")
-			}
-			sealWrap, err := getOrDefaultBool(secretEngine, "seal_wrap")
-			if err != nil {
-				return errors.Wrap(err, "error getting seal_wrap for secret engine")
-			}
-			config, err := getMountConfigInput(secretEngine)
-			if err != nil {
-				return err
-			}
-			input := api.MountInput{
-				Type:        secretEngineType,
-				Description: description,
-				PluginName:  pluginName,
-				Config:      config,
-				Options:     config.Options, // options needs to be sent here first time
-				Local:       local,
-				SealWrap:    sealWrap,
-			}
-			logrus.Infof("mounting secret engine with input: %#v", input)
-			err = v.cl.Sys().Mount(path, &input)
-			if err != nil {
-				return errors.Wrapf(err, "error mounting %s into vault", path)
-			}
-
-			logrus.Infoln("mounted", secretEngineType, "to", path)
-		} else {
-			logrus.Infof("tuning already existing mount: %s/", path)
-			config, err := getMountConfigInput(secretEngine)
-			if err != nil {
-				return err
-			}
-			err = v.cl.Sys().TuneMount(path, config)
-			if err != nil {
-				return errors.Wrapf(err, "error tuning %s in vault", path)
-			}
-		}
-
-		// Configuration of the Secret Engine in a very generic manner, YAML config file should have the proper format
-		configuration, err := getOrDefaultStringMap(secretEngine, "configuration")
-		if err != nil {
-			return errors.Wrap(err, "error getting configuration for secret engine")
-		}
-
-		for configOption, configData := range configuration {
-			configData, err := cast.ToSliceE(configData)
-			if err != nil {
-				return errors.Wrap(err, "error converting config data for secret engine")
-			}
-			for _, subConfigData := range configData {
-				subConfigData, err := cast.ToStringMapE(subConfigData)
-				if err != nil {
-					return errors.Wrap(err, "error converting sub config data for secret engine")
-				}
-
-				name, ok := subConfigData["name"]
-				if !ok && !configNeedsNoName(secretEngineType, configOption) {
-					return errors.Errorf("error finding sub config data name for secret engine: %s/%s", path, configOption)
-				}
-
-				// config data can have a child dict. But it will cause:
-				// `json: unsupported type: map[interface {}]interface {}`
-				// So check and replace by `map[string]interface{}` before using it.
-				for k, v := range subConfigData {
-					switch val := v.(type) {
-					case map[interface{}]interface{}:
-						subConfigData[k] = cast.ToStringMap(val)
-					}
-				}
-
-				var configPath string
-				if name != nil {
-					configPath = fmt.Sprintf("%s/%s/%s", path, configOption, name)
-				} else {
-					configPath = fmt.Sprintf("%s/%s", path, configOption)
-				}
-
-				// Control if the configs should be updated or just Created once and skipped later on
-				// This is a workaround to secrets backend like GCP that will destroy and recreate secrets at every iteration
-				createOnly := cast.ToBool(subConfigData["create_only"])
-				// Delete the create_only key from the map, so we don't push it to vault
-				delete(subConfigData, "create_only")
-
-				rotate := cast.ToBool(subConfigData["rotate"])
-				// Delete the rotate key from the map, so we don't push it to vault
-				delete(subConfigData, "rotate")
-
-				saveTo := cast.ToString(subConfigData["save_to"])
-				// Delete the rotate key from the map, so we don't push it to vault
-				delete(subConfigData, "save_to")
-
-				shouldUpdate := true
-				if (createOnly || rotate) && mountExists {
-					secretExists := false
-					if configOption == "root/generate" { // the pki generate call is a different beast
-						req := v.cl.NewRequest("GET", fmt.Sprintf("/v1/%s/ca", path))
-						resp, err := v.cl.RawRequestWithContext(context.Background(), req)
-						if resp != nil {
-							defer resp.Body.Close()
-						}
-						if err != nil {
-							return errors.Wrapf(err, "failed to check pki CA")
-						}
-						if resp.StatusCode == http.StatusOK {
-							secretExists = true
-						}
-					} else {
-						secret, err := v.cl.Logical().Read(configPath)
-						if err != nil {
-							return errors.Wrapf(err, "error reading configPath %s", configPath)
-						}
-						if secret != nil && secret.Data != nil {
-							secretExists = true
-						}
-					}
-
-					if secretExists {
-						reason := "rotate"
-						if createOnly {
-							reason = "create_only"
-						}
-						logrus.Infof("Secret at configpath %s already exists, %s was set so this will not be updated", configPath, reason)
-						shouldUpdate = false
-					}
-				}
-
-				if shouldUpdate {
-					sec, err := v.writeWithWarningCheck(configPath, subConfigData)
-					if err != nil {
-						if isOverwriteProhibitedError(err) {
-							logrus.Infoln("can't reconfigure", configPath, "please delete it manually")
-
-							continue
-						}
-						return errors.Wrapf(err, "error configuring %s config in vault", configPath)
-					}
-
-					if saveTo != "" {
-						_, err = v.writeWithWarningCheck(saveTo, vaultpkg.NewData(0, sec.Data))
-						if err != nil {
-							return errors.Wrapf(err, "error saving secret in vault to %s", saveTo)
-						}
-					}
-				}
-
-				// For secret engines where the root credentials are rotatable we don't wan't to reconfigure again
-				// with the old credentials, because that would cause access denied issues. Currently these are:
-				// - AWS
-				// - Database
-				if rotate && mountExists &&
-					((secretEngineType == "database" && configOption == "config") ||
-						(secretEngineType == "aws" && configOption == "config/root")) {
-					// TODO we need to find out if it was rotated or not
-					err = v.rotateSecretEngineCredentials(secretEngineType, path, name.(string), configPath)
-					if err != nil {
-						return errors.Wrapf(err, "error rotating credentials for '%s' config in vault", configPath)
-					}
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-func (v *vault) rotateSecretEngineCredentials(secretEngineType, path, name, configPath string) error {
-	var rotatePath string
-	switch secretEngineType {
-	case "aws":
-		rotatePath = fmt.Sprintf("%s/config/rotate-root", path)
-	case "database":
-		rotatePath = fmt.Sprintf("%s/rotate-root/%s", path, name)
-	case "gcp":
-		rotatePath = fmt.Sprintf("%s/%s/rotate", path, name)
-	default:
-		return errors.Errorf("secret engine type '%s' doesn't support credential rotation", secretEngineType)
-	}
-
-	if _, ok := v.rotateCache[rotatePath]; !ok {
-		logrus.Infoln("doing credential rotation at", rotatePath)
-
-		_, err := v.writeWithWarningCheck(rotatePath, nil)
-		if err != nil {
-			return errors.Wrapf(err, "error rotating credentials for '%s' config in vault", configPath)
-		}
-
-		logrus.Infoln("credential got rotated at", rotatePath)
-
-		v.rotateCache[rotatePath] = true
-	} else {
-		logrus.Infoln("credentials were rotated previously for", rotatePath)
 	}
 
 	return nil
@@ -1181,30 +925,6 @@ func toSliceStringMapE(o interface{}) ([]map[string]interface{}, error) {
 	return sm, json.Unmarshal(data, &sm)
 }
 
-func getOrDefaultBool(m map[string]interface{}, key string) (bool, error) {
-	value := m[key]
-	if value != nil {
-		return cast.ToBoolE(value)
-	}
-	return false, nil
-}
-
-func getOrDefaultString(m map[string]interface{}, key string) (string, error) {
-	value := m[key]
-	if value != nil {
-		return cast.ToStringE(value)
-	}
-	return "", nil
-}
-
-func getOrDefaultStringMapString(m map[string]interface{}, key string) (map[string]string, error) {
-	value := m[key]
-	if value != nil {
-		return cast.ToStringMapStringE(value)
-	}
-	return map[string]string{}, nil
-}
-
 func getOrDefaultStringMap(m map[string]interface{}, key string) (map[string]interface{}, error) {
 	value := m[key]
 	if value != nil {
@@ -1223,40 +943,6 @@ func getOrError(m map[string]interface{}, key string) (string, error) {
 
 func isOverwriteProhibitedError(err error) bool {
 	return strings.Contains(err.Error(), "delete them before reconfiguring")
-}
-
-func getMountConfigInput(secretEngine map[string]interface{}) (api.MountConfigInput, error) {
-	var mountConfigInput api.MountConfigInput
-	config, ok := secretEngine["config"]
-	if ok {
-		if err := mapstructure.Decode(config, &mountConfigInput); err != nil {
-			return mountConfigInput, errors.Wrap(err, "error parsing config for secret engine")
-		}
-	}
-
-	// Bank-Vaults supported options outside config to be used options in the mount request
-	// so for now, to preserve backward compatibility we overwrite the options inside config
-	// with the options outside.
-	options, err := getOrDefaultStringMapString(secretEngine, "options")
-	if err != nil {
-		return mountConfigInput, errors.Wrap(err, "error getting options for secret engine")
-	}
-	mountConfigInput.Options = options
-
-	return mountConfigInput, nil
-}
-
-func configNeedsNoName(secretEngineType string, configOption string) bool {
-	if configOption == "config" {
-		_, ok := secretEnginesWihtoutNameConfig[secretEngineType]
-		return ok
-	}
-
-	if secretEngineType == "aws" && configOption == "config/root" {
-		return true
-	}
-
-	return false
 }
 
 func getOrDefaultSecretData(m interface{}) (map[string]interface{}, error) {
