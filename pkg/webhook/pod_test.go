@@ -501,11 +501,46 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 		pod         *corev1.Pod
 		vaultConfig VaultConfig
 	}
+
 	defaultMode := int32(420)
-	runAsUser := int64(100)
-	initContainerSecurityContext := &corev1.SecurityContext{
-		RunAsUser:                &runAsUser,
+	agentRunAsUser := vaultAgentUID
+
+	baseSecurityContext := &corev1.SecurityContext{
+		RunAsNonRoot:             &vaultConfig.RunAsNonRoot,
+		ReadOnlyRootFilesystem:   &vaultConfig.ReadOnlyRootFilesystem,
 		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{
+				"ALL",
+			},
+		},
+	}
+
+	agentInitContainerSecurityContext := &corev1.SecurityContext{
+		RunAsUser:                &agentRunAsUser,
+		RunAsNonRoot:             &vaultConfig.RunAsNonRoot,
+		ReadOnlyRootFilesystem:   &vaultConfig.ReadOnlyRootFilesystem,
+		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{
+				"ALL",
+			},
+		},
+	}
+
+	agentContainerSecurityContext := &corev1.SecurityContext{
+		RunAsUser:                &agentRunAsUser,
+		RunAsNonRoot:             &vaultConfig.RunAsNonRoot,
+		ReadOnlyRootFilesystem:   &vaultConfig.ReadOnlyRootFilesystem,
+		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{
+				"ALL",
+			},
+			Add: []corev1.Capability{
+				"IPC_LOCK",
+			},
+		},
 	}
 
 	tests := []struct {
@@ -584,7 +619,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									corev1.ResourceMemory: resource.MustParse("64Mi"),
 								},
 							},
-							SecurityContext: initContainerSecurityContext,
+							SecurityContext: agentInitContainerSecurityContext,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "vault-env",
@@ -620,9 +655,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									Value: "false",
 								},
 							},
-							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
-							},
+							SecurityContext: baseSecurityContext,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "vault-env",
@@ -779,7 +812,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									corev1.ResourceMemory: resource.MustParse("64Mi"),
 								},
 							},
-							SecurityContext: initContainerSecurityContext,
+							SecurityContext: agentInitContainerSecurityContext,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "vault-env",
@@ -813,9 +846,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									Value: "false",
 								},
 							},
-							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
-							},
+							SecurityContext: baseSecurityContext,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "vault-env",
@@ -966,14 +997,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									Value: "false",
 								},
 							},
-							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
-								Capabilities: &corev1.Capabilities{
-									Add: []corev1.Capability{
-										"IPC_LOCK",
-									},
-								},
-							},
+							SecurityContext: agentContainerSecurityContext,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "vault-env",
@@ -1133,7 +1157,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									corev1.ResourceMemory: resource.MustParse("64Mi"),
 								},
 							},
-							SecurityContext: initContainerSecurityContext,
+							SecurityContext: agentInitContainerSecurityContext,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "vault-env",
@@ -1167,9 +1191,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									Value: "false",
 								},
 							},
-							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
-							},
+							SecurityContext: baseSecurityContext,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "vault-env",
@@ -1353,7 +1375,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									corev1.ResourceMemory: resource.MustParse("64Mi"),
 								},
 							},
-							SecurityContext: initContainerSecurityContext,
+							SecurityContext: agentInitContainerSecurityContext,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "vault-env",
@@ -1400,9 +1422,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									Value: "false",
 								},
 							},
-							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
-							},
+							SecurityContext: baseSecurityContext,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "vault-env",

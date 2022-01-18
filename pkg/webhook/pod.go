@@ -30,7 +30,8 @@ import (
 	"github.com/banzaicloud/bank-vaults/internal/injector"
 )
 
-const vaultAgentConfig = `
+const (
+	vaultAgentConfig = `
 pid_file = "/tmp/pidfile"
 
 auto_auth {
@@ -47,8 +48,10 @@ auto_auth {
                 }
         }
 }`
+	vaultAgentUID int64 = 100
 
-const VaultEnvVolumeName = "vault-env"
+	VaultEnvVolumeName = "vault-env"
+)
 
 func (mw *MutatingWebhook) MutatePod(ctx context.Context, pod *corev1.Pod, vaultConfig VaultConfig, dryRun bool) error {
 	mw.logger.Debug("Successfully connected to the API")
@@ -138,12 +141,12 @@ func (mw *MutatingWebhook) MutatePod(ctx context.Context, pod *corev1.Pod, vault
 			pod.Spec.ShareProcessNamespace = &shareProcessNamespace
 		}
 		if !vaultConfig.CtOnce {
-			pod.Spec.Containers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
+			pod.Spec.Containers = append(getContainers(pod.Spec.SecurityContext, vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
 		} else {
 			if vaultConfig.CtInjectInInitcontainers {
 				mw.addSecretsVolToContainers(vaultConfig, pod.Spec.InitContainers)
 			}
-			pod.Spec.InitContainers = append(getContainers(vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.InitContainers...)
+			pod.Spec.InitContainers = append(getContainers(pod.Spec.SecurityContext, vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.InitContainers...)
 		}
 
 		mw.logger.Debug("Successfully appended pod containers to spec")
@@ -204,7 +207,7 @@ func (mw *MutatingWebhook) MutatePod(ctx context.Context, pod *corev1.Pod, vault
 			shareProcessNamespace := true
 			pod.Spec.ShareProcessNamespace = &shareProcessNamespace
 		}
-		pod.Spec.Containers = append(getAgentContainers(pod.Spec.Containers, vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
+		pod.Spec.Containers = append(getAgentContainers(pod.Spec.Containers, pod.Spec.SecurityContext, vaultConfig, containerEnvVars, containerVolMounts), pod.Spec.Containers...)
 
 		mw.logger.Debug("Successfully appended pod containers to spec")
 	}
@@ -598,10 +601,6 @@ func hasTLSVolume(volumes []corev1.Volume) bool {
 	return false
 }
 
-func hasPodSecurityContextRunAsUser(p *corev1.PodSecurityContext) bool {
-	return p.RunAsUser != nil
-}
-
 func getServiceAccountMount(containers []corev1.Container) (serviceAccountMount corev1.VolumeMount) {
 mountSearch:
 	for _, container := range containers {
@@ -632,6 +631,7 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 			Image:           vaultConfig.AgentImage,
 			ImagePullPolicy: vaultConfig.AgentImagePullPolicy,
 			Command:         []string{"sh", "-c", cmd},
+			SecurityContext: getBaseSecurityContext(podSecurityContext, vaultConfig),
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -657,11 +657,9 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 			MountPath: "/vault/agent/",
 		})
 
-		runAsUser := int64(100)
-		securityContext := &corev1.SecurityContext{
-			RunAsUser:                &runAsUser,
-			AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
-		}
+		securityContext := getBaseSecurityContext(podSecurityContext, vaultConfig)
+		runAsUser := vaultAgentUID
+		securityContext.RunAsUser = &runAsUser
 
 		containers = append(containers, corev1.Container{
 			Name:            "vault-agent",
@@ -697,7 +695,7 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 				},
 			},
 
-			SecurityContext: getSecurityContext(podSecurityContext, vaultConfig),
+			SecurityContext: getBaseSecurityContext(podSecurityContext, vaultConfig),
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
 					corev1.ResourceCPU:    vaultConfig.EnvCPULimit,
@@ -714,21 +712,12 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 	return containers
 }
 
-func getContainers(vaultConfig VaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
+func getContainers(podSecurityContext *corev1.PodSecurityContext, vaultConfig VaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	containers := []corev1.Container{}
-	securityContext := &corev1.SecurityContext{
-		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
-	}
+	securityContext := getBaseSecurityContext(podSecurityContext, vaultConfig)
 
 	if vaultConfig.CtShareProcess {
-		securityContext = &corev1.SecurityContext{
-			AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
-			Capabilities: &corev1.Capabilities{
-				Add: []corev1.Capability{
-					"SYS_PTRACE",
-				},
-			},
-		}
+		securityContext.Capabilities.Add = append(securityContext.Capabilities.Add, "SYS_PTRACE")
 	}
 
 	containerVolMounts = append(containerVolMounts, corev1.VolumeMount{
@@ -771,28 +760,19 @@ func getContainers(vaultConfig VaultConfig, containerEnvVars []corev1.EnvVar, co
 	return containers
 }
 
-func getAgentContainers(originalContainers []corev1.Container, vaultConfig VaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
+func getAgentContainers(originalContainers []corev1.Container, podSecurityContext *corev1.PodSecurityContext, vaultConfig VaultConfig, containerEnvVars []corev1.EnvVar, containerVolMounts []corev1.VolumeMount) []corev1.Container {
 	containers := []corev1.Container{}
-	securityContext := &corev1.SecurityContext{
-		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
-		Capabilities: &corev1.Capabilities{
-			Add: []corev1.Capability{
-				"IPC_LOCK",
-			},
-		},
-	}
+
+	securityContext := getBaseSecurityContext(podSecurityContext, vaultConfig)
+
+	securityContext.Capabilities.Add = append(securityContext.Capabilities.Add, "IPC_LOCK")
 
 	if vaultConfig.AgentShareProcess {
-		securityContext = &corev1.SecurityContext{
-			AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
-			Capabilities: &corev1.Capabilities{
-				Add: []corev1.Capability{
-					"SYS_PTRACE",
-					"IPC_LOCK",
-				},
-			},
-		}
+		securityContext.Capabilities.Add = append(securityContext.Capabilities.Add, "SYS_PTRACE")
 	}
+
+	runAsUser := vaultAgentUID
+	securityContext.RunAsUser = &runAsUser
 
 	serviceAccountMount := getServiceAccountMount(originalContainers)
 
@@ -833,17 +813,31 @@ func getAgentContainers(originalContainers []corev1.Container, vaultConfig Vault
 	return containers
 }
 
-func getSecurityContext(podSecurityContext *corev1.PodSecurityContext, vaultConfig VaultConfig) *corev1.SecurityContext {
-	if hasPodSecurityContextRunAsUser(podSecurityContext) {
-		return &corev1.SecurityContext{
-			RunAsUser:                podSecurityContext.RunAsUser,
-			AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
-		}
+func getBaseSecurityContext(podSecurityContext *corev1.PodSecurityContext, vaultConfig VaultConfig) *corev1.SecurityContext {
+	context := &corev1.SecurityContext{
+		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
+		RunAsNonRoot:             &vaultConfig.RunAsNonRoot,
+		ReadOnlyRootFilesystem:   &vaultConfig.ReadOnlyRootFilesystem,
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{
+				"ALL",
+			},
+		},
 	}
 
-	return &corev1.SecurityContext{
-		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
+	if podSecurityContext != nil && podSecurityContext.RunAsUser != nil {
+		context.RunAsUser = podSecurityContext.RunAsUser
 	}
+
+	if vaultConfig.RunAsUser > 0 {
+		context.RunAsUser = &vaultConfig.RunAsUser
+	}
+
+	if vaultConfig.RunAsGroup > 0 {
+		context.RunAsGroup = &vaultConfig.RunAsGroup
+	}
+
+	return context
 }
 
 func getConfigMapForVaultAgent(pod *corev1.Pod, vaultConfig VaultConfig) *corev1.ConfigMap {
