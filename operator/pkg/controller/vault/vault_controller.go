@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -32,8 +31,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
-	etcdv1beta2 "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
-	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/imdario/mergo"
 	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -264,41 +261,6 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
-	}
-
-	// check if we need to create an etcd cluster
-	// if etcd size is < 0. Will not create etcd cluster
-	if v.Spec.HasEtcdStorage() && v.Spec.GetEtcdSize() > 0 {
-		etcdCluster, err := etcdForVault(v)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to fabricate etcd cluster: %v", err)
-		}
-
-		// Create the secret if it doesn't exist
-		sec, err := secretForEtcd(v, etcdCluster)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to fabricate secret for etcd: %v", err)
-		}
-
-		// Set Vault instance as the owner and controller
-		if err := controllerutil.SetControllerReference(v, sec, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		err = r.createObjectIfNotExists(sec)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to create secret for etcd: %v", err)
-		}
-
-		// Set Vault instance as the owner and controller
-		if err := controllerutil.SetControllerReference(v, etcdCluster, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		err = r.createOrUpdateObject(etcdCluster)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to create/update etcd cluster: %v", err)
-		}
 	}
 
 	// Create the service if it doesn't exist
@@ -631,84 +593,6 @@ func secretForRawVaultConfig(v *vaultv1alpha1.Vault) (*corev1.Secret, string, er
 	}
 
 	return &secret, fmt.Sprintf("%x", sha256.Sum256(configJSON)), nil
-}
-
-func secretForEtcd(v *vaultv1alpha1.Vault, e *etcdv1beta2.EtcdCluster) (*corev1.Secret, error) {
-	hosts := []string{
-		e.Name,
-		e.Name + "." + e.Namespace,
-		e.Name + "." + e.Namespace + ".svc.cluster.local",
-		"*." + e.Name + "." + e.Namespace + ".svc",
-		"*." + e.Name + "." + e.Namespace + ".svc.cluster.local",
-		e.Name + "-client." + e.Namespace + ".svc",
-		e.Name + "-client." + e.Namespace + ".svc.cluster.local",
-		"localhost",
-	}
-	cm, err := bvtls.NewCertificateManager(strings.Join(hosts, ","), "8760h")
-	if err != nil {
-		return nil, err
-	}
-	err = cm.NewChain()
-	if err != nil {
-		return nil, err
-	}
-
-	secret := corev1.Secret{}
-	secret.Name = e.Name + "-tls"
-	secret.Namespace = e.Namespace
-	secret.Labels = v.LabelsForVault()
-	secret.StringData = map[string]string{}
-
-	secret.StringData[etcdutil.CliCAFile] = cm.Chain.CACert
-	secret.StringData[etcdutil.CliCertFile] = cm.Chain.ClientCert
-	secret.StringData[etcdutil.CliKeyFile] = cm.Chain.ClientKey
-
-	secret.StringData["peer-ca.crt"] = cm.Chain.CACert
-	secret.StringData["peer.crt"] = cm.Chain.PeerCert
-	secret.StringData["peer.key"] = cm.Chain.PeerKey
-
-	secret.StringData["server-ca.crt"] = cm.Chain.CACert
-	secret.StringData["server.crt"] = cm.Chain.ServerCert
-	secret.StringData["server.key"] = cm.Chain.ServerKey
-
-	return &secret, nil
-}
-
-func etcdForVault(v *vaultv1alpha1.Vault) (*etcdv1beta2.EtcdCluster, error) {
-	storage := v.Spec.GetEtcdStorage()
-	etcdAddress := storage["address"].(string)
-	etcdURL, err := url.Parse(etcdAddress)
-	if err != nil {
-		return nil, err
-	}
-	etcdName := etcdURL.Hostname()
-	etcdCluster := &etcdv1beta2.EtcdCluster{}
-	etcdCluster.APIVersion = etcdv1beta2.SchemeGroupVersion.String()
-	etcdCluster.Kind = etcdv1beta2.EtcdClusterResourceKind
-	etcdCluster.Annotations = v.Spec.EtcdAnnotations
-	etcdCluster.Name = etcdName
-	etcdCluster.Namespace = v.Namespace
-	etcdCluster.Labels = v.LabelsForVault()
-	etcdCluster.Spec.Size = v.Spec.GetEtcdSize()
-	etcdCluster.Spec.Repository = v.Spec.EtcdRepository
-	etcdCluster.Spec.Pod = &etcdv1beta2.PodPolicy{
-		PersistentVolumeClaimSpec: v.Spec.EtcdPVCSpec,
-		Resources:                 getEtcdResource(v),
-		Annotations:               v.Spec.EtcdPodAnnotations,
-		BusyboxImage:              v.Spec.EtcdPodBusyBoxImage,
-		Affinity:                  getEtcdAffinity(v, etcdName),
-	}
-	etcdCluster.Spec.Version = v.Spec.GetEtcdVersion()
-	etcdCluster.Spec.TLS = &etcdv1beta2.TLSPolicy{
-		Static: &etcdv1beta2.StaticTLS{
-			OperatorSecret: etcdName + "-tls",
-			Member: &etcdv1beta2.MemberSecret{
-				ServerSecret: etcdName + "-tls",
-				PeerSecret:   etcdName + "-tls",
-			},
-		},
-	}
-	return etcdCluster, nil
 }
 
 func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
@@ -1262,38 +1146,6 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	}))
 
 	volumeMounts = withAuditLogVolumeMount(v, volumeMounts)
-
-	// TODO Configure Vault to wait for etcd in an init container in this case
-	// If etcd size is < 0 means not create new etcd cluster
-	// No need to override etcd config, and use user input value
-	if v.Spec.HasEtcdStorage() && v.Spec.GetEtcdSize() > 0 {
-
-		// Mount the Secret holding the certificate into Vault
-		etcdStorage := v.Spec.GetEtcdStorage()
-		etcdAddress := etcdStorage["address"].(string)
-		etcdURL, err := url.Parse(etcdAddress)
-		if err != nil {
-			return nil, err
-		}
-		etcdName := etcdURL.Hostname()
-
-		etcdVolume := corev1.Volume{
-			Name: "etcd-tls",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: etcdName + "-tls",
-				},
-			},
-		}
-
-		volumes = append(volumes, etcdVolume)
-
-		etcdVolumeMount := corev1.VolumeMount{
-			Name:      "etcd-tls",
-			MountPath: "/etcd/tls",
-		}
-		volumeMounts = append(volumeMounts, etcdVolumeMount)
-	}
 
 	unsealCommand := []string{"bank-vaults", "unseal", "--init"}
 
@@ -1940,27 +1792,6 @@ func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
 	}
 }
 
-func getEtcdAffinity(v *vaultv1alpha1.Vault, etcdName string) *corev1.Affinity {
-	if v.Spec.EtcdAffinity != nil {
-		return v.Spec.EtcdAffinity
-	}
-	if v.Spec.PodAntiAffinity != "" {
-		return &corev1.Affinity{
-			PodAntiAffinity: &corev1.PodAntiAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-					{
-						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"app": "etcd", "etcd_cluster": etcdName},
-						},
-						TopologyKey: v.Spec.PodAntiAffinity,
-					},
-				},
-			},
-		}
-	}
-	return nil
-}
-
 func getNodeAffinity(v *vaultv1alpha1.Vault) *corev1.NodeAffinity {
 	if v.Spec.NodeAffinity.Size() == 0 {
 		return nil
@@ -2133,24 +1964,6 @@ func getVaultResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
 func getBankVaultsResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
 	if v.Spec.Resources != nil && v.Spec.Resources.BankVaults != nil {
 		return *v.Spec.Resources.BankVaults
-	}
-
-	return corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("100m"),
-			corev1.ResourceMemory: resource.MustParse("64Mi"),
-		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("200m"),
-			corev1.ResourceMemory: resource.MustParse("128Mi"),
-		},
-	}
-}
-
-// getEtcdResource return resource in spec or return pre-defined resource if not configurated
-func getEtcdResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
-	if v.Spec.Resources != nil && v.Spec.Resources.Etcd != nil {
-		return *v.Spec.Resources.Etcd
 	}
 
 	return corev1.ResourceRequirements{
