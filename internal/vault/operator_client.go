@@ -26,7 +26,6 @@ import (
 
 	"emperror.dev/errors"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	json "github.com/json-iterator/go"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
@@ -86,6 +85,7 @@ type purgeUnmanagedConfig struct {
 	Enabled bool `json:"enabled,omitempty"`
 	Exclude struct {
 		Auths    bool `json:"auth,omitempty"`
+		Plugins  bool `json:"plugins,omitempty"`
 		Policies bool `json:"policies,omitempty"`
 		Secrets  bool `json:"secrets,omitempty"`
 	} `json:"exclude,omitempty"`
@@ -95,6 +95,7 @@ type purgeUnmanagedConfig struct {
 type externalConfig struct {
 	PurgeUnmanagedConfig purgeUnmanagedConfig `json:"purgeUnmanagedConfig,omitempty"`
 	Auth                 []auth               `json:"auth,omitempty"`
+	Plugins              []plugin             `json:"plugins,omitempty"`
 	Policies             []policy             `json:"policies,omitempty"`
 	Secrets              []secretEngine       `json:"secrets,omitempty"`
 }
@@ -477,8 +478,7 @@ func (v *vault) Configure(config *viper.Viper) error {
 		return errors.Wrap(err, "error configuring secret engines for vault")
 	}
 
-	err = v.configurePlugins(config)
-	if err != nil {
+	if err = v.configurePlugins(); err != nil {
 		return errors.Wrap(err, "error configuring plugins for vault")
 	}
 
@@ -514,65 +514,6 @@ func (*vault) rootTokenKey() string {
 
 func (*vault) testKey() string {
 	return "vault-test"
-}
-
-func (v *vault) configurePlugins(config *viper.Viper) error {
-	plugins := []map[string]interface{}{}
-	err := config.UnmarshalKey("plugins", &plugins)
-	if err != nil {
-		return errors.Wrap(err, "error unmarshalling vault plugins config")
-	}
-
-	if len(plugins) == 0 {
-		return nil
-	}
-
-	listPlugins, err := v.cl.Sys().ListPlugins(&api.ListPluginsInput{})
-	if err != nil {
-		return errors.Wrap(err, "failed to retrieve list of plugins")
-	}
-
-	logrus.Debugf("already registered plugins: %#v", listPlugins.PluginsByType)
-
-	for _, plugin := range plugins {
-		command, err := getOrError(plugin, "command")
-		if err != nil {
-			return errors.Wrap(err, "error getting command for plugin")
-		}
-		pluginName, err := getOrError(plugin, "plugin_name")
-		if err != nil {
-			return errors.Wrap(err, "error getting plugin_name for plugin")
-		}
-		sha256, err := getOrError(plugin, "sha256")
-		if err != nil {
-			return errors.Wrap(err, "error getting sha256 for plugin")
-		}
-		typeRaw, err := getOrError(plugin, "type")
-		if err != nil {
-			return errors.Wrap(err, "error getting type for plugin")
-		}
-		pluginType, err := consts.ParsePluginType(typeRaw)
-		if err != nil {
-			return errors.Wrap(err, "error parsing type for plugin")
-		}
-
-		input := api.RegisterPluginInput{
-			Name:    pluginName,
-			Command: command,
-			SHA256:  sha256,
-			Type:    pluginType,
-		}
-		logrus.Infof("registering plugin with input: %#v", input)
-
-		err = v.cl.Sys().RegisterPlugin(&input)
-		if err != nil {
-			return errors.Wrapf(err, "error registering plugin %s in vault", pluginName)
-		}
-
-		logrus.Infoln("registered plugin", pluginName)
-	}
-
-	return nil
 }
 
 func (v *vault) configureAuditDevices(config *viper.Viper) error {
@@ -931,14 +872,6 @@ func getOrDefaultStringMap(m map[string]interface{}, key string) (map[string]int
 		return cast.ToStringMapE(value)
 	}
 	return map[string]interface{}{}, nil
-}
-
-func getOrError(m map[string]interface{}, key string) (string, error) {
-	value := m[key]
-	if value != nil {
-		return cast.ToStringE(value)
-	}
-	return "", errors.Errorf("value for %s is not set", key)
 }
 
 func isOverwriteProhibitedError(err error) bool {
