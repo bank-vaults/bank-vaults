@@ -757,13 +757,18 @@ type UnsealConfig struct {
 // UnsealOptions represents the common options to all unsealing backends
 type UnsealOptions struct {
 	PreFlightChecks *bool `json:"preFlightChecks,omitempty"`
+	StoreRootToken  *bool `json:"storeRootToken,omitempty"`
 }
 
 func (uso UnsealOptions) ToArgs() []string {
 	args := []string{}
 	if uso.PreFlightChecks == nil || *uso.PreFlightChecks {
-		args = append(args, "--pre-flight-checks", "true")
+		args = append(args, "--pre-flight-checks=true")
 	}
+	if uso.StoreRootToken != nil && !*uso.StoreRootToken {
+		args = append(args, "--store-root-token=false")
+	}
+
 	return args
 }
 

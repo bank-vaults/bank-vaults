@@ -93,7 +93,11 @@ spec:
   unsealConfig:
     options:
       # The preFlightChecks flag enables unseal and root token storage tests
+      # This is true by default
       preFlightChecks: true
+      # The storeRootToken flag enables storing of root token in chosen storage
+      # This is true by default
+      storeRootToken: true
     kubernetes:
       secretNamespace: default
 

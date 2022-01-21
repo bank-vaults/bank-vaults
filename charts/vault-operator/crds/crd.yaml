@@ -1074,6 +1074,8 @@ spec:
                     properties:
                       preFlightChecks:
                         type: boolean
+                      storeRootToken:
+                        type: boolean
                     type: object
                   vault:
                     properties:
