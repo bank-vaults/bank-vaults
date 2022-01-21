@@ -40,6 +40,9 @@ syncPeriod: "1m"
 labels: {}
   #  team: banzai
 
+podLabels: {}
+  #  team: banzai
+
 resources:
   limits:
     cpu: 100m
