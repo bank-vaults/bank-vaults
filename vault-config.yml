@@ -338,3 +338,16 @@ startupSecrets:
       data:
         AWS_ACCESS_KEY_ID: secretId
         AWS_SECRET_ACCESS_KEY: s3cr3t
+
+groups:
+  - name: admin
+    policies:
+      - allow_secrets
+    metadata:
+      privileged: true
+    type: external
+
+group-aliases:
+  - name: admin
+    mountpath: kubernetes
+    group: admin
