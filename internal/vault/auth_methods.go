@@ -62,15 +62,15 @@ func (v *vault) getExistingAuthMethods() (map[string]*api.MountOutput, error) {
 // getUnmanagedAuthMethods gets unmanaged auth methods by comparing what's already in Vault and what's in the externalConfig
 func (v *vault) getUnmanagedAuthMethods(managedAuthMethods []auth) map[string]*api.MountOutput {
 	// TODO: remove this line and just use passed value
-	unmangedAuths, _ := v.getExistingAuthMethods()
+	unmanagedAuths, _ := v.getExistingAuthMethods()
 	// Remove managed auth methods form the items since the rest will be disabled.
-	for _, mangedAuthMethod := range managedAuthMethods {
-		delete(unmangedAuths, mangedAuthMethod.Type)
+	for _, managedAuthMethod := range managedAuthMethods {
+		delete(unmanagedAuths, managedAuthMethod.Type)
 	}
 	// Remove token auth method since it's the default
-	delete(unmangedAuths, "token")
+	delete(unmanagedAuths, "token")
 
-	return unmangedAuths
+	return unmanagedAuths
 }
 
 func (v *vault) configureAuthMethods() error {
@@ -98,7 +98,7 @@ func (v *vault) removeUnmanagedAuthMethods(unManagedAuths map[string]*api.MountO
 	}
 
 	for authMethod := range unManagedAuths {
-		logrus.Infof("removing unmanged auth method %s ", authMethod)
+		logrus.Infof("removing unmanaged auth method %s ", authMethod)
 		err := v.cl.Sys().DisableAuth(authMethod)
 		if err != nil {
 			return errors.Wrapf(err, "error disabling %s auth method in vault", authMethod)

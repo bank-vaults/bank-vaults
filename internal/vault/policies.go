@@ -73,8 +73,8 @@ func (v *vault) getUnmanagedPolicies(managedPolicies []policy) map[string]bool {
 	delete(unmanagedPolicies, "default")
 
 	// Remove managed polices form the items since the reset will be removed.
-	for _, mangedPolicy := range managedPolicies {
-		delete(unmanagedPolicies, mangedPolicy.Name)
+	for _, managedPolicy := range managedPolicies {
+		delete(unmanagedPolicies, managedPolicy.Name)
 	}
 
 	return unmanagedPolicies
@@ -83,7 +83,7 @@ func (v *vault) getUnmanagedPolicies(managedPolicies []policy) map[string]bool {
 func (v *vault) configurePolicies() error {
 	// Add managed policies.
 	managedPolicies := extConfig.Policies
-	logrus.Debugf("add manged policies %v", managedPolicies)
+	logrus.Debugf("add managed policies %v", managedPolicies)
 	for _, policy := range managedPolicies {
 		if err := policy.format(); err != nil {
 			return errors.Wrapf(err, "error formatting %s policy", policy.Name)
@@ -96,7 +96,7 @@ func (v *vault) configurePolicies() error {
 	// Remove unmanaged policies.
 	if extConfig.PurgeUnmanagedConfig.Enabled && !extConfig.PurgeUnmanagedConfig.Exclude.Policies {
 		unmanagedPolicies := v.getUnmanagedPolicies(managedPolicies)
-		logrus.Debugf("remove unmanged policies %v", unmanagedPolicies)
+		logrus.Debugf("remove unmanaged policies %v", unmanagedPolicies)
 		for policyName := range unmanagedPolicies {
 			if err := v.cl.Sys().DeletePolicy(policyName); err != nil {
 				return errors.Wrapf(err, "error deleting %s policy from vault", policyName)

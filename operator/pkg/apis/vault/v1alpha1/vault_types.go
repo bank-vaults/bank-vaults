@@ -776,6 +776,16 @@ func (uso UnsealOptions) ToArgs() []string {
 func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 	args := []string{}
 
+	if usc.Options.PreFlightChecks == nil || *usc.Options.PreFlightChecks {
+		args = append(args,
+			"--pre-flight-checks=true")
+	}
+
+	if usc.Options.StoreRootToken != nil && !*usc.Options.StoreRootToken {
+		args = append(args,
+			"--store-root-token=false")
+	}
+
 	if usc.Google != nil {
 
 		args = append(args,

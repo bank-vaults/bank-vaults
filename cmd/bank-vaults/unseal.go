@@ -198,7 +198,6 @@ func init() {
 	configBoolVar(unsealCmd, cfgRaftSecondary, false, "This instance should always join a raft leader")
 	configBoolVar(unsealCmd, cfgRaftHAStorage, false, "Join leader vault instance in raft HA storage mode")
 	configStringVar(unsealCmd, cfgInitRootToken, "", "Root token for the new vault cluster (only if -init=true)")
-	configBoolVar(unsealCmd, cfgStoreRootToken, true, "Should the root token be stored in the key store (only if -init=true)")
 	configBoolVar(unsealCmd, cfgPreFlightChecks, true, "should the key store be tested first to validate access rights")
 	configBoolVar(unsealCmd, cfgAuto, false, "Run in auto-unseal mode")
 
