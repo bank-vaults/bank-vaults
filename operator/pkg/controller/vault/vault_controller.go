@@ -336,6 +336,17 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 			tlsExpiration = certificate.NotAfter
 			tlsHostsChanged := certHostsAndIPsChanged(v, service, certificate)
 
+			// Check if the ca.crt expiration date is closer than the server.crt expiration
+			if caData := sec.Data["ca.crt"]; len(caData) != 0 {
+				caCertificate, err := bvtls.PEMToCertificate(caData)
+				if err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed to get CA certificate from secret: %v", err)
+				}
+				if caCertificate.NotAfter.Before(tlsExpiration) {
+					tlsExpiration = caCertificate.NotAfter
+				}
+			}
+
 			// Do we need to regenerate the TLS certificate and possibly even the CA?
 			if time.Until(tlsExpiration) < v.Spec.GetTLSExpiryThreshold() {
 				// Generate new TLS server certificate if expiration date is too close
