@@ -82,22 +82,26 @@ type Vault interface {
 }
 
 type purgeUnmanagedConfig struct {
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled bool `json:"enabled"`
 	Exclude struct {
-		Auths    bool `json:"auth,omitempty"`
-		Plugins  bool `json:"plugins,omitempty"`
-		Policies bool `json:"policies,omitempty"`
-		Secrets  bool `json:"secrets,omitempty"`
-	} `json:"exclude,omitempty"`
+		Auths        bool `json:"auth"`
+		Groups       bool `json:"groups"`
+		GroupAliases bool `json:"group-aliases"`
+		Plugins      bool `json:"plugins"`
+		Policies     bool `json:"policies"`
+		Secrets      bool `json:"secrets"`
+	} `json:"exclude"`
 }
 
 // WIP: This should hold all externalConfig when all sections refactord.
 type externalConfig struct {
-	PurgeUnmanagedConfig purgeUnmanagedConfig `json:"purgeUnmanagedConfig,omitempty"`
-	Auth                 []auth               `json:"auth,omitempty"`
-	Plugins              []plugin             `json:"plugins,omitempty"`
-	Policies             []policy             `json:"policies,omitempty"`
-	Secrets              []secretEngine       `json:"secrets,omitempty"`
+	PurgeUnmanagedConfig purgeUnmanagedConfig `json:"purgeUnmanagedConfig"`
+	Auth                 []auth               `json:"auth"`
+	Groups               []group              `json:"groups"`
+	GroupAliases         []groupAlias         `mapstructure:"group-aliases"`
+	Plugins              []plugin             `json:"plugins"`
+	Policies             []policy             `json:"policies"`
+	Secrets              []secretEngine       `json:"secrets"`
 }
 
 var extConfig externalConfig
@@ -461,6 +465,10 @@ func (v *vault) Configure(config *viper.Viper) error {
 	defer v.cl.SetToken("")
 	defer func() { rootToken = nil }()
 
+	// The extConfig var should be rest with every configuration change to remove any leftovers from previous unmarshal.
+	extConfig = externalConfig{}
+
+	// TODO: For safety, change "Unmarshal" to "UnmarshalExact" when restructure is done for all config groups.
 	err = config.Unmarshal(&extConfig)
 	if err != nil {
 		return errors.Wrap(err, "error loading externalConfig")
@@ -482,6 +490,10 @@ func (v *vault) Configure(config *viper.Viper) error {
 		return errors.Wrap(err, "error configuring plugins for vault")
 	}
 
+	if err = v.configureIdentityGroups(); err != nil {
+		return errors.Wrap(err, "error writing groups configurations for vault")
+	}
+
 	err = v.configureAuditDevices(config)
 	if err != nil {
 		return errors.Wrap(err, "error configuring audit devices for vault")
@@ -490,11 +502,6 @@ func (v *vault) Configure(config *viper.Viper) error {
 	err = v.configureStartupSecrets(config)
 	if err != nil {
 		return errors.Wrap(err, "error writing startup secrets to vault")
-	}
-
-	err = v.configureIdentityGroups(config)
-	if err != nil {
-		return errors.Wrap(err, "error writing groups configurations for vault")
 	}
 
 	return err
@@ -665,195 +672,6 @@ func generateCertPayload(data interface{}) (map[string]interface{}, error) {
 	}
 
 	return map[string]interface{}{"pem_bundle": strings.Join(pkiSlice, "\n")}, nil
-}
-
-func readVaultGroup(group string, client *api.Client) (secret *api.Secret, err error) {
-	secret, err = client.Logical().Read(fmt.Sprintf("identity/group/name/%s", group))
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read group %s by name", group)
-	}
-	if secret == nil {
-		// No Data returned, Group does not exist
-		return nil, nil
-	}
-	return secret, nil
-}
-
-func readVaultGroupAlias(id string, client *api.Client) (secret *api.Secret, err error) {
-	secret, err = client.Logical().Read(fmt.Sprintf("identity/group-alias/id/%s", id))
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read group alias by id %s", id)
-	}
-	if secret == nil {
-		// No Data returned, Group does not exist
-		return nil, nil
-	}
-	return secret, nil
-}
-
-func getVaultAuthMountAccessor(path string, client *api.Client) (accessor string, err error) {
-	path = strings.TrimRight(path, "/") + "/"
-	mounts, err := client.Sys().ListAuth()
-	if err != nil {
-		return "", errors.Wrapf(err, "failed to read auth mounts from vault")
-	}
-	if mounts[path] == nil {
-		return "", errors.Errorf("auth mount path %s does not exist in vault", path)
-	}
-	return mounts[path].Accessor, nil
-}
-
-func getVaultGroupID(group string, client *api.Client) (id string, err error) {
-	g, err := readVaultGroup(group, client)
-	if err != nil {
-		return "", errors.Wrapf(err, "error reading group %s", group)
-	}
-	if g == nil {
-		return "", errors.Errorf("group %s does not exist", group)
-	}
-	return g.Data["id"].(string), nil
-}
-
-func getVaultGroupAliasName(aliasID string, client *api.Client) (id string, err error) {
-	alias, err := readVaultGroupAlias(aliasID, client)
-	if err != nil {
-		return "", errors.Wrapf(err, "error reading group alias %s", aliasID)
-	}
-	if alias == nil {
-		return "", errors.Errorf("group alias %s does not exist", aliasID)
-	}
-	return alias.Data["name"].(string), nil
-}
-
-func getVaultGroupAliasMount(aliasID string, client *api.Client) (id string, err error) {
-	alias, err := readVaultGroupAlias(aliasID, client)
-	if err != nil {
-		return "", errors.Wrapf(err, "error reading group alias %s", aliasID)
-	}
-	if alias == nil {
-		return "", errors.Errorf("group alias %s does not exist", aliasID)
-	}
-	return alias.Data["mount_accessor"].(string), nil
-}
-
-func findVaultGroupAliasIDFromNameAndMount(name string, accessor string, client *api.Client) (id string, err error) {
-	aliases, err := client.Logical().List("identity/group-alias/id")
-	if err != nil {
-		return "", errors.Wrap(err, "error listing group aliases")
-	}
-	if aliases == nil {
-		return "", nil
-	}
-
-	for _, alias := range aliases.Data["keys"].([]interface{}) {
-		aliasName, err := getVaultGroupAliasName(cast.ToString(alias), client)
-		if err != nil {
-			return "", errors.Wrapf(err, "error fetching name for alias id: %s err", alias)
-		}
-
-		aliasMount, err := getVaultGroupAliasMount(cast.ToString(alias), client)
-		if err != nil {
-			return "", errors.Wrapf(err, "error fetching mount for alias id: %s err", alias)
-		}
-
-		if aliasName == name && aliasMount == accessor {
-			return cast.ToString(alias), nil
-		}
-	}
-
-	// Did not find any alias matching Name and MountPath
-	return "", nil
-}
-
-func (v *vault) configureIdentityGroups(config *viper.Viper) error {
-	groups := []map[string]interface{}{}
-	groupAliases := []map[string]interface{}{}
-
-	err := config.UnmarshalKey("groups", &groups)
-	if err != nil {
-		return errors.Wrap(err, "error unmarshalling vault groups config")
-	}
-
-	err = config.UnmarshalKey("group-aliases", &groupAliases)
-	if err != nil {
-		return errors.Wrap(err, "error unmarshalling vault group aliases config")
-	}
-
-	for _, group := range groups {
-		g, err := readVaultGroup(cast.ToString(group["name"]), v.cl)
-		if err != nil {
-			return errors.Wrap(err, "error reading group")
-		}
-
-		// Currently does not support specifying members directly in the group config
-		// Use group aliases for that
-		if cast.ToString(group["type"]) != "external" {
-			return errors.Errorf("only external groups are supported for now")
-		}
-
-		config := map[string]interface{}{
-			"name":     cast.ToString(group["name"]),
-			"type":     cast.ToString(group["type"]),
-			"policies": cast.ToStringSlice(group["policies"]),
-			"metadata": cast.ToStringMap(group["metadata"]),
-		}
-
-		if g == nil {
-			logrus.Infof("creating group: %s", group["name"])
-			_, err = v.writeWithWarningCheck("identity/group", config)
-			if err != nil {
-				return errors.Wrapf(err, "failed to create group %s", group["name"])
-			}
-		} else {
-			logrus.Infof("tuning already existing group: %s", group["name"])
-			_, err = v.writeWithWarningCheck(fmt.Sprintf("identity/group/name/%s", group["name"]), config)
-			if err != nil {
-				return errors.Wrapf(err, "failed to tune group %s", group["name"])
-			}
-		}
-	}
-
-	// Group Aliases for External Groups might require to have the same Name when on different Mount/Path combinations
-	// external groups can only have ONE alias so we need to make sure not to overwrite any
-	for _, groupAlias := range groupAliases {
-		accessor, err := getVaultAuthMountAccessor(cast.ToString(groupAlias["mountpath"]), v.cl)
-		if err != nil {
-			return errors.Wrapf(err, "error getting mount accessor for %s", groupAlias["mountpath"])
-		}
-
-		id, err := getVaultGroupID(cast.ToString(groupAlias["group"]), v.cl)
-		if err != nil {
-			return errors.Wrapf(err, "error getting canonical_id for group %s", groupAlias["group"])
-		}
-
-		config := map[string]interface{}{
-			"name":           cast.ToString(groupAlias["name"]),
-			"mount_accessor": accessor,
-			"canonical_id":   id,
-		}
-
-		// Find a matching alias for NAME and MOUNT
-		ga, err := findVaultGroupAliasIDFromNameAndMount(cast.ToString(groupAlias["name"]), accessor, v.cl)
-		if err != nil {
-			return errors.Wrapf(err, "error finding group-alias %s", groupAlias["name"])
-		}
-
-		if ga == "" {
-			logrus.Infof("creating group-alias: %s@%s", groupAlias["name"], accessor)
-			_, err = v.writeWithWarningCheck("identity/group-alias", config)
-			if err != nil {
-				return errors.Wrapf(err, "failed to create group-alias %s", groupAlias["name"])
-			}
-		} else {
-			logrus.Infof("tuning already existing group-alias: %s@%s - ID: %s", groupAlias["name"], accessor, ga)
-			_, err = v.writeWithWarningCheck(fmt.Sprintf("identity/group-alias/id/%s", ga), config)
-			if err != nil {
-				return errors.Wrapf(err, "failed to tune group-alias %s", ga)
-			}
-		}
-	}
-
-	return nil
 }
 
 // toSliceStringMapE casts []map[string]interface{} preserving nested types

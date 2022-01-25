@@ -133,6 +133,27 @@ spec:
         rules: path "pki/*" {
           capabilities = ["create", "read", "update", "delete", "list"]
           }
+
+    groups:
+      - name: admin1
+        policies:
+          - allow_secrets
+        metadata:
+          privileged: true
+        type: external
+      - name: admin2
+        policies:
+          - allow_secrets
+        metadata:
+          privileged: true
+        type: external
+
+    group-aliases:
+      - name: admin1
+        mountpath: token
+        group: admin1
+
+
     auth:
       - type: kubernetes
         roles:
