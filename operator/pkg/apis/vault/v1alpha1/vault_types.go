@@ -453,7 +453,7 @@ func (spec *VaultSpec) GetTLSExpiryThreshold() time.Duration {
 	}
 	duration, err := time.ParseDuration(spec.TLSExpiryThreshold)
 	if err != nil {
-		log.Error(err, "using default treshold due to parse error", "tlsExpiryThreshold", spec.TLSExpiryThreshold)
+		log.Error(err, "using default threshold due to parse error", "tlsExpiryThreshold", spec.TLSExpiryThreshold)
 		return time.Hour * 168
 	}
 	return duration
