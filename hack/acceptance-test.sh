@@ -84,7 +84,7 @@ kubectl delete pvc --all
 # 4. test: disabled root token storage
 kubectl apply -f operator/deploy/cr-disabled-root-token-storage.yaml
 kubectl wait --for=condition=healthy --timeout=120s vault/vault
-test x`kubectl get secret vault-root` = "Error from server (NotFound): secrets \"vault-root\" not found"
+test $(kubectl get secret vault-root -o json --ignore-not-found | wc -l) -eq 0
 kubectl delete -f operator/deploy/cr-disabled-root-token-storage.yaml
 kubectl delete secret vault-unseal-keys
 kubectl delete pvc --all
