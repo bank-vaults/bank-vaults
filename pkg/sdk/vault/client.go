@@ -17,6 +17,7 @@ package vault
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -30,6 +31,9 @@ import (
 	"cloud.google.com/go/compute/metadata"
 	credentials "cloud.google.com/go/iam/credentials/apiv1"
 	"emperror.dev/errors"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/fsnotify/fsnotify"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/leosayous21/go-azure-msi/msi"
@@ -151,6 +155,10 @@ const (
 	// AWSEC2AuthMethod is used for the Vault AWS EC2 auth method
 	// as described here: https://www.vaultproject.io/docs/auth/aws#ec2-auth-method
 	AWSEC2AuthMethod ClientAuthMethod = "aws-ec2"
+
+	// AWSIAMAuthMethod is used for the Vault AWS IAM auth method
+	// as described here: https://www.vaultproject.io/docs/auth/aws#iam-auth-method
+	AWSIAMAuthMethod ClientAuthMethod = "aws-iam"
 
 	// GCPGCEAuthMethod is used for the Vault GCP GCE auth method
 	// as described here: https://www.vaultproject.io/docs/auth/gcp#gce-login
@@ -395,6 +403,44 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 						"pkcs7": pkcs7,
 						"nonce": nonce,
 						"role":  o.role,
+					}, nil
+				}
+
+			case AWSIAMAuthMethod:
+				loginDataFunc = func() (map[string]interface{}, error) {
+					stsSession, err := session.NewSessionWithOptions(session.Options{
+						CredentialsProviderOptions: &session.CredentialsProviderOptions{
+							WebIdentityRoleProviderOptions: func(*stscreds.WebIdentityRoleProvider) {},
+						},
+					})
+					if err != nil {
+						return nil, err
+					}
+
+					var params *sts.GetCallerIdentityInput
+					svc := sts.New(stsSession)
+					stsRequest, _ := svc.GetCallerIdentityRequest(params)
+					singErr := stsRequest.Sign()
+					if singErr != nil {
+						return nil, singErr
+					}
+
+					headersJSON, err := json.Marshal(stsRequest.HTTPRequest.Header)
+					if err != nil {
+						return nil, err
+					}
+
+					requestBody, err := ioutil.ReadAll(stsRequest.HTTPRequest.Body)
+					if err != nil {
+						return nil, err
+					}
+
+					return map[string]interface{}{
+						"role":                    o.role,
+						"iam_http_request_method": stsRequest.HTTPRequest.Method,
+						"iam_request_url":         base64.StdEncoding.EncodeToString([]byte(stsRequest.HTTPRequest.URL.String())),
+						"iam_request_headers":     base64.StdEncoding.EncodeToString(headersJSON),
+						"iam_request_body":        base64.StdEncoding.EncodeToString(requestBody),
 					}, nil
 				}
 
