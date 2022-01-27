@@ -43,6 +43,12 @@ type auth struct {
 	Config           map[string]interface{} `json:"config"`
 }
 
+func (a *auth) setDefaults() {
+	if a.Path == "" {
+		a.Path = a.Type
+	}
+}
+
 // getExistingAuthMethods gets all auth methods that are already in Vault.
 // The existing auth methods are in a map to make it easy to disable easily from it with "O(n)" complexity.
 func (v *vault) getExistingAuthMethods() (map[string]*api.MountOutput, error) {
@@ -77,10 +83,8 @@ func (v *vault) getUnmanagedAuthMethods(managedAuthMethods []auth) map[string]*a
 
 func (v *vault) configureAuthMethods() error {
 	managedAuths := extConfig.Auth
-	for i := range managedAuths {
-		if managedAuths[i].Path == "" {
-			managedAuths[i].Path = managedAuths[i].Type
-		}
+	for _, auth := range managedAuths {
+		auth.setDefaults()
 	}
 
 	existingAuths, _ := v.getExistingAuthMethods()
@@ -117,7 +121,6 @@ func (v *vault) removeUnmanagedAuthMethods(unManagedAuths map[string]*api.MountO
 
 func (v *vault) addManagedAuthMethods(managedAuths []auth, existingAuths map[string]*api.MountOutput) error {
 	for _, authMethod := range managedAuths {
-
 		description := fmt.Sprintf("%s backend", authMethod.Type)
 
 		// get auth mount options
