@@ -120,22 +120,22 @@ type ReconcileVault struct {
 	httpClient          *http.Client
 }
 
-func (r *ReconcileVault) createOrUpdateObject(o client.Object) error {
-	return createOrUpdateObjectWithClient(r.client, o)
+func (r *ReconcileVault) createOrUpdateObject(ctx context.Context, o client.Object) error {
+	return createOrUpdateObjectWithClient(ctx, r.client, o)
 }
 
-func createOrUpdateObjectWithClient(c client.Client, o client.Object) error {
+func createOrUpdateObjectWithClient(ctx context.Context, c client.Client, o client.Object) error {
 	key := client.ObjectKeyFromObject(o)
 
 	current := o.DeepCopyObject().(client.Object)
 
-	err := c.Get(context.TODO(), key, current)
+	err := c.Get(ctx, key, current)
 	if apierrors.IsNotFound(err) {
 		err := patch.DefaultAnnotator.SetLastAppliedAnnotation(o)
 		if err != nil {
 			log.Error(err, "failed to annotate original object", "object", o)
 		}
-		return c.Create(context.TODO(), o)
+		return c.Create(ctx, o)
 	} else if err == nil {
 		// Handle special cases for update
 		switch o.(type) {
@@ -165,7 +165,7 @@ func createOrUpdateObjectWithClient(c client.Client, o client.Object) error {
 			resourceVersion := current.(metav1.ObjectMetaAccessor).GetObjectMeta().GetResourceVersion()
 			o.(metav1.ObjectMetaAccessor).GetObjectMeta().SetResourceVersion(resourceVersion)
 
-			return c.Update(context.TODO(), o)
+			return c.Update(ctx, o)
 		}
 
 		if !result.IsEmpty() {
@@ -184,7 +184,7 @@ func createOrUpdateObjectWithClient(c client.Client, o client.Object) error {
 			resourceVersion := current.(metav1.ObjectMetaAccessor).GetObjectMeta().GetResourceVersion()
 			o.(metav1.ObjectMetaAccessor).GetObjectMeta().SetResourceVersion(resourceVersion)
 
-			return c.Update(context.TODO(), o)
+			return c.Update(ctx, o)
 		}
 
 		log.V(1).Info(fmt.Sprintf("Skipping update for object %s:%s", o.GetObjectKind(), o.(metav1.ObjectMetaAccessor).GetObjectMeta().GetName()))
@@ -196,7 +196,6 @@ func createOrUpdateObjectWithClient(c client.Client, o client.Object) error {
 // Check if secret match the labels or annotations selectors
 // If any of the Labels selector OR Annotation Selector match it will return true
 func secretMatchLabelsOrAnnotations(s corev1.Secret, labelsSelectors []map[string]string, annotationsSelectors []map[string]string) bool {
-
 	sm := s.ObjectMeta
 	log.V(1).Info(fmt.Sprintf("External Secrets Watcher: Checking labels and annotations for secret:  %s/%s", sm.GetNamespace(), sm.GetName()))
 
@@ -227,19 +226,6 @@ func secretMatchLabelsOrAnnotations(s corev1.Secret, labelsSelectors []map[strin
 	return false
 }
 
-func (r *ReconcileVault) createObjectIfNotExists(o client.Object) error {
-	key := client.ObjectKeyFromObject(o)
-
-	current := o.DeepCopyObject().(client.Object)
-
-	err := r.client.Get(context.TODO(), key, current)
-	if apierrors.IsNotFound(err) {
-		return r.client.Create(context.TODO(), o)
-	}
-
-	return err
-}
-
 // Reconcile reads that state of the cluster for a Vault object and makes changes based on the state read
 // and what is in the Vault.Spec
 // Note:
@@ -251,7 +237,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 
 	// Fetch the Vault instance
 	v := &vaultv1alpha1.Vault{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, v)
+	err := r.client.Get(ctx, request.NamespacedName, v)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -269,7 +255,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 	if err := controllerutil.SetControllerReference(v, service, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
-	err = r.createOrUpdateObject(service)
+	err = r.createOrUpdateObject(ctx, service)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to create/update service: %v", err)
 	}
@@ -279,7 +265,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 	if service.Spec.Type == corev1.ServiceTypeLoadBalancer && !v.Spec.IsTLSDisabled() && v.Spec.ExistingTLSSecretName == "" {
 		key := client.ObjectKeyFromObject(service)
 
-		err = r.client.Get(context.Background(), key, service)
+		err = r.client.Get(ctx, key, service)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to get Vault LB service: %v", err)
 		}
@@ -292,14 +278,14 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 
 	// Create the service if it doesn't exist
 	// NOTE: currently this is not used, but should be here once we implement support for Client Forwarding as well.
-	// Currently request forwarding works only.
+	// Currently, request forwarding works only.
 	services := perInstanceServicesForVault(v)
 	for _, ser := range services {
 		// Set Vault instance as the owner and controller
 		if err := controllerutil.SetControllerReference(v, ser, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
-		err = r.createOrUpdateObject(ser)
+		err = r.createOrUpdateObject(ctx, ser)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create/update per instance service: %v", err)
 		}
@@ -314,7 +300,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 		}
 		sec := &corev1.Secret{}
 		// Get tls secret
-		err := r.client.Get(context.TODO(), types.NamespacedName{
+		err := r.client.Get(ctx, types.NamespacedName{
 			Namespace: v.Namespace,
 			Name:      secretName,
 		}, sec)
@@ -367,7 +353,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 			if err := controllerutil.SetControllerReference(v, sec, r.scheme); err != nil {
 				return reconcile.Result{}, err
 			}
-			err = r.createOrUpdateObject(sec)
+			err = r.createOrUpdateObject(ctx, sec)
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to create secret for vault: %v", err)
 			}
@@ -375,7 +361,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 
 		// Distribute the CA certificate to every namespace defined
 		if len(v.Spec.CANamespaces) > 0 {
-			err = r.distributeCACertificate(v, client.ObjectKey{Name: sec.Name, Namespace: sec.Namespace})
+			err = r.distributeCACertificate(ctx, v, client.ObjectKey{Name: sec.Name, Namespace: sec.Namespace})
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to distribute CA secret for vault: %v", err)
 			}
@@ -390,7 +376,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 			return reconcile.Result{}, err
 		}
 
-		err = r.createOrUpdateObject(cm)
+		err = r.createOrUpdateObject(ctx, cm)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create/update fluentd configmap: %v", err)
 		}
@@ -405,7 +391,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 			return reconcile.Result{}, err
 		}
 
-		err = r.createOrUpdateObject(cm)
+		err = r.createOrUpdateObject(ctx, cm)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create/update statsd configmap: %v", err)
 		}
@@ -424,7 +410,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 			Namespace: v.Namespace,
 		}
 
-		if err = r.client.List(context.TODO(), &externalSecretsInNamespace, &externalSecretsInNamespaceFilter); err != nil {
+		if err = r.client.List(ctx, &externalSecretsInNamespace, &externalSecretsInNamespaceFilter); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to list secrets in the CRD namespace: %v", err)
 		}
 
@@ -445,7 +431,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 		return reconcile.Result{}, err
 	}
 
-	err = r.createOrUpdateObject(rawConfigSecret)
+	err = r.createOrUpdateObject(ctx, rawConfigSecret)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to create/update Secret: %v", err)
 	}
@@ -464,7 +450,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 		return reconcile.Result{}, err
 	}
 
-	err = r.createOrUpdateObject(statefulSet)
+	err = r.createOrUpdateObject(ctx, statefulSet)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to create/update StatefulSet: %v", err)
 	}
@@ -476,7 +462,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 		if err := controllerutil.SetControllerReference(v, serviceMonitor, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
-		err = r.createOrUpdateObject(serviceMonitor)
+		err = r.createOrUpdateObject(ctx, serviceMonitor)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create/update serviceMonitor: %v", err)
 		}
@@ -484,20 +470,20 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 
 	// Create configurer if there is any external config
 	if len(v.Spec.ExternalConfig.Raw) != 0 {
-		err := r.deployConfigurer(v, restartAnnotations)
+		err := r.deployConfigurer(ctx, v, restartAnnotations)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
-	// Create ingress if specificed
+	// Create ingress if specified
 	if ingress := ingressForVault(v); ingress != nil {
 		// Set Vault instance as the owner and controller
 		if err := controllerutil.SetControllerReference(v, ingress, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
 
-		err = r.createOrUpdateObject(ingress)
+		err = r.createOrUpdateObject(ctx, ingress)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create/update ingress: %v", err)
 		}
@@ -510,7 +496,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 		LabelSelector: labelSelector,
 		Namespace:     v.Namespace,
 	}
-	err = r.client.List(context.TODO(), podList, listOps)
+	err = r.client.List(ctx, podList, listOps)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to list pods: %v", err)
 	}
@@ -542,7 +528,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 	// Fetch the Vault instance again to minimize the possibility of updating a stale object
 	// see https://github.com/banzaicloud/bank-vaults/issues/364
 	v = &vaultv1alpha1.Vault{}
-	err = r.client.Get(context.TODO(), request.NamespacedName, v)
+	err = r.client.Get(ctx, request.NamespacedName, v)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -569,7 +555,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 			Error:  statusError,
 		}}
 		log.V(1).Info("Updating vault status", "status", v.Status, "resourceVersion", v.ResourceVersion)
-		err := r.client.Update(context.TODO(), v)
+		err := r.client.Update(ctx, v)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to update vault status: %v", err)
 		}
@@ -2043,10 +2029,10 @@ func getFluentDResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
 	}
 }
 
-func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecretKey client.ObjectKey) error {
+func (r *ReconcileVault) distributeCACertificate(ctx context.Context, v *vaultv1alpha1.Vault, caSecretKey client.ObjectKey) error {
 	// Get the current version of the TLS Secret
 	var currentSecret corev1.Secret
-	err := r.client.Get(context.TODO(), caSecretKey, &currentSecret)
+	err := r.client.Get(ctx, caSecretKey, &currentSecret)
 	if err != nil {
 		return fmt.Errorf("failed to query current secret for vault: %v", err)
 	}
@@ -2072,7 +2058,7 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 
 	if v.Spec.CANamespaces[0] == "*" {
 		var namespaceList corev1.NamespaceList
-		if err := r.client.List(context.TODO(), &namespaceList, &client.ListOptions{}); err != nil {
+		if err := r.client.List(ctx, &namespaceList, &client.ListOptions{}); err != nil {
 			return fmt.Errorf("failed to list namespaces: %v", err)
 		}
 
@@ -2090,7 +2076,7 @@ func (r *ReconcileVault) distributeCACertificate(v *vaultv1alpha1.Vault, caSecre
 			currentSecret.GetObjectMeta().SetUID("")
 			currentSecret.SetOwnerReferences(nil)
 
-			err = createOrUpdateObjectWithClient(r.nonNamespacedClient, &currentSecret)
+			err = createOrUpdateObjectWithClient(ctx, r.nonNamespacedClient, &currentSecret)
 			if apierrors.IsNotFound(err) {
 				log.V(2).Info("can't distribute CA secret, namespace doesn't exist", "namespace", namespace)
 			} else if err != nil {
@@ -2107,7 +2093,7 @@ func certHostsAndIPsChanged(v *vaultv1alpha1.Vault, service *corev1.Service, cer
 	return len(cert.DNSNames)+len(cert.IPAddresses) != len(hostsAndIPsForVault(v, service))
 }
 
-func (r *ReconcileVault) deployConfigurer(v *vaultv1alpha1.Vault, tlsAnnotations map[string]string) error {
+func (r *ReconcileVault) deployConfigurer(ctx context.Context, v *vaultv1alpha1.Vault, tlsAnnotations map[string]string) error {
 	// Create the default config secret if it doesn't exist
 	configSecret := secretForConfigurer(v)
 
@@ -2119,12 +2105,12 @@ func (r *ReconcileVault) deployConfigurer(v *vaultv1alpha1.Vault, tlsAnnotations
 
 	// Since the default config type has changed to Secret now,
 	// we need to delete the old ConfigMap of the configurer config.
-	err = r.client.Delete(context.TODO(), deprecatedConfigMapForConfigurer(v))
+	err = r.client.Delete(ctx, deprecatedConfigMapForConfigurer(v))
 	if err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to delete deprecated configurer configmap: %v", err)
 	}
 
-	err = r.createOrUpdateObject(configSecret)
+	err = r.createOrUpdateObject(ctx, configSecret)
 	if err != nil {
 		return fmt.Errorf("failed to create/update configurer configmap: %v", err)
 	}
@@ -2134,7 +2120,7 @@ func (r *ReconcileVault) deployConfigurer(v *vaultv1alpha1.Vault, tlsAnnotations
 		LabelSelector: labels.SelectorFromSet(v.LabelsForVaultConfigurer()),
 		Namespace:     v.Namespace,
 	}
-	if err = r.client.List(context.TODO(), &externalConfigMaps, &externalConfigMapsFilter); err != nil {
+	if err = r.client.List(ctx, &externalConfigMaps, &externalConfigMapsFilter); err != nil {
 		return fmt.Errorf("failed to list configmaps: %v", err)
 	}
 
@@ -2143,21 +2129,21 @@ func (r *ReconcileVault) deployConfigurer(v *vaultv1alpha1.Vault, tlsAnnotations
 		LabelSelector: labels.SelectorFromSet(v.LabelsForVaultConfigurer()),
 		Namespace:     v.Namespace,
 	}
-	if err = r.client.List(context.TODO(), &externalSecrets, &externalSecretsFilter); err != nil {
+	if err = r.client.List(ctx, &externalSecrets, &externalSecretsFilter); err != nil {
 		return fmt.Errorf("failed to list secrets: %v", err)
 	}
 
 	// Create the deployment if it doesn't exist
-	configurerDep, err := deploymentForConfigurer(v, externalConfigMaps, externalSecrets, tlsAnnotations)
+	configurerDeployment, err := deploymentForConfigurer(v, externalConfigMaps, externalSecrets, tlsAnnotations)
 	if err != nil {
 		return fmt.Errorf("failed to fabricate deployment: %v", err)
 	}
 
 	// Set Vault instance as the owner and controller
-	if err := controllerutil.SetControllerReference(v, configurerDep, r.scheme); err != nil {
+	if err := controllerutil.SetControllerReference(v, configurerDeployment, r.scheme); err != nil {
 		return err
 	}
-	err = r.createOrUpdateObject(configurerDep)
+	err = r.createOrUpdateObject(ctx, configurerDeployment)
 	if err != nil {
 		return fmt.Errorf("failed to create/update configurer deployment: %v", err)
 	}
@@ -2169,7 +2155,7 @@ func (r *ReconcileVault) deployConfigurer(v *vaultv1alpha1.Vault, tlsAnnotations
 		return err
 	}
 
-	err = r.createOrUpdateObject(configurerSer)
+	err = r.createOrUpdateObject(ctx, configurerSer)
 	if err != nil {
 		return fmt.Errorf("failed to create/update service: %v", err)
 	}
