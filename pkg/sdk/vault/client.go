@@ -31,15 +31,15 @@ import (
 	"cloud.google.com/go/compute/metadata"
 	credentials "cloud.google.com/go/iam/credentials/apiv1"
 	"emperror.dev/errors"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/fsnotify/fsnotify"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/leosayous21/go-azure-msi/msi"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iam/v1"
 	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 )
 
 const (
@@ -410,7 +410,7 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 				loginDataFunc = func() (map[string]interface{}, error) {
 					stsSession, err := session.NewSessionWithOptions(session.Options{
 						CredentialsProviderOptions: &session.CredentialsProviderOptions{
-							WebIdentityRoleProviderOptions: func(*stscreds.WebIdentityRoleProvider){},
+							WebIdentityRoleProviderOptions: func(*stscreds.WebIdentityRoleProvider) {},
 						},
 					})
 					if err != nil {
@@ -420,9 +420,12 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					var params *sts.GetCallerIdentityInput
 					svc := sts.New(stsSession)
 					stsRequest, _ := svc.GetCallerIdentityRequest(params)
-					stsRequest.Sign()
+					singErr := stsRequest.Sign()
+					if singErr != nil {
+						return nil, singErr
+					}
 
-					headersJson, err := json.Marshal(stsRequest.HTTPRequest.Header)
+					headersJSON, err := json.Marshal(stsRequest.HTTPRequest.Header)
 					if err != nil {
 						return nil, err
 					}
@@ -433,11 +436,11 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 					}
 
 					return map[string]interface{}{
-						"role": o.role,
+						"role":                    o.role,
 						"iam_http_request_method": stsRequest.HTTPRequest.Method,
-						"iam_request_url": base64.StdEncoding.EncodeToString([]byte(stsRequest.HTTPRequest.URL.String())),
-						"iam_request_headers": base64.StdEncoding.EncodeToString(headersJson),
-						"iam_request_body": base64.StdEncoding.EncodeToString(requestBody),
+						"iam_request_url":         base64.StdEncoding.EncodeToString([]byte(stsRequest.HTTPRequest.URL.String())),
+						"iam_request_headers":     base64.StdEncoding.EncodeToString(headersJSON),
+						"iam_request_body":        base64.StdEncoding.EncodeToString(requestBody),
 					}, nil
 				}
 
