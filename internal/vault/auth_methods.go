@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"emperror.dev/errors"
 	"github.com/cristalhq/jwt/v3"
@@ -42,6 +43,12 @@ type auth struct {
 	Config           map[string]interface{} `json:"config"`
 }
 
+func (a *auth) setDefaults() {
+	if a.Path == "" {
+		a.Path = a.Type
+	}
+}
+
 // getExistingAuthMethods gets all auth methods that are already in Vault.
 // The existing auth methods are in a map to make it easy to disable easily from it with "O(n)" complexity.
 func (v *vault) getExistingAuthMethods() (map[string]*api.MountOutput, error) {
@@ -52,8 +59,9 @@ func (v *vault) getExistingAuthMethods() (map[string]*api.MountOutput, error) {
 		return nil, errors.Wrapf(err, "unable to list existing auth methods")
 	}
 
-	for _, existingAuthMethod := range existingAuthList {
-		existingAuths[existingAuthMethod.Type] = existingAuthMethod
+	for path, existingAuthMethod := range existingAuthList {
+		filteredPath := strings.Trim(path, "/")
+		existingAuths[filteredPath] = existingAuthMethod
 	}
 
 	return existingAuths, nil
@@ -75,6 +83,10 @@ func (v *vault) getUnmanagedAuthMethods(managedAuthMethods []auth) map[string]*a
 
 func (v *vault) configureAuthMethods() error {
 	managedAuths := extConfig.Auth
+	for i := range managedAuths {
+		managedAuths[i].setDefaults()
+	}
+
 	existingAuths, _ := v.getExistingAuthMethods()
 	unanagedAuths := v.getUnmanagedAuthMethods(managedAuths)
 
@@ -109,10 +121,6 @@ func (v *vault) removeUnmanagedAuthMethods(unManagedAuths map[string]*api.MountO
 
 func (v *vault) addManagedAuthMethods(managedAuths []auth, existingAuths map[string]*api.MountOutput) error {
 	for _, authMethod := range managedAuths {
-		if authMethod.Path == "" {
-			authMethod.Path = authMethod.Type
-		}
-
 		description := fmt.Sprintf("%s backend", authMethod.Type)
 
 		// get auth mount options
@@ -139,7 +147,7 @@ func (v *vault) addManagedAuthMethods(managedAuths []auth, existingAuths map[str
 		}
 
 		// We have to filter all existing auths, not to re-enable them as that would raise an error
-		if existingAuths[authMethod.Type] == nil {
+		if existingAuths[authMethod.Path] == nil {
 			logrus.Debugf("enabling %s auth backend in vault...", authMethod.Type)
 			err := v.cl.Sys().EnableAuthWithOptions(authMethod.Path, &options)
 			if err != nil {
