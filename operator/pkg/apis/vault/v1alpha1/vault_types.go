@@ -83,7 +83,7 @@ type VaultSpec struct {
 	Image string `json:"image,omitempty"`
 
 	// BankVaultsImage specifies the Bank Vaults image to use for Vault unsealing and configuration
-	// default: banzaicloud/bank-vaults:latest
+	// default: ghcr.io/banzaicloud/bank-vaults:latest
 	BankVaultsImage string `json:"bankVaultsImage,omitempty"`
 
 	// BankVaultsVolumeMounts define some extra Kubernetes Volume mounts for the Bank Vaults Sidecar container.

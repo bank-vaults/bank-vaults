@@ -18,10 +18,9 @@ require (
 	github.com/cristalhq/jwt/v3 v3.0.14
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/google/go-cmp v0.5.6
-	github.com/google/go-containerregistry v0.5.1
-	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20210521160948-0233fcda5d53
-	github.com/hashicorp/go-uuid v1.0.2 // indirect
-	github.com/hashicorp/go-plugin v1.4.3 // indirect
+	github.com/google/go-containerregistry v0.8.0
+	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220105220605-d9bfbcb99e52
+	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/api v1.3.0
 	github.com/hashicorp/vault/sdk v0.3.0
@@ -43,7 +42,6 @@ require (
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	google.golang.org/api v0.63.0
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa
-	google.golang.org/grpc v1.43.0 // indirect
 	k8s.io/api v0.21.1
 	k8s.io/apiextensions-apiserver v0.21.1
 	k8s.io/apimachinery v0.21.1
