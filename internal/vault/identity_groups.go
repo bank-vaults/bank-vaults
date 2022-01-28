@@ -214,7 +214,7 @@ func (v *vault) removeUnmanagedGroups(managedGroups []group) error {
 	}
 	unmanagedGroups := getUnmanagedGroups(existingGroups, managedGroups)
 
-	logrus.Debugf("removing unmanged groups ... %T", unmanagedGroups)
+	logrus.Debugf("removing unmanaged groups ... %T", unmanagedGroups)
 	for unmanagedGroupName := range unmanagedGroups {
 		_, err := v.cl.Logical().Delete("identity/group/name/" + unmanagedGroupName)
 		if err != nil {
@@ -311,7 +311,7 @@ func (v *vault) removeUnmanagedGroupAliases(managedGroupAliases []groupAlias) er
 	}
 	unmanagedGroupAliases := getUnmanagedGroupAliases(existingGroupAliases, managedGroupAliases)
 
-	logrus.Debugf("removing unmanged group-aliases ... %T", unmanagedGroupAliases)
+	logrus.Debugf("removing unmanaged group-aliases ... %T", unmanagedGroupAliases)
 	for unmanagedGroupAliasName, unmanagedGroupAliasID := range unmanagedGroupAliases {
 		_, err := v.cl.Logical().Delete("identity/group-alias/id/" + unmanagedGroupAliasID)
 		if err != nil {

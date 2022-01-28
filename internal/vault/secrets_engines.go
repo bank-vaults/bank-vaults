@@ -150,9 +150,9 @@ func getUnmanagedSecretsEngines(
 	delete(unmanagedSecretsEngines, "cubbyhole")
 
 	// Remove managed secret engine form the items since the reset will be removed.
-	for _, mangedSecretEngine := range managedSecretsEngines {
-		mangedSecretEngine.setPath()
-		delete(unmanagedSecretsEngines, mangedSecretEngine.Path)
+	for _, managedSecretEngine := range managedSecretsEngines {
+		managedSecretEngine.setPath()
+		delete(unmanagedSecretsEngines, managedSecretEngine.Path)
 	}
 
 	return unmanagedSecretsEngines
@@ -340,9 +340,9 @@ func (v *vault) removeUnmanagedSecretsEngines(unmanagedSecretsEngines map[string
 		return nil
 	}
 
-	logrus.Debugf("removing unmanged secrets engines... %v", unmanagedSecretsEngines)
+	logrus.Debugf("removing unmanaged secrets engines... %v", unmanagedSecretsEngines)
 	for secretEnginePath := range unmanagedSecretsEngines {
-		logrus.Infof("removing unmanged secret engine path %s ", secretEnginePath)
+		logrus.Infof("removing unmanaged secret engine path %s ", secretEnginePath)
 		if err := v.cl.Sys().Unmount(secretEnginePath); err != nil {
 			return errors.Wrapf(err, "error unmounting %s secret engine from vault", secretEnginePath)
 		}

@@ -16,6 +16,7 @@ package vault
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -25,6 +26,7 @@ import (
 	"time"
 
 	"emperror.dev/errors"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	json "github.com/json-iterator/go"
 	"github.com/mitchellh/mapstructure"
@@ -451,25 +453,91 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 }
 
 func (v *vault) Configure(config *viper.Viper) error {
+	var rootToken []byte
+
 	logrus.Debugf("retrieving key from kms service...")
 
-	rootToken, err := v.keyStore.Get(v.rootTokenKey())
-	if err != nil {
-		return errors.Wrapf(err, "unable to get key '%s'", v.rootTokenKey())
-	}
+	if v.config.StoreRootToken {
+		rootToken, err := v.keyStore.Get(v.rootTokenKey())
+		if err != nil {
+			return errors.Wrapf(err, "unable to get key '%s'", v.rootTokenKey())
+		}
+		v.cl.SetToken(string(rootToken))
+	} else {
+		var OTP string
+		var nonce string
+		var encodedRootToken string
+		var OTPLength int
 
-	v.cl.SetToken(string(rootToken))
+		logrus.Debugf("initiating generate-root token process...")
+
+		response, err := v.cl.Sys().GenerateRootInit("", "")
+		if err != nil {
+			return errors.Wrapf(err, "unable to initiate generate-root token process")
+		}
+		OTP = response.OTP
+		nonce = response.Nonce
+		OTPLength = response.OTPLength
+
+		// Iterate over existing unseal keys
+		for i := 0; i < response.Required; i++ {
+			keyID := v.unsealKeyForID(i)
+			logrus.Debugf("retrieving key from kms service...")
+			k, err := v.keyStore.Get(keyID)
+			if err != nil {
+				return errors.Wrapf(err, "unable to get key '%s'", keyID)
+			}
+			res, err := v.cl.Sys().GenerateRootUpdate(string(k), nonce)
+			if err != nil {
+				return errors.Wrapf(err, "unable to update generate-root token process with key %s", keyID)
+			}
+
+			if res.Complete {
+				encodedRootToken = res.EncodedRootToken
+				switch OTPLength {
+				case 0:
+					// Backwards compat
+					tokenBytes, err := XORBase64(encodedRootToken, OTP)
+					if err != nil {
+						return errors.Wrapf(err, "error xoring encoded root token")
+					}
+
+					uuidToken, err := uuid.FormatUUID(tokenBytes)
+					if err != nil {
+						return errors.Wrapf(err, "error formatting base64 encoded root token")
+					}
+					rootToken = []byte(strings.TrimSpace(uuidToken))
+
+				default:
+					tokenBytes, err := base64.RawStdEncoding.DecodeString(encodedRootToken)
+					if err != nil {
+						return errors.Wrapf(err, "error decoding base64 encoded root token")
+					}
+
+					tokenBytes, err = XORBytes(tokenBytes, []byte(OTP))
+					if err != nil {
+						return errors.Wrapf(err, "error xoring encoded root token")
+					}
+					rootToken = tokenBytes
+				}
+				v.cl.SetToken(string(rootToken))
+				break
+			} else if res.Complete && i == (response.Required-1) {
+				err = v.cl.Sys().GenerateRootCancel()
+				if err != nil {
+					return errors.Wrapf(err, "unable to cancel generate root token process")
+				}
+				return errors.Wrapf(err, "unable to generate root token, all unseal keys were exhausted")
+			}
+		}
+	}
 
 	// Clear the token and GC it
 	defer runtime.GC()
 	defer v.cl.SetToken("")
 	defer func() { rootToken = nil }()
 
-	// The extConfig var should be rest with every configuration change to remove any leftovers from previous unmarshal.
-	extConfig = externalConfig{}
-
-	// TODO: For safety, change "Unmarshal" to "UnmarshalExact" when restructure is done for all config groups.
-	err = config.Unmarshal(&extConfig)
+	err := config.Unmarshal(&extConfig)
 	if err != nil {
 		return errors.Wrap(err, "error loading externalConfig")
 	}
@@ -490,10 +558,6 @@ func (v *vault) Configure(config *viper.Viper) error {
 		return errors.Wrap(err, "error configuring plugins for vault")
 	}
 
-	if err = v.configureIdentityGroups(); err != nil {
-		return errors.Wrap(err, "error writing groups configurations for vault")
-	}
-
 	err = v.configureAuditDevices(config)
 	if err != nil {
 		return errors.Wrap(err, "error configuring audit devices for vault")
@@ -502,6 +566,10 @@ func (v *vault) Configure(config *viper.Viper) error {
 	err = v.configureStartupSecrets(config)
 	if err != nil {
 		return errors.Wrap(err, "error writing startup secrets to vault")
+	}
+
+	if err = v.configureIdentityGroups(); err != nil {
+		return errors.Wrap(err, "error writing groups configurations for vault")
 	}
 
 	return err
@@ -731,4 +799,44 @@ func getOrDefaultSecretData(m interface{}) (map[string]interface{}, error) {
 	data["data"] = secData
 
 	return data, nil
+}
+
+// XORBytes takes two byte slices and XORs them together, returning the final
+// byte slice. It is an error to pass in two byte slices that do not have the
+// same length.
+func XORBytes(a, b []byte) ([]byte, error) {
+	if len(a) != len(b) {
+		return nil, errors.Errorf("length of byte slices is not equivalent: %d != %d", len(a), len(b))
+	}
+
+	buf := make([]byte, len(a))
+
+	for i := range a {
+		buf[i] = a[i] ^ b[i]
+	}
+
+	return buf, nil
+}
+
+// XORBase64 takes two base64-encoded strings and XORs the decoded byte slices
+// together, returning the final byte slice. It is an error to pass in two
+// strings that do not have the same length to their base64-decoded byte slice.
+func XORBase64(a, b string) ([]byte, error) {
+	aBytes, err := base64.StdEncoding.DecodeString(a)
+	if err != nil {
+		return nil, errors.New("error decoding first base64 value")
+	}
+	if len(aBytes) == 0 {
+		return nil, errors.Errorf("decoded first base64 value is nil or empty")
+	}
+
+	bBytes, err := base64.StdEncoding.DecodeString(b)
+	if err != nil {
+		return nil, errors.New("error decoding second base64 value")
+	}
+	if len(bBytes) == 0 {
+		return nil, errors.Errorf("decoded second base64 value is nil or empty")
+	}
+
+	return XORBytes(aBytes, bBytes)
 }
