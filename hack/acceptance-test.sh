@@ -81,7 +81,15 @@ kubectl delete -f operator/deploy/cr-hsm-softhsm.yaml
 kubectl delete secret vault-unseal-keys
 kubectl delete pvc --all
 
-# 4. test: single node cluster with defined PriorityClass via vaultPodSpec and vaultConfigurerPodSpec
+# 4. test: disabled root token storage
+kubectl apply -f operator/deploy/cr-disabled-root-token-storage.yaml
+kubectl wait --for=condition=healthy --timeout=120s vault/vault
+test $(kubectl get secret vault-root -o json --ignore-not-found | wc -l) -eq 0
+kubectl delete -f operator/deploy/cr-disabled-root-token-storage.yaml
+kubectl delete secret vault-unseal-keys
+kubectl delete pvc --all
+
+# 5. test: single node cluster with defined PriorityClass via vaultPodSpec and vaultConfigurerPodSpec
 kubectl apply -f operator/deploy/priorityclass.yaml
 kubectl apply -f operator/deploy/cr-priority.yaml
 kubectl wait --for=condition=healthy --timeout=120s vault/vault
@@ -101,7 +109,7 @@ kubectl delete -f operator/deploy/priorityclass.yaml
 kubectl delete secret vault-unseal-keys
 kubectl delete pvc --all
 
-# 5. test: Run the OIDC authenticated client test
+# 6. test: Run the OIDC authenticated client test
 kubectl create namespace vswh # create the namespace beforehand, because we need the CA cert here as well
 kubectl create clusterrolebinding oidc-reviewer --clusterrole=system:service-account-issuer-discovery --group=system:unauthenticated
 kubectl apply -f operator/deploy/cr-oidc.yaml
