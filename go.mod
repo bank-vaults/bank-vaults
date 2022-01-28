@@ -20,6 +20,7 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-containerregistry v0.5.1
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20210521160948-0233fcda5d53
+	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/hashicorp/go-plugin v1.4.3 // indirect
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/api v1.3.0

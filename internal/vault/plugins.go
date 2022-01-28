@@ -137,7 +137,7 @@ func (v *vault) removeUnmanagedPlugins(managedPlugins []plugin) error {
 	existingPlugins, _ := v.getExistingPlugins()
 	unanagedPlugins := getUnmanagedPlugins(existingPlugins, managedPlugins)
 
-	logrus.Debugf("removing unmanged plugins ... %v", unanagedPlugins)
+	logrus.Debugf("removing unmanaged plugins ... %v", unanagedPlugins)
 	for existingPluginType, existingPluginNames := range unanagedPlugins {
 		for existingPluginName := range existingPluginNames {
 			pluginType, err := consts.ParsePluginType(existingPluginType)
