@@ -83,8 +83,8 @@ func (v *vault) getUnmanagedAuthMethods(managedAuthMethods []auth) map[string]*a
 
 func (v *vault) configureAuthMethods() error {
 	managedAuths := extConfig.Auth
-	for _, auth := range managedAuths {
-		auth.setDefaults()
+	for i := range managedAuths {
+		managedAuths[i].setDefaults()
 	}
 
 	existingAuths, _ := v.getExistingAuthMethods()
