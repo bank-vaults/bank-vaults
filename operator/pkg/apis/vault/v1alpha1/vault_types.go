@@ -177,7 +177,7 @@ type VaultSpec struct {
 	// - Plugin Backends
 	// - Policies
 	// - Startup Secrets (Bank Vaults feature)
-	// A documented example: https://github.com/banzaicloud/bank-vaults/blob/master/vault-config.yml
+	// A documented example: https://github.com/banzaicloud/bank-vaults/blob/main/vault-config.yml
 	// default:
 	ExternalConfig extv1beta1.JSON `json:"externalConfig,omitempty"`
 

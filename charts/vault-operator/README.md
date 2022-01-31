@@ -18,7 +18,7 @@ be deployed beforehand and configured with the `vault.config` option. YAML
 provided under this option will be converted to JSON for the final vault
 `config.json` file.
 
-> See https://github.com/banzaicloud/bank-vaults/tree/master/operator for more information on the Operator
+> See https://github.com/banzaicloud/bank-vaults/tree/main/operator for more information on the Operator
 > See https://www.vaultproject.io/docs/configuration/ for more information on storage options for Vault.
 
 ## Installing the Chart
@@ -83,10 +83,10 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 
 ## Using Vault Operator
 
-To deploy different Vault configurations (single node, HA, with AWS unsealing, with etcd backend, ...) see: https://github.com/banzaicloud/bank-vaults/tree/master/operator/deploy for more examples.
+To deploy different Vault configurations (single node, HA, with AWS unsealing, with etcd backend, ...) see: https://github.com/banzaicloud/bank-vaults/tree/main/operator/deploy for more examples.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/banzaicloud/bank-vaults/master/operator/deploy/cr-raft.yaml
+kubectl apply -f https://raw.githubusercontent.com/banzaicloud/bank-vaults/main/operator/deploy/cr-raft.yaml
 ```
 
 Once the Vault pods are ready (in HA setup always one is ready), it can be accessed using a `kubectl port-forward`:

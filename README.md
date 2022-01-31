@@ -1,4 +1,4 @@
-<p align="center"><img src="https://raw.githubusercontent.com/banzaicloud/bank-vaults/master/docs/images/logo.svg" width="260"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/banzaicloud/bank-vaults/main/docs/images/logo.svg" width="260"></p>
 
 <p align="center">
 
@@ -87,7 +87,7 @@ If you encounter any problems that is not addressed in our documentation, [open 
 If you find this project useful, help us:
 
 - Support the development of this project and star this repo! :star:
-- If you use Bank-Vaults in a production environment, add yourself to the list of production [adopters](https://github.com/banzaicloud/bank-vaults/blob/master/ADOPTERS.md).:metal: <br>
+- If you use Bank-Vaults in a production environment, add yourself to the list of production [adopters](https://github.com/banzaicloud/bank-vaults/blob/main/ADOPTERS.md).:metal: <br>
 - Help new users with issues they may encounter :muscle:
 - Send a pull request with your new features and bug fixes :rocket:
 

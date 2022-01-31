@@ -7,7 +7,7 @@
 name: Anchore Container Scan
 on:
   push:
-    branches: [master, anchore]
+    branches: [anchore]
     paths-ignore:
       - 'README.md'
       - 'charts/**'

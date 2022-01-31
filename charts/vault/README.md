@@ -23,11 +23,10 @@ Please also note that scaling to more than 1 replicas can be made successfully o
 
 ## Installing the Chart
 
-To install the chart, use the following, this backs Vault with a Consul cluster:
+To install the chart, use the following:
 
 ```bash
-helm init -c;
-helm repo add banzaicloud-stable http://kubernetes-charts.banzaicloud.com/branch/master
+helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com
 helm install banzaicloud-stable/vault
 ```
 
