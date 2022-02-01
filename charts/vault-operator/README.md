@@ -86,6 +86,7 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 To deploy different Vault configurations (single node, HA, with AWS unsealing, with etcd backend, ...) see: https://github.com/banzaicloud/bank-vaults/tree/main/operator/deploy for more examples.
 
 ```bash
+kubectl apply -f https://raw.githubusercontent.com/banzaicloud/bank-vaults/main/operator/deploy/rbac.yaml
 kubectl apply -f https://raw.githubusercontent.com/banzaicloud/bank-vaults/main/operator/deploy/cr-raft.yaml
 ```
 
