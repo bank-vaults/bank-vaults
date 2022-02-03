@@ -1,4 +1,4 @@
-// Copyright © 2021 Banzai Cloud
+// Copyright © 2022 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
