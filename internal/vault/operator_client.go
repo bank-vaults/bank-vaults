@@ -91,7 +91,7 @@ type purgeUnmanagedConfig struct {
 		Plugins      bool `json:"plugins"`
 		Policies     bool `json:"policies"`
 		Secrets      bool `json:"secrets"`
-		Audits       bool `json:"audit"`
+		Audit        bool `json:"audit"`
 	} `json:"exclude"`
 }
 
@@ -559,8 +559,7 @@ func (v *vault) Configure(config *viper.Viper) error {
 		return errors.Wrap(err, "error configuring plugins for vault")
 	}
 
-	err = v.configureAuditDevices(config)
-	if err != nil {
+	if err = v.configureAuditDevices(); err != nil {
 		return errors.Wrap(err, "error configuring audit devices for vault")
 	}
 
