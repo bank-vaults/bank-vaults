@@ -88,14 +88,14 @@ func (v *vault) configureAuthMethods() error {
 	}
 
 	existingAuths, _ := v.getExistingAuthMethods()
-	unanagedAuths := v.getUnmanagedAuthMethods(managedAuths)
+	unmanagedAuths := v.getUnmanagedAuthMethods(managedAuths)
 
 	err := v.addManagedAuthMethods(managedAuths, existingAuths)
 	if err != nil {
 		return errors.Wrap(err, "error configuring managed auth methods")
 	}
 
-	err = v.removeUnmanagedAuthMethods(unanagedAuths)
+	err = v.removeUnmanagedAuthMethods(unmanagedAuths)
 	if err != nil {
 		return errors.Wrap(err, "error while disabling unmanaged auth methods")
 	}
