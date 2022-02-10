@@ -29,7 +29,6 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	json "github.com/json-iterator/go"
-	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
@@ -92,6 +91,7 @@ type purgeUnmanagedConfig struct {
 		Plugins      bool `json:"plugins"`
 		Policies     bool `json:"policies"`
 		Secrets      bool `json:"secrets"`
+		Audit        bool `json:"audit"`
 	} `json:"exclude"`
 }
 
@@ -104,6 +104,7 @@ type externalConfig struct {
 	Plugins              []plugin             `json:"plugins"`
 	Policies             []policy             `json:"policies"`
 	Secrets              []secretEngine       `json:"secrets"`
+	Audit                []audit              `json:"audit"`
 }
 
 var extConfig externalConfig
@@ -558,8 +559,7 @@ func (v *vault) Configure(config *viper.Viper) error {
 		return errors.Wrap(err, "error configuring plugins for vault")
 	}
 
-	err = v.configureAuditDevices(config)
-	if err != nil {
+	if err = v.configureAuditDevices(); err != nil {
 		return errors.Wrap(err, "error configuring audit devices for vault")
 	}
 
@@ -589,56 +589,6 @@ func (*vault) rootTokenKey() string {
 
 func (*vault) testKey() string {
 	return "vault-test"
-}
-
-func (v *vault) configureAuditDevices(config *viper.Viper) error {
-	auditDevices := []map[string]interface{}{}
-	err := config.UnmarshalKey("audit", &auditDevices)
-	if err != nil {
-		return errors.Wrap(err, "error unmarshalling audit devices config")
-	}
-
-	for _, auditDevice := range auditDevices {
-		auditDeviceType, err := cast.ToStringE(auditDevice["type"])
-		if err != nil {
-			return errors.Wrap(err, "error finding type for audit device")
-		}
-
-		path := auditDeviceType
-		if pathOverwrite, ok := auditDevice["path"]; ok {
-			path, err = cast.ToStringE(pathOverwrite)
-			if err != nil {
-				return errors.Wrap(err, "error converting path for audit device")
-			}
-			path = strings.Trim(path, "/")
-		}
-
-		mounts, err := v.cl.Sys().ListAudit()
-		if err != nil {
-			return errors.Wrap(err, "error reading audit mounts from vault")
-		}
-
-		logrus.Infof("already existing audit devices: %#v", mounts)
-
-		if mounts[path+"/"] == nil {
-			var options api.EnableAuditOptions
-			err = mapstructure.Decode(auditDevice, &options)
-			if err != nil {
-				return errors.Wrap(err, "error parsing audit options")
-			}
-			logrus.Infof("enabling audit device with options: %#v", options)
-			err = v.cl.Sys().EnableAuditWithOptions(path, &options)
-			if err != nil {
-				return errors.Wrapf(err, "error enabling audit device %s in vault", path)
-			}
-
-			logrus.Infoln("mounted audit device", auditDeviceType, "to", path)
-		} else {
-			logrus.Infof("audit device is already mounted: %s/", path)
-		}
-	}
-
-	return nil
 }
 
 func (v *vault) configureStartupSecrets(config *viper.Viper) error {
