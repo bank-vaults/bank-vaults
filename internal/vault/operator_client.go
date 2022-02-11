@@ -28,7 +28,6 @@ import (
 	"emperror.dev/errors"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
-	json "github.com/json-iterator/go"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
@@ -85,26 +84,27 @@ type Vault interface {
 type purgeUnmanagedConfig struct {
 	Enabled bool `json:"enabled"`
 	Exclude struct {
+		Audit        bool `json:"audit"`
 		Auths        bool `json:"auth"`
 		Groups       bool `json:"groups"`
 		GroupAliases bool `json:"group-aliases"`
 		Plugins      bool `json:"plugins"`
 		Policies     bool `json:"policies"`
 		Secrets      bool `json:"secrets"`
-		Audit        bool `json:"audit"`
 	} `json:"exclude"`
 }
 
 // WIP: This should hold all externalConfig when all sections refactord.
 type externalConfig struct {
 	PurgeUnmanagedConfig purgeUnmanagedConfig `json:"purgeUnmanagedConfig"`
+	Audit                []audit              `json:"audit"`
 	Auth                 []auth               `json:"auth"`
 	Groups               []group              `json:"groups"`
 	GroupAliases         []groupAlias         `mapstructure:"group-aliases"`
 	Plugins              []plugin             `json:"plugins"`
 	Policies             []policy             `json:"policies"`
 	Secrets              []secretEngine       `json:"secrets"`
-	Audit                []audit              `json:"audit"`
+	StartupSecrets       []startupSecret      `json:"startupSecrets"`
 }
 
 var extConfig externalConfig
@@ -563,8 +563,7 @@ func (v *vault) Configure(config *viper.Viper) error {
 		return errors.Wrap(err, "error configuring audit devices for vault")
 	}
 
-	err = v.configureStartupSecrets(config)
-	if err != nil {
+	if err = v.configureStartupSecrets(); err != nil {
 		return errors.Wrap(err, "error writing startup secrets to vault")
 	}
 
@@ -591,54 +590,6 @@ func (*vault) testKey() string {
 	return "vault-test"
 }
 
-func (v *vault) configureStartupSecrets(config *viper.Viper) error {
-	raw := config.Get("startupSecrets")
-	startupSecrets, err := toSliceStringMapE(raw)
-	if err != nil {
-		return errors.Wrapf(err, "error decoding data for startup secrets")
-	}
-	for _, startupSecret := range startupSecrets {
-		startupSecretType, err := cast.ToStringE(startupSecret["type"])
-		if err != nil {
-			return errors.Wrap(err, "error finding type for startup secret")
-		}
-
-		switch startupSecretType {
-		case "kv":
-			path, data, err := readStartupSecret(startupSecret)
-			if err != nil {
-				return errors.Wrap(err, "unable to read 'kv' startup secret")
-			}
-
-			_, err = v.writeWithWarningCheck(path, data)
-			if err != nil {
-				return errors.Wrapf(err, "error writing data for startup 'kv' secret '%s'", path)
-			}
-
-		case "pki":
-			path, data, err := readStartupSecret(startupSecret)
-			if err != nil {
-				return errors.Wrap(err, "unable to read 'pki' startup secret")
-			}
-
-			certData, err := generateCertPayload(data["data"])
-			if err != nil {
-				return errors.Wrap(err, "error generating 'pki' startup secret")
-			}
-
-			_, err = v.writeWithWarningCheck(path, certData)
-			if err != nil {
-				return errors.Wrapf(err, "error writing data for startup 'pki' secret '%s'", path)
-			}
-
-		default:
-			return errors.Errorf("'%s' startup secret type is not supported, only 'kv' or 'pki'", startupSecretType)
-		}
-	}
-
-	return nil
-}
-
 func (v *vault) writeWithWarningCheck(path string, data map[string]interface{}) (*api.Secret, error) {
 	sec, err := v.cl.Logical().Write(path, data)
 	if err != nil {
@@ -650,64 +601,6 @@ func (v *vault) writeWithWarningCheck(path string, data map[string]interface{}) 
 		}
 	}
 	return sec, nil
-}
-
-func readStartupSecret(startupSecret map[string]interface{}) (string, map[string]interface{}, error) {
-	path, err := cast.ToStringE(startupSecret["path"])
-	if err != nil {
-		return "", nil, errors.Wrap(err, "error findind path for startup secret")
-	}
-
-	data, err := getOrDefaultStringMap(startupSecret, "data")
-	if err != nil {
-		return "", nil, errors.Wrapf(err, "error getting data for startup secret '%s'", path)
-	}
-
-	if _, ok := data["secretKeyRef"]; ok {
-		secData, err := getOrDefaultSecretData(data["secretKeyRef"])
-		if err != nil {
-			return "", nil, errors.Wrap(err, "error getting data from k8s secret")
-		}
-		data = secData
-	}
-
-	return path, data, nil
-}
-
-func generateCertPayload(data interface{}) (map[string]interface{}, error) {
-	pkiData, err := cast.ToStringMapStringE(data)
-	if err != nil {
-		return map[string]interface{}{}, errors.Wrapf(err, "cast to map[string]... failed: %v", data)
-	}
-
-	pkiSlice := []string{}
-	for _, v := range pkiData {
-		pkiSlice = append(pkiSlice, v)
-	}
-
-	if len(pkiSlice) < 2 {
-		return map[string]interface{}{}, errors.Errorf("missing key or certificate in pki data: %v", pkiData)
-	}
-
-	return map[string]interface{}{"pem_bundle": strings.Join(pkiSlice, "\n")}, nil
-}
-
-// toSliceStringMapE casts []map[string]interface{} preserving nested types
-func toSliceStringMapE(o interface{}) ([]map[string]interface{}, error) {
-	data, err := json.Marshal(o)
-	if err != nil {
-		return nil, err
-	}
-	var sm []map[string]interface{}
-	return sm, json.Unmarshal(data, &sm)
-}
-
-func getOrDefaultStringMap(m map[string]interface{}, key string) (map[string]interface{}, error) {
-	value := m[key]
-	if value != nil {
-		return cast.ToStringMapE(value)
-	}
-	return map[string]interface{}{}, nil
 }
 
 func isOverwriteProhibitedError(err error) bool {
