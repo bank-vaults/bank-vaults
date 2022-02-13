@@ -29,11 +29,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/cast"
 	"github.com/spf13/viper"
-	corev1 "k8s.io/api/core/v1"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-	crconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 // DefaultConfigFile is the name of the default config file
@@ -82,29 +78,28 @@ type Vault interface {
 }
 
 type purgeUnmanagedConfig struct {
-	Enabled bool `json:"enabled"`
+	Enabled bool `mapstructure:"enabled"`
 	Exclude struct {
-		Audit        bool `json:"audit"`
-		Auths        bool `json:"auth"`
-		Groups       bool `json:"groups"`
-		GroupAliases bool `json:"group-aliases"`
-		Plugins      bool `json:"plugins"`
-		Policies     bool `json:"policies"`
-		Secrets      bool `json:"secrets"`
-	} `json:"exclude"`
+		Audit        bool `mapstructure:"audit"`
+		Auth         bool `mapstructure:"auth"`
+		Groups       bool `mapstructure:"groups"`
+		GroupAliases bool `mapstructure:"group-aliases"`
+		Plugins      bool `mapstructure:"plugins"`
+		Policies     bool `mapstructure:"policies"`
+		Secrets      bool `mapstructure:"secrets"`
+	} `mapstructure:"exclude"`
 }
 
-// WIP: This should hold all externalConfig when all sections refactord.
 type externalConfig struct {
-	PurgeUnmanagedConfig purgeUnmanagedConfig `json:"purgeUnmanagedConfig"`
-	Audit                []audit              `json:"audit"`
-	Auth                 []auth               `json:"auth"`
-	Groups               []group              `json:"groups"`
+	PurgeUnmanagedConfig purgeUnmanagedConfig `mapstructure:"purgeUnmanagedConfig"`
+	Audit                []audit              `mapstructure:"audit"`
+	Auth                 []auth               `mapstructure:"auth"`
+	Groups               []group              `mapstructure:"groups"`
 	GroupAliases         []groupAlias         `mapstructure:"group-aliases"`
-	Plugins              []plugin             `json:"plugins"`
-	Policies             []policy             `json:"policies"`
-	Secrets              []secretEngine       `json:"secrets"`
-	StartupSecrets       []startupSecret      `json:"startupSecrets"`
+	Plugins              []plugin             `mapstructure:"plugins"`
+	Policies             []policy             `mapstructure:"policies"`
+	Secrets              []secretEngine       `mapstructure:"secrets"`
+	StartupSecrets       []startupSecret      `mapstructure:"startupSecrets"`
 }
 
 var extConfig externalConfig
@@ -538,13 +533,30 @@ func (v *vault) Configure(config *viper.Viper) error {
 	defer v.cl.SetToken("")
 	defer func() { rootToken = nil }()
 
-	err := config.Unmarshal(&extConfig)
+	// The extConfig var should be rest with every configuration change to remove any leftovers from previous unmarshal.
+	extConfig = externalConfig{}
+
+	// UnmarshalExact is used for safety to avoid mistakes like typos in the config keys, which could lead to deletion
+	// in Vault if the purge config is enabled.
+	err := config.UnmarshalExact(&extConfig)
 	if err != nil {
 		return errors.Wrap(err, "error loading externalConfig")
 	}
 
+	if err = v.configureAuditDevices(); err != nil {
+		return errors.Wrap(err, "error configuring audit devices for vault")
+	}
+
 	if err = v.configureAuthMethods(); err != nil {
 		return errors.Wrap(err, "error configuring auth methods for vault")
+	}
+
+	if err = v.configureIdentityGroups(); err != nil {
+		return errors.Wrap(err, "error writing groups configurations for vault")
+	}
+
+	if err = v.configurePlugins(); err != nil {
+		return errors.Wrap(err, "error configuring plugins for vault")
 	}
 
 	if err = v.configurePolicies(); err != nil {
@@ -555,20 +567,8 @@ func (v *vault) Configure(config *viper.Viper) error {
 		return errors.Wrap(err, "error configuring secret engines for vault")
 	}
 
-	if err = v.configurePlugins(); err != nil {
-		return errors.Wrap(err, "error configuring plugins for vault")
-	}
-
-	if err = v.configureAuditDevices(); err != nil {
-		return errors.Wrap(err, "error configuring audit devices for vault")
-	}
-
 	if err = v.configureStartupSecrets(); err != nil {
 		return errors.Wrap(err, "error writing startup secrets to vault")
-	}
-
-	if err = v.configureIdentityGroups(); err != nil {
-		return errors.Wrap(err, "error writing groups configurations for vault")
 	}
 
 	return err
@@ -601,47 +601,6 @@ func (v *vault) writeWithWarningCheck(path string, data map[string]interface{}) 
 		}
 	}
 	return sec, nil
-}
-
-func isOverwriteProhibitedError(err error) bool {
-	return strings.Contains(err.Error(), "delete them before reconfiguring")
-}
-
-func getOrDefaultSecretData(m interface{}) (map[string]interface{}, error) {
-	values, err := cast.ToSliceE(m)
-	if err != nil {
-		return map[string]interface{}{}, err
-	}
-
-	k8sCfg := crconfig.GetConfigOrDie()
-	c, err := crclient.New(k8sCfg, crclient.Options{})
-	if err != nil {
-		return map[string]interface{}{}, err
-	}
-
-	vaultNamespace := os.Getenv("NAMESPACE")
-
-	secData := map[string]string{}
-	for _, value := range values {
-		keyRef, err := cast.ToStringMapStringE(value)
-		if err != nil {
-			return map[string]interface{}{}, err
-		}
-
-		secret := &corev1.Secret{}
-		err = c.Get(context.Background(), crclient.ObjectKey{
-			Namespace: vaultNamespace,
-			Name:      keyRef["name"],
-		}, secret)
-		if err != nil {
-			return map[string]interface{}{}, err
-		}
-		secData[keyRef["key"]] = cast.ToString(secret.Data[keyRef["key"]])
-	}
-	data := map[string]interface{}{}
-	data["data"] = secData
-
-	return data, nil
 }
 
 // XORBytes takes two byte slices and XORs them together, returning the final

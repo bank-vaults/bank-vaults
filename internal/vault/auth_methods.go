@@ -30,148 +30,27 @@ import (
 )
 
 type auth struct {
-	Type             string                 `json:"type"`
-	Path             string                 `json:"path"`
-	Description      string                 `json:"description"`
-	UsersOrGroupsKey string                 `json:"usersOrGroupsKey"`
-	Roles            []interface{}          `json:"roles"`
-	Users            interface{}            `json:"users"`
-	Crossaccountrole []interface{}          `json:"crossaccountrole"`
-	Groups           map[string]interface{} `json:"groups"`
-	Options          map[string]interface{} `json:"options"`
-	Map              map[string]interface{} `json:"map"`
-	Config           map[string]interface{} `json:"config"`
+	Type             string                 `mapstructure:"type"`
+	Path             string                 `mapstructure:"path"`
+	Description      string                 `mapstructure:"description"`
+	UsersOrGroupsKey string                 `mapstructure:"usersOrGroupsKey"`
+	Roles            []interface{}          `mapstructure:"roles"`
+	Users            interface{}            `mapstructure:"users"`
+	Crossaccountrole []interface{}          `mapstructure:"crossaccountrole"`
+	Groups           map[string]interface{} `mapstructure:"groups"`
+	Options          map[string]interface{} `mapstructure:"options"`
+	Map              map[string]interface{} `mapstructure:"map"`
+	Config           map[string]interface{} `mapstructure:"config"`
 }
 
-func (a *auth) setDefaults() {
-	if a.Path == "" {
-		a.Path = a.Type
-	}
-}
-
-// getExistingAuthMethods gets all auth methods that are already in Vault.
-// The existing auth methods are in a map to make it easy to disable easily from it with "O(n)" complexity.
-func (v *vault) getExistingAuthMethods() (map[string]*api.MountOutput, error) {
-	existingAuths := make(map[string]*api.MountOutput)
-
-	existingAuthList, err := v.cl.Sys().ListAuth()
-	if err != nil {
-		return nil, errors.Wrapf(err, "unable to list existing auth methods")
-	}
-
-	for path, existingAuthMethod := range existingAuthList {
-		filteredPath := strings.Trim(path, "/")
-		existingAuths[filteredPath] = existingAuthMethod
-	}
-
-	return existingAuths, nil
-}
-
-// getUnmanagedAuthMethods gets unmanaged auth methods by comparing what's already in Vault and what's in the externalConfig
-func (v *vault) getUnmanagedAuthMethods(managedAuthMethods []auth) map[string]*api.MountOutput {
-	// TODO: remove this line and just use passed value
-	unmanagedAuths, _ := v.getExistingAuthMethods()
-	// Remove managed auth methods form the items since the rest will be disabled.
-	for _, managedAuthMethod := range managedAuthMethods {
-		delete(unmanagedAuths, managedAuthMethod.Type)
-	}
-	// Remove token auth method since it's the default
-	delete(unmanagedAuths, "token")
-
-	return unmanagedAuths
-}
-
-func (v *vault) configureAuthMethods() error {
-	managedAuths := extConfig.Auth
-	for i := range managedAuths {
-		managedAuths[i].setDefaults()
-	}
-
-	existingAuths, _ := v.getExistingAuthMethods()
-	unmanagedAuths := v.getUnmanagedAuthMethods(managedAuths)
-
-	err := v.addManagedAuthMethods(managedAuths, existingAuths)
-	if err != nil {
-		return errors.Wrap(err, "error configuring managed auth methods")
-	}
-
-	err = v.removeUnmanagedAuthMethods(unmanagedAuths)
-	if err != nil {
-		return errors.Wrap(err, "error while disabling unmanaged auth methods")
-	}
-
-	return nil
-}
-
-// Disables any auth method that's not managed if purgeUnmanagedConfig option is enabled
-func (v *vault) removeUnmanagedAuthMethods(unManagedAuths map[string]*api.MountOutput) error {
-	if len(unManagedAuths) == 0 || !extConfig.PurgeUnmanagedConfig.Enabled || extConfig.PurgeUnmanagedConfig.Exclude.Auths {
-		return nil
-	}
-
-	for authMethod := range unManagedAuths {
-		logrus.Infof("removing unmanaged auth method %s ", authMethod)
-		err := v.cl.Sys().DisableAuth(authMethod)
-		if err != nil {
-			return errors.Wrapf(err, "error disabling %s auth method in vault", authMethod)
-		}
-	}
-	return nil
-}
-
-func (v *vault) addManagedAuthMethods(managedAuths []auth, existingAuths map[string]*api.MountOutput) error {
-	for _, authMethod := range managedAuths {
-		description := fmt.Sprintf("%s backend", authMethod.Type)
-
-		// get auth mount options
-		// https://www.vaultproject.io/api/system/auth.html#config
-		var authConfigInput api.AuthConfigInput
-		hasMountOptions := authMethod.Options != nil
-		// https://www.vaultproject.io/api/system/auth.html
-		var options api.EnableAuthOptions
-		if hasMountOptions {
-			err := mapstructure.Decode(authMethod.Options, &authConfigInput)
-			if err != nil {
-				return errors.Wrap(err, "error parsing auth method options")
-			}
-			options = api.EnableAuthOptions{
-				Type:        authMethod.Type,
-				Description: description,
-				Config:      authConfigInput,
-			}
-		} else {
-			options = api.EnableAuthOptions{
-				Type:        authMethod.Type,
-				Description: description,
-			}
-		}
-
-		// We have to filter all existing auths, not to re-enable them as that would raise an error
-		if existingAuths[authMethod.Path] == nil {
-			logrus.Debugf("enabling %s auth backend in vault...", authMethod.Type)
-			err := v.cl.Sys().EnableAuthWithOptions(authMethod.Path, &options)
-			if err != nil {
-				return errors.Wrapf(err, "error enabling %s auth method in vault", authMethod.Type)
-			}
-		}
-
-		// If auth method exists but has additional mount options
-		if hasMountOptions {
-			logrus.Debugf("tuning existing %s auth backend in vault...", authMethod.Path)
-			// all auth methods are mounted below auth/
-			tunePath := fmt.Sprintf("auth/%s", authMethod.Path)
-			err := v.cl.Sys().TuneMount(tunePath, authConfigInput)
-			if err != nil {
-				return errors.Wrapf(err, "error tuning %s auth method in vault", authMethod.Path)
-			}
-		}
-		err := v.addAdditionalAuthConfig(authMethod)
-		if err != nil {
-			return errors.Wrapf(err, "error while adding auth method config")
+func initAuthConfig(configs []auth) []auth {
+	for index, config := range configs {
+		if config.Path == "" {
+			configs[index].Path = config.Type
 		}
 	}
 
-	return nil
+	return configs
 }
 
 func (v *vault) addAdditionalAuthConfig(authMethod auth) error {
@@ -479,6 +358,129 @@ func (v *vault) configureGenericAuthRoles(method, path, roleSubPath string, role
 		if err != nil {
 			return errors.Wrapf(err, "error putting %s %s role into vault", role["name"], method)
 		}
+	}
+
+	return nil
+}
+
+func (v *vault) addManagedAuthMethods(managedAuths []auth) error {
+	existingAuths, err := v.getExistingAuthMethods()
+	if err != nil {
+		return errors.Wrapf(err, "unable to list existing auth methods")
+	}
+
+	for _, authMethod := range managedAuths {
+		description := fmt.Sprintf("%s backend", authMethod.Type)
+
+		// get auth mount options
+		// https://www.vaultproject.io/api/system/auth.html#config
+		var authConfigInput api.AuthConfigInput
+		hasMountOptions := authMethod.Options != nil
+		// https://www.vaultproject.io/api/system/auth.html
+		var options api.EnableAuthOptions
+		if hasMountOptions {
+			err := mapstructure.Decode(authMethod.Options, &authConfigInput)
+			if err != nil {
+				return errors.Wrap(err, "error parsing auth method options")
+			}
+			options = api.EnableAuthOptions{
+				Type:        authMethod.Type,
+				Description: description,
+				Config:      authConfigInput,
+			}
+		} else {
+			options = api.EnableAuthOptions{
+				Type:        authMethod.Type,
+				Description: description,
+			}
+		}
+
+		// We have to filter all existing auths, not to re-enable them as that would raise an error
+		if existingAuths[authMethod.Path] == nil {
+			logrus.Infof("adding auth method %s (%s)", authMethod.Path, authMethod.Type)
+			err := v.cl.Sys().EnableAuthWithOptions(authMethod.Path, &options)
+			if err != nil {
+				return errors.Wrapf(err, "error enabling %s auth method in vault", authMethod.Path)
+			}
+		}
+
+		// If auth method exists but has additional mount options
+		if hasMountOptions {
+			logrus.Infof("tuning existing auth %s (%s)", authMethod.Path, authMethod.Type)
+			// all auth methods are mounted below auth/
+			tunePath := fmt.Sprintf("auth/%s", authMethod.Path)
+			err := v.cl.Sys().TuneMount(tunePath, authConfigInput)
+			if err != nil {
+				return errors.Wrapf(err, "error tuning %s (%s) auth method in vault", authMethod.Path, authMethod.Type)
+			}
+		}
+		err := v.addAdditionalAuthConfig(authMethod)
+		if err != nil {
+			return errors.Wrapf(err, "error while adding auth method config")
+		}
+	}
+
+	return nil
+}
+
+// getExistingAuthMethods gets all auth methods that are already in Vault.
+// The existing auth methods are in a map to make it easy to disable easily from it with "O(n)" complexity.
+func (v *vault) getExistingAuthMethods() (map[string]*api.MountOutput, error) {
+	existingAuths := make(map[string]*api.MountOutput)
+
+	existingAuthList, err := v.cl.Sys().ListAuth()
+	if err != nil {
+		return nil, errors.Wrapf(err, "unable to list existing auth methods")
+	}
+
+	for path, existingAuthMethod := range existingAuthList {
+		filteredPath := strings.Trim(path, "/")
+		existingAuths[filteredPath] = existingAuthMethod
+	}
+
+	return existingAuths, nil
+}
+
+// getUnmanagedAuthMethods gets unmanaged auth methods by comparing what's already in Vault and what's in the externalConfig
+func (v *vault) getUnmanagedAuthMethods(managedAuthMethods []auth) map[string]*api.MountOutput {
+	unmanagedAuths, _ := v.getExistingAuthMethods()
+
+	// Remove managed auth methods form the items since the rest will be disabled.
+	for _, managedAuthMethod := range managedAuthMethods {
+		delete(unmanagedAuths, managedAuthMethod.Path)
+	}
+	// Remove token auth method since it's the default
+	delete(unmanagedAuths, "token")
+
+	return unmanagedAuths
+}
+
+// Disables any auth method that's not managed if purgeUnmanagedConfig option is enabled
+func (v *vault) removeUnmanagedAuthMethods(unmanagedAuths map[string]*api.MountOutput) error {
+	if len(unmanagedAuths) == 0 || !extConfig.PurgeUnmanagedConfig.Enabled || extConfig.PurgeUnmanagedConfig.Exclude.Auth {
+		return nil
+	}
+
+	for authMethod := range unmanagedAuths {
+		logrus.Infof("removing auth method %s ", authMethod)
+		err := v.cl.Sys().DisableAuth(authMethod)
+		if err != nil {
+			return errors.Wrapf(err, "error disabling %s auth method in vault", authMethod)
+		}
+	}
+	return nil
+}
+
+func (v *vault) configureAuthMethods() error {
+	managedAuths := initAuthConfig(extConfig.Auth)
+	unmanagedAuths := v.getUnmanagedAuthMethods(managedAuths)
+
+	if err := v.addManagedAuthMethods(managedAuths); err != nil {
+		return errors.Wrap(err, "error configuring managed auth methods")
+	}
+
+	if err := v.removeUnmanagedAuthMethods(unmanagedAuths); err != nil {
+		return errors.Wrap(err, "error while disabling unmanaged auth methods")
 	}
 
 	return nil

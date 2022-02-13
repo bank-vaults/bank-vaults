@@ -48,9 +48,9 @@ var builtinPlugins = map[string]map[string]bool{
 
 type plugin struct {
 	Name    string `mapstructure:"plugin_name"`
-	Type    string `json:"type"`
-	Command string `json:"command"`
-	SHA256  string `json:"sha256"`
+	Type    string `mapstructure:"type"`
+	Command string `mapstructure:"command"`
+	SHA256  string `mapstructure:"sha256"`
 }
 
 // getExistingPlugins gets all plugins that are already in Vault.
@@ -118,11 +118,11 @@ func (v *vault) addManagedPlugins(managedPlugins []plugin) error {
 			Type:    pluginType,
 		}
 
-		logrus.Debugf("adding plugin with input: %#v", input)
+		logrus.Infof("adding plugin %s (%s)", plugin.Name, plugin.Type)
+		logrus.Debugf("plugin input %#v", input)
 		if err = v.cl.Sys().RegisterPlugin(&input); err != nil {
 			return errors.Wrapf(err, "error adding plugin %s/%s in vault", plugin.Type, plugin.Name)
 		}
-		logrus.Infof("added plugin %s/%s", plugin.Type, plugin.Name)
 	}
 
 	return nil
@@ -135,10 +135,9 @@ func (v *vault) removeUnmanagedPlugins(managedPlugins []plugin) error {
 	}
 
 	existingPlugins, _ := v.getExistingPlugins()
-	unanagedPlugins := getUnmanagedPlugins(existingPlugins, managedPlugins)
+	unmanagedPlugins := getUnmanagedPlugins(existingPlugins, managedPlugins)
 
-	logrus.Debugf("removing unmanaged plugins ... %v", unanagedPlugins)
-	for existingPluginType, existingPluginNames := range unanagedPlugins {
+	for existingPluginType, existingPluginNames := range unmanagedPlugins {
 		for existingPluginName := range existingPluginNames {
 			pluginType, err := consts.ParsePluginType(existingPluginType)
 			if err != nil {
@@ -150,11 +149,10 @@ func (v *vault) removeUnmanagedPlugins(managedPlugins []plugin) error {
 				Type: pluginType,
 			}
 
-			logrus.Infof("removing plugin with input: %#v", input)
+			logrus.Infof("removing plugin %s (%s)", existingPluginName, existingPluginType)
 			if err := v.cl.Sys().DeregisterPlugin(&input); err != nil {
 				return errors.Wrapf(err, "error removing plugin %s/%s in vault", existingPluginType, existingPluginName)
 			}
-			logrus.Infof("removing plugin %s/%s", existingPluginType, existingPluginName)
 		}
 	}
 
@@ -165,11 +163,11 @@ func (v *vault) configurePlugins() error {
 	managedPlugins := extConfig.Plugins
 
 	if err := v.addManagedPlugins(managedPlugins); err != nil {
-		return errors.Wrap(err, "error while adding managed plugins")
+		return errors.Wrap(err, "error while adding plugins")
 	}
 
 	if err := v.removeUnmanagedPlugins(managedPlugins); err != nil {
-		return errors.Wrap(err, "error while removing unmanaged plugins")
+		return errors.Wrap(err, "error while removing plugins")
 	}
 
 	return nil

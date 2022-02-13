@@ -51,3 +51,6 @@ dist/
 
 # Vault configs
 *.hcl
+
+# VS Code config
+.vscode/

@@ -22,27 +22,40 @@ import (
 )
 
 type policy struct {
-	Name           string `json:"name"`
-	Rules          string `json:"rules"`
+	Name           string `mapstructure:"name"`
+	Rules          string `mapstructure:"rules"`
 	RulesFormatted string
 }
 
-func (p *policy) format() error {
-	// Try to format rules (HCL only)
-	policyRules, err := hclPrinter.Format([]byte(p.Rules))
-	if err != nil {
-		// Check if rules parse (HCL or JSON)
-		_, parseErr := hcl.Parse(p.Rules)
-		if parseErr != nil {
-			return errors.Wrapf(err, "error parsing %s policy rules", p.Name)
-		}
+func initPoliciesConfig(policiesConfig []policy) ([]policy, error) {
+	for index, policy := range policiesConfig {
+		//
+		// Format HCL polices.
+		rulesFormatted, err := hclPrinter.Format([]byte(policy.Rules))
+		if err != nil {
+			// Check if rules parse (HCL or JSON).
+			if _, err := hcl.Parse(policy.Rules); err != nil {
+				return nil, errors.Wrapf(err, "error parsing %s policy rules", policy.Name)
+			}
 
-		// Policies are parsable but couldn't be HCL formatted (most likely JSON)
-		policyRules = []byte(p.Rules)
-		logrus.Debugf("error HCL-formatting %s policy rules (ignore if rules are JSON-formatted): %s", p.Name, err.Error())
+			// Policies are parsable but couldn't be HCL formatted (most likely JSON).
+			rulesFormatted = []byte(policy.Rules)
+			logrus.Debugf("error HCL-formatting %s policy rules (ignore if rules are JSON-formatted): %s",
+				policy.Name, err.Error())
+		}
+		policiesConfig[index].RulesFormatted = string(rulesFormatted)
 	}
 
-	p.RulesFormatted = string(policyRules)
+	return policiesConfig, nil
+}
+
+func (v *vault) addManagedPolicies(managedPolicies []policy) error {
+	for _, policy := range managedPolicies {
+		logrus.Infof("adding policy %s", policy.Name)
+		if err := v.cl.Sys().PutPolicy(policy.Name, policy.RulesFormatted); err != nil {
+			return errors.Wrapf(err, "error putting %s policy into vault", policy.Name)
+		}
+	}
 
 	return nil
 }
@@ -80,28 +93,34 @@ func (v *vault) getUnmanagedPolicies(managedPolicies []policy) map[string]bool {
 	return unmanagedPolicies
 }
 
-func (v *vault) configurePolicies() error {
-	// Add managed policies.
-	managedPolicies := extConfig.Policies
-	logrus.Debugf("add managed policies %v", managedPolicies)
-	for _, policy := range managedPolicies {
-		if err := policy.format(); err != nil {
-			return errors.Wrapf(err, "error formatting %s policy", policy.Name)
-		}
-		if err := v.cl.Sys().PutPolicy(policy.Name, policy.RulesFormatted); err != nil {
-			return errors.Wrapf(err, "error putting %s policy into vault", policy.Name)
-		}
+func (v *vault) removeUnmanagedPolicies(managedPolicies []policy) error {
+	if !extConfig.PurgeUnmanagedConfig.Enabled || extConfig.PurgeUnmanagedConfig.Exclude.Policies {
+		logrus.Debugf("purge config is disabled, no unmanaged policies will be removed")
+		return nil
 	}
 
-	// Remove unmanaged policies.
-	if extConfig.PurgeUnmanagedConfig.Enabled && !extConfig.PurgeUnmanagedConfig.Exclude.Policies {
-		unmanagedPolicies := v.getUnmanagedPolicies(managedPolicies)
-		logrus.Debugf("remove unmanaged policies %v", unmanagedPolicies)
-		for policyName := range unmanagedPolicies {
-			if err := v.cl.Sys().DeletePolicy(policyName); err != nil {
-				return errors.Wrapf(err, "error deleting %s policy from vault", policyName)
-			}
+	unmanagedPolicies := v.getUnmanagedPolicies(managedPolicies)
+	for policyName := range unmanagedPolicies {
+		logrus.Infof("removing policy %s", policyName)
+		if err := v.cl.Sys().DeletePolicy(policyName); err != nil {
+			return errors.Wrapf(err, "error deleting %s policy from vault", policyName)
 		}
+	}
+	return nil
+}
+
+func (v *vault) configurePolicies() error {
+	managedPolicies, err := initPoliciesConfig(extConfig.Policies)
+	if err != nil {
+		return errors.Wrap(err, "error while initializing policies config")
+	}
+
+	if err := v.addManagedPolicies(managedPolicies); err != nil {
+		return errors.Wrap(err, "error while adding policies")
+	}
+
+	if err := v.removeUnmanagedPolicies(managedPolicies); err != nil {
+		return errors.Wrap(err, "error while removing policies")
 	}
 
 	return nil

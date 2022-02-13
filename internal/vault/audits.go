@@ -24,21 +24,22 @@ import (
 )
 
 type audit struct {
-	Type        string                 `json:"type"`
-	Path        string                 `json:"path"`
-	Description string                 `json:"description"`
-	Options     map[string]interface{} `json:"options"`
+	Type        string                 `mapstructure:"type"`
+	Path        string                 `mapstructure:"path"`
+	Description string                 `mapstructure:"description"`
+	Options     map[string]interface{} `mapstructure:"options"`
 }
 
-func (a *audit) setDefaults() {
-	if a.Path == "" {
-		a.Path = a.Type
+func initAuditConfig(configs []audit) []audit {
+	for index, config := range configs {
+		if config.Path == "" {
+			configs[index].Path = config.Type
+		}
+
+		configs[index].Path = strings.Trim(config.Path, "/")
 	}
-}
 
-func (a *audit) setPath() {
-	a.setDefaults()
-	a.Path = strings.Trim(a.Path, "/")
+	return configs
 }
 
 // getExistingAudits gets all audits that are already in Vault.
@@ -50,7 +51,7 @@ func (v *vault) getExistingAudits() (map[string]bool, error) {
 		return nil, errors.Wrapf(err, "unable to list existing audits")
 	}
 
-	logrus.Infof("already existing audit devices: %#v", existingAuditsList)
+	logrus.Debugf("already existing audit devices: %#v", existingAuditsList)
 
 	for existingAuditPath := range existingAuditsList {
 		existingAudits[strings.Trim(existingAuditPath, "/")] = true
@@ -64,17 +65,18 @@ func (v *vault) getUnmanagedAudits(managedAudits []audit) map[string]bool {
 
 	// Remove managed audits form the items since the reset will be removed.
 	for _, managedAudit := range managedAudits {
-		managedAudit.setPath()
-		delete(unmanagedAudits, managedAudit.Type)
+		delete(unmanagedAudits, managedAudit.Path)
 	}
 
 	return unmanagedAudits
 }
 
-func (v *vault) addManagedAudits(managedAudits []audit, existingAudits map[string]bool) error {
+func (v *vault) addManagedAudits(managedAudits []audit) error {
+	existingAudits, _ := v.getExistingAudits()
+
 	for _, auditDevice := range managedAudits {
-		if existingAudits[auditDevice.Type] {
-			logrus.Infof("audit device is already mounted: %s/", auditDevice.Path)
+		if existingAudits[auditDevice.Path] {
+			logrus.Infof("audit device is already mounted %s/", auditDevice.Path)
 		} else {
 			var options api.EnableAuditOptions
 			err := mapstructure.Decode(auditDevice, &options)
@@ -82,13 +84,12 @@ func (v *vault) addManagedAudits(managedAudits []audit, existingAudits map[strin
 				return errors.Wrap(err, "error parsing audit options")
 			}
 
-			logrus.Infof("enabling audit device with options: %#v", options)
+			logrus.Infof("adding audit device %s (%s)", auditDevice.Path, auditDevice.Type)
+			logrus.Debugf("audit device options %#v", options)
 			err = v.cl.Sys().EnableAuditWithOptions(auditDevice.Path+"/", &options)
 			if err != nil {
 				return errors.Wrapf(err, "error enabling audit device %s in vault", auditDevice.Path)
 			}
-
-			logrus.Infoln("mounted audit device", auditDevice.Type, "to", auditDevice.Path)
 		}
 	}
 
@@ -102,7 +103,7 @@ func (v *vault) removeUnmanagedAudits(unmanagedAudits map[string]bool) error {
 	}
 
 	for auditPath := range unmanagedAudits {
-		logrus.Infof("removing unmanged audit %s", auditPath)
+		logrus.Infof("removing unmanged audit device %s", auditPath)
 		err := v.cl.Sys().DisableAudit(auditPath)
 		if err != nil {
 			return errors.Wrapf(err, "error disabling %s audit in vault", auditPath)
@@ -112,20 +113,14 @@ func (v *vault) removeUnmanagedAudits(unmanagedAudits map[string]bool) error {
 }
 
 func (v *vault) configureAuditDevices() error {
-	managedAudits := extConfig.Audit
-	for i := range managedAudits {
-		managedAudits[i].setDefaults()
-	}
-	existingAudits, _ := v.getExistingAudits()
+	managedAudits := initAuditConfig(extConfig.Audit)
 	unmanagedAudits := v.getUnmanagedAudits(managedAudits)
 
-	err := v.addManagedAudits(managedAudits, existingAudits)
-	if err != nil {
+	if err := v.addManagedAudits(managedAudits); err != nil {
 		return errors.Wrap(err, "error configuring managed audits")
 	}
 
-	err = v.removeUnmanagedAudits(unmanagedAudits)
-	if err != nil {
+	if err := v.removeUnmanagedAudits(unmanagedAudits); err != nil {
 		return errors.Wrap(err, "error while disabling unmanaged auth methods")
 	}
 

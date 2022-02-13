@@ -29,6 +29,10 @@ import (
 	vaultpkg "github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
+func isOverwriteProhibitedError(err error) bool {
+	return strings.Contains(err.Error(), "delete them before reconfiguring")
+}
+
 // secretEnginesWihtoutNameConfig holds the secret engine types where
 // the name shouldn't be part of the config path
 var secretEnginesWihtoutNameConfig = map[string]bool{
@@ -41,24 +45,27 @@ var secretEnginesWihtoutNameConfig = map[string]bool{
 }
 
 type secretEngine struct {
-	Path          string                 `json:"path"`
-	Type          string                 `json:"type"`
-	Description   string                 `json:"description"`
-	Configuration map[string]interface{} `json:"configuration"`
-	Config        map[string]interface{} `json:"config"`
-	Options       map[string]string      `json:"options"`
-	PluginName    string                 `json:"plugin_name"`
-	Local         bool                   `json:"local"`
-	SealWrap      bool                   `json:"seal_wrap"`
+	Path          string                 `mapstructure:"path"`
+	Type          string                 `mapstructure:"type"`
+	Description   string                 `mapstructure:"description"`
+	Configuration map[string]interface{} `mapstructure:"configuration"`
+	Config        map[string]interface{} `mapstructure:"config"`
+	Options       map[string]string      `mapstructure:"options"`
+	PluginName    string                 `mapstructure:"plugin_name"`
+	Local         bool                   `mapstructure:"local"`
+	SealWrap      bool                   `mapstructure:"seal_wrap"`
 }
 
-func (se *secretEngine) setPath() {
-	if se.Path == "" {
-		se.Path = se.Type
-		return
+func initSecretsEnginesConfig(configs []secretEngine) []secretEngine {
+	for index, config := range configs {
+		if config.Path == "" {
+			configs[index].Path = config.Type
+		}
+
+		configs[index].Path = strings.Trim(config.Path, "/")
 	}
 
-	se.Path = strings.Trim(se.Path, "/")
+	return configs
 }
 
 func (se *secretEngine) getMountConfigInput() (api.MountConfigInput, error) {
@@ -81,7 +88,7 @@ func (v *vault) mountExists(path string) (bool, error) {
 	if err != nil {
 		return false, errors.Wrap(err, "error reading mounts from vault")
 	}
-	logrus.Infof("already existing mounts: %+v", mounts)
+	logrus.Debugf("already existing mounts: %+v", mounts)
 
 	return mounts[path+"/"] != nil, nil
 }
@@ -138,11 +145,8 @@ func (v *vault) getExistingSecretsEngines() (map[string]bool, error) {
 
 // getUnmanagedSecretsEngines gets unmanaged secrets engines by comparing what's already in Vault
 // and what's in the externalConfig.
-func getUnmanagedSecretsEngines(
-	existingSecretsEngines map[string]bool,
-	managedSecretsEngines []secretEngine,
-) map[string]bool {
-	unmanagedSecretsEngines := existingSecretsEngines
+func (v *vault) getUnmanagedSecretsEngines(managedSecretsEngines []secretEngine) map[string]bool {
+	unmanagedSecretsEngines, _ := v.getExistingSecretsEngines()
 
 	// Ignore system mounts.
 	delete(unmanagedSecretsEngines, "sys")
@@ -151,7 +155,6 @@ func getUnmanagedSecretsEngines(
 
 	// Remove managed secret engine form the items since the reset will be removed.
 	for _, managedSecretEngine := range managedSecretsEngines {
-		managedSecretEngine.setPath()
 		delete(unmanagedSecretsEngines, managedSecretEngine.Path)
 	}
 
@@ -173,8 +176,6 @@ func configNeedsNoName(secretEngineType string, configOption string) bool {
 
 func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) error {
 	for _, secretEngine := range managedSecretsEngines {
-		secretEngine.setPath()
-
 		mountExists, err := v.mountExists(secretEngine.Path)
 		if err != nil {
 			return err
@@ -196,16 +197,16 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) e
 				Local:       secretEngine.Local,
 				SealWrap:    secretEngine.SealWrap,
 			}
-			logrus.Infof("mounting secret engine with input: %#v", mountInput)
+
+			logrus.Infof("adding secret engine %s (%s)", secretEngine.Path, secretEngine.Type)
+			logrus.Debugf("secret engine input %#v", mountInput)
 			err = v.cl.Sys().Mount(secretEngine.Path, &mountInput)
 			if err != nil {
 				return errors.Wrapf(err, "error mounting %s into vault", secretEngine.Path)
 			}
-
-			logrus.Infoln("mounted", secretEngine.Type, "to", secretEngine.Path)
 		} else {
 			// If the secret engine is already mounted, only update its config in place.
-			logrus.Infof("tuning already existing mount: %s/", secretEngine.Path)
+			logrus.Infof("tuning already existing secret engine %s/", secretEngine.Path)
 			err = v.cl.Sys().TuneMount(secretEngine.Path, mountConfigInput)
 			if err != nil {
 				return errors.Wrapf(err, "error tuning %s in vault", secretEngine.Path)
@@ -340,9 +341,8 @@ func (v *vault) removeUnmanagedSecretsEngines(unmanagedSecretsEngines map[string
 		return nil
 	}
 
-	logrus.Debugf("removing unmanaged secrets engines... %v", unmanagedSecretsEngines)
 	for secretEnginePath := range unmanagedSecretsEngines {
-		logrus.Infof("removing unmanaged secret engine path %s ", secretEnginePath)
+		logrus.Infof("removing secret engine path %s ", secretEnginePath)
 		if err := v.cl.Sys().Unmount(secretEnginePath); err != nil {
 			return errors.Wrapf(err, "error unmounting %s secret engine from vault", secretEnginePath)
 		}
@@ -352,18 +352,15 @@ func (v *vault) removeUnmanagedSecretsEngines(unmanagedSecretsEngines map[string
 }
 
 func (v *vault) configureSecretsEngines() error {
-	managedSecretsEngines := extConfig.Secrets
-	existingSecretsEngines, _ := v.getExistingSecretsEngines()
-	unmanagedSecretsEngines := getUnmanagedSecretsEngines(existingSecretsEngines, managedSecretsEngines)
+	managedSecretsEngines := initSecretsEnginesConfig(extConfig.Secrets)
+	unmanagedSecretsEngines := v.getUnmanagedSecretsEngines(managedSecretsEngines)
 
-	err := v.addManagedSecretsEngines(managedSecretsEngines)
-	if err != nil {
-		return errors.Wrap(err, "error adding managed secrets engines")
+	if err := v.addManagedSecretsEngines(managedSecretsEngines); err != nil {
+		return errors.Wrap(err, "error adding secrets engines")
 	}
 
-	err = v.removeUnmanagedSecretsEngines(unmanagedSecretsEngines)
-	if err != nil {
-		return errors.Wrap(err, "error removing unmanaged secrets engines")
+	if err := v.removeUnmanagedSecretsEngines(unmanagedSecretsEngines); err != nil {
+		return errors.Wrap(err, "error removing secrets engines")
 	}
 
 	return nil
