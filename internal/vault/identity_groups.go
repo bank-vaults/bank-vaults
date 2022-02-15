@@ -24,16 +24,16 @@ import (
 )
 
 type group struct {
-	Name     string                 `json:"path"`
-	Type     string                 `json:"type"`
-	Policies []string               `json:"policies"`
-	Metadata map[string]interface{} `json:"metadata"`
+	Name     string                 `mapstructure:"name"`
+	Type     string                 `mapstructure:"type"`
+	Policies []string               `mapstructure:"policies"`
+	Metadata map[string]interface{} `mapstructure:"metadata"`
 }
 
 type groupAlias struct {
-	Name      string `json:"name"`
+	Name      string `mapstructure:"name"`
 	MountPath string `mapstructure:"mountpath"`
-	Group     string `json:"group"`
+	Group     string `mapstructure:"group"`
 }
 
 //
@@ -148,6 +148,11 @@ func (v *vault) getExistingGroups() (map[string]bool, error) {
 		return nil, errors.Wrapf(err, "failed to retrieve list of groups")
 	}
 
+	if existingGroupsList == nil {
+		logrus.Debugf("vault has no groups")
+		return nil, nil
+	}
+
 	existingGroupsNames := cast.ToStringSlice(existingGroupsList.Data["keys"])
 	for _, existingGroupName := range existingGroupsNames {
 		existinGroups[existingGroupName] = true
@@ -185,7 +190,7 @@ func (v *vault) addManagedGroups(managedGroups []group) error {
 		}
 
 		if g == nil {
-			logrus.Infof("creating group: %s", group.Name)
+			logrus.Infof("adding group %s", group.Name)
 			_, err = v.writeWithWarningCheck("identity/group", config)
 			if err != nil {
 				return errors.Wrapf(err, "failed to create group %s", group.Name)
@@ -212,15 +217,14 @@ func (v *vault) removeUnmanagedGroups(managedGroups []group) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to get existing groups from vault")
 	}
-	unmanagedGroups := getUnmanagedGroups(existingGroups, managedGroups)
 
-	logrus.Debugf("removing unmanaged groups ... %T", unmanagedGroups)
+	unmanagedGroups := getUnmanagedGroups(existingGroups, managedGroups)
 	for unmanagedGroupName := range unmanagedGroups {
+		logrus.Infof("removing group %s", unmanagedGroupName)
 		_, err := v.cl.Logical().Delete("identity/group/name/" + unmanagedGroupName)
 		if err != nil {
 			return errors.Wrapf(err, "error removing group %s from vault", unmanagedGroupName)
 		}
-		logrus.Infof("removed group %s", unmanagedGroupName)
 	}
 
 	return nil
@@ -256,7 +260,7 @@ func (v *vault) addManagedGroupAliases(managedGroupAliases []groupAlias) error {
 		}
 
 		if ga == "" {
-			logrus.Infof("creating group-alias: %s@%s", groupAlias.Name, accessor)
+			logrus.Infof("adding group-alias: %s@%s", groupAlias.Name, accessor)
 			_, err = v.writeWithWarningCheck("identity/group-alias", config)
 			if err != nil {
 				return errors.Wrapf(err, "failed to create group-alias %s", groupAlias.Name)
@@ -280,6 +284,11 @@ func (v *vault) getExistingGroupAliases() (map[string]string, error) {
 		"identity/group-alias/id", map[string][]string{"list": {"true"}})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to retrieve list of group-alias")
+	}
+
+	if existingGroupAliasesRaw == nil {
+		logrus.Debugf("vault has no group-aliases")
+		return nil, nil
 	}
 
 	existingGroupAliasesData := cast.ToStringMap(existingGroupAliasesRaw.Data["key_info"])
@@ -311,14 +320,13 @@ func (v *vault) removeUnmanagedGroupAliases(managedGroupAliases []groupAlias) er
 	}
 	unmanagedGroupAliases := getUnmanagedGroupAliases(existingGroupAliases, managedGroupAliases)
 
-	logrus.Debugf("removing unmanaged group-aliases ... %T", unmanagedGroupAliases)
+	logrus.Infof("removing group-aliases ... %T", unmanagedGroupAliases)
 	for unmanagedGroupAliasName, unmanagedGroupAliasID := range unmanagedGroupAliases {
 		_, err := v.cl.Logical().Delete("identity/group-alias/id/" + unmanagedGroupAliasID)
 		if err != nil {
 			return errors.Wrapf(err, "error removing group-alias %s with ID %s from vault",
 				unmanagedGroupAliasName, unmanagedGroupAliasID)
 		}
-		logrus.Infof("removed group-alias %s with ID %s", unmanagedGroupAliasName, unmanagedGroupAliasID)
 	}
 
 	return nil
@@ -332,19 +340,19 @@ func (v *vault) configureIdentityGroups() error {
 	managedGroupAliases := extConfig.GroupAliases
 
 	if err := v.addManagedGroups(managedGroups); err != nil {
-		return errors.Wrap(err, "error while adding managed groups")
+		return errors.Wrap(err, "error while adding groups")
 	}
 
 	if err := v.addManagedGroupAliases(managedGroupAliases); err != nil {
-		return errors.Wrap(err, "error while adding managed groups aliases")
+		return errors.Wrap(err, "error while adding groups aliases")
 	}
 
 	if err := v.removeUnmanagedGroups(managedGroups); err != nil {
-		return errors.Wrap(err, "error while removing unmanaged groups")
+		return errors.Wrap(err, "error while removing groups")
 	}
 
 	if err := v.removeUnmanagedGroupAliases(managedGroupAliases); err != nil {
-		return errors.Wrap(err, "error while removing unmanaged group aliases")
+		return errors.Wrap(err, "error while removing group aliases")
 	}
 
 	return nil

@@ -1,0 +1,128 @@
+name: CI - E2E tests
+on:
+  pull_request: {}
+  workflow_dispatch:
+    inputs:
+      log-level:
+        description: 'Set log level for verbosity'
+        required: false
+        default: 'info'
+        type: choice
+        options:
+        - 'info'
+        - 'debug'
+
+jobs:
+  validate-config-crud:
+    name: Validate Config CRUD
+
+    runs-on: ubuntu-latest
+
+    services:
+      vault:
+        image: vault:1.9.1
+        ports:
+          - 8200:8200
+        options: >-
+          --name=vault
+          --cap-add=IPC_LOCK
+        env:
+          VAULT_DEV_ROOT_TOKEN_ID: e2e_tests
+
+    env:
+      GO_VERSION: 1.17
+      VAULT_TOKEN: 'e2e_tests'
+      VAULT_ADDR: 'http://0.0.0.0:8200'
+      VAULT_LOG_FILE: 'vault.log'
+      BANK_VAULTS_LOG_FILE: 'bank-vaults.log'
+      BANK_VAULTS_CONFIG_FILE: '/tmp/vault-config.yml'
+      # The input value changes according to the workflow context.
+      LOG_LEVEL: "${{ github.event.inputs.log-level || inputs.log-level }}"
+
+    steps:
+      - name: Copy Vault binary
+        run: |
+          docker cp vault:/bin/vault /usr/local/bin/vault
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2.2.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build bank-vaults binary
+        run: |
+          go install ./cmd/bank-vaults/...
+
+      - name: Run bank-vaults
+        run: |
+          touch "${BANK_VAULTS_CONFIG_FILE}"
+          bank-vaults configure \
+            --mode dev \
+            --vault-config-file "${BANK_VAULTS_CONFIG_FILE}" \
+            &> "${BANK_VAULTS_LOG_FILE}" & disown
+
+      - name: Audit tests
+        if: always()
+        run: |
+          bash scripts/validate-config-crud/validate-config-crud.sh "audit"
+
+      - name: Auth tests
+        if: always()
+        run: |
+          bash scripts/validate-config-crud/validate-config-crud.sh "auth"
+
+      - name: Groups tests
+        if: always()
+        run: |
+          bash scripts/validate-config-crud/validate-config-crud.sh "groups"
+
+      - name: Group-aliases tests
+        if: always()
+        run: |
+          bash scripts/validate-config-crud/validate-config-crud.sh "group-aliases"
+
+      - name: Policies tests
+        if: always()
+        run: |
+          bash scripts/validate-config-crud/validate-config-crud.sh "policies"
+
+      - name: StartupSecrets tests
+        if: always()
+        run: |
+          bash scripts/validate-config-crud/validate-config-crud.sh "startupSecrets"
+
+      - name: Secrets tests
+        if: always()
+        run: |
+          bash scripts/validate-config-crud/validate-config-crud.sh "secrets"
+
+      - name: Print logs
+        if: always()
+        run: |
+          echo -e "\nVaults logs ..."
+          docker logs vault &> "${VAULT_LOG_FILE}"
+          cat "${VAULT_LOG_FILE}"
+
+          echo -e "\nBank-Vaults logs ..."
+          cat "${BANK_VAULTS_LOG_FILE}"
+
+      - name: Store log files
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: logs
+          path: |
+            ${{ env.VAULT_LOG_FILE }}
+            ${{ env.BANK_VAULTS_LOG_FILE }}

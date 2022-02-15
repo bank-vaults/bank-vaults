@@ -15,19 +15,61 @@
 package vault
 
 import (
+	"context"
+	"os"
 	"strings"
 
 	"emperror.dev/errors"
 	"github.com/spf13/cast"
+	corev1 "k8s.io/api/core/v1"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	crconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 type startupSecret struct {
-	Type string `json:"type"`
-	Path string `json:"path"`
+	Type string `mapstructure:"type"`
+	Path string `mapstructure:"path"`
 	Data struct {
-		Data         map[string]interface{} `json:"data"`
-		SecretKeyRef []interface{}          `json:"secretKeyRef"`
-	} `json:"data"`
+		Data         map[string]interface{}   `mapstructure:"data"`
+		SecretKeyRef []map[string]interface{} `mapstructure:"secretKeyRef"`
+	} `mapstructure:"data"`
+}
+
+func getOrDefaultSecretData(m interface{}) (map[string]interface{}, error) {
+	values, err := cast.ToSliceE(m)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	k8sCfg := crconfig.GetConfigOrDie()
+	c, err := crclient.New(k8sCfg, crclient.Options{})
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	vaultNamespace := os.Getenv("NAMESPACE")
+
+	secData := map[string]string{}
+	for _, value := range values {
+		keyRef, err := cast.ToStringMapStringE(value)
+		if err != nil {
+			return map[string]interface{}{}, err
+		}
+
+		secret := &corev1.Secret{}
+		err = c.Get(context.Background(), crclient.ObjectKey{
+			Namespace: vaultNamespace,
+			Name:      keyRef["name"],
+		}, secret)
+		if err != nil {
+			return map[string]interface{}{}, err
+		}
+		secData[keyRef["key"]] = cast.ToString(secret.Data[keyRef["key"]])
+	}
+	data := map[string]interface{}{}
+	data["data"] = secData
+
+	return data, nil
 }
 
 func readStartupSecret(startupSecret startupSecret) (string, map[string]interface{}, error) {
