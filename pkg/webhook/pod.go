@@ -48,7 +48,7 @@ auto_auth {
                 }
         }
 }`
-	vaultAgentUID int64 = 100
+	vaultAgentUID int64 = 0
 
 	VaultEnvVolumeName = "vault-env"
 )
