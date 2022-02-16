@@ -819,6 +819,13 @@ func getBaseSecurityContext(podSecurityContext *corev1.PodSecurityContext, vault
 		RunAsNonRoot:             &vaultConfig.RunAsNonRoot,
 		ReadOnlyRootFilesystem:   &vaultConfig.ReadOnlyRootFilesystem,
 		Capabilities: &corev1.Capabilities{
+			Add: []corev1.Capability{
+				"CHOWN",
+				"SETFCAP",
+				"SETGID",
+				"SETPCAP",
+				"SETUID",
+			},
 			Drop: []corev1.Capability{
 				"ALL",
 			},
