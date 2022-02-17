@@ -146,6 +146,7 @@ test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id-in
 # Make sure file templating works
 kubectl apply -f deploy/test-deploy-templating.yaml
 sleep 10
+kubectl get pods -A
 test $(kubectl exec -it $(kubectl get pods --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c alpine -- cat /vault/secrets/config.yaml | jq '.id' | xargs ) = "secretId"
 
 kubectl apply -f deploy/test-deployment-seccontext.yaml
