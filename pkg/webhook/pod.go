@@ -658,8 +658,6 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 		})
 
 		securityContext := getBaseSecurityContext(podSecurityContext, vaultConfig)
-		runAsUser := vaultAgentUID
-		securityContext.RunAsUser = &runAsUser
 
 		containers = append(containers, corev1.Container{
 			Name:            "vault-agent",
@@ -771,9 +769,6 @@ func getAgentContainers(originalContainers []corev1.Container, podSecurityContex
 		securityContext.Capabilities.Add = append(securityContext.Capabilities.Add, "SYS_PTRACE")
 	}
 
-	runAsUser := vaultAgentUID
-	securityContext.RunAsUser = &runAsUser
-
 	serviceAccountMount := getServiceAccountMount(originalContainers)
 
 	containerVolMounts = append(containerVolMounts, serviceAccountMount, corev1.VolumeMount{
@@ -816,6 +811,7 @@ func getAgentContainers(originalContainers []corev1.Container, podSecurityContex
 func getBaseSecurityContext(podSecurityContext *corev1.PodSecurityContext, vaultConfig VaultConfig) *corev1.SecurityContext {
 	context := &corev1.SecurityContext{
 		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
+		RunAsUser:                &vaultConfig.RunAsUser,
 		RunAsNonRoot:             &vaultConfig.RunAsNonRoot,
 		ReadOnlyRootFilesystem:   &vaultConfig.ReadOnlyRootFilesystem,
 		Capabilities: &corev1.Capabilities{

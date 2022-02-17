@@ -143,6 +143,11 @@ test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id-fo
 test "$(kubectl get cm sample-configmap -o jsonpath='{.binaryData.aws-access-key-id-binary}')" = "secretId"
 test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id-inline}')" = "AWS_ACCESS_KEY_ID: secretId AWS_SECRET_ACCESS_KEY: s3cr3t"
 
+# Make sure file templating works
+kubectl apply -f deploy/test-deploy-templating.yaml
+sleep 10
+test $(kubectl exec -it $(kubectl get pods --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c alpine -- cat /vault/secrets/config.yaml | jq '.id' | xargs ) = "secretId"
+
 kubectl apply -f deploy/test-deployment-seccontext.yaml
 kubectl wait --for=condition=available deployment/hello-secrets-seccontext --timeout=120s
 check_webhook_seccontext
