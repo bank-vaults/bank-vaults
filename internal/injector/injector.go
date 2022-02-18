@@ -16,7 +16,6 @@ package injector
 
 import (
 	"encoding/json"
-	"github.com/banzaicloud/bank-vaults/internal/configuration"
 	"regexp"
 	"strings"
 
@@ -25,6 +24,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 
+	"github.com/banzaicloud/bank-vaults/internal/configuration"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
