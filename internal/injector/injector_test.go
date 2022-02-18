@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build integration
 // +build integration
 
 package injector
@@ -19,11 +20,13 @@ package injector
 import (
 	"encoding/base64"
 	"os"
+	"strings"
 	"testing"
 
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
@@ -31,7 +34,8 @@ import (
 func TestSecretInjector(t *testing.T) {
 	t.Parallel()
 
-	os.Setenv("VAULT_ADDR", "http://localhost:8200")
+	err := os.Setenv("VAULT_ADDR", "http://localhost:8200")
+	assert.NoError(t, err)
 
 	config := vaultapi.DefaultConfig()
 	if config.Error != nil {
@@ -77,11 +81,12 @@ func TestSecretInjector(t *testing.T) {
 		t.Parallel()
 
 		references := map[string]string{
-			"ACCOUNT_PASSWORD": "vault:secret/data/account#password",
-			"TRANSIT_SECRET":   `>>vault:transit/decrypt/mykey#${.plaintext | b64dec}#{"ciphertext":"` + ciphertext + `"}`,
-			"ROOT_CERT":        ">>vault:pki/root/generate/internal#certificate",
-			"ROOT_CERT_CACHED": ">>vault:pki/root/generate/internal#certificate",
-			"INLINE_SECRET":    "scheme://${vault:secret/data/account#username}:${vault:secret/data/account#password}@127.0.0.1:8080",
+			"ACCOUNT_PASSWORD":      "vault:secret/data/account#password",
+			"TRANSIT_SECRET":        `>>vault:transit/decrypt/mykey#${.plaintext | b64dec}#{"ciphertext":"` + ciphertext + `"}`,
+			"ROOT_CERT":             ">>vault:pki/root/generate/internal#certificate",
+			"ROOT_CERT_CACHED":      ">>vault:pki/root/generate/internal#certificate",
+			"INLINE_SECRET":         "scheme://${vault:secret/data/account#username}:${vault:secret/data/account#password}@127.0.0.1:8080",
+			"INLINE_DYNAMIC_SECRET": "${>>vault:pki/root/generate/internal#certificate}__${>>vault:pki/root/generate/internal#certificate}",
 		}
 
 		results := map[string]string{}
@@ -90,13 +95,19 @@ func TestSecretInjector(t *testing.T) {
 		}
 
 		err = injector.InjectSecretsFromVault(references, injectFunc)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// This tests caching of dynamic secrets in calls. We can't predict
 		// the value, but it is enough checking if they are present and equal.
+		assert.NotNil(t, results["ROOT_CERT"])
 		assert.Equal(t, results["ROOT_CERT"], results["ROOT_CERT_CACHED"])
 		delete(results, "ROOT_CERT")
 		delete(results, "ROOT_CERT_CACHED")
+
+		inlineCerts := strings.Split(results["INLINE_DYNAMIC_SECRET"], "__")
+		require.Equal(t, 2, len(inlineCerts), "two certs are expected")
+		assert.Equal(t, inlineCerts[0], inlineCerts[1], "the two certs should be the same")
+		delete(results, "INLINE_DYNAMIC_SECRET")
 
 		assert.Equal(t, map[string]string{
 			"ACCOUNT_PASSWORD": "secret",
@@ -141,7 +152,8 @@ func TestSecretInjector(t *testing.T) {
 func TestSecretInjectorFromPath(t *testing.T) {
 	t.Parallel()
 
-	os.Setenv("VAULT_ADDR", "http://localhost:8200")
+	err := os.Setenv("VAULT_ADDR", "http://localhost:8200")
+	assert.NoError(t, err)
 
 	config := vaultapi.DefaultConfig()
 	if config.Error != nil {
@@ -178,7 +190,7 @@ func TestSecretInjectorFromPath(t *testing.T) {
 		}
 
 		err = injector.InjectSecretsFromVaultPath(paths, injectFunc)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, map[string]string{
 			"password":  "secret",
@@ -197,7 +209,7 @@ func TestSecretInjectorFromPath(t *testing.T) {
 		}
 
 		err = injector.InjectSecretsFromVaultPath(paths, injectFunc)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, map[string]string{
 			"password":  "secret",
@@ -218,7 +230,8 @@ func TestSecretInjectorFromPath(t *testing.T) {
 		}
 
 		err = injector.InjectSecretsFromVaultPath(paths, injectFunc)
-		assert.Equal(t, map[string]string{}, results)
 		assert.EqualError(t, err, "path not found: secret/data/doesnotexist")
+
+		assert.Equal(t, map[string]string{}, results)
 	})
 }

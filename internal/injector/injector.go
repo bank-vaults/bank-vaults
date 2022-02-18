@@ -42,28 +42,32 @@ type Config struct {
 }
 
 type SecretInjector struct {
-	config  Config
-	client  *vault.Client
-	renewer SecretRenewer
-	logger  logrus.FieldLogger
+	config       Config
+	client       *vault.Client
+	renewer      SecretRenewer
+	logger       logrus.FieldLogger
+	transitCache map[string][]byte
+	secretCache  map[string]map[string]interface{}
 }
 
 func NewSecretInjector(config Config, client *vault.Client, renewer SecretRenewer, logger logrus.FieldLogger) SecretInjector {
-	return SecretInjector{config: config, client: client, renewer: renewer, logger: logger}
+	return SecretInjector{
+		config:       config,
+		client:       client,
+		renewer:      renewer,
+		logger:       logger,
+		transitCache: map[string][]byte{},
+		secretCache:  map[string]map[string]interface{}{},
+	}
 }
 
 var inlineMutationRegex = regexp.MustCompile(`\${([>]{0,2}vault:.*?)}`)
 
 func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inject SecretInjectorFunc) error {
-	transitCache := map[string][]byte{}
-	secretCache := map[string]map[string]interface{}{}
-
-	templater := configuration.NewTemplater(configuration.DefaultLeftDelimiter, configuration.DefaultRightDelimiter)
-
 	for name, value := range references {
 		if HasInlineVaultDelimiters(value) {
 			for _, vaultSecretReference := range FindInlineVaultDelimiters(value) {
-				mapData, err := getDataFromVault(map[string]string{name: vaultSecretReference[1]}, i)
+				mapData, err := i.GetDataFromVault(map[string]string{name: vaultSecretReference[1]})
 				if err != nil {
 					return err
 				}
@@ -93,7 +97,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 		valuePath := strings.TrimPrefix(value, "vault:")
 
 		// handle special case for vault:login env value
-		// namely pass through the the VAULT_TOKEN received from the Vault login procedure
+		// namely pass through the VAULT_TOKEN received from the Vault login procedure
 		if name == "VAULT_TOKEN" && valuePath == "login" {
 			value = i.client.RawClient().Token()
 			inject(name, value)
@@ -107,7 +111,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 				return errors.Errorf("found encrypted variable, but transit key ID is empty: %s", name)
 			}
 
-			if v, ok := transitCache[value]; ok {
+			if v, ok := i.transitCache[value]; ok {
 				inject(name, string(v))
 
 				continue
@@ -123,7 +127,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 				continue
 			}
 
-			transitCache[value] = out
+			i.transitCache[value] = out
 			inject(name, string(out))
 
 			continue
@@ -150,7 +154,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 		var data map[string]interface{}
 		var err error
 
-		if data = secretCache[secretCacheKey]; data == nil {
+		if data = i.secretCache[secretCacheKey]; data == nil {
 			data, err = i.readVaultPath(valuePath, versionOrData, update)
 		}
 
@@ -168,7 +172,9 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 			continue
 		}
 
-		secretCache[secretCacheKey] = data
+		i.secretCache[secretCacheKey] = data
+
+		templater := configuration.NewTemplater(configuration.DefaultLeftDelimiter, configuration.DefaultRightDelimiter)
 
 		if templater.IsGoTemplate(key) {
 			value, err := templater.Template(key, data)
@@ -304,12 +310,12 @@ func FindInlineVaultDelimiters(value string) [][]string {
 	return inlineMutationRegex.FindAllStringSubmatch(value, -1)
 }
 
-func getDataFromVault(data map[string]string, secretInjector SecretInjector) (map[string]string, error) {
+func (i SecretInjector) GetDataFromVault(data map[string]string) (map[string]string, error) {
 	vaultData := make(map[string]string, len(data))
 
 	inject := func(key, value string) {
 		vaultData[key] = value
 	}
 
-	return vaultData, secretInjector.InjectSecretsFromVault(data, inject)
+	return vaultData, i.InjectSecretsFromVault(data, inject)
 }

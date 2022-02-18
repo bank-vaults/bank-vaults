@@ -24,7 +24,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/banzaicloud/bank-vaults/internal/injector"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 type dockerCredentials struct {
@@ -99,6 +98,12 @@ func (mw *MutatingWebhook) MutateSecret(secret *corev1.Secret, vaultConfig Vault
 
 	defer vaultClient.Close()
 
+	config := injector.Config{
+		TransitKeyID: vaultConfig.TransitKeyID,
+		TransitPath:  vaultConfig.TransitPath,
+	}
+	secretInjector := injector.NewSecretInjector(config, vaultClient, nil, logger)
+
 	for key, value := range secret.Data {
 		if key == corev1.DockerConfigJsonKey {
 			var dc dockerCredentials
@@ -106,7 +111,7 @@ func (mw *MutatingWebhook) MutateSecret(secret *corev1.Secret, vaultConfig Vault
 			if err != nil {
 				return errors.Wrap(err, "unmarshal dockerconfig json failed")
 			}
-			err = mw.mutateDockerCreds(secret, &dc, vaultClient, vaultConfig)
+			err = mw.mutateDockerCreds(secret, &dc, secretInjector)
 			if err != nil {
 				return errors.Wrap(err, "mutate dockerconfig json failed")
 			}
@@ -114,7 +119,7 @@ func (mw *MutatingWebhook) MutateSecret(secret *corev1.Secret, vaultConfig Vault
 			data := map[string]string{
 				key: string(value),
 			}
-			err := mw.mutateInlineSecretData(secret, data, vaultClient, vaultConfig)
+			err := mw.mutateInlineSecretData(secret, data, secretInjector)
 			if err != nil {
 				return err
 			}
@@ -122,7 +127,7 @@ func (mw *MutatingWebhook) MutateSecret(secret *corev1.Secret, vaultConfig Vault
 			sc := map[string]string{
 				key: string(value),
 			}
-			err := mw.mutateSecretData(secret, sc, vaultClient, vaultConfig)
+			err := mw.mutateSecretData(secret, sc, secretInjector)
 			if err != nil {
 				return errors.Wrap(err, "mutate generic secret failed")
 			}
@@ -132,7 +137,7 @@ func (mw *MutatingWebhook) MutateSecret(secret *corev1.Secret, vaultConfig Vault
 	return nil
 }
 
-func (mw *MutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCredentials, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCredentials, secretInjector injector.SecretInjector) error {
 	assembled := dockerCredentials{Auths: map[string]dockerAuthConfig{}}
 
 	for key, creds := range dc.Auths {
@@ -150,12 +155,12 @@ func (mw *MutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCr
 			username := fmt.Sprintf("%s:%s", split[0], split[1])
 			password := fmt.Sprintf("%s:%s", split[2], split[3])
 
-			credPath := map[string]string{
+			credentialData := map[string]string{
 				"username": username,
 				"password": password,
 			}
 
-			dcCreds, err := getDataFromVault(credPath, vaultClient, vaultConfig, mw.logger)
+			dcCreds, err := secretInjector.GetDataFromVault(credentialData)
 			if err != nil {
 				return err
 			}
@@ -181,10 +186,10 @@ func (mw *MutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCr
 	return nil
 }
 
-func (mw *MutatingWebhook) mutateInlineSecretData(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
+func (mw *MutatingWebhook) mutateInlineSecretData(secret *corev1.Secret, sc map[string]string, secretInjector injector.SecretInjector) error {
 	for key, value := range sc {
 		for _, vaultSecretReference := range injector.FindInlineVaultDelimiters(value) {
-			mapData, err := getDataFromVault(map[string]string{key: vaultSecretReference[1]}, vaultClient, vaultConfig, mw.logger)
+			mapData, err := secretInjector.GetDataFromVault(map[string]string{key: vaultSecretReference[1]})
 			if err != nil {
 				return err
 			}
@@ -196,8 +201,8 @@ func (mw *MutatingWebhook) mutateInlineSecretData(secret *corev1.Secret, sc map[
 	return nil
 }
 
-func (mw *MutatingWebhook) mutateSecretData(secret *corev1.Secret, sc map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
-	secCreds, err := getDataFromVault(sc, vaultClient, vaultConfig, mw.logger)
+func (mw *MutatingWebhook) mutateSecretData(secret *corev1.Secret, sc map[string]string, secretInjector injector.SecretInjector) error {
+	secCreds, err := secretInjector.GetDataFromVault(sc)
 	if err != nil {
 		return err
 	}

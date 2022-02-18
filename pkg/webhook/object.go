@@ -18,11 +18,9 @@ import (
 	"strings"
 
 	"emperror.dev/errors"
-	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/banzaicloud/bank-vaults/internal/injector"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 type element interface {
@@ -76,7 +74,7 @@ func sliceIterator(s []interface{}) iterator {
 	return c
 }
 
-func traverseObject(o interface{}, vaultClient *vault.Client, vaultConfig VaultConfig, logger logrus.FieldLogger) error {
+func traverseObject(o interface{}, secretInjector injector.SecretInjector) error {
 	var iterator iterator
 
 	switch value := o.(type) {
@@ -92,7 +90,7 @@ func traverseObject(o interface{}, vaultClient *vault.Client, vaultConfig VaultC
 		switch s := e.Get().(type) {
 		case string:
 			if hasVaultPrefix(s) {
-				dataFromVault, err := getDataFromVault(map[string]string{"data": s}, vaultClient, vaultConfig, logger)
+				dataFromVault, err := secretInjector.GetDataFromVault(map[string]string{"data": s})
 				if err != nil {
 					return err
 				}
@@ -101,7 +99,7 @@ func traverseObject(o interface{}, vaultClient *vault.Client, vaultConfig VaultC
 			} else if injector.HasInlineVaultDelimiters(s) {
 				dataFromVault := s
 				for _, vaultSecretReference := range injector.FindInlineVaultDelimiters(s) {
-					mapData, err := getDataFromVault(map[string]string{"data": vaultSecretReference[1]}, vaultClient, vaultConfig, logger)
+					mapData, err := secretInjector.GetDataFromVault(map[string]string{"data": vaultSecretReference[1]})
 					if err != nil {
 						return err
 					}
@@ -110,7 +108,7 @@ func traverseObject(o interface{}, vaultClient *vault.Client, vaultConfig VaultC
 				e.Set(dataFromVault)
 			}
 		case map[string]interface{}, []interface{}:
-			err := traverseObject(e.Get(), vaultClient, vaultConfig, logger)
+			err := traverseObject(e.Get(), secretInjector)
 			if err != nil {
 				return err
 			}
@@ -130,5 +128,11 @@ func (mw *MutatingWebhook) MutateObject(object *unstructured.Unstructured, vault
 
 	defer vaultClient.Close()
 
-	return traverseObject(object.Object, vaultClient, vaultConfig, mw.logger)
+	config := injector.Config{
+		TransitKeyID: vaultConfig.TransitKeyID,
+		TransitPath:  vaultConfig.TransitPath,
+	}
+	secretInjector := injector.NewSecretInjector(config, vaultClient, nil, logger)
+
+	return traverseObject(object.Object, secretInjector)
 }

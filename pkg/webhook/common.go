@@ -16,28 +16,7 @@ package webhook
 
 import (
 	"strings"
-
-	"github.com/sirupsen/logrus"
-
-	"github.com/banzaicloud/bank-vaults/internal/injector"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
-
-func getDataFromVault(data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig, logger logrus.FieldLogger) (map[string]string, error) {
-	vaultData := make(map[string]string, len(data))
-
-	inject := func(key, value string) {
-		vaultData[key] = value
-	}
-
-	config := injector.Config{
-		TransitKeyID: vaultConfig.TransitKeyID,
-		TransitPath:  vaultConfig.TransitPath,
-	}
-	secretInjector := injector.NewSecretInjector(config, vaultClient, nil, logger)
-
-	return vaultData, secretInjector.InjectSecretsFromVault(data, inject)
-}
 
 func hasVaultPrefix(value string) bool {
 	return strings.HasPrefix(value, "vault:") || strings.HasPrefix(value, ">>vault:")
