@@ -21,7 +21,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/banzaicloud/bank-vaults/internal/injector"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 func configMapNeedsMutation(configMap *corev1.ConfigMap) bool {
@@ -52,7 +51,13 @@ func (mw *MutatingWebhook) MutateConfigMap(configMap *corev1.ConfigMap, vaultCon
 
 	defer vaultClient.Close()
 
-	configMap.Data, err = getDataFromVault(configMap.Data, vaultClient, vaultConfig, mw.logger)
+	config := injector.Config{
+		TransitKeyID: vaultConfig.TransitKeyID,
+		TransitPath:  vaultConfig.TransitPath,
+	}
+	secretInjector := injector.NewSecretInjector(config, vaultClient, nil, logger)
+
+	configMap.Data, err = secretInjector.GetDataFromVault(configMap.Data)
 	if err != nil {
 		return err
 	}
@@ -62,7 +67,7 @@ func (mw *MutatingWebhook) MutateConfigMap(configMap *corev1.ConfigMap, vaultCon
 			binaryData := map[string]string{
 				key: string(value),
 			}
-			err := mw.mutateConfigMapBinaryData(configMap, binaryData, vaultClient, vaultConfig)
+			err := mw.mutateConfigMapBinaryData(configMap, binaryData, secretInjector)
 			if err != nil {
 				return err
 			}
@@ -72,8 +77,8 @@ func (mw *MutatingWebhook) MutateConfigMap(configMap *corev1.ConfigMap, vaultCon
 	return nil
 }
 
-func (mw *MutatingWebhook) mutateConfigMapBinaryData(configMap *corev1.ConfigMap, data map[string]string, vaultClient *vault.Client, vaultConfig VaultConfig) error {
-	mapData, err := getDataFromVault(data, vaultClient, vaultConfig, mw.logger)
+func (mw *MutatingWebhook) mutateConfigMapBinaryData(configMap *corev1.ConfigMap, data map[string]string, secretInjector injector.SecretInjector) error {
+	mapData, err := secretInjector.GetDataFromVault(data)
 	if err != nil {
 		return err
 	}
