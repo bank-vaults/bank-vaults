@@ -11,9 +11,9 @@ function waitfor {
 
 function finish {
     echo "The last command was: $(history 1 | awk '{print $2}')"
-    kubectl get pods
-    kubectl describe pods
-    kubectl describe services
+    kubectl get pods -A
+    kubectl describe pods -A
+    kubectl describe services -A
     kubectl logs deployment/vault-operator
     kubectl logs deployment/vault-configurer
     kubectl logs --all-containers statefulset/vault
