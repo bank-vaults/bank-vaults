@@ -147,7 +147,8 @@ test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id-in
 kubectl apply -f deploy/test-deploy-templating.yaml
 kubectl get pods -A
 sleep 10
-kubectl -n vswh logs $(kubectl get pods -n vswh --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}')
+kubectl -n vswh logs $(kubectl get pods -n vswh --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c vault-agent
+kubectl -n vswh logs $(kubectl get pods -n vswh --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c alpine
 kubectl wait pod -l app.kubernetes.io/name=test-templating --for=condition=ready --timeout=120s -A
 kubectl get pods -A
 test $(kubectl -n vswh exec -it $(kubectl get pods -n vswh --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c alpine -- cat /vault/secrets/config.yaml | jq '.id' | xargs ) = "secretId"
