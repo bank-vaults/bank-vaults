@@ -27,7 +27,7 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v3
       with:
-          fetch-depth: 0 # chart testing fails otherwise
+        fetch-depth: 0 # chart testing fails otherwise
 
     - name: Check licenses
       env:
@@ -52,6 +52,15 @@ jobs:
       run: make check
       env:
         VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
+
+#    # Uncomment for debugging with SSH
+#    - name: Setup upterm session
+#      uses: lhotari/action-upterm@v1
+#      with:
+#        ## limits ssh access and adds the ssh public key for the user which triggered the workflow
+#        limit-access-to-actor: true
+#        ## limits ssh access and adds the ssh public keys of the listed GitHub users
+#        limit-access-to-users: bonifaido
 
   acceptance-test:
     name: Acceptance test
