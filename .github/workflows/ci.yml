@@ -27,7 +27,7 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v3
       with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
 
     - name: Check licenses
       env:
@@ -50,17 +50,8 @@ jobs:
     - name: Set up chart-testing
       uses: helm/chart-testing-action@v2.2.0
 
-
-    - name: Setup upterm session
-      uses: lhotari/action-upterm@v1
-      with:
-          ## limits ssh access and adds the ssh public key for the user which triggered the workflow
-          limit-access-to-actor: true
-          ## limits ssh access and adds the ssh public keys of the listed GitHub users
-          limit-access-to-users: bonifaido
-
     - name: Run chart-testing
-      run: ct lint --config charts/testing.yaml
+      run: ct lint --debug --config charts/testing.yaml
 
   acceptance-test:
     name: Acceptance test
@@ -78,7 +69,7 @@ jobs:
         go-version: ${{ env.GO_VERSION }}
 
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Start kind cluster
       run: |
