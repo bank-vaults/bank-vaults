@@ -25,12 +25,20 @@ jobs:
         go-version: ${{ env.GO_VERSION }}
 
     - name: Check out code
-      uses: actions/checkout@v1
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0 # chart testing fails otherwise
 
     - name: Check licenses
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: make license-check
+
+    - name: Set up chart-testing
+      uses: helm/chart-testing-action@v2.2.0
+
+    - name: Run chart-testing
+      run: ct lint --debug --config charts/testing.yaml
 
     - name: Setup test dependencies
       run: |
@@ -45,11 +53,14 @@ jobs:
       env:
         VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
 
-    - name: Set up chart-testing
-      uses: helm/chart-testing-action@v2.2.0
-
-    - name: Run chart-testing
-      run: ct lint --config charts/testing.yaml
+#    # Uncomment for debugging with SSH
+#    - name: Setup upterm session
+#      uses: lhotari/action-upterm@v1
+#      with:
+#        ## limits ssh access and adds the ssh public key for the user which triggered the workflow
+#        limit-access-to-actor: true
+#        ## limits ssh access and adds the ssh public keys of the listed GitHub users
+#        limit-access-to-users: bonifaido
 
   acceptance-test:
     name: Acceptance test
@@ -67,7 +78,7 @@ jobs:
         go-version: ${{ env.GO_VERSION }}
 
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Start kind cluster
       run: |
