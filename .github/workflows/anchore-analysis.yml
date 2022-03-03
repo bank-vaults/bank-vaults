@@ -19,7 +19,7 @@ jobs:
 
     steps:
     - name: Checkout the code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag banzaicloud/bank-vaults:latest
