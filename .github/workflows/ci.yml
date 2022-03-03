@@ -27,12 +27,18 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v3
       with:
-          fetch-depth: 0
+          fetch-depth: 0 # chart testing fails otherwise
 
     - name: Check licenses
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: make license-check
+
+    - name: Set up chart-testing
+      uses: helm/chart-testing-action@v2.2.0
+
+    - name: Run chart-testing
+      run: ct lint --debug --config charts/testing.yaml
 
     - name: Setup test dependencies
       run: |
@@ -42,16 +48,10 @@ jobs:
         sudo pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin banzai --token-label bank-vaults --label bank-vaults
         sudo chown -R runner:docker /etc/softhsm /var/lib/softhsm
 
-#    - name: Run verification
-#      run: make check
-#      env:
-#        VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
-
-    - name: Set up chart-testing
-      uses: helm/chart-testing-action@v2.2.0
-
-    - name: Run chart-testing
-      run: ct lint --debug --config charts/testing.yaml
+    - name: Run verification
+      run: make check
+      env:
+        VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
 
   acceptance-test:
     name: Acceptance test
