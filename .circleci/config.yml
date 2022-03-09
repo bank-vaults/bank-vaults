@@ -7,18 +7,16 @@ jobs:
   multi-cluster-acceptance-test:
     machine:
       image: ubuntu-2004:202107-02
-#      docker_layer_caching: true
 
     resource_class: large
 
     environment:
-      GO_VERSION: "1.17.1"
-      K8S_VERSION: v1.21.1
-      HELM_VERSION: v3.7.0
+      GO_VERSION: "1.17.8"
+      K8S_VERSION: v1.23.4
+      HELM_VERSION: v3.8.0
       KUBECONFIG: /home/circleci/.kube/config
-      KIND_VERSION: v0.11.1
+      KIND_VERSION: v0.12.0
       GOPATH: /go
-      DOCKER_LATEST: 1
 
     steps:
       - checkout
@@ -29,16 +27,6 @@ jobs:
             curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
             mkdir -p ${HOME}/.kube
             touch ${HOME}/.kube/config
-
-      # TODO: Build and load this images to the kind clusters once this doesn't take ages
-      # - run:
-      #     name: Build Docker images
-      #     command: |
-      #       make docker
-      #       make docker-operator
-      #       make docker-vault-env
-      #       make docker-webhook
-      #     no_output_timeout: 30m
 
       - run:
           name: Create go directory
