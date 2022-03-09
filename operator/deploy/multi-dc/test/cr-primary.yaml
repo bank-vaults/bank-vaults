@@ -35,7 +35,7 @@ spec:
   unsealConfig:
     vault:
       address: "http://{{.CENTRAL_VAULT_ADDRESS}}:8200"
-      token: "227e1cce-6bf7-30bb-2d2a-acc854318caf"
+      token: "{{.VAULT_TOKEN}}"
       unsealKeysPath: "secret/data/vault-unseal-keys"
 
   # "self" is a special value which means that this
@@ -59,8 +59,6 @@ spec:
       statsd_address: localhost:9125
     ui: true
 
-  # See: https://banzaicloud.com/docs/bank-vaults/cli-tool/#example-external-vault-configuration
-  # The repository also contains a lot examples in the deploy/ and operator/deploy directories.
   externalConfig:
     policies:
       - name: allow_secrets
