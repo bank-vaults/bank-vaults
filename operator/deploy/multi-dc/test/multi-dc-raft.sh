@@ -14,6 +14,9 @@ set -euo pipefail
 # - vault
 #
 
+METALLB_VERSION=v0.12.1
+export VAULT_TOKEN=$(uuidgen)
+
 if [ $# = 0 ]; then
     echo "The Bank-Vaults Multi-DC CLI"
     echo
@@ -37,10 +40,10 @@ function waitfor {
 
 function metallb_setup {
     export METALLB_ADDRESS_RANGE=$1
-    kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml
-    kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/metallb.yaml
+    kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/manifests/namespace.yaml
+    kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/manifests/metallb.yaml
     kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
-    cat operator/deploy/multi-dc/test/metallb-config.yaml | envtpl | kubectl apply -f -
+    envtpl operator/deploy/multi-dc/test/metallb-config.yaml | kubectl apply -f -
 }
 
 function cidr_range {
@@ -66,7 +69,7 @@ function infra_setup {
 
     node_setup tertiary 172.18.3.255/25
 
-    docker run -d --rm --network kind -e VAULT_DEV_ROOT_TOKEN_ID=227e1cce-6bf7-30bb-2d2a-acc854318caf --name central-vault vault
+    docker run -d --rm --network kind -e VAULT_DEV_ROOT_TOKEN_ID=${VAULT_TOKEN} --name central-vault vault
     export CENTRAL_VAULT_ADDRESS=$(docker inspect central-vault --format '{{.NetworkSettings.Networks.kind.IPAddress}}')
 }
 
@@ -76,7 +79,7 @@ function install_instance {
     helm upgrade --install vault-operator charts/vault-operator --wait --set image.tag=latest --set image.pullPolicy=Always --set image.bankVaultsTag=latest
 
     kubectl apply -f operator/deploy/rbac.yaml
-    cat operator/deploy/multi-dc/test/cr-${INSTANCE}.yaml | envtpl | kubectl apply -f -
+    envtpl operator/deploy/multi-dc/test/cr-${INSTANCE}.yaml | kubectl apply -f -
 
     echo "Waiting for for ${INSTANCE} vault instance..."
     waitfor kubectl get pod/vault-${INSTANCE}-0
@@ -123,12 +126,10 @@ if [ $COMMAND = "install" ]; then
 
 elif [ $COMMAND = "status" ]; then
 
-    export VAULT_TOKEN=227e1cce-6bf7-30bb-2d2a-acc854318caf
-    
     export VAULT_SKIP_VERIFY="true"
 
     export VAULT_ADDR=https://$(implement_me):8200
-    
+
     vault operator raft list-peers -format json | jq
 
 elif [ $COMMAND = "uninstall" ]; then
