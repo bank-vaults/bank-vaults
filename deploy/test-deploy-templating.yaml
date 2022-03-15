@@ -6,7 +6,7 @@ metadata:
     my-app.kubernetes.io/name: my-app-vault-agent
     branches: "true"
   name: my-app-vault-agent
-  namespace: vswh
+  namespace: default
 data:
   config.hcl: |
     vault {
@@ -44,7 +44,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vault-test
-  namespace: vswh
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -68,3 +68,10 @@ spec:
       - name: alpine
         image: alpine
         command: ["sh", "-c", "cat /vault/secrets/config.yaml && echo going to sleep... && sleep 1000"]
+        resources:
+          limits:
+            cpu: "1"
+            memory: 100Mi
+          requests:
+            cpu: "1"
+            memory: 100Mi

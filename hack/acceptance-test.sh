@@ -34,6 +34,10 @@ function check_webhook_seccontext {
 
 trap finish EXIT
 
+
+kind delete cluster
+./hack/kind.sh
+sleep 20
 # Smoke test the pure Vault Helm chart first
 helm upgrade --install --wait vault ./charts/vault --set unsealer.image.tag=latest --set ingress.enabled=true --set "ingress.hosts[0]=localhost"
 helm delete vault
@@ -49,6 +53,8 @@ helm upgrade --install vault-operator ./charts/vault-operator \
     --set image.bankVaultsTag=latest \
     --set image.pullPolicy=IfNotPresent \
     --wait
+
+#helm upgrade --install vault-operator banzaicloud-stable/vault-operator --set=image.repository=localhost:5000/vault-operator --set=image.tag=issue-1531-fix --wait
 
 # Install common RBAC setup for CRs
 kubectl apply -f operator/deploy/rbac.yaml
@@ -120,7 +126,14 @@ kurun apply -f hack/oidc-pod.yaml
 waitfor "kubectl get pod/oidc -o json | jq -e '.status.phase == \"Succeeded\"'"
 kubectl delete -f hack/oidc-pod.yaml
 
+kubectl delete -f operator/deploy/cr-oidc.yaml
+kubectl delete secret vault-unseal-keys
+kubectl delete pvc --all
+sleep 20
+kubectl apply -f operator/deploy/cr-raft.yaml
+
 # Run the webhook test, the hello-secrets deployment should be successfully mutated
+
 helm upgrade --install vault-secrets-webhook ./charts/vault-secrets-webhook \
     --set image.tag=latest \
     --set image.pullPolicy=IfNotPresent \
@@ -131,6 +144,8 @@ helm upgrade --install vault-secrets-webhook ./charts/vault-secrets-webhook \
     --set vaultEnv.tag=latest \
     --namespace vswh \
     --wait
+
+#helm upgrade --install vault-secrets-webhook banzaicloud-stable/vault-secrets-webhook --set=image.repository=localhost:5000/vault-secrets-webhook --set=image.tag=issue-1531-fix --namespace vswh --wait
 
 kubectl apply -f deploy/test-secret.yaml
 test "$(kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].username')" = "dockerrepouser"
@@ -147,14 +162,10 @@ test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id-in
 kubectl apply -f deploy/test-deploy-templating.yaml
 kubectl get pods -A
 sleep 10
-kubectl -n vswh logs $(kubectl get pods -n vswh --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c vault-agent
-kubectl -n vswh logs $(kubectl get pods -n vswh --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c alpine
-#kubectl logs $(kubectl get pods --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c vault-agent
-#kubectl logs $(kubectl get pods --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c alpine
+kubectl logs $(kubectl get pods --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c alpine
+kubectl logs $(kubectl get pods --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c vault-agent
 kubectl wait pod -l app.kubernetes.io/name=test-templating --for=condition=ready --timeout=120s -A
-kubectl get pods -A
-test $(kubectl -n vswh exec -it $(kubectl get pods -n vswh --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c alpine -- cat /vault/secrets/config.yaml | jq '.id' | xargs ) = "secretId"
-#test $(kubectl exec -it $(kubectl get pods --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c alpine -- cat /vault/secrets/config.yaml | jq '.id' | xargs ) = "secretId"
+test $(kubectl exec -it $(kubectl get pods --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c alpine -- cat /vault/secrets/config.yaml | jq '.id' | xargs ) = "secretId"
 
 kubectl apply -f deploy/test-deployment-seccontext.yaml
 kubectl wait --for=condition=available deployment/hello-secrets-seccontext --timeout=120s

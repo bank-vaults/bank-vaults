@@ -109,6 +109,11 @@ spec:
         description: General secrets.
         options:
           version: 2
+      - path: kv
+        type: kv
+        description: General secrets.
+        options:
+          version: 2
 
     # Allows writing some secrets to Vault (useful for development purposes).
     # See https://www.vaultproject.io/docs/secrets/kv/index.html for more information.
