@@ -35,9 +35,9 @@ function check_webhook_seccontext {
 trap finish EXIT
 
 
-kind delete cluster
-./hack/kind.sh
-sleep 20
+#kind delete cluster
+#./hack/kind.sh
+#sleep 20
 # Smoke test the pure Vault Helm chart first
 helm upgrade --install --wait vault ./charts/vault --set unsealer.image.tag=latest --set ingress.enabled=true --set "ingress.hosts[0]=localhost"
 helm delete vault
