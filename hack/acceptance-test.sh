@@ -131,6 +131,7 @@ kubectl delete secret vault-unseal-keys
 kubectl delete pvc --all
 sleep 20
 kubectl apply -f operator/deploy/cr-raft.yaml
+kubectl wait --for=condition=healthy --timeout=150s vault/vault
 
 # Run the webhook test, the hello-secrets deployment should be successfully mutated
 
