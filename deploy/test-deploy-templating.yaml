@@ -70,8 +70,8 @@ spec:
         command: ["sh", "-c", "cat /vault/secrets/config.yaml && echo going to sleep... && sleep 1000"]
         resources:
           limits:
-            cpu: "1"
+            cpu: "0.1"
             memory: 10Mi
           requests:
-            cpu: "1"
+            cpu: "0.1"
             memory: 10Mi
