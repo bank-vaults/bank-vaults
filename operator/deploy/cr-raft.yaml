@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/name: vault
     vault_cr: vault
 spec:
-  size: 3
+  size: 1
   image: vault:1.6.2
 
   # Common annotations for all created resources
