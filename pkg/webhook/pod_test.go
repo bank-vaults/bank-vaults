@@ -506,10 +506,18 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 	agentRunAsUser := vaultAgentUID
 
 	baseSecurityContext := &corev1.SecurityContext{
+		RunAsUser:                &agentRunAsUser,
 		RunAsNonRoot:             &vaultConfig.RunAsNonRoot,
 		ReadOnlyRootFilesystem:   &vaultConfig.ReadOnlyRootFilesystem,
 		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 		Capabilities: &corev1.Capabilities{
+			Add: []corev1.Capability{
+				"CHOWN",
+				"SETFCAP",
+				"SETGID",
+				"SETPCAP",
+				"SETUID",
+			},
 			Drop: []corev1.Capability{
 				"ALL",
 			},
@@ -522,6 +530,13 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 		ReadOnlyRootFilesystem:   &vaultConfig.ReadOnlyRootFilesystem,
 		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
 		Capabilities: &corev1.Capabilities{
+			Add: []corev1.Capability{
+				"CHOWN",
+				"SETFCAP",
+				"SETGID",
+				"SETPCAP",
+				"SETUID",
+			},
 			Drop: []corev1.Capability{
 				"ALL",
 			},
@@ -538,6 +553,11 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 				"ALL",
 			},
 			Add: []corev1.Capability{
+				"CHOWN",
+				"SETFCAP",
+				"SETGID",
+				"SETPCAP",
+				"SETUID",
 				"IPC_LOCK",
 			},
 		},

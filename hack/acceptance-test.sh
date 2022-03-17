@@ -11,9 +11,9 @@ function waitfor {
 
 function finish {
     echo "The last command was: $(history 1 | awk '{print $2}')"
-    kubectl get pods
-    kubectl describe pods
-    kubectl describe services
+    kubectl get pods -A
+    kubectl describe pods -A
+    kubectl describe services -A
     kubectl logs deployment/vault-operator
     kubectl logs deployment/vault-configurer
     kubectl logs --all-containers statefulset/vault
@@ -120,6 +120,15 @@ kurun apply -f hack/oidc-pod.yaml
 waitfor "kubectl get pod/oidc -o json | jq -e '.status.phase == \"Succeeded\"'"
 kubectl delete -f hack/oidc-pod.yaml
 
+kubectl delete -f operator/deploy/cr-oidc.yaml
+kubectl delete secret vault-unseal-keys
+kubectl delete pvc --all
+
+sleep 20
+
+kubectl apply -f operator/deploy/cr-raft-1.yaml
+kubectl wait --for=condition=healthy --timeout=150s vault/vault
+
 # Run the webhook test, the hello-secrets deployment should be successfully mutated
 helm upgrade --install vault-secrets-webhook ./charts/vault-secrets-webhook \
     --set image.tag=latest \
@@ -142,6 +151,12 @@ test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id}')
 test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id-formatted}')" = "AWS key in base64: c2VjcmV0SWQ="
 test "$(kubectl get cm sample-configmap -o jsonpath='{.binaryData.aws-access-key-id-binary}')" = "secretId"
 test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id-inline}')" = "AWS_ACCESS_KEY_ID: secretId AWS_SECRET_ACCESS_KEY: s3cr3t"
+
+# Make sure file templating works
+kubectl apply -f deploy/test-deploy-templating.yaml
+sleep 10
+kubectl wait pod -l app.kubernetes.io/name=test-templating --for=condition=ready --timeout=120s -A
+test $(kubectl exec -it $(kubectl get pods --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}') -c alpine -- cat /vault/secrets/config.yaml | jq '.id' | xargs ) = "secretId"
 
 kubectl apply -f deploy/test-deployment-seccontext.yaml
 kubectl wait --for=condition=available deployment/hello-secrets-seccontext --timeout=120s
