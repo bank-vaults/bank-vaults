@@ -53,6 +53,15 @@ helm upgrade --install vault-operator ./charts/vault-operator \
 # Install common RBAC setup for CRs
 kubectl apply -f operator/deploy/rbac.yaml
 
+# Wait for operator
+kubectl wait --for=condition=ready --timeout=150s pods -l app.kubernetes.io/name=vault-operator
+
+# 0. test: KVv2 options
+kubectl apply -f operator/deploy/cr-kvv2.yaml
+kubectl wait --for=condition=healthy --timeout=180s vault/vault
+kubectl delete -f operator/deploy/cr-kvv2.yaml
+kubectl delete secret vault-unseal-keys
+
 # 1. test: test the external secrets watcher work and match as expected
 kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
 kubectl wait --for=condition=healthy --timeout=180s vault/vault
@@ -140,6 +149,8 @@ helm upgrade --install vault-secrets-webhook ./charts/vault-secrets-webhook \
     --set vaultEnv.tag=latest \
     --namespace vswh \
     --wait
+
+kubectl wait --namespace vswh --for=condition=ready --timeout=150s pods -l app.kubernetes.io/name=vault-secrets-webhook
 
 kubectl apply -f deploy/test-secret.yaml
 test "$(kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].username')" = "dockerrepouser"
