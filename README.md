@@ -1,4 +1,4 @@
-<p align="center"><img src="https://raw.githubusercontent.com/banzaicloud/bank-vaults/main/docs/images/logo.svg" width="260"></p>
+<p align="center"><img src="docs/images/logo/bank-vaults-logo-vertical.svg" width="270"></p>
 
 <p align="center">
 
