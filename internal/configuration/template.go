@@ -71,7 +71,7 @@ func (t Templater) EnvTemplate(templateText string) (*bytes.Buffer, error) {
 	env.Env = make(map[string]string, len(os.Environ()))
 
 	for _, v := range os.Environ() {
-		split := strings.Split(v, "=")
+		split := strings.SplitN(v, "=", 2)
 		env.Env[split[0]] = split[1]
 	}
 
