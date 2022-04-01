@@ -83,7 +83,7 @@ jobs:
     - name: Start kind cluster
       run: |
         kind version
-        kind create cluster --config hack/kind.yaml
+        kind create cluster --config hack/kind.yaml --wait 1m
 
     - name: Build Docker images
       run: |

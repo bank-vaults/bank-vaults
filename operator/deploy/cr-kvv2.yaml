@@ -1,0 +1,105 @@
+apiVersion: vault.banzaicloud.com/v1alpha1
+kind: Vault
+metadata:
+  name: vault
+spec:
+  size: 1
+  image: vault:1.6.2
+
+  # Specify the Service's type where the Vault Service is exposed
+  serviceType: ClusterIP
+
+  # Service account name of Vault pod
+  serviceAccount: vault
+
+  # Disable statsd side-car container
+  statsdDisabled: true
+
+  # Describe where you would like to store the Vault unseal keys and root token.
+  unsealConfig:
+    options:
+      # The preFlightChecks flag enables unseal and root token storage tests
+      # This is true by default
+      preFlightChecks: true
+      # The storeRootToken flag enables storing of root token in chosen storage
+      # This is true by default
+      storeRootToken: true
+    kubernetes:
+      # Namespace for Secret used to store root token and unseal keys
+      secretNamespace: default
+      # Secret name to store root token and unseal keys
+      secretName: vault-unseal-keys
+
+  # A YAML representation of a final vault config file.
+  # See https://www.vaultproject.io/docs/configuration/ for more information.
+  config:
+    storage:
+      file:
+        path: /vault/file
+    listener:
+      tcp:
+        address: 0.0.0.0:8200
+        tls_disable: true
+    api_addr: http://vault.default:8200
+    disable_clustering: true
+    ui: true
+
+  # See: https://banzaicloud.com/docs/bank-vaults/cli-tool/#example-external-vault-configuration
+  # The repository also contains a lot examples in the deploy/ and operator/deploy directories.
+  externalConfig:
+    policies:
+      - name: allow_secrets
+        rules: |
+          path "secret/*" {
+            capabilities = ["create", "read", "update", "delete", "list"]
+          }
+
+    auth:
+      - type: kubernetes
+        roles:
+          # Allow every pod in the default namespace to use the secret kv store
+          - name: default
+            bound_service_account_names: ["default"]
+            bound_service_account_namespaces: ["default"]
+            policies: ["allow_secrets"]
+            ttl: 1h
+
+    secrets:
+      - type: kv
+        path: secret
+        description: General secrets backend with cas constraint.
+        options:
+          version: 2
+        configuration:
+          config:
+            - max_versions: 3
+              cas_required: true
+      - type: kv
+        path: kv
+        description: General secrets backend.
+        options:
+          version: 2
+
+    startupSecrets:
+      - type: kv
+        path: secret/data/info
+        data:
+          data:
+            APP_LOGIN: user
+            APP_PASSWORD: password
+          options:
+            cas: 0
+      - type: kv
+        path: kv/data/info
+        data:
+          data:
+            APP_LOGIN: user
+            APP_PASSWORD: password
+
+  volumes:
+    - name: vault-file
+      emptyDir: {}
+
+  volumeMounts:
+    - name: vault-file
+      mountPath: /vault/file

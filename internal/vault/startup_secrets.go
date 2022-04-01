@@ -31,6 +31,7 @@ type startupSecret struct {
 	Path string `mapstructure:"path"`
 	Data struct {
 		Data         map[string]interface{}   `mapstructure:"data"`
+		Options      map[string]interface{}   `mapstructure:"options,omitempty"`
 		SecretKeyRef []map[string]interface{} `mapstructure:"secretKeyRef"`
 	} `mapstructure:"data"`
 }
@@ -119,6 +120,10 @@ func (v *vault) configureStartupSecrets() error {
 			path, data, err := readStartupSecret(startupSecret)
 			if err != nil {
 				return errors.Wrap(err, "unable to read 'kv' startup secret")
+			}
+
+			if len(startupSecret.Data.Options) > 0 {
+				data["options"] = startupSecret.Data.Options
 			}
 
 			_, err = v.writeWithWarningCheck(path, data)
