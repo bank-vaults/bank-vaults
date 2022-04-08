@@ -1326,6 +1326,9 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			Replicas: &replicas,
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateStatefulSetStrategy{
+					Partition: new(int32),
+				},
 			},
 			PodManagementPolicy: podManagementPolicy,
 			Selector: &metav1.LabelSelector{
