@@ -86,4 +86,4 @@ monitoring:
     enabled: false
     additionalLabels: {}
     metricRelabelings: []
-    relabelings: []  
+    relabelings: []
