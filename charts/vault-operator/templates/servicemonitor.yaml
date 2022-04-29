@@ -1,0 +1,30 @@
+{{ if .Values.monitoring.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "vault.fullname" . }}
+  namespace: {{ include "vault.namespace" . }}
+  labels:
+{{ include "vault.labels" . | indent 4 }}
+{{- with .Values.monitoring.serviceMonitor.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+{{- end }}
+spec:
+  selector:
+    matchLabels:
+{{ include "vault.labels" . | indent 6 }}
+  endpoints:
+  - port: http
+    path: /metrics
+    {{- with .Values.monitoring.serviceMonitor.metricsRelabelings }}
+    metricRelabelings:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.monitoring.serviceMonitor.relabelings }}
+    relabelings:
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+  namespaceSelector:
+    matchNames:
+    - {{ include "vault.namespace" . }}
+{{- end }}

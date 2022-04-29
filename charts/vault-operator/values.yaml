@@ -80,3 +80,10 @@ serviceAccount:
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
+monitoring:
+  # Create a Vault Operator ServiceMonitor object
+  serviceMonitor:
+    enabled: false
+    additionalLabels: {}
+    metricRelabelings: []
+    relabelings: []
