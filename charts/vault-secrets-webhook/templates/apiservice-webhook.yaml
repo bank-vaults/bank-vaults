@@ -110,6 +110,7 @@ webhooks:
 {{- if semverCompare ">=1.12-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   sideEffects: {{ .Values.apiSideEffectValue }}
 {{- end }}
+{{- if .Values.secretsMutation }}
 - name: secrets.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
   {{- if semverCompare ">=1.14-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   admissionReviewVersions: ["v1beta1"]
@@ -172,6 +173,7 @@ webhooks:
 {{- end }}
 {{- if semverCompare ">=1.12-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   sideEffects: {{ .Values.apiSideEffectValue }}
+{{- end }}
 {{- end }}
 {{- if .Values.configMapMutation }}
 - name: configmaps.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com

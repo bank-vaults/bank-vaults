@@ -145,6 +145,9 @@ customResourcesFailurePolicy: Ignore
 # This can cause issues when used with Helm, so it is not enabled by default
 configMapMutation: false
 
+# Whether to mutate Secrets with values from Vault. Set to false in order to prevent secret values from being persisted in Kubernetes.
+secretsMutation: true
+
 configMapFailurePolicy: Ignore
 
 podsFailurePolicy: Ignore
