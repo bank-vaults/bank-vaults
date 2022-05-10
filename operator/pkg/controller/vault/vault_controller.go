@@ -80,6 +80,15 @@ func NewCache() (cache.NewCacheFunc, error) {
 			&corev1.ConfigMap{}: cache.ObjectSelector{
 				Label: labels.NewSelector().Add(*lreq),
 			},
+			&corev1.Secret{}: cache.ObjectSelector{
+				Label: labels.NewSelector().Add(*lreq),
+			},
+			&corev1.Service{}: cache.ObjectSelector{
+				Label: labels.NewSelector().Add(*lreq),
+			},
+			&corev1.Pod{}: cache.ObjectSelector{
+				Label: labels.NewSelector().Add(*lreq),
+			},
 		},
 	}), nil
 }
