@@ -5,7 +5,7 @@ require (
 	cloud.google.com/go/storage v1.10.0
 	emperror.dev/errors v0.8.0
 	github.com/Azure/azure-sdk-for-go v46.4.0+incompatible
-	github.com/Azure/go-autorest/autorest v0.11.12
+	github.com/Azure/go-autorest/autorest v0.11.18
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.3
 	github.com/Masterminds/semver/v3 v3.1.0
 	github.com/Masterminds/sprig/v3 v3.1.0
@@ -42,15 +42,15 @@ require (
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	google.golang.org/api v0.63.0
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa
-	k8s.io/api v0.21.1
-	k8s.io/apiextensions-apiserver v0.21.1
-	k8s.io/apimachinery v0.21.1
-	k8s.io/client-go v0.21.1
-	k8s.io/code-generator v0.21.1
-	k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
-	k8s.io/utils v0.0.0-20210527160623-6fdb442a123b
+	k8s.io/api v0.23.5
+	k8s.io/apiextensions-apiserver v0.23.5
+	k8s.io/apimachinery v0.23.5
+	k8s.io/client-go v0.23.5
+	k8s.io/code-generator v0.23.5
+	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65
+	k8s.io/utils v0.0.0-20211116205334-6203023598ed
 	logur.dev/adapter/logrus v0.5.0
-	sigs.k8s.io/controller-runtime v0.9.0
+	sigs.k8s.io/controller-runtime v0.11.2
 )
 
 replace github.com/banzaicloud/bank-vaults/pkg/sdk => ./pkg/sdk

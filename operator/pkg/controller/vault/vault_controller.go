@@ -43,9 +43,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -64,6 +66,23 @@ import (
 var log = logf.Log.WithName("controller_vault")
 
 var configFileNames = []string{"vault-config.yml", "vault-config.yaml"}
+
+func NewCache() (cache.NewCacheFunc, error) {
+	lreq, err := labels.NewRequirement(vaultv1alpha1.AppNameLabelKey, selection.In, []string{
+		vaultv1alpha1.VaultLabelValue,
+		vaultv1alpha1.VaultConfiguratorLabelValue,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return cache.BuilderWithOptions(cache.Options{
+		SelectorsByObject: cache.SelectorsByObject{
+			&corev1.ConfigMap{}: cache.ObjectSelector{
+				Label: labels.NewSelector().Add(*lreq),
+			},
+		},
+	}), nil
+}
 
 // Add creates a new Vault Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -1188,7 +1207,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			// This probe makes sure Vault is responsive in a HTTPS manner
 			// See: https://www.vaultproject.io/api/system/init.html
 			LivenessProbe: &corev1.Probe{
-				Handler: corev1.Handler{
+				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Scheme: getVaultURIScheme(v),
 						Port:   intstr.FromString(v.Spec.GetAPIPortName()),
@@ -1198,7 +1217,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			// This probe makes sure that only the active Vault instance gets traffic
 			// See: https://www.vaultproject.io/api/system/health.html
 			ReadinessProbe: &corev1.Probe{
-				Handler: corev1.Handler{
+				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Scheme: getVaultURIScheme(v),
 						Port:   intstr.FromString(v.Spec.GetAPIPortName()),

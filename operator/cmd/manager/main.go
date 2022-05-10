@@ -89,6 +89,7 @@ func main() {
 		LivenessEndpointName:    "/",      // For Chart backwards compatibility
 		ReadinessEndpointName:   "/ready", // For Chart backwards compatibility
 		MetricsBindAddress:      metricsBindAddress,
+		NewCache:                controller.NewCacheFunc,
 	})
 	if err != nil {
 		log.Error(err, "Unable to create manager as defined")

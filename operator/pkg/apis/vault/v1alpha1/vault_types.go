@@ -35,6 +35,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+const (
+	AppNameLabelKey             = "app.kubernetes.io/name"
+	VaultLabelValue             = "vault"
+	VaultConfiguratorLabelValue = "vault-configurator"
+	VaultCRLabelKey             = "vault_cr"
+)
+
 var log = ctrl.Log.WithName("controller_vault")
 
 var bankVaultsImage string
@@ -718,13 +725,13 @@ func (vault *Vault) GetIngress() *Ingress {
 // LabelsForVault returns the labels for selecting the resources
 // belonging to the given vault CR name.
 func (vault *Vault) LabelsForVault() map[string]string {
-	return map[string]string{"app.kubernetes.io/name": "vault", "vault_cr": vault.Name}
+	return map[string]string{AppNameLabelKey: VaultLabelValue, VaultCRLabelKey: vault.Name}
 }
 
 // LabelsForVaultConfigurer returns the labels for selecting the resources
 // belonging to the given vault CR name.
 func (vault *Vault) LabelsForVaultConfigurer() map[string]string {
-	return map[string]string{"app.kubernetes.io/name": "vault-configurator", "vault_cr": vault.Name}
+	return map[string]string{AppNameLabelKey: VaultConfiguratorLabelValue, VaultCRLabelKey: vault.Name}
 }
 
 // AsOwnerReference returns this Vault instance as an OwnerReference
