@@ -16,6 +16,11 @@ metadata:
       {{ $key }}: {{ $value | quote }}
     {{- end }}
 spec:
+  {{- if eq (include "vault.capabilities.ingress.apiVersion" .) "networking.k8s.io/v1" }}
+  {{- if .Values.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.ingress.ingressClassName }}
+  {{- end }}
+  {{- end }}
   rules:
     {{- range .Values.ingress.hosts }}
     {{- $url := splitList "/" . }}
