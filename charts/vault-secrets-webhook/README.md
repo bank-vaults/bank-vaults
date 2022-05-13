@@ -127,6 +127,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | volumes                            | extra volume definitions                                                      | `[]`                                                     |
 | volumeMounts                       | extra volume mounts                                                           | `[]`                                                     |
 | configMapMutation                  | enable injecting values from Vault to ConfigMaps                              | `false`                                                  |
+| secretsMutation                    | enable injecting values from Vault to Secrets                                 | `true`                                                   |
 | customResourceMutations            | list of CustomResources to inject values from Vault                           | `[]`                                                     |
 | podDisruptionBudget.enabled        | enable PodDisruptionBudget                                                    | `true`                                                   |
 | podDisruptionBudget.minAvailable   | represents the number of Pods that must be available (integer or percentage)  | `1`                                                      |
