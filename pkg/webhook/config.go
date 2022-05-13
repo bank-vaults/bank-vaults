@@ -284,10 +284,14 @@ func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig 
 
 	if val, ok := annotations["vault.security.banzaicloud.io/transit-key-id"]; ok {
 		vaultConfig.TransitKeyID = val
+	} else {
+		vaultConfig.TransitKeyID = viper.GetString("transit_key_id")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/transit-path"]; ok {
 		vaultConfig.TransitPath = val
+	} else {
+		vaultConfig.TransitPath = viper.GetString("transit_path")
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-agent-configmap"]; ok {
@@ -442,6 +446,8 @@ func SetConfigDefaults() {
 	viper.SetDefault("tls_private_key_file", "")
 	viper.SetDefault("listen_address", ":8443")
 	viper.SetDefault("telemetry_listen_address", "")
+	viper.SetDefault("transit_key_id", "")
+	viper.SetDefault("transit_path", "")
 	viper.SetDefault("default_image_pull_secret", "")
 	viper.SetDefault("default_image_pull_secret_namespace", "")
 	viper.SetDefault("registry_skip_verify", "false")
