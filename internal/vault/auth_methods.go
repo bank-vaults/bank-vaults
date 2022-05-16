@@ -43,14 +43,26 @@ type auth struct {
 	Config           map[string]interface{} `mapstructure:"config"`
 }
 
-func initAuthConfig(configs []auth) []auth {
-	for index, config := range configs {
-		if config.Path == "" {
-			configs[index].Path = config.Type
+func initAuthConfig(auths []auth) []auth {
+	for index, auth := range auths {
+		// Use the type as a path in case the path is not set.
+		if auth.Path == "" {
+			auths[index].Path = auth.Type
+		}
+
+		// Convert `map[interface{}]interface{}` to `map[string]interface{}` before sending the config to Vault API.
+		// That's because the config data can have a sub dict (like `provider_config` in JWT/OIDC).
+		// Without this conversion, Vault API will retrun the following error:
+		// `json: unsupported type: map[interface {}]interface {}`
+		for key, value := range auths[index].Config {
+			switch val := value.(type) {
+			case map[interface{}]interface{}:
+				auths[index].Config[key] = cast.ToStringMap(val)
+			}
 		}
 	}
 
-	return configs
+	return auths
 }
 
 func (v *vault) addAdditionalAuthConfig(authMethod auth) error {
