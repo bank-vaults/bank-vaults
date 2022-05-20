@@ -46,6 +46,7 @@ type ImageRegistry interface {
 		ctx context.Context,
 		clientset kubernetes.Interface,
 		namespace string,
+		isDisabled bool,
 		container *corev1.Container,
 		podSpec *corev1.PodSpec) (*v1.Config, error)
 }
@@ -82,6 +83,7 @@ func (r *Registry) GetImageConfig(
 	ctx context.Context,
 	client kubernetes.Interface,
 	namespace string,
+	isDisabled bool,
 	container *corev1.Container,
 	podSpec *corev1.PodSpec) (*v1.Config, error) {
 	allowToCache := IsAllowedToCache(container)
@@ -113,7 +115,7 @@ func (r *Registry) GetImageConfig(
 		containerInfo.ImagePullSecrets = []string{defaultImagePullSecret}
 	}
 
-	imageConfig, err := getImageConfig(ctx, client, containerInfo)
+	imageConfig, err := getImageConfig(ctx, client, containerInfo, isDisabled)
 	if imageConfig != nil && allowToCache {
 		r.imageCache.Set(container.Image, imageConfig, cache.DefaultExpiration)
 	}
@@ -122,8 +124,8 @@ func (r *Registry) GetImageConfig(
 }
 
 // getImageConfig download image blob from registry
-func getImageConfig(ctx context.Context, client kubernetes.Interface, container containerInfo) (*v1.Config, error) {
-	registrySkipVerify := viper.GetBool("registry_skip_verify")
+func getImageConfig(ctx context.Context, client kubernetes.Interface, container containerInfo, isDisabled bool) (*v1.Config, error) {
+	registrySkipVerify := isDisabled
 
 	chainOpts := k8schain.Options{
 		Namespace:          container.Namespace,
