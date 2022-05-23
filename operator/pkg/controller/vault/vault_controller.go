@@ -1520,11 +1520,11 @@ func configMapForStatsD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	statsdConfig := v.Spec.StatsdConfig
 	if statsdConfig == "" {
 		statsdConfig = `mappings:
-		- match: vault.route.*.*
-		  name: "vault_route"
-		  labels:
-			method: "$1"
-			path: "$2"`
+        - match: vault.route.*.*
+          name: "vault_route"
+          labels:
+            method: "$1"
+            path: "$2"`
 	}
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
