@@ -128,6 +128,14 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | volumeMounts                       | extra volume mounts                                                           | `[]`                                                     |
 | configMapMutation                  | enable injecting values from Vault to ConfigMaps                              | `false`                                                  |
 | secretsMutation                    | enable injecting values from Vault to Secrets                                 | `true`                                                   |
+| pods.objectSelector                | object selector to use - ( overrides root ObjectSelector )                    | `{}`                                                     |
+| pods.namespaceSelector             | namespace selector to use - ( overrides root namespaceSelector )              | `{}`                                                     |
+| secrets.objectSelector             | object selector to use - ( overrides root ObjectSelector )                    | `{}`                                                     |
+| secrets.namespaceSelector          | namespace selector to use - ( overrides root namespaceSelector )              | `{}`                                                     |
+| configMaps.objectSelector          | object selector to use - ( overrides root ObjectSelector )                    | `{}`                                                     |
+| configMaps.namespaceSelector       | namespace selector to use - ( overrides root namespaceSelector )              | `{}`                                                     |
+| customResources.objectSelector     | object selector to use - ( overrides root ObjectSelector )                    | `{}`                                                     |
+| customResources.namespaceSelector  | namespace selector to use - ( overrides root namespaceSelector )              | `{}`                                                     |
 | customResourceMutations            | list of CustomResources to inject values from Vault                           | `[]`                                                     |
 | podDisruptionBudget.enabled        | enable PodDisruptionBudget                                                    | `true`                                                   |
 | podDisruptionBudget.minAvailable   | represents the number of Pods that must be available (integer or percentage)  | `1`                                                      |

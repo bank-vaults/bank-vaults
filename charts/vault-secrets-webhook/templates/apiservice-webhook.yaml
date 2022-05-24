@@ -23,6 +23,61 @@
 {{- $caCrt = required "Required when certificate.generate is false" .Values.certificate.ca.crt }}
 {{- end }}
 
+
+{{- $secretsNamespaceSelector := default dict }}
+{{- $secretsObjectSelector := default dict }}
+{{- $configmapsNamespaceSelector := default dict }}
+{{- $configmapsObjectSelector := default dict }}
+{{- $podsNamespaceSelector := default dict }}
+{{- $podsObjectSelector := default dict }}
+{{- $crNamespaceSelector := default dict }}
+{{- $crObjectSelector := default dict }}
+
+{{- if .Values.secrets.namespaceSelector }}
+{{- $secretsNamespaceSelector = .Values.secrets.namespaceSelector }}
+{{- else }}
+{{- $secretsNamespaceSelector = .Values.namespaceSelector }}
+{{- end }}
+{{- if .Values.secrets.objectSelector }}
+{{- $secretsObjectSelector = .Values.secrets.objectSelector }}
+{{- else }}
+{{- $secretsObjectSelector = .Values.objectSelector }}
+{{- end }}
+
+{{- if .Values.configMaps.namespaceSelector }}
+{{- $configmapsNamespaceSelector = .Values.configMaps.namespaceSelector }}
+{{- else }}
+{{- $configmapsNamespaceSelector = .Values.namespaceSelector }}
+{{- end }}
+{{- if .Values.configMaps.objectSelector }}
+{{- $configmapsObjectSelector = .Values.configMaps.objectSelector }}
+{{- else }}
+{{- $configmapsObjectSelector = .Values.objectSelector }}
+{{- end }}
+
+{{- if .Values.pods.namespaceSelector }}
+{{- $podsNamespaceSelector = .Values.pods.namespaceSelector }}
+{{- else }}
+{{- $podsNamespaceSelector = .Values.namespaceSelector }}
+{{- end }}
+{{- if .Values.pods.objectSelector }}
+{{- $podsObjectSelector = .Values.pods.objectSelector }}
+{{- else }}
+{{- $podsObjectSelector = .Values.objectSelector }}
+{{- end }}
+
+{{- if .Values.customResources.namespaceSelector }}
+{{- $crNamespaceSelector = .Values.customResources.namespaceSelector }}
+{{- else }}
+{{- $crNamespaceSelector = .Values.namespaceSelector }}
+{{- end }}
+{{- if .Values.customResources.objectSelector }}
+{{- $crObjectSelector = .Values.customResources.objectSelector }}
+{{- else }}
+{{- $crObjectSelector = .Values.objectSelector }}
+{{- end }}
+
+
 {{- if $tlsCrt }}
 apiVersion: v1
 kind: Secret
@@ -80,13 +135,13 @@ webhooks:
     - pods
   failurePolicy: {{ .Values.podsFailurePolicy }}
   namespaceSelector:
-  {{- if .Values.namespaceSelector.matchLabels }}
+  {{- if $podsNamespaceSelector.matchLabels }}
     matchLabels:
-{{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
+{{ toYaml $podsNamespaceSelector.matchLabels | indent 6 }}
   {{- end }}
     matchExpressions:
-    {{- if .Values.namespaceSelector.matchExpressions }}
-{{ toYaml .Values.namespaceSelector.matchExpressions | indent 4 }}
+    {{- if $podsNamespaceSelector.matchExpressions }}
+{{ toYaml $podsNamespaceSelector.matchExpressions | indent 4 }}
     {{- end }}
     - key: name
       operator: NotIn
@@ -94,13 +149,13 @@ webhooks:
       - {{ .Release.Namespace }}
 {{- if semverCompare ">=1.15-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   objectSelector:
-  {{- if .Values.objectSelector.matchLabels }}
+  {{- if $podsObjectSelector.matchLabels }}
     matchLabels:
-{{ toYaml .Values.objectSelector.matchLabels | indent 6 }}
+{{ toYaml $podsObjectSelector.matchLabels | indent 6 }}
   {{- end }}
     matchExpressions:
-    {{- if .Values.objectSelector.matchExpressions }}
-{{ toYaml .Values.objectSelector.matchExpressions | indent 4 }}
+    {{- if $podsObjectSelector.matchExpressions }}
+{{ toYaml $podsObjectSelector.matchExpressions | indent 4 }}
     {{- end }}
     - key: security.banzaicloud.io/mutate
       operator: NotIn
@@ -140,13 +195,13 @@ webhooks:
     - secrets
   failurePolicy: {{ .Values.secretsFailurePolicy }}
   namespaceSelector:
-  {{- if .Values.namespaceSelector.matchLabels }}
+  {{- if $secretsNamespaceSelector.matchLabels }}
     matchLabels:
-{{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
+{{ toYaml $secretsNamespaceSelector.matchLabels | indent 6 }}
   {{- end }}
     matchExpressions:
-    {{- if .Values.namespaceSelector.matchExpressions }}
-{{ toYaml .Values.namespaceSelector.matchExpressions | indent 4 }}
+    {{- if $secretsNamespaceSelector.matchExpressions }}
+{{ toYaml $secretsNamespaceSelector.matchExpressions | indent 4 }}
     {{- end }}
     - key: name
       operator: NotIn
@@ -154,13 +209,13 @@ webhooks:
       - {{ .Release.Namespace }}
 {{- if semverCompare ">=1.15-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   objectSelector:
-  {{- if .Values.objectSelector.matchLabels }}
+  {{- if $secretsObjectSelector.matchLabels }}
     matchLabels:
-{{ toYaml .Values.objectSelector.matchLabels | indent 6 }}
+{{ toYaml $secretsObjectSelector.matchLabels | indent 6 }}
   {{- end }}
     matchExpressions:
-    {{- if .Values.objectSelector.matchExpressions }}
-{{ toYaml .Values.objectSelector.matchExpressions | indent 4 }}
+    {{- if $secretsObjectSelector.matchExpressions }}
+{{ toYaml $secretsObjectSelector.matchExpressions | indent 4 }}
     {{- end }}
     - key: owner
       operator: NotIn
@@ -205,13 +260,13 @@ webhooks:
         - configmaps
   failurePolicy: {{ .Values.configmapFailurePolicy | default .Values.configMapFailurePolicy }}
   namespaceSelector:
-  {{- if .Values.namespaceSelector.matchLabels }}
+  {{- if $configmapsNamespaceSelector.matchLabels }}
     matchLabels:
-{{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
+{{ toYaml $configmapsNamespaceSelector.matchLabels | indent 6 }}
   {{- end }}
     matchExpressions:
-  {{- if .Values.namespaceSelector.matchExpressions }}
-{{ toYaml .Values.namespaceSelector.matchExpressions | indent 4 }}
+  {{- if $configmapsNamespaceSelector.matchExpressions }}
+{{ toYaml $configmapsNamespaceSelector.matchExpressions | indent 4 }}
   {{- end }}
     - key: name
       operator: NotIn
@@ -219,13 +274,13 @@ webhooks:
       - {{ .Release.Namespace }}
 {{- if semverCompare ">=1.15-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   objectSelector:
-  {{- if .Values.objectSelector.matchLabels }}
+  {{- if $configmapsObjectSelector.matchLabels }}
     matchLabels:
-{{ toYaml .Values.objectSelector.matchLabels | indent 6 }}
+{{ toYaml $configmapsObjectSelector.matchLabels | indent 6 }}
   {{- end }}
     matchExpressions:
-    {{- if .Values.objectSelector.matchExpressions }}
-{{ toYaml .Values.objectSelector.matchExpressions | indent 4 }}
+    {{- if $configmapsObjectSelector.matchExpressions }}
+{{ toYaml $configmapsObjectSelector.matchExpressions | indent 4 }}
     {{- end }}
     - key: owner
       operator: NotIn
@@ -270,13 +325,13 @@ webhooks:
 {{ toYaml .Values.customResourceMutations | indent 6 }}
   failurePolicy: {{ .Values.customResourcesFailurePolicy }}
   namespaceSelector:
-  {{- if .Values.namespaceSelector.matchLabels }}
+  {{- if $crNamespaceSelector.matchLabels }}
     matchLabels:
-{{ toYaml .Values.namespaceSelector.matchLabels | indent 6 }}
+{{ toYaml $crNamespaceSelector.matchLabels | indent 6 }}
   {{- end }}
     matchExpressions:
-    {{- if .Values.namespaceSelector.matchExpressions }}
-{{ toYaml .Values.namespaceSelector.matchExpressions | indent 4 }}
+    {{- if $crNamespaceSelector.matchExpressions }}
+{{ toYaml $crNamespaceSelector.matchExpressions | indent 4 }}
     {{- end }}
     - key: name
       operator: NotIn
@@ -284,13 +339,13 @@ webhooks:
       - {{ .Release.Namespace }}
 {{- if semverCompare ">=1.15-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   objectSelector:
-  {{- if .Values.objectSelector.matchLabels }}
+  {{- if $crObjectSelector.matchLabels }}
     matchLabels:
-{{ toYaml .Values.objectSelector.matchLabels | indent 6 }}
+{{ toYaml $crObjectSelector.matchLabels | indent 6 }}
   {{- end }}
     matchExpressions:
-    {{- if .Values.objectSelector.matchExpressions }}
-{{ toYaml .Values.objectSelector.matchExpressions | indent 4 }}
+    {{- if $crObjectSelector.matchExpressions }}
+{{ toYaml $crObjectSelector.matchExpressions | indent 4 }}
     {{- end }}
     - key: security.banzaicloud.io/mutate
       operator: NotIn
