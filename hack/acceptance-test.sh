@@ -62,6 +62,12 @@ kubectl wait --for=condition=healthy --timeout=180s vault/vault
 kubectl delete -f operator/deploy/cr-kvv2.yaml
 kubectl delete secret vault-unseal-keys
 
+# 0. test: explicit statsd options
+kubectl apply -f operator/deploy/cr-statsd.yaml
+kubectl wait --for=condition=healthy --timeout=180s vault/vault
+kubectl delete -f operator/deploy/cr-statsd.yaml
+kubectl delete secret vault-unseal-keys
+
 # 1. test: test the external secrets watcher work and match as expected
 kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
 kubectl wait --for=condition=healthy --timeout=180s vault/vault

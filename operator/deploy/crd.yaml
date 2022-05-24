@@ -956,6 +956,8 @@ spec:
                 type: boolean
               statsdImage:
                 type: string
+              statsdConfig:
+                type: string
               tlsAdditionalHosts:
                 items:
                   type: string

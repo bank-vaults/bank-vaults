@@ -1517,18 +1517,22 @@ func withTLSVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMoun
 
 func configMapForStatsD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	ls := v.LabelsForVault()
+	statsdConfig := v.Spec.StatsdConfig
+	if statsdConfig == "" {
+		statsdConfig = `mappings:
+        - match: vault.route.*.*
+          name: "vault_route"
+          labels:
+            method: "$1"
+            path: "$2"`
+	}
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name + "-statsd-mapping",
 			Namespace: v.Namespace,
 			Labels:    ls,
 		},
-		Data: map[string]string{"statsd-mapping.conf": `mappings:
-    - match: vault.route.*.*
-      name: "vault_route"
-      labels:
-        method: "$1"
-        path: "$2"`},
+		Data: map[string]string{"statsd-mapping.conf": statsdConfig},
 	}
 	return cm
 }
