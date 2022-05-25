@@ -98,6 +98,10 @@ type VaultSpec struct {
 	// default: prom/statsd-exporter:latest
 	StatsDImage string `json:"statsdImage,omitempty"`
 
+	// StatsdConfig specifices the StatsD mapping configuration
+	// default:
+	StatsdConfig string `json:"statsdConfig,omitempty"`
+
 	// FluentDEnabled specifies if FluentD based log exportation should be enabled
 	// default: false
 	FluentDEnabled bool `json:"fluentdEnabled,omitempty"`
