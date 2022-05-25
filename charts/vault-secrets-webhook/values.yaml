@@ -180,6 +180,26 @@ objectSelector: {}
   # matchLabels:
   #   vault-injection: enabled
 
+# objectSelector & namespaceSelector for secrets resource (overrides `objectSelector`); Requires K8s 1.15+
+secrets:
+  objectSelector: {}
+  namespaceSelector: {}
+
+# objectSelector & namespaceSelector for pods resource (overrides `objectSelector`); Requires K8s 1.15+
+pods:
+  objectSelector: {}
+  namespaceSelector: {}
+
+# objectSelector & namespaceSelector for configmap resource (overrides `objectSelector`); Requires K8s 1.15+
+configMaps:
+  objectSelector: {}
+  namespaceSelector: {}
+
+# objectSelector & namespaceSelector for customResource resource (overrides `objectSelector`); Requires K8s 1.15+
+customResources:
+  objectSelector: {}
+  namespaceSelector: {}
+
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
