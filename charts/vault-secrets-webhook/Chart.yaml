@@ -1,8 +1,8 @@
 apiVersion: v2
 type: application
 name: vault-secrets-webhook
-version: 1.15.10
-appVersion: 1.15.2
+version: 1.15.11
+appVersion: 1.15.3
 description: A Helm chart that deploys a mutating admission webhook that configures applications to request secrets from Vault
 icon: https://raw.githubusercontent.com/banzaicloud/bank-vaults/main/docs/images/logo/bank-vaults-logo.svg
 home: https://banzaicloud.com/products/bank-vaults/
