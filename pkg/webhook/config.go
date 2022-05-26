@@ -53,6 +53,7 @@ type VaultConfig struct {
 	RunAsUser                   int64
 	RunAsGroup                  int64
 	ReadOnlyRootFilesystem      bool
+	RegistrySkipVerify          bool
 	IgnoreMissingSecrets        string
 	VaultEnvPassThrough         string
 	ConfigfilePath              string
@@ -262,6 +263,12 @@ func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig 
 		vaultConfig.ReadOnlyRootFilesystem, _ = strconv.ParseBool(val)
 	} else {
 		vaultConfig.ReadOnlyRootFilesystem, _ = strconv.ParseBool(viper.GetString("readonly_root_fs"))
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/registry-skip-verify"]; ok {
+		vaultConfig.RegistrySkipVerify, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.RegistrySkipVerify, _ = strconv.ParseBool(viper.GetString("registry_skip_verify"))
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/mutate-configmap"]; ok {
