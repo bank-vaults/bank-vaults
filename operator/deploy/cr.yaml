@@ -91,6 +91,11 @@ spec:
   # Define a list of namespaces or use ["*"] for all namespaces.
   caNamespaces:
     - "vswh"
+    
+  # Support for adding hostnames and IPs to the generated CA certificate.
+  # tlsAdditionalHosts:
+  #   - vault2.example.com
+  #   - 192.168.20.20
 
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
