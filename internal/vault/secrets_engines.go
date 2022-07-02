@@ -62,7 +62,7 @@ func initSecretsEnginesConfig(configs []secretEngine) []secretEngine {
 			configs[index].Path = config.Type
 		}
 
-		configs[index].Path = strings.Trim(config.Path, "/")
+		configs[index].Path = strings.Trim(configs[index].Path, "/")
 	}
 
 	return configs
