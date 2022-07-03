@@ -67,6 +67,8 @@ audit_test () {
 
   test "$(${get_vault_values_json} | jq -r '."audit_foo/".type')" == "file"; test_case_passed
   test "$(${get_vault_values_json} | jq -r '."audit_bar/".type')" == "file"; test_case_passed
+  # If the "path" key is not defined, then the "type" value should be used as "path".
+  test "$(${get_vault_values_json} | jq -r '."file/".type')" == "file"; test_case_passed
 
   #
   ## Case 2.
@@ -108,6 +110,8 @@ auth_test () {
 
   test "$(${get_vault_values_json} | jq -r '."auth_foo/".type')" == "approle"; test_case_passed
   test "$(${get_vault_values_json} | jq -r '."auth_bar/".type')" == "userpass"; test_case_passed
+  # If the "path" key is not defined, then the "type" value should be used as "path".
+  test "$(${get_vault_values_json} | jq -r '."userpass/".type')" == "userpass"; test_case_passed
 
   #
   ## Case 2.
@@ -265,6 +269,8 @@ secrets_test () {
 
   test "$(${get_vault_values_json} | jq -r '."secret_foo/".type')" == "kv"; test_case_passed
   test "$(${get_vault_values_json} | jq -r '."secret_bar/".type')" == "ssh"; test_case_passed
+  # If the "path" key is not defined, then the "type" value should be used as "path".
+  test "$(${get_vault_values_json} | jq -r '."ssh/".type')" == "ssh"; test_case_passed
 
   #
   ## Case 2.
