@@ -73,37 +73,37 @@ jobs:
             --vault-config-file "${BANK_VAULTS_CONFIG_FILE}" \
             &> "${BANK_VAULTS_LOG_FILE}" & disown
 
-      - name: Audit tests
+      - name: Test group - Audit
         if: always()
         run: |
           bash scripts/validate-config-crud/validate-config-crud.sh "audit"
 
-      - name: Auth tests
+      - name: Test group - Auth
         if: always()
         run: |
           bash scripts/validate-config-crud/validate-config-crud.sh "auth"
 
-      - name: Groups tests
+      - name: Test group - Groups
         if: always()
         run: |
           bash scripts/validate-config-crud/validate-config-crud.sh "groups"
 
-      - name: Group-aliases tests
+      - name: Test group - Group-Aliases
         if: always()
         run: |
           bash scripts/validate-config-crud/validate-config-crud.sh "group-aliases"
 
-      - name: Policies tests
+      - name: Test group - Policies
         if: always()
         run: |
           bash scripts/validate-config-crud/validate-config-crud.sh "policies"
 
-      - name: StartupSecrets tests
+      - name: Test group - StartupSecrets
         if: always()
         run: |
           bash scripts/validate-config-crud/validate-config-crud.sh "startupSecrets"
 
-      - name: Secrets tests
+      - name: Test group - Secrets
         if: always()
         run: |
           bash scripts/validate-config-crud/validate-config-crud.sh "secrets"
