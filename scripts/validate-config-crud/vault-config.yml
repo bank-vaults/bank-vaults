@@ -18,6 +18,10 @@ audit:
     type: file
     options:
       file_path: /tmp/foo.log
+  # The "path" would be defaulted to "type".
+  - type: file
+    options:
+      file_path: /tmp/file.log
 
 auth:
   # The auth "auth_approle" is used in group-aliases tests.
@@ -27,6 +31,8 @@ auth:
     type: approle
   - path: auth_bar
     type: userpass
+  # The "path" would be defaulted to "type".
+  - type: userpass
 
 groups:
   - name: group_foo
@@ -64,6 +70,8 @@ secrets:
     type: kv
   - path: secret_bar
     type: ssh
+  # The "path" would be defaulted to "type".
+  - type: ssh
 
 startupSecrets:
   - type: kv

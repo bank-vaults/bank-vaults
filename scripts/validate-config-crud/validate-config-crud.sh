@@ -54,9 +54,10 @@ test_case_passed () {
   echo "[PASSED] Test case successfully passed."
 }
 
-#
-# Tests.
 
+#
+# Test group - Audit
+#
 audit_test () {
   bank_vaults_config_copy "audit"
   local get_vault_values_json='vault audit list -format=json'
@@ -67,6 +68,8 @@ audit_test () {
 
   test "$(${get_vault_values_json} | jq -r '."audit_foo/".type')" == "file"; test_case_passed
   test "$(${get_vault_values_json} | jq -r '."audit_bar/".type')" == "file"; test_case_passed
+  # If the "path" key is not defined, then the "type" value should be used as "path".
+  test "$(${get_vault_values_json} | jq -r '."file/".type')" == "file"; test_case_passed
 
   #
   ## Case 2.
@@ -98,6 +101,10 @@ audit_test () {
   echo "All audit test cases have been passed."
 }
 
+
+#
+# Test group - Auth
+#
 auth_test () {
   bank_vaults_config_copy "auth"
   local get_vault_values_json='vault auth list -format=json'
@@ -108,6 +115,8 @@ auth_test () {
 
   test "$(${get_vault_values_json} | jq -r '."auth_foo/".type')" == "approle"; test_case_passed
   test "$(${get_vault_values_json} | jq -r '."auth_bar/".type')" == "userpass"; test_case_passed
+  # If the "path" key is not defined, then the "type" value should be used as "path".
+  test "$(${get_vault_values_json} | jq -r '."userpass/".type')" == "userpass"; test_case_passed
 
   #
   ## Case 2.
@@ -139,6 +148,10 @@ auth_test () {
   echo "All auth test cases have been passed."
 }
 
+
+#
+# Test group - Groups
+#
 groups_test () {
   bank_vaults_config_copy 'groups'
   local get_vault_values_json='vault list -format=json identity/group/name'
@@ -180,6 +193,10 @@ groups_test () {
   echo "All groups test cases have been passed."
 }
 
+
+#
+# Test group - Group-Aliases
+#
 group_aliases_test () {
   # NOTE: group-aliases has a different test style because Vault exposes only group-aliases IDs not the names directly.
   bank_vaults_config_copy 'auth groups group-aliases'
@@ -239,6 +256,10 @@ group_aliases_test () {
   echo "All group-aliases test cases have been passed."
 }
 
+
+#
+# Test group - StartupSecrets
+#
 startup_secrets_test () {
   # Note: The "startupSecrets" doesn't have purge option; hence, we only check the values.
   bank_vaults_config_copy "secrets startupSecrets"
@@ -255,6 +276,10 @@ startup_secrets_test () {
   echo "All startupSecrets test cases have been passed."
 }
 
+
+#
+# Test group - Secrets
+#
 secrets_test () {
   bank_vaults_config_copy "secrets"
   local get_vault_values_json='vault secrets list -format=json'
@@ -265,6 +290,8 @@ secrets_test () {
 
   test "$(${get_vault_values_json} | jq -r '."secret_foo/".type')" == "kv"; test_case_passed
   test "$(${get_vault_values_json} | jq -r '."secret_bar/".type')" == "ssh"; test_case_passed
+  # If the "path" key is not defined, then the "type" value should be used as "path".
+  test "$(${get_vault_values_json} | jq -r '."ssh/".type')" == "ssh"; test_case_passed
 
   #
   ## Case 2.
@@ -296,6 +323,10 @@ secrets_test () {
   echo "All secrets test cases have been passed."
 }
 
+
+#
+# Test group - Policies
+#
 policies_test () {
   bank_vaults_config_copy 'policies'
   local get_vault_values_json='vault policy list -format=json'

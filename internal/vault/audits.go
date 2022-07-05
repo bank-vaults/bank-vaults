@@ -36,7 +36,7 @@ func initAuditConfig(configs []audit) []audit {
 			configs[index].Path = config.Type
 		}
 
-		configs[index].Path = strings.Trim(config.Path, "/")
+		configs[index].Path = strings.Trim(configs[index].Path, "/")
 	}
 
 	return configs
