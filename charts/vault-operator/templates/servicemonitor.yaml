@@ -2,17 +2,17 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ include "vault.fullname" . }}
-  namespace: {{ include "vault.namespace" . }}
+  name: {{ include "vault-operator.fullname" . }}
+  namespace: {{ include "vault-operator.namespace" . }}
   labels:
-{{ include "vault.labels" . | indent 4 }}
+{{ include "vault-operator.labels" . | indent 4 }}
 {{- with .Values.monitoring.serviceMonitor.additionalLabels }}
     {{- toYaml . | nindent 4 }}
 {{- end }}
 spec:
   selector:
     matchLabels:
-{{ include "vault.labels" . | indent 6 }}
+{{ include "vault-operator.labels" . | indent 6 }}
   endpoints:
   - port: http
     path: /metrics
@@ -26,5 +26,5 @@ spec:
     {{- end }}
   namespaceSelector:
     matchNames:
-    - {{ include "vault.namespace" . }}
+    - {{ include "vault-operator.namespace" . }}
 {{- end }}
