@@ -1,7 +1,7 @@
 apiVersion: v2
 type: application
 name: vault-operator
-version: 1.15.8
+version: 1.15.9
 appVersion: 1.15.3
 description: A Helm chart for banzaicloud/bank-vaults Vault operator
 icon: https://raw.githubusercontent.com/banzaicloud/bank-vaults/main/docs/images/logo/bank-vaults-logo.svg
