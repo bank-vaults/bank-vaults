@@ -491,7 +491,7 @@ spec:
                 type: string
               externalConfig:
                 x-kubernetes-preserve-unknown-fields: true
-              fleuntdConfLocation:
+              fluentdConfLocation:
                 type: string
               fluentdConfFile:
                 type: string
