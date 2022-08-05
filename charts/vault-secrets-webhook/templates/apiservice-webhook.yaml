@@ -109,6 +109,9 @@ metadata:
 webhooks:
 - name: pods.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
   {{- if semverCompare ">=1.14-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
+  {{- with .Values.reinvocationPolicy }}
+  reinvocationPolicy: {{ . }}
+  {{- end }}
   admissionReviewVersions: ["v1beta1"]
   {{- if .Values.timeoutSeconds }}
   timeoutSeconds: {{ .Values.timeoutSeconds }}
@@ -167,6 +170,9 @@ webhooks:
 {{- end }}
 {{- if .Values.secretsMutation }}
 - name: secrets.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+  {{- with .Values.reinvocationPolicy }}
+  reinvocationPolicy: {{ . }}
+  {{- end }}
   {{- if semverCompare ">=1.14-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   admissionReviewVersions: ["v1beta1"]
   {{- if .Values.timeoutSeconds }}
@@ -234,6 +240,9 @@ webhooks:
 - name: configmaps.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
   {{- if semverCompare ">=1.14-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
   admissionReviewVersions: ["v1beta1"]
+  {{- with .Values.reinvocationPolicy }}
+  reinvocationPolicy: {{ . }}
+  {{- end }}
   {{- if .Values.timeoutSeconds }}
   timeoutSeconds: {{ .Values.timeoutSeconds }}
   {{- end }}
