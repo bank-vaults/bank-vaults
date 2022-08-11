@@ -35,7 +35,7 @@ jobs:
       run: make license-check
 
     - name: Set up chart-testing
-      uses: helm/chart-testing-action@v2.2.1
+      uses: helm/chart-testing-action@v2.3.0
 
     - name: Run chart-testing
       run: ct lint --debug --config charts/testing.yaml
