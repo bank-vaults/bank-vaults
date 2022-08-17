@@ -15,9 +15,13 @@
 package vault
 
 import (
+	"fmt"
+	"strings"
+
 	"emperror.dev/errors"
 	"github.com/hashicorp/hcl"
 	hclPrinter "github.com/hashicorp/hcl/hcl/printer"
+	"github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,8 +31,11 @@ type policy struct {
 	RulesFormatted string
 }
 
-func initPoliciesConfig(policiesConfig []policy) ([]policy, error) {
+func initPoliciesConfig(policiesConfig []policy, mounts map[string]*api.MountOutput) ([]policy, error) {
 	for index, policy := range policiesConfig {
+		for k, v := range mounts {
+			policy.Rules = strings.Replace(policy.Rules, fmt.Sprintf("__accessor__%s", strings.TrimRight(k, "/")), v.Accessor, -1)
+		}
 		//
 		// Format HCL polices.
 		rulesFormatted, err := hclPrinter.Format([]byte(policy.Rules))
@@ -110,7 +117,11 @@ func (v *vault) removeUnmanagedPolicies(managedPolicies []policy) error {
 }
 
 func (v *vault) configurePolicies() error {
-	managedPolicies, err := initPoliciesConfig(extConfig.Policies)
+	auths, err := v.cl.Sys().ListAuth()
+	if err != nil {
+		return errors.Wrap(err, "error while getting list of auth engines")
+	}
+	managedPolicies, err := initPoliciesConfig(extConfig.Policies, auths)
 	if err != nil {
 		return errors.Wrap(err, "error while initializing policies config")
 	}

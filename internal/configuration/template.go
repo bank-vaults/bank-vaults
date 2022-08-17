@@ -105,11 +105,16 @@ func customFuncs() template.FuncMap {
 
 func funcMap() map[string]interface{} {
 	return map[string]interface{}{
-		"awskms": awsKmsDecrypt,
-		"file":   fileContent,
-		"gcpkms": gcpKmsDecrypt,
-		"blob":   blobRead,
+		"awskms":   awsKmsDecrypt,
+		"file":     fileContent,
+		"gcpkms":   gcpKmsDecrypt,
+		"blob":     blobRead,
+		"accessor": accessorPlaceholder,
 	}
+}
+
+func accessorPlaceholder(path string) (string, error) {
+	return fmt.Sprintf("__accessor__%s", strings.TrimRight(path, "/")), nil
 }
 
 // blob reads a content from a blob url
