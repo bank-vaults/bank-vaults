@@ -109,6 +109,7 @@ spec:
             ttl: 1h
     audit:
       - type: file
+        path: file
         description: "File based audit logging device"
         options:
           file_path: /vault/logs/vault.log
