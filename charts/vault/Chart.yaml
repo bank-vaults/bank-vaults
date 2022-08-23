@@ -1,8 +1,8 @@
 apiVersion: v2
 type: application
 name: vault
-version: 1.15.5
-appVersion: 1.15.3
+version: 1.16.0
+appVersion: 1.16.0
 description: A Helm chart for Vault, a tool for managing secrets
 home: https://www.vaultproject.io/
 icon: https://www.vaultproject.io/assets/images/mega-nav/logo-vault-0f83e3d2.svg
