@@ -3,28 +3,30 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: {{ include "vault-operator.fullname" . }}
-  namespace: {{ include "vault-operator.namespace" . }}
   labels:
-{{ include "vault-operator.labels" . | indent 4 }}
-{{- with .Values.monitoring.serviceMonitor.additionalLabels }}
+    helm.sh/chart: {{ include "vault-operator.chart" . }}
+    app.kubernetes.io/name: {{ include "vault-operator.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    {{- with .Values.monitoring.serviceMonitor.additionalLabels }}
     {{- toYaml . | nindent 4 }}
-{{- end }}
+    {{- end }}
 spec:
   selector:
     matchLabels:
-{{ include "vault-operator.labels" . | indent 6 }}
+      app.kubernetes.io/name: {{ include "vault-operator.name" . }}
   endpoints:
   - port: http
     path: /metrics
-    {{- with .Values.monitoring.serviceMonitor.metricsRelabelings }}
+    {{- with .Values.monitoring.serviceMonitor.metricRelabelings }}
     metricRelabelings:
       {{- toYaml . | nindent 6 }}
     {{- end }}
     {{- with .Values.monitoring.serviceMonitor.relabelings }}
     relabelings:
-      {{- toYaml . | nindent 4 }}
+      {{- toYaml . | nindent 6 }}
     {{- end }}
   namespaceSelector:
     matchNames:
-    - {{ include "vault-operator.namespace" . }}
+    - {{ .Release.Namespace }}
 {{- end }}
