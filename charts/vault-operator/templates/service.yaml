@@ -1,20 +1,16 @@
 apiVersion: v1
 kind: Service
 metadata:
-{{- if .Values.service.name }}
-  name: {{ .Values.service.name }}
-{{- else }}
-  name: {{ include "vault-operator.fullname" . }}
-{{- end }}
+  name: {{ .Values.service.name | default (include "vault-operator.fullname" .)}}
   labels:
     helm.sh/chart: {{ include "vault-operator.chart" . }}
     app.kubernetes.io/name: {{ include "vault-operator.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{- if .Values.service.annotations }}
+  {{- with .Values.service.annotations }}
   annotations:
-{{ toYaml .Values.service.annotations | indent 4 }}
-{{- end }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   type: {{ .Values.service.type }}
   ports:
