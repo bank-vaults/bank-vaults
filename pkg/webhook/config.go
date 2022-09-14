@@ -456,6 +456,7 @@ func SetConfigDefaults() {
 	viper.SetDefault("transit_key_id", "")
 	viper.SetDefault("transit_path", "")
 	viper.SetDefault("default_image_pull_secret", "")
+	viper.SetDefault("default_image_pull_secret_service_account", "")
 	viper.SetDefault("default_image_pull_secret_namespace", "")
 	viper.SetDefault("registry_skip_verify", "false")
 	viper.SetDefault("enable_json_log", "false")
