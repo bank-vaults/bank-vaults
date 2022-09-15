@@ -16,7 +16,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: {{ include "vault-operator.name" . }}
   endpoints:
-  - port: http
+  - port: http-metrics
     path: /metrics
     {{- with .Values.monitoring.serviceMonitor.metricRelabelings }}
     metricRelabelings:
