@@ -109,3 +109,46 @@ jobs:
     - name: Operator and webhook acceptance test
       run: |
         hack/acceptance-test.sh
+
+  multi-cluster-acceptance-test:
+    name: Multi-cluster acceptance test
+    runs-on: ubuntu-latest
+
+    env:
+      GO_VERSION: "1.17.8"
+      K8S_VERSION: "v1.23.4"
+      HELM_VERSION: "v3.8.0"
+      KIND_VERSION: "v0.12.0"
+
+    steps:
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - uses: azure/setup-helm@v3
+      with:
+         version: ${{ env.HELM_VERSION }}
+         token: ${{ secrets.GITHUB_TOKEN }}
+
+    - uses: engineerd/setup-kind@v0.5.0
+      with:
+        version: ${{ env.KIND_VERSION }}
+
+    - name: Install envtpl
+      run: go install github.com/subfuzion/envtpl/...@master
+
+    - name: Install cidr
+      run: go install github.com/hankjacobs/cidr@master
+
+    - name: Build the Helm charts
+      run: |
+        helm dep build ./charts/vault-operator
+
+    - name: Operator Multi-DC Raft test
+      run: |
+        ./operator/deploy/multi-dc/test/multi-dc-raft.sh install
