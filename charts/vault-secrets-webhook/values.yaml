@@ -58,6 +58,7 @@ env:
   # # specify an imagePullSecret
   # DEFAULT_IMAGE_PULL_SECRET:
   # DEFAULT_IMAGE_PULL_SECRET_NAMESPACE:
+  # DEFAULT_IMAGE_PULL_SECRET_SERVICE_ACCOUNT
   # VAULT_CLIENT_TIMEOUT: 10s
   # # define the webhook's role in Vault used for authentication,
   # # if not defined individually in resources by annotations.
