@@ -30,7 +30,7 @@ metadata:
     heritage: {{ .Release.Service }}
 spec:
   secretName: {{ include "vault-secrets-webhook.rootCACertificate" . }}
-  duration: 43800h # 5y
+  duration: 43800h0m0s # 5y
   issuerRef:
     name: {{ include "vault-secrets-webhook.selfSignedIssuer" . }}
   commonName: "ca.vault-secrets-webhook.cert-manager"
@@ -68,7 +68,7 @@ metadata:
     heritage: {{ .Release.Service }}
 spec:
   secretName: {{ include "vault-secrets-webhook.servingCertificate" . }}
-  duration: 8760h # 1y
+  duration: 8760h0m0s # 1y
   issuerRef:
     name: {{ include "vault-secrets-webhook.rootCAIssuer" . }}
   dnsNames:
