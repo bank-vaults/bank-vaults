@@ -99,39 +99,27 @@ func (mw *MutatingWebhook) MutateSecret(secret *corev1.Secret, vaultConfig Vault
 	defer vaultClient.Close()
 
 	config := injector.Config{
-		TransitKeyID: vaultConfig.TransitKeyID,
-		TransitPath:  vaultConfig.TransitPath,
+		TransitKeyID:     vaultConfig.TransitKeyID,
+		TransitPath:      vaultConfig.TransitPath,
+		TransitBatchSize: vaultConfig.TransitBatchSize,
 	}
 	secretInjector := injector.NewSecretInjector(config, vaultClient, nil, logger)
 
-	for key, value := range secret.Data {
-		if key == corev1.DockerConfigJsonKey {
-			var dc dockerCredentials
-			err := json.Unmarshal(value, &dc)
-			if err != nil {
-				return errors.Wrap(err, "unmarshal dockerconfig json failed")
-			}
-			err = mw.mutateDockerCreds(secret, &dc, secretInjector)
-			if err != nil {
-				return errors.Wrap(err, "mutate dockerconfig json failed")
-			}
-		} else if injector.HasInlineVaultDelimiters(string(value)) {
-			data := map[string]string{
-				key: string(value),
-			}
-			err := mw.mutateInlineSecretData(secret, data, secretInjector)
-			if err != nil {
-				return err
-			}
-		} else if hasVaultPrefix(string(value)) {
-			sc := map[string]string{
-				key: string(value),
-			}
-			err := mw.mutateSecretData(secret, sc, secretInjector)
-			if err != nil {
-				return errors.Wrap(err, "mutate generic secret failed")
-			}
+	if value, ok := secret.Data[corev1.DockerConfigJsonKey]; ok {
+		var dc dockerCredentials
+		err := json.Unmarshal(value, &dc)
+		if err != nil {
+			return errors.Wrap(err, "unmarshal dockerconfig json failed")
 		}
+		err = mw.mutateDockerCreds(secret, &dc, secretInjector)
+		if err != nil {
+			return errors.Wrap(err, "mutate dockerconfig json failed")
+		}
+	}
+
+	err = mw.mutateSecretData(secret, secretInjector)
+	if err != nil {
+		return errors.Wrap(err, "mutate generic secret failed")
 	}
 
 	return nil
@@ -186,28 +174,21 @@ func (mw *MutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCr
 	return nil
 }
 
-func (mw *MutatingWebhook) mutateInlineSecretData(secret *corev1.Secret, sc map[string]string, secretInjector injector.SecretInjector) error {
-	for key, value := range sc {
-		for _, vaultSecretReference := range injector.FindInlineVaultDelimiters(value) {
-			mapData, err := secretInjector.GetDataFromVault(map[string]string{key: vaultSecretReference[1]})
-			if err != nil {
-				return err
-			}
-			for key, value := range mapData {
-				secret.Data[key] = []byte(strings.Replace(string(secret.Data[key]), vaultSecretReference[0], value, -1))
-			}
-		}
-	}
-	return nil
-}
+func (mw *MutatingWebhook) mutateSecretData(secret *corev1.Secret, secretInjector injector.SecretInjector) error {
+	convertedData := make(map[string]string, len(secret.Data))
 
-func (mw *MutatingWebhook) mutateSecretData(secret *corev1.Secret, sc map[string]string, secretInjector injector.SecretInjector) error {
-	secCreds, err := secretInjector.GetDataFromVault(sc)
+	for k := range secret.Data {
+		convertedData[k] = string(secret.Data[k])
+	}
+
+	convertedData, err := secretInjector.GetDataFromVault(convertedData)
 	if err != nil {
 		return err
 	}
-	for key, value := range secCreds {
-		secret.Data[key] = []byte(value)
+
+	for k := range secret.Data {
+		secret.Data[k] = []byte(convertedData[k])
 	}
+
 	return nil
 }

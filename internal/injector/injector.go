@@ -37,6 +37,7 @@ type SecretRenewer interface {
 type Config struct {
 	TransitKeyID         string
 	TransitPath          string
+	TransitBatchSize     int
 	IgnoreMissingSecrets bool
 	DaemonMode           bool
 }
@@ -63,7 +64,108 @@ func NewSecretInjector(config Config, client *vault.Client, renewer SecretRenewe
 
 var inlineMutationRegex = regexp.MustCompile(`\${([>]{0,2}vault:.*?)}`)
 
+func (i SecretInjector) FetchTransitSecrets(secrets []string) (map[string][]byte, error) {
+	if len(i.config.TransitKeyID) == 0 {
+		return map[string][]byte{}, errors.Errorf("found encrypted variable, but transit key ID is empty: %s", "todo")
+	}
+
+	if len(secrets) == 0 {
+		return map[string][]byte{}, nil
+	}
+
+	out, err := i.client.Transit.DecryptBatch(i.config.TransitPath, i.config.TransitKeyID, secrets)
+	for k, v := range out {
+		i.transitCache[k] = v
+	}
+
+	if err != nil {
+		i.logger.Errorln("failed to decrypt variable:", err)
+	}
+
+	return out, nil
+}
+
+func paginate(secrets []string, batchSize int) [][]string {
+	transitSecrets := [][]string{}
+
+	for i := range secrets {
+		if i%batchSize == 0 {
+			transitSecrets = append(transitSecrets, []string{})
+		}
+
+		index := i / batchSize
+
+		transitSecrets[index] = append(transitSecrets[index], secrets[i])
+	}
+
+	return transitSecrets
+}
+
+func (i SecretInjector) preprocessTransitSecrets(references *map[string]string, inject SecretInjectorFunc) error {
+	// use set so that we don't have duplicates
+	secretSet := map[string]bool{}
+
+	for _, value := range *references {
+		// decrypts value with Vault Transit Secret Engine
+		if HasInlineVaultDelimiters(value) {
+			for _, vaultSecretReference := range FindInlineVaultDelimiters(value) {
+				if i.client.Transit.IsEncrypted(vaultSecretReference[1]) {
+					secretSet[vaultSecretReference[1]] = true
+				}
+			}
+		} else if i.client.Transit.IsEncrypted(value) {
+			secretSet[value] = true
+		}
+	}
+
+	// convert back to slice & filter out already-cached secrets
+	secrets := make([]string, 0, len(secretSet))
+	for k := range secretSet {
+		if _, cached := i.transitCache[k]; !cached {
+			secrets = append(secrets, k)
+		}
+	}
+
+	for _, sec := range paginate(secrets, i.config.TransitBatchSize) {
+		_, err := i.FetchTransitSecrets(sec)
+		if err != nil {
+			if !i.config.IgnoreMissingSecrets {
+				return errors.Wrapf(err, "failed to decrypt secret: %s", sec)
+			}
+
+			i.logger.Errorln("failed to decrypt secret:", sec, err)
+		}
+	}
+
+	for name, value := range *references {
+		if HasInlineVaultDelimiters(value) {
+			for _, vaultSecretReference := range FindInlineVaultDelimiters(value) {
+				if v, ok := i.transitCache[vaultSecretReference[0]]; ok {
+					value = strings.Replace(value, vaultSecretReference[0], string(v), -1)
+				}
+			}
+			inject(name, value)
+
+			continue
+		}
+		if i.client.Transit.IsEncrypted(value) {
+			if v, ok := i.transitCache[value]; ok {
+				inject(name, string(v))
+
+				continue
+			}
+		}
+	}
+
+	return nil
+}
+
 func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inject SecretInjectorFunc) error {
+	err := i.preprocessTransitSecrets(&references, inject)
+	if err != nil && !i.config.IgnoreMissingSecrets {
+		return errors.Wrapf(err, "unable to preprocess transit secrets")
+	}
+
 	for name, value := range references {
 		if HasInlineVaultDelimiters(value) {
 			for _, vaultSecretReference := range FindInlineVaultDelimiters(value) {
