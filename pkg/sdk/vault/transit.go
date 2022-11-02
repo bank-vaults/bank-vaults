@@ -56,3 +56,39 @@ func (t *Transit) Decrypt(transitPath, keyID string, ciphertext []byte) ([]byte,
 	}
 	return base64.StdEncoding.DecodeString(out.Data["plaintext"].(string))
 }
+
+func (t *Transit) DecryptBatch(transitPath, keyID string, ciphertexts []string) (map[string][]byte, error) {
+	if len(transitPath) == 0 {
+		// Rewrite to default if not defined, all examples from documentation
+		// uses `transit` path
+		transitPath = "transit"
+	}
+
+	batchInput := [](map[string]interface{}){}
+	for _, text := range ciphertexts {
+		batchInput = append(batchInput, map[string]interface{}{
+			"ciphertext": text,
+		})
+	}
+
+	out, err := t.client.Logical().Write(
+		path.Join(transitPath, "decrypt", keyID),
+		map[string]interface{}{
+			"batch_input": batchInput,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := map[string][]byte{}
+	for k, val := range out.Data["batch_results"].([]interface{}) {
+		ret[ciphertexts[k]], err = base64.StdEncoding.DecodeString(val.(map[string]interface{})["plaintext"].(string))
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ret, nil
+}

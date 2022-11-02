@@ -39,6 +39,7 @@ type VaultConfig struct {
 	VaultEnvDelay               time.Duration
 	TransitKeyID                string
 	TransitPath                 string
+	TransitBatchSize            int
 	CtConfigMap                 string
 	CtImage                     string
 	CtInjectInInitcontainers    bool
@@ -408,6 +409,13 @@ func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig 
 		vaultConfig.MutateProbes = false
 	}
 
+	if val, ok := annotations["vault.security.banzaicloud.io/transit-batch-size"]; ok {
+		batchSize, _ := strconv.ParseInt(val, 10, 32)
+		vaultConfig.TransitBatchSize = int(batchSize)
+	} else {
+		vaultConfig.TransitBatchSize = viper.GetInt("transit_batch_size")
+	}
+
 	return vaultConfig
 }
 
@@ -455,6 +463,7 @@ func SetConfigDefaults() {
 	viper.SetDefault("telemetry_listen_address", "")
 	viper.SetDefault("transit_key_id", "")
 	viper.SetDefault("transit_path", "")
+	viper.SetDefault("transit_batch_size", 25)
 	viper.SetDefault("default_image_pull_secret", "")
 	viper.SetDefault("default_image_pull_secret_service_account", "")
 	viper.SetDefault("default_image_pull_secret_namespace", "")
@@ -468,5 +477,6 @@ func SetConfigDefaults() {
 	viper.SetDefault("VAULT_ENV_MEMORY_LIMIT", "")
 	viper.SetDefault("VAULT_ENV_LOG_SERVER", "")
 	viper.SetDefault("VAULT_NAMESPACE", "")
+
 	viper.AutomaticEnv()
 }

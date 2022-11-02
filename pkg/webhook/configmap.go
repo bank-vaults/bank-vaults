@@ -52,8 +52,9 @@ func (mw *MutatingWebhook) MutateConfigMap(configMap *corev1.ConfigMap, vaultCon
 	defer vaultClient.Close()
 
 	config := injector.Config{
-		TransitKeyID: vaultConfig.TransitKeyID,
-		TransitPath:  vaultConfig.TransitPath,
+		TransitKeyID:     vaultConfig.TransitKeyID,
+		TransitPath:      vaultConfig.TransitPath,
+		TransitBatchSize: vaultConfig.TransitBatchSize,
 	}
 	secretInjector := injector.NewSecretInjector(config, vaultClient, nil, logger)
 

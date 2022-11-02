@@ -20,6 +20,7 @@ package injector
 import (
 	"encoding/base64"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -234,4 +235,54 @@ func TestSecretInjectorFromPath(t *testing.T) {
 
 		assert.Equal(t, map[string]string{}, results)
 	})
+}
+
+func TestPaginate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		pageSize int
+		secrets  []string
+		want     [][]string
+	}{
+		{
+			name:     "no secrets",
+			pageSize: 1,
+			secrets:  []string{},
+			want:     [][]string{},
+		},
+		{
+			name:     "page by more values then exist",
+			pageSize: 100,
+			secrets:  []string{"vault:v1:aGVsbG8="},
+			want:     [][]string{{"vault:v1:aGVsbG8="}},
+		},
+		{
+			name:     "pagination works",
+			pageSize: 2,
+			secrets:  []string{"vault:v1:aGVsbG8=", "vault:v2:aGVsbG8=", "vault:v3:aGVsbG8=", "vault:v4:aGVsbG8="},
+			want:     [][]string{{"vault:v1:aGVsbG8=", "vault:v2:aGVsbG8="}, {"vault:v3:aGVsbG8=", "vault:v4:aGVsbG8="}},
+		},
+		{
+			name:     "pagination with remeinder",
+			pageSize: 3,
+			secrets:  []string{"vault:v1:aGVsbG8=", "vault:v2:aGVsbG8=", "vault:v3:aGVsbG8=", "vault:v4:aGVsbG8="},
+			want:     [][]string{{"vault:v1:aGVsbG8=", "vault:v2:aGVsbG8=", "vault:v3:aGVsbG8="}, {"vault:v4:aGVsbG8="}},
+		},
+		{
+			name:     "page size 1",
+			pageSize: 1,
+			secrets:  []string{"vault:v1:aGVsbG8=", "vault:v2:aGVsbG8=", "vault:v3:aGVsbG8=", "vault:v4:aGVsbG8="},
+			want:     [][]string{{"vault:v1:aGVsbG8="}, {"vault:v2:aGVsbG8="}, {"vault:v3:aGVsbG8="}, {"vault:v4:aGVsbG8="}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := paginate(tt.secrets, tt.pageSize)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("paginate() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
