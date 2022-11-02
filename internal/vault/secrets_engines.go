@@ -315,7 +315,7 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) e
 					}
 				}
 
-				// For secret engines where the root credentials are rotatable we don't wan't to reconfigure again
+				// For secret engines where the root credentials are rotatable we don't want to reconfigure again
 				// with the old credentials, because that would cause access denied issues. Currently these are:
 				// - AWS
 				// - Database
@@ -323,7 +323,11 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) e
 					((secretEngine.Type == "database" && configOption == "config") ||
 						(secretEngine.Type == "aws" && configOption == "config/root")) {
 					// TODO we need to find out if it was rotated or not
-					err = v.rotateSecretEngineCredentials(secretEngine.Type, secretEngine.Path, name.(string), configPath)
+					nameStr := ""
+					if name != nil {
+						nameStr = name.(string)
+					}
+					err = v.rotateSecretEngineCredentials(secretEngine.Type, secretEngine.Path, nameStr, configPath)
 					if err != nil {
 						return errors.Wrapf(err, "error rotating credentials for '%s' config in vault", configPath)
 					}
