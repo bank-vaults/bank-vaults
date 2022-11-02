@@ -1,9 +1,8 @@
-{{- if .Values.rbac.psp.enabled }}
+{{- if .Values.rbac.psp.enabled (.Capabilities.APIVersions.Has "policy/v1beta1/PodSecurityPolicy") }}
 {{- if semverCompare ">=1.16-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
 apiVersion: policy/v1beta1
 {{- else  }}
 apiVersion: extensions/v1beta1
-{{- end }}
 kind: PodSecurityPolicy
 metadata:
   name: {{ template "vault-secrets-webhook.fullname" . }}
@@ -34,7 +33,9 @@ spec:
   - secret
   - emptyDir
   - configMap
+{{- end }}
 ---
+{{- if .Values.rbac.psp.enabled (.Capabilities.APIVersions.Has "policy/v1beta1/PodSecurityPolicy") }}
 {{- if semverCompare ">=1.16-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
 apiVersion: policy/v1beta1
 {{- else  }}

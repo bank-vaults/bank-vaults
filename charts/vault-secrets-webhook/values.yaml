@@ -88,8 +88,20 @@ metrics:
 securityContext:
   runAsUser: 65534
   allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
 
-podSecurityContext: {}
+podSecurity: ["pod-security.kubernetes.io/audit=restricted",
+      "pod-security.kubernetes.io/audit-version=latest",
+      "pod-security.kubernetes.io/warn=restricted",
+      "pod-security.kubernetes.io/warn-version=latest",
+      "pod-security.kubernetes.io/enforce=restricted",
+      "pod-security.kubernetes.io/enforce-version=v1.24"]
+
+podSecurityContext: 
+  fsGroup: 999
+  supplementalGroups:
+    - 999
+
 
 volumes: []
 # - name: vault-tls
