@@ -30,7 +30,7 @@ jobs:
           VAULT_DEV_ROOT_TOKEN_ID: e2e_tests
 
     env:
-      GO_VERSION: 1.17
+      GO_VERSION: 1.19.2
       VAULT_TOKEN: 'e2e_tests'
       VAULT_ADDR: 'http://0.0.0.0:8200'
       VAULT_LOG_FILE: 'vault.log'

@@ -40,7 +40,7 @@ LICENSEI_VERSION = 0.3.1
 CODE_GENERATOR_VERSION = 0.19.3
 CONTROLLER_GEN_VERSION = v0.4.1
 
-GOLANG_VERSION = 1.17
+GOLANG_VERSION = 1.19.2
 
 ## include "generic" targets
 include main-targets.mk
