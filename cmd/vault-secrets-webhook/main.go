@@ -49,7 +49,7 @@ func newK8SClient() (kubernetes.Interface, error) {
 }
 
 func healthzHandler(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 }
 
 func handlerFor(config mutating.WebhookConfig, recorder whwebhook.MetricsRecorder) http.Handler {

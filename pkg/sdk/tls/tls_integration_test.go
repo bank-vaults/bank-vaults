@@ -118,7 +118,7 @@ func TestGenerateTLS(t *testing.T) {
 		test := test
 
 		t.Run(strings.Split(test, ":")[0], func(t *testing.T) {
-			req, err := http.NewRequestWithContext(context.Background(), "GET", "https://"+test, nil)
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://"+test, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -224,7 +224,7 @@ func TestLoadAndRegenerateTLS(t *testing.T) {
 		test := test
 
 		t.Run(strings.Split(test, ":")[0], func(t *testing.T) {
-			req, err := http.NewRequestWithContext(context.Background(), "GET", "https://"+test, nil)
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://"+test, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
