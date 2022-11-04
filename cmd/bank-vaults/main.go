@@ -103,7 +103,7 @@ const (
 const (
 	cfgHSMModulePath = "hsm-module-path"
 	cfgHSMSlotID     = "hsm-slot-id"
-	cfgHSMTokenLabel = "hsm-token-label" // nolint:gosec
+	cfgHSMTokenLabel = "hsm-token-label" //nolint:gosec
 	cfgHSMPin        = "hsm-pin"
 	cfgHSMKeyLabel   = "hsm-key-label"
 )

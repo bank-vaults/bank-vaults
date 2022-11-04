@@ -117,7 +117,7 @@ func (t kvTester) Test(key string) error {
 	_, err := t.Service.Get(key)
 	if err != nil {
 		if !isNotFoundError(err) {
-			return err // nolint:wrapcheck
+			return err //nolint:wrapcheck
 		}
 	}
 
@@ -234,7 +234,7 @@ func (v *vault) keyStoreNotFound(key string) (bool, error) {
 		return true, nil
 	}
 
-	return false, err // nolint:wrapcheck
+	return false, err //nolint:wrapcheck
 }
 
 func (v *vault) keyStoreSet(key string, val []byte) error {

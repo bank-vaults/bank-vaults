@@ -162,7 +162,7 @@ func (tokenStore *inMemoryTokenStore) List(userID string) ([]*Token, error) {
 		i := 0
 		for _, v := range userTokens {
 			tokens[i] = v
-			i++ // nolint:wastedassign
+			i++
 		}
 		return tokens, nil
 	}

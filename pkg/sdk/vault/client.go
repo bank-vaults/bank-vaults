@@ -119,7 +119,7 @@ func (co ClientTimeout) apply(o *clientOptions) {
 }
 
 // ClientLogger wraps a logur.Logger compatible logger to be used in the client.
-func ClientLogger(logger Logger) clientLogger { // nolint:revive
+func ClientLogger(logger Logger) clientLogger { //nolint:revive
 	return clientLogger{logger: logger}
 }
 
@@ -372,10 +372,10 @@ func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*
 
 			var loginDataFunc func() (map[string]interface{}, error)
 
-			switch o.authMethod { // nolint:exhaustive
+			switch o.authMethod { //nolint:exhaustive
 			case AWSEC2AuthMethod:
 				loginDataFunc = func() (map[string]interface{}, error) {
-					resp, err := http.Get(awsEC2PKCS7Url) // nolint:noctx
+					resp, err := http.Get(awsEC2PKCS7Url) //nolint:noctx
 					if err != nil {
 						return nil, err
 					}
