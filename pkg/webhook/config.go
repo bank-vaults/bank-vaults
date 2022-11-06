@@ -83,6 +83,7 @@ type VaultConfig struct {
 	VaultServiceAccount         string
 	ObjectNamespace             string
 	MutateProbes                bool
+	Token                       string
 }
 
 func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig {
@@ -415,6 +416,8 @@ func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig 
 	} else {
 		vaultConfig.TransitBatchSize = viper.GetInt("transit_batch_size")
 	}
+
+	vaultConfig.Token = viper.GetString("vault_token")
 
 	return vaultConfig
 }
