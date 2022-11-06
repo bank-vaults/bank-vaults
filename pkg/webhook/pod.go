@@ -94,6 +94,14 @@ func (mw *MutatingWebhook) MutatePod(ctx context.Context, pod *corev1.Pod, vault
 			Value: strconv.FormatBool(vaultConfig.SkipVerify),
 		},
 	}
+
+	if vaultConfig.Token != "" {
+		containerEnvVars = append(containerEnvVars, corev1.EnvVar{
+			Name:  "VAULT_TOKEN",
+			Value: vaultConfig.Token,
+		})
+	}
+
 	containerVolMounts := []corev1.VolumeMount{
 		{
 			Name:      VaultEnvVolumeName,
@@ -344,6 +352,13 @@ func (mw *MutatingWebhook) mutateContainers(ctx context.Context, containers []co
 				Value: vaultConfig.ClientTimeout.String(),
 			},
 		}...)
+
+		if vaultConfig.Token != "" {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  "VAULT_TOKEN",
+				Value: vaultConfig.Token,
+			})
+		}
 
 		if vaultConfig.LogLevel != "" {
 			container.Env = append(container.Env, []corev1.EnvVar{
@@ -650,7 +665,7 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 				},
 			},
 		})
-	} else if vaultConfig.UseAgent || vaultConfig.CtConfigMap != "" {
+	} else if vaultConfig.Token == "" && (vaultConfig.UseAgent || vaultConfig.CtConfigMap != "") {
 		serviceAccountMount := getServiceAccountMount(originalContainers)
 
 		containerVolMounts = append(containerVolMounts, serviceAccountMount, corev1.VolumeMount{
