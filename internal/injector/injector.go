@@ -28,6 +28,10 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
+const (
+	MissingSecretsAnnotation = "vault.security.banzaicloud.io/vault-ignore-missing-secrets"
+)
+
 type SecretInjectorFunc func(key, value string)
 
 type SecretRenewer interface {
@@ -269,7 +273,11 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 				return errors.Errorf("path not found: %s", valuePath)
 			}
 
-			i.logger.Warnf("path not found: %s", valuePath)
+			i.logger.Warnf(
+				"We couldn't find a secret path. This is not an error since missing secrets can be ignored according to the configuration you've set (annotation: %s). Path not found: %s",
+				MissingSecretsAnnotation,
+				valuePath,
+			)
 
 			continue
 		}
@@ -323,7 +331,11 @@ func (i SecretInjector) InjectSecretsFromVaultPath(paths string, inject SecretIn
 				return errors.Errorf("path not found: %s", valuePath)
 			}
 
-			i.logger.Warnln("path not found:", valuePath)
+			i.logger.Warnf(
+				"We couldn't find a secret path. This is not an error since missing secrets can be ignored according to the configuration you've set (annotation: %s). Path not found: %s",
+				MissingSecretsAnnotation,
+				valuePath,
+			)
 
 			continue
 		}
