@@ -269,7 +269,7 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 				return errors.Errorf("path not found: %s", valuePath)
 			}
 
-			i.logger.Errorf("path not found: %s", valuePath)
+			i.logger.Warnf("path not found: %s", valuePath)
 
 			continue
 		}
@@ -323,7 +323,7 @@ func (i SecretInjector) InjectSecretsFromVaultPath(paths string, inject SecretIn
 				return errors.Errorf("path not found: %s", valuePath)
 			}
 
-			i.logger.Errorln("path not found:", valuePath)
+			i.logger.Warnln("path not found:", valuePath)
 
 			continue
 		}
