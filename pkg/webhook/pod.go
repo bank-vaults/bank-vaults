@@ -36,6 +36,7 @@ pid_file = "/tmp/pidfile"
 
 auto_auth {
         method "kubernetes" {
+                namespace = "%s"
                 mount_path = "auth/%s"
                 config = {
                         role = "%s"
@@ -869,7 +870,7 @@ func getConfigMapForVaultAgent(pod *corev1.Pod, vaultConfig VaultConfig) *corev1
 			OwnerReferences: ownerReferences,
 		},
 		Data: map[string]string{
-			"config.hcl": fmt.Sprintf(vaultAgentConfig, vaultConfig.Path, vaultConfig.Role),
+			"config.hcl": fmt.Sprintf(vaultAgentConfig, vaultConfig.VaultNamespace, vaultConfig.Path, vaultConfig.Role),
 		},
 	}
 }

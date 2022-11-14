@@ -1540,7 +1540,7 @@ func configMapForStatsD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 func configMapForFluentD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	ls := v.LabelsForVault()
 	fluentdConfFile := v.Spec.FluentDConfFile
-	if fluentdConfFile != "" {
+	if fluentdConfFile == "" {
 		fluentdConfFile = "fluent.conf"
 	}
 	cm := &corev1.ConfigMap{
