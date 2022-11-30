@@ -82,12 +82,13 @@ func TestSecretInjector(t *testing.T) {
 		t.Parallel()
 
 		references := map[string]string{
-			"ACCOUNT_PASSWORD":      "vault:secret/data/account#password",
-			"TRANSIT_SECRET":        `>>vault:transit/decrypt/mykey#${.plaintext | b64dec}#{"ciphertext":"` + ciphertext + `"}`,
-			"ROOT_CERT":             ">>vault:pki/root/generate/internal#certificate",
-			"ROOT_CERT_CACHED":      ">>vault:pki/root/generate/internal#certificate",
-			"INLINE_SECRET":         "scheme://${vault:secret/data/account#username}:${vault:secret/data/account#password}@127.0.0.1:8080",
-			"INLINE_DYNAMIC_SECRET": "${>>vault:pki/root/generate/internal#certificate}__${>>vault:pki/root/generate/internal#certificate}",
+			"ACCOUNT_PASSWORD":                "vault:secret/data/account#password",
+			"TRANSIT_SECRET":                  `>>vault:transit/decrypt/mykey#${.plaintext | b64dec}#{"ciphertext":"` + ciphertext + `"}`,
+			"ROOT_CERT":                       ">>vault:pki/root/generate/internal#certificate",
+			"ROOT_CERT_CACHED":                ">>vault:pki/root/generate/internal#certificate",
+			"INLINE_SECRET":                   "scheme://${vault:secret/data/account#username}:${vault:secret/data/account#password}@127.0.0.1:8080",
+			"INLINE_SECRET_EMBEDDED_TEMPLATE": "scheme://${vault:secret/data/account#username}:${vault:secret/data/account#${.password | urlquery}}@127.0.0.1:8080",
+			"INLINE_DYNAMIC_SECRET":           "${>>vault:pki/root/generate/internal#certificate}__${>>vault:pki/root/generate/internal#certificate}",
 		}
 
 		results := map[string]string{}
@@ -111,9 +112,10 @@ func TestSecretInjector(t *testing.T) {
 		delete(results, "INLINE_DYNAMIC_SECRET")
 
 		assert.Equal(t, map[string]string{
-			"ACCOUNT_PASSWORD": "secret",
-			"TRANSIT_SECRET":   "secret",
-			"INLINE_SECRET":    "scheme://superusername:secret@127.0.0.1:8080",
+			"ACCOUNT_PASSWORD":                "secret",
+			"TRANSIT_SECRET":                  "secret",
+			"INLINE_SECRET":                   "scheme://superusername:secret@127.0.0.1:8080",
+			"INLINE_SECRET_EMBEDDED_TEMPLATE": "scheme://superusername:secret@127.0.0.1:8080",
 		}, results)
 	})
 

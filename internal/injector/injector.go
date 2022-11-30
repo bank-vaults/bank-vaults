@@ -62,7 +62,7 @@ func NewSecretInjector(config Config, client *vault.Client, renewer SecretRenewe
 	}
 }
 
-var inlineMutationRegex = regexp.MustCompile(`\${([>]{0,2}vault:.*?)}`)
+var inlineMutationRegex = regexp.MustCompile(`\${([>]{0,2}vault:.*?#*}?)}`)
 
 func (i SecretInjector) FetchTransitSecrets(secrets []string) (map[string][]byte, error) {
 	if len(i.config.TransitKeyID) == 0 {
