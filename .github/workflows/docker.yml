@@ -36,7 +36,7 @@ jobs:
           if_false: latest
       - name: Determine image tag
         id: imagetag
-        run: echo "::set-output name=value::${TAG_OR_BRANCH##*/}"
+        run: echo "value=${TAG_OR_BRANCH##*/}" >> $GITHUB_OUTPUT
         env:
           TAG_OR_BRANCH: ${{ steps.refortag.outputs.value }}
 
