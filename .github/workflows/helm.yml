@@ -57,7 +57,7 @@ jobs:
           GIT_REFNAME="$(echo "${{ github.ref }}" | sed -r 's@refs/(heads|pull|tags)/@@g')"
 
           echo "GIT_REFNAME=${GIT_REFNAME}"
-          echo ::set-output name=git_refname::${GIT_REFNAME}
+          echo "git_refname=${GIT_REFNAME}" >> $GITHUB_OUTPUT
 
       - name: Set Helm push enabled
         id: set-helm-push-enabled
@@ -70,7 +70,7 @@ jobs:
           fi
 
           echo "HELM_PUSH_ENABLED=${HELM_PUSH_ENABLED}"
-          echo ::set-output name=helm_push_enabled::${HELM_PUSH_ENABLED}
+          echo "helm_push_enabled=${HELM_PUSH_ENABLED}" >> $GITHUB_OUTPUT
 
       - if: ${{ steps.set-helm-push-enabled.outputs.helm_push_enabled == 1 }}
         name: Set chart name
@@ -79,7 +79,7 @@ jobs:
           CHART_NAME="$(echo "${{ steps.set-git-refname.outputs.git_refname }}}" | awk -F '/' '{print $(NF-1)}')"
 
           echo "CHART_NAME=${CHART_NAME}"
-          echo ::set-output name=chart_name::${CHART_NAME}
+          echo "chart_name=${CHART_NAME}" >> $GITHUB_OUTPUT
 
       - if: ${{ steps.set-helm-push-enabled.outputs.helm_push_enabled == 1 }}
         name: Package Helm chart
@@ -89,7 +89,7 @@ jobs:
           HELM_PACKAGE_PATH="${HELM_PACKAGE_OUTPUT##"Successfully packaged chart and saved it to: "}"
 
           echo "HELM_PACKAGE_PATH=${HELM_PACKAGE_PATH}"
-          echo ::set-output name=helm_package_path::${HELM_PACKAGE_PATH}
+          echo "helm_package_path=${HELM_PACKAGE_PATH}" >> $GITHUB_OUTPUT
 
       - if: ${{ steps.set-helm-push-enabled.outputs.helm_push_enabled == 1 }}
         name: Check Helm chart version in repository
