@@ -6,6 +6,7 @@ on:
       - master
     tags:
       - "chart/**/[0-9]+.[0-9]+.[0-9]+"
+      - "chart/**/[0-9]+.[0-9]+.[0-9]+-dev.[0-9]+"
   pull_request:
 
 env:
@@ -63,7 +64,7 @@ jobs:
         id: set-helm-push-enabled
         run: |
           HELM_PUSH_ENABLED=""
-          if [ "${{ github.event_name }}" == "push" ] && echo "${{ steps.set-git-refname.outputs.git_refname }}" | grep -E -q "^(chart/)?[^/]+/[0-9]+\.[0-9]+\.[0-9]+"; then
+          if [ "${{ github.event_name }}" == "push" ] && echo "${{ steps.set-git-refname.outputs.git_refname }}" | grep -E -q "^(chart/)?[^/]+/[0-9]+.[0-9]+.[0-9]+(?:-dev.[0-9]+)?"; then
             HELM_PUSH_ENABLED=1
           else
             printf >&2 "Unstable chart (%s) from %s event, chart will not be pushed" "${{ steps.set-git-refname.outputs.git_refname }}" "${{ github.event_name }}"
@@ -94,7 +95,7 @@ jobs:
       - if: ${{ steps.set-helm-push-enabled.outputs.helm_push_enabled == 1 }}
         name: Check Helm chart version in repository
         run: |
-          CHART_PATH="${{ github.workspace }}/${{ steps.set-chart-name.outputs.chart_name }}"
+          CHART_PATH="${{ github.workspace }}/charts/${{ steps.set-chart-name.outputs.chart_name }}"
           EXPECTED_CHART_VERSION="$(echo "${{ steps.set-git-refname.outputs.git_refname }}" | awk -F '/' '{print $NF}')" || exit 1
           ACTUAL_CHART_VERSION="$(awk '/version: [0-9]+\.[0-9]+\.[0-9]+/ {print $2}' "${CHART_PATH}/Chart.yaml")" || exit 1
 
