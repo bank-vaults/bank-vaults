@@ -1,0 +1,20 @@
+# Useful for local development with a Vault dev server:
+#
+# vault server -dev
+# export VAULT_ADDR='http://127.0.0.1:8200'
+# vault kv put secret/database/test username=joska
+#
+# make -j webhook-up
+#
+# kubectl apply -f deploy/test-configmap-dev.yaml
+# kubectl get configmap configmap-dev -o yaml
+#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configmap-dev
+  annotations:
+    vault.security.banzaicloud.io/vault-addr: "http://localhost:8200"
+data:
+  plain: vault:secret/data/database/test#username
+  template: user=${vault:secret/data/database/test#username}
