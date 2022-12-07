@@ -95,7 +95,7 @@ jobs:
       - if: ${{ steps.set-helm-push-enabled.outputs.helm_push_enabled == 1 }}
         name: Check Helm chart version in repository
         run: |
-          CHART_PATH="${{ github.workspace }}/${{ steps.set-chart-name.outputs.chart_name }}"
+          CHART_PATH="${{ github.workspace }}/charts/${{ steps.set-chart-name.outputs.chart_name }}"
           EXPECTED_CHART_VERSION="$(echo "${{ steps.set-git-refname.outputs.git_refname }}" | awk -F '/' '{print $NF}')" || exit 1
           ACTUAL_CHART_VERSION="$(awk '/version: [0-9]+\.[0-9]+\.[0-9]+/ {print $2}' "${CHART_PATH}/Chart.yaml")" || exit 1
 
