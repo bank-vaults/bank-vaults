@@ -170,13 +170,12 @@ operator-down:
 webhook-forward: ## Install the webhook chart and kurun to port-forward the local webhook into Kubernetes
 	kubectl create namespace vault-infra --dry-run -o yaml | kubectl apply -f -
 	kubectl label namespaces vault-infra name=vault-infra --overwrite
-	helm upgrade --install vault-secrets-webhook charts/vault-secrets-webhook --namespace vault-infra --set replicaCount=0 --set podsFailurePolicy=Fail --set secretsFailurePolicy=Fail
+	helm upgrade --install vault-secrets-webhook charts/vault-secrets-webhook --namespace vault-infra --set replicaCount=0 --set podsFailurePolicy=Fail --set secretsFailurePolicy=Fail --set configMapMutation=true --set configMapFailurePolicy=Fail
 	kurun port-forward localhost:8443 --namespace vault-infra --servicename vault-secrets-webhook --tlssecret vault-secrets-webhook-webhook-tls
 
 .PHONY: webhook-run ## Run run the webhook locally
 webhook-run:
 	KUBERNETES_NAMESPACE=vault-infra go run ./cmd/vault-secrets-webhook
 
-
-.PHONY: webhook-up ## Run the webhook and `kurun port-forward` in foreground. Use with make -j.
+.PHONY: webhook-up ## Run the webhook and `kurun port-forward` in foreground. Use with make -j webhook-up
 webhook-up: webhook-run webhook-forward
