@@ -37,19 +37,19 @@ bin/golangci-lint-${GOLANGCI_VERSION}:
 
 .PHONY: lint
 lint: bin/golangci-lint ## Run linter
-	bin/golangci-lint run
+	bin/golangci-lint run --disable varnamelen,ireturn,nosnakecase,exhaustruct,nonamedreturns,nilnil,contextcheck,maintidx,dupword,gosec,gomoddirectives,gci,gofumpt,gofmt,goimports,revive,staticcheck
 
 .PHONY: lint-sdk
 lint-sdk: bin/golangci-lint ## Run linter
-	cd pkg/sdk && ../../bin/golangci-lint run
+	cd pkg/sdk && ../../bin/golangci-lint run --disable varnamelen,ireturn,nosnakecase,exhaustruct,nonamedreturns,nilnil,contextcheck,maintidx,dupword,gosec,gomoddirectives,gci,gofumpt,gofmt,goimports,revive,staticcheck
 
 .PHONY: fix
 fix: bin/golangci-lint ## Fix lint violations
-	bin/golangci-lint run --fix
+	bin/golangci-lint run --fix --disable varnamelen,ireturn,nosnakecase,exhaustruct,nonamedreturns,nilnil,contextcheck,maintidx,dupword,gosec,gomoddirectives,gci,gofumpt,gofmt,goimports,revive,staticcheck
 
 .PHONY: fix-sdk
 fix-sdk: bin/golangci-lint ## Fix lint violations
-	cd pkg/sdk && ../../bin/golangci-lint run --fix
+	cd pkg/sdk && ../../bin/golangci-lint run --fix --disable varnamelen,ireturn,nosnakecase,exhaustruct,nonamedreturns,nilnil,contextcheck,maintidx,dupword,gosec,gomoddirectives,gci,gofumpt,gofmt,goimports,revive,staticcheck
 
 bin/licensei: bin/licensei-${LICENSEI_VERSION}
 	@ln -sf licensei-${LICENSEI_VERSION} bin/licensei

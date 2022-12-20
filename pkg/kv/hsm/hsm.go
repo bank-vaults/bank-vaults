@@ -81,7 +81,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	for _, s := range slots {
 		if config.TokenLabel == "" {
 			if s.ID() == config.SlotID {
-				slot = &s // nolint:gosec
+				slot = &s //nolint:gosec
 				log.Infof("found HSM slot %d in HSM by slot ID", slot.ID())
 
 				break
@@ -92,7 +92,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 				return nil, errors.WrapIf(err, "can't query token info from slot")
 			}
 			if tokenInfo.Label == config.TokenLabel {
-				slot = &s // nolint:gosec
+				slot = &s //nolint:gosec
 				log.Infof("found HSM slot %d in HSM by token label", slot.ID())
 
 				break
@@ -256,7 +256,7 @@ func (h *hsmCrypto) Set(key string, value []byte) error {
 }
 
 /*
-Purpose: Generate RSA keypair with a given tokenLabel and persistence.
+	Purpose: Generate RSA keypair with a given tokenLabel and persistence.
 	tokenLabel: string to set as the token labels
 */
 func generateRSAKeyPairRequest(tokenLabel string) p11.GenerateKeyPairRequest {

@@ -386,7 +386,7 @@ func (i SecretInjector) readVaultPath(path, versionOrData string, update bool) (
 		secretData = cast.ToStringMap(v2Data)
 
 		// Check if a given version of a path is destroyed
-		metadata := secret.Data["metadata"].(map[string]interface{}) // nolint:forcetypeassert
+		metadata := secret.Data["metadata"].(map[string]interface{}) //nolint:forcetypeassert
 		if metadata["destroyed"].(bool) {
 			i.logger.Warnln("version of secret has been permanently destroyed version:", versionOrData, "path:", path)
 		}

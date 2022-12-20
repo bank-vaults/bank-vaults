@@ -57,7 +57,7 @@ func TestSecretInjector(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	ciphertext := secret.Data["ciphertext"].(string) // nolint:forcetypeassert
+	ciphertext := secret.Data["ciphertext"].(string) //nolint:forcetypeassert
 
 	_, err = client.RawClient().Logical().Write("secret/data/account", vault.NewData(0, map[string]interface{}{"username": "superusername", "password": "secret"}))
 	assert.NoError(t, err)
