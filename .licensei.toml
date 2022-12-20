@@ -24,6 +24,7 @@ ignored = [
   "cloud.google.com/go/storage",
 
   "gomodules.xyz/orderedmap", # MIT
+  "github.com/form3tech-oss/jwt-go", # MIT
   "gomodules.xyz/jsonpatch/v2", # Apache 2.0
   "gomodules.xyz/jsonpatch/v3", # Apache 2.0
 ]
