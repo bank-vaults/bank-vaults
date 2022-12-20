@@ -292,10 +292,8 @@ func (v *vault) Init() error {
 	}
 
 	resp, err := v.cl.Sys().Init(&api.InitRequest{
-		SecretShares:      v.config.SecretShares,
-		SecretThreshold:   v.config.SecretThreshold,
-		RecoveryShares:    v.config.SecretShares,
-		RecoveryThreshold: v.config.SecretThreshold,
+		SecretShares:    v.config.SecretShares,
+		SecretThreshold: v.config.SecretThreshold,
 	})
 	if err != nil {
 		return errors.Wrap(err, "error initializing vault")
