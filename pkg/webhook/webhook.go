@@ -27,9 +27,9 @@ import (
 	"github.com/slok/kubewebhook/v2/pkg/log"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	"github.com/slok/kubewebhook/v2/pkg/webhook/mutating"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
@@ -214,35 +214,35 @@ func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 			return nil, errors.Wrap(err, "Failed to retrieve specified service account on namespace "+vaultConfig.ObjectNamespace)
 		}
 
-        saToken := ""
-        if len(sa.Secrets) > 0 {
-		    secret, err := mw.k8sClient.CoreV1().Secrets(vaultConfig.ObjectNamespace).Get(context.Background(), sa.Secrets[0].Name, metav1.GetOptions{})
-		    if err != nil {
+		saToken := ""
+		if len(sa.Secrets) > 0 {
+			secret, err := mw.k8sClient.CoreV1().Secrets(vaultConfig.ObjectNamespace).Get(context.Background(), sa.Secrets[0].Name, metav1.GetOptions{})
+			if err != nil {
 				return nil, errors.Wrap(err, "Failed to retrieve secret for service account "+sa.Secrets[0].Name+" in namespace "+vaultConfig.ObjectNamespace)
-		    }
-            saToken = string(secret.Data["token"])
-        }
+			}
+			saToken = string(secret.Data["token"])
+		}
 
-        if saToken == "" {
-            tokenTTL := int64(600) // min allowed duration is 10 mins
-	        tokenRequest := &authenticationv1.TokenRequest{
+		if saToken == "" {
+			tokenTTL := int64(600) // min allowed duration is 10 mins
+			tokenRequest := &authenticationv1.TokenRequest{
 				Spec: authenticationv1.TokenRequestSpec{
 					Audiences:         []string{"https://kubernetes.default.svc"},
 					ExpirationSeconds: &tokenTTL,
 				},
-	        }
+			}
 
-            token, err := mw.k8sClient.CoreV1().ServiceAccounts(vaultConfig.ObjectNamespace).CreateToken(
-                context.Background(),
-                vaultConfig.VaultServiceAccount,
-                tokenRequest,
-                metav1.CreateOptions{},
-            )
-            if err != nil {
-			    return nil, errors.Wrap(err, "Failed to create a token for the specified service account " +  vaultConfig.VaultServiceAccount + " on namespace "+vaultConfig.ObjectNamespace)
-		    }
-            saToken = string(token.Status.Token)
-        }
+			token, err := mw.k8sClient.CoreV1().ServiceAccounts(vaultConfig.ObjectNamespace).CreateToken(
+				context.Background(),
+				vaultConfig.VaultServiceAccount,
+				tokenRequest,
+				metav1.CreateOptions{},
+			)
+			if err != nil {
+				return nil, errors.Wrap(err, "Failed to create a token for the specified service account "+vaultConfig.VaultServiceAccount+" on namespace "+vaultConfig.ObjectNamespace)
+			}
+			saToken = string(token.Status.Token)
+		}
 
 		return vault.NewClientFromConfig(
 			clientConfig,
