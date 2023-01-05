@@ -241,7 +241,7 @@ func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 			if err != nil {
 				return nil, errors.Wrap(err, "Failed to create a token for the specified service account "+vaultConfig.VaultServiceAccount+" on namespace "+vaultConfig.ObjectNamespace)
 			}
-			saToken = string(token.Status.Token)
+			saToken = token.Status.Token
 		}
 
 		return vault.NewClientFromConfig(
