@@ -274,9 +274,9 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 			}
 
 			i.logger.Warnf(
-				"We couldn't find a secret path. This is not an error since missing secrets can be ignored according to the configuration you've set (annotation: %s). Path not found: %s",
-				MissingSecretsAnnotation,
+				"Path not found: %s - We couldn't find a secret path. This is not an error since missing secrets can be ignored according to the configuration you've set (annotation: %s).",
 				valuePath,
+				MissingSecretsAnnotation,
 			)
 
 			continue
@@ -332,9 +332,9 @@ func (i SecretInjector) InjectSecretsFromVaultPath(paths string, inject SecretIn
 			}
 
 			i.logger.Warnf(
-				"We couldn't find a secret path. This is not an error since missing secrets can be ignored according to the configuration you've set (annotation: %s). Path not found: %s",
-				MissingSecretsAnnotation,
+				"Path not found: %s - We couldn't find a secret path. This is not an error since missing secrets can be ignored according to the configuration you've set (annotation: %s).",
 				valuePath,
+				MissingSecretsAnnotation,
 			)
 
 			continue
