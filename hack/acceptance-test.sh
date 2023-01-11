@@ -37,7 +37,6 @@ trap finish EXIT
 # Smoke test the pure Vault Helm chart first
 helm upgrade --install --wait vault ./charts/vault --set unsealer.image.tag=latest --set ingress.enabled=true --set "ingress.hosts[0]=localhost"
 helm delete vault
-kubectl delete secret bank-vaults
 
 # Create a resource quota in the default namespace
 kubectl create quota bank-vaults --hard=cpu=4,memory=8G,pods=10,services=10,replicationcontrollers=10,secrets=15,persistentvolumeclaims=10
