@@ -140,7 +140,7 @@ jobs:
         version: ${{ env.KIND_VERSION }}
 
     - name: Install envtpl
-      run: go install github.com/subfuzion/envtpl/...@master
+      run: go install github.com/subfuzion/envtpl/...@428c2d7
 
     - name: Install cidr
       run: go install github.com/hankjacobs/cidr@master
