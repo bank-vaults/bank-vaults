@@ -503,10 +503,9 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 	}
 
 	defaultMode := int32(420)
-	agentRunAsUser := vaultAgentUID
 
 	baseSecurityContext := &corev1.SecurityContext{
-		RunAsUser:                &agentRunAsUser,
+		RunAsUser:                &vaultConfig.RunAsUser,
 		RunAsNonRoot:             &vaultConfig.RunAsNonRoot,
 		ReadOnlyRootFilesystem:   &vaultConfig.ReadOnlyRootFilesystem,
 		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
@@ -525,7 +524,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 	}
 
 	agentInitContainerSecurityContext := &corev1.SecurityContext{
-		RunAsUser:                &agentRunAsUser,
+		RunAsUser:                &vaultConfig.RunAsUser,
 		RunAsNonRoot:             &vaultConfig.RunAsNonRoot,
 		ReadOnlyRootFilesystem:   &vaultConfig.ReadOnlyRootFilesystem,
 		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,
@@ -544,7 +543,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 	}
 
 	agentContainerSecurityContext := &corev1.SecurityContext{
-		RunAsUser:                &agentRunAsUser,
+		RunAsUser:                &vaultConfig.RunAsUser,
 		RunAsNonRoot:             &vaultConfig.RunAsNonRoot,
 		ReadOnlyRootFilesystem:   &vaultConfig.ReadOnlyRootFilesystem,
 		AllowPrivilegeEscalation: &vaultConfig.PspAllowPrivilegeEscalation,

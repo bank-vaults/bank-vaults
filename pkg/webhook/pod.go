@@ -49,8 +49,6 @@ auto_auth {
                 }
         }
 }`
-	vaultAgentUID int64 = 0
-
 	VaultEnvVolumeName = "vault-env"
 )
 
@@ -674,8 +672,6 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 		})
 
 		securityContext := getBaseSecurityContext(podSecurityContext, vaultConfig)
-		runAsUser := vaultAgentUID
-		securityContext.RunAsUser = &runAsUser
 
 		containers = append(containers, corev1.Container{
 			Name:            "vault-agent",
@@ -786,9 +782,6 @@ func getAgentContainers(originalContainers []corev1.Container, podSecurityContex
 	if vaultConfig.AgentShareProcess {
 		securityContext.Capabilities.Add = append(securityContext.Capabilities.Add, "SYS_PTRACE")
 	}
-
-	runAsUser := vaultAgentUID
-	securityContext.RunAsUser = &runAsUser
 
 	serviceAccountMount := getServiceAccountMount(originalContainers)
 
