@@ -30,7 +30,9 @@ rules:
       - configmaps
     verbs:
       - "get"
+    {{- if .Values.secretsMutation }}
       - "update"
+    {{- end }}
   - apiGroups:
       - ""
     resources:
