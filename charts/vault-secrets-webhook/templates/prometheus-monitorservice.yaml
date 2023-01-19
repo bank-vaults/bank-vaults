@@ -31,6 +31,8 @@ spec:
     matchLabels:
       app.kubernetes.io/name: {{ template "vault-secrets-webhook.name" . }}
       app.kubernetes.io/instance: "{{ .Release.Name }}"
+{{- end }}
+{{- if .Values.metrics.enabled }}
 ---
 apiVersion: v1
 kind: Service
