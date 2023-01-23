@@ -19,11 +19,8 @@ builds:
             - arm64
         hooks:
             post:
-            # TODO
-            # This would be better if it could be ./cmd/bank-vaults instead of github.com/banzaicloud/bank-vaults/cmd/bank-vaults
-            # Since this is pulling the source code directly from GitHub so what we would like to build has to be pushed there first
-            - xgo --targets={{ .Os }}/{{ .Arch }} --dest=dist github.com/banzaicloud/bank-vaults/cmd/bank-vaults
-            - bash -c "mv dist/bank-vaults-{{ .Os }}*-{{ .Arch }} dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
+            - xgo -targets {{ .Os }}/{{ .Arch }} -dest dist -ldflags '-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}' -pkg cmd/bank-vaults .
+            - bash -c "mkdir dist/bank-vaults_{{ .Os }}_{{ .Arch }}; mv dist/github.com/banzaicloud/bank-vaults-{{ .Os }}-{{ .Arch }} dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
 
     -   id: vault-env
         main: ./cmd/vault-env
