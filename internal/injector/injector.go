@@ -143,12 +143,20 @@ func (i SecretInjector) preprocessTransitSecrets(references *map[string]string, 
 
 	for name, value := range *references {
 		if HasInlineVaultDelimiters(value) {
+			newValue := value
 			for _, vaultSecretReference := range FindInlineVaultDelimiters(value) {
 				if v, ok := i.transitCache[vaultSecretReference[0]]; ok {
-					value = strings.Replace(value, vaultSecretReference[0], string(v), -1)
+					newValue = strings.Replace(value, vaultSecretReference[0], string(v), -1)
 				}
 			}
-			inject(name, value)
+
+			// Only inject the value if its content has been updated using the transit cache
+			if value != newValue {
+				inject(name, value)
+
+				// Delete the key from the references to avoid a double processing by the old logic
+				delete(*references, name)
+			}
 
 			continue
 		}

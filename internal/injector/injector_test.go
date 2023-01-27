@@ -32,6 +32,11 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
+func assertKeyDoesNotExist(t *testing.T, m map[string]string, k string) {
+	_, hasKey := m[k]
+	assert.False(t, hasKey)
+}
+
 func TestSecretInjector(t *testing.T) {
 	t.Parallel()
 
@@ -93,6 +98,7 @@ func TestSecretInjector(t *testing.T) {
 
 		results := map[string]string{}
 		injectFunc := func(key, value string) {
+			assertKeyDoesNotExist(t, results, key)
 			results[key] = value
 		}
 
@@ -128,6 +134,7 @@ func TestSecretInjector(t *testing.T) {
 
 		results := map[string]string{}
 		injectFunc := func(key, value string) {
+			assertKeyDoesNotExist(t, results, key)
 			results[key] = value
 		}
 
@@ -144,6 +151,7 @@ func TestSecretInjector(t *testing.T) {
 
 		results := map[string]string{}
 		injectFunc := func(key, value string) {
+			assertKeyDoesNotExist(t, results, key)
 			results[key] = value
 		}
 
@@ -189,6 +197,7 @@ func TestSecretInjectorFromPath(t *testing.T) {
 		results := map[string]string{}
 
 		injectFunc := func(key, value string) {
+			assertKeyDoesNotExist(t, results, key)
 			results[key] = value
 		}
 
@@ -208,6 +217,7 @@ func TestSecretInjectorFromPath(t *testing.T) {
 		results := map[string]string{}
 
 		injectFunc := func(key, value string) {
+			assertKeyDoesNotExist(t, results, key)
 			results[key] = value
 		}
 
@@ -229,6 +239,7 @@ func TestSecretInjectorFromPath(t *testing.T) {
 
 		results := map[string]string{}
 		injectFunc := func(key, value string) {
+			assertKeyDoesNotExist(t, results, key)
 			results[key] = value
 		}
 
