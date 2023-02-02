@@ -137,6 +137,10 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
+deployment:
+  # Strategy for the deployment
+  strategy: {}
+
 # A list of Kubernetes resource types to mutate as well:
 # Example: ["ingresses", "servicemonitors"]
 customResourceMutations: []

@@ -94,7 +94,7 @@ You can read more information on how to add firewall rules for the GKE control p
 The following tables lists configurable parameters of the vault-secrets-webhook chart and their default values:
 
 | Parameter                          | Description                                                                   | Default                                                  |
-| ---------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------- |
+|------------------------------------|-------------------------------------------------------------------------------|----------------------------------------------------------|
 | affinity                           | affinities to use                                                             | `{}`                                                     |
 | debug                              | debug logs for webhook                                                        | `false`                                                  |
 | image.pullPolicy                   | image pull policy                                                             | `IfNotPresent`                                           |
@@ -122,12 +122,13 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | env.VAULT_ENV_MEMORY_REQUEST       | memory requests for init-containers vault-env and copy-vault-env              | `64Mi`                                                   |
 | env.VAULT_ENV_CPU_LIMIT            | cpu limits for init-containers vault-env and copy-vault-env                   | `250m`                                                   |
 | env.VAULT_ENV_MEMORY_LIMIT         | memory limits for init-containers vault-env and copy-vault-env                | `64Mi`                                                   |
-| env.VAULT_ENV_LOG_SERVER           | define remote log server for vault-env                                        | ``                                                   |
-| initContainers                     | containers, which are run before the app containers are started               | `[]`                                                  |
+| env.VAULT_ENV_LOG_SERVER           | define remote log server for vault-env                                        | ``                                                       |
+| initContainers                     | containers, which are run before the app containers are started               | `[]`                                                     |
 | volumes                            | extra volume definitions                                                      | `[]`                                                     |
 | volumeMounts                       | extra volume mounts                                                           | `[]`                                                     |
 | configMapMutation                  | enable injecting values from Vault to ConfigMaps                              | `false`                                                  |
 | secretsMutation                    | enable injecting values from Vault to Secrets                                 | `true`                                                   |
+| deployment.strategy                | rolling strategy for webhook deployment                                       | `{}`                                                     |
 | pods.objectSelector                | object selector to use - ( overrides root ObjectSelector )                    | `{}`                                                     |
 | pods.namespaceSelector             | namespace selector to use - ( overrides root namespaceSelector )              | `{}`                                                     |
 | secrets.objectSelector             | object selector to use - ( overrides root ObjectSelector )                    | `{}`                                                     |
@@ -151,7 +152,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | podSecurityContext                 | Pod security context for webhook deployment                                   | `{}`                                                     |
 | timeoutSeconds                     | Webhook timeoutSeconds value                                                  | ``                                                       |
 | hostNetwork                        | allow pod to use the node network namespace                                   | `false`                                                  |
-| dnsPolicy                          | The dns policy desired for the deployment                                     | ``                                                |
+| dnsPolicy                          | The dns policy desired for the deployment                                     | ``                                                       |
 | kubeVersion                        | Override cluster version                                                      | ``                                                       |
 
 ### Certificate options
