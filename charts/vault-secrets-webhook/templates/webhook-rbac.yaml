@@ -46,6 +46,12 @@ rules:
     verbs:
       - "create"
       - "update"
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts/token
+    verbs:
+      - "create"
 {{- if .Values.rbac.psp.enabled }}
   - apiGroups:
       - extensions
