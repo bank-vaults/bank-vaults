@@ -27,63 +27,64 @@ import (
 
 // VaultConfig represents vault options
 type VaultConfig struct {
-	Addr                        string
-	AuthMethod                  string
-	Role                        string
-	Path                        string
-	SkipVerify                  bool
-	TLSSecret                   string
-	ClientTimeout               time.Duration
-	UseAgent                    bool
-	VaultEnvDaemon              bool
-	VaultEnvDelay               time.Duration
-	TransitKeyID                string
-	TransitPath                 string
-	TransitBatchSize            int
-	CtConfigMap                 string
-	CtImage                     string
-	CtInjectInInitcontainers    bool
-	CtOnce                      bool
-	CtImagePullPolicy           corev1.PullPolicy
-	CtShareProcess              bool
-	CtShareProcessDefault       string
-	CtCPU                       resource.Quantity
-	CtMemory                    resource.Quantity
-	PspAllowPrivilegeEscalation bool
-	RunAsNonRoot                bool
-	RunAsUser                   int64
-	RunAsGroup                  int64
-	ReadOnlyRootFilesystem      bool
-	RegistrySkipVerify          bool
-	IgnoreMissingSecrets        string
-	VaultEnvPassThrough         string
-	ConfigfilePath              string
-	MutateConfigMap             bool
-	EnableJSONLog               string
-	LogLevel                    string
-	AgentConfigMap              string
-	AgentOnce                   bool
-	AgentShareProcess           bool
-	AgentShareProcessDefault    string
-	AgentCPU                    resource.Quantity
-	AgentMemory                 resource.Quantity
-	AgentImage                  string
-	AgentImagePullPolicy        corev1.PullPolicy
-	EnvImage                    string
-	EnvImagePullPolicy          corev1.PullPolicy
-	EnvLogServer                string
-	Skip                        bool
-	VaultEnvFromPath            string
-	TokenAuthMount              string
-	EnvCPURequest               resource.Quantity
-	EnvMemoryRequest            resource.Quantity
-	EnvCPULimit                 resource.Quantity
-	EnvMemoryLimit              resource.Quantity
-	VaultNamespace              string
-	VaultServiceAccount         string
-	ObjectNamespace             string
-	MutateProbes                bool
-	Token                       string
+	Addr                          string
+	AuthMethod                    string
+	Role                          string
+	Path                          string
+	SkipVerify                    bool
+	TLSSecret                     string
+	ClientTimeout                 time.Duration
+	UseAgent                      bool
+	VaultEnvDaemon                bool
+	VaultEnvDelay                 time.Duration
+	TransitKeyID                  string
+	TransitPath                   string
+	TransitBatchSize              int
+	CtConfigMap                   string
+	CtImage                       string
+	CtInjectInInitcontainers      bool
+	CtOnce                        bool
+	CtImagePullPolicy             corev1.PullPolicy
+	CtShareProcess                bool
+	CtShareProcessDefault         string
+	CtCPU                         resource.Quantity
+	CtMemory                      resource.Quantity
+	PspAllowPrivilegeEscalation   bool
+	RunAsNonRoot                  bool
+	RunAsUser                     int64
+	RunAsGroup                    int64
+	ReadOnlyRootFilesystem        bool
+	RegistrySkipVerify            bool
+	IgnoreMissingSecrets          string
+	VaultEnvPassThrough           string
+	ConfigfilePath                string
+	MutateConfigMap               bool
+	EnableJSONLog                 string
+	LogLevel                      string
+	AgentConfigMap                string
+	AgentOnce                     bool
+	AgentShareProcess             bool
+	AgentShareProcessDefault      string
+	AgentCPU                      resource.Quantity
+	AgentMemory                   resource.Quantity
+	AgentImage                    string
+	AgentImagePullPolicy          corev1.PullPolicy
+	ServiceAccountTokenVolumeName string
+	EnvImage                      string
+	EnvImagePullPolicy            corev1.PullPolicy
+	EnvLogServer                  string
+	Skip                          bool
+	VaultEnvFromPath              string
+	TokenAuthMount                string
+	EnvCPURequest                 resource.Quantity
+	EnvMemoryRequest              resource.Quantity
+	EnvCPULimit                   resource.Quantity
+	EnvMemoryLimit                resource.Quantity
+	VaultNamespace                string
+	VaultServiceAccount           string
+	ObjectNamespace               string
+	MutateProbes                  bool
+	Token                         string
 }
 
 func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig {
@@ -179,6 +180,14 @@ func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig 
 		vaultConfig.CtConfigMap = val
 	} else {
 		vaultConfig.CtConfigMap = ""
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/service-account-token-volume-name"]; ok {
+		vaultConfig.ServiceAccountTokenVolumeName = val
+	} else if viper.GetString("SERVICE_ACCOUNT_TOKEN_VOLUME_NAME") != "" {
+		vaultConfig.ServiceAccountTokenVolumeName = viper.GetString("SERVICE_ACCOUNT_TOKEN_VOLUME_NAME")
+	} else {
+		vaultConfig.ServiceAccountTokenVolumeName = "/var/run/secrets/kubernetes.io/serviceaccount"
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-ct-image"]; ok {
