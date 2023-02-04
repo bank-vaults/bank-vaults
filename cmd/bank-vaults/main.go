@@ -269,7 +269,7 @@ func init() {
 	configStringVar(rootCmd, cfgFilePath, "", "The path prefix of the files where to store values in")
 
 	// Misc common flags
-	configBoolVar(rootCmd, cfgOnce, false, "Run configure/unsela only once")
+	configBoolVar(rootCmd, cfgOnce, false, "Run configure/unseal only once")
 	configDurationVar(configureCmd, cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the Vault instance")
 }
 
