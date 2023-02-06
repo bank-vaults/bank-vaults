@@ -48,7 +48,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build bank-vaults
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           tags: ghcr.io/banzaicloud/bank-vaults:${{ steps.imagetag.outputs.value }}
           file: Dockerfile
@@ -57,7 +57,7 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
       - name: Build vault-env
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           tags: ghcr.io/banzaicloud/vault-env:${{ steps.imagetag.outputs.value }}
           file: Dockerfile.vault-env
@@ -66,7 +66,7 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
       - name: Build vault-operator
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           tags: ghcr.io/banzaicloud/vault-operator:${{ steps.imagetag.outputs.value }}
           file: Dockerfile.operator
@@ -75,7 +75,7 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
       - name: Build vault-secrets-webhook
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           tags: ghcr.io/banzaicloud/vault-secrets-webhook:${{ steps.imagetag.outputs.value }}
           file: Dockerfile.webhook
