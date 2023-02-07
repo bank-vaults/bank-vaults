@@ -615,11 +615,11 @@ func hasTLSVolume(volumes []corev1.Volume) bool {
 	return false
 }
 
-func getServiceAccountMount(containers []corev1.Container) (serviceAccountMount corev1.VolumeMount) {
+func getServiceAccountMount(containers []corev1.Container, vaultConfig VaultConfig) (serviceAccountMount corev1.VolumeMount) {
 mountSearch:
 	for _, container := range containers {
 		for _, mount := range container.VolumeMounts {
-			if mount.MountPath == "/var/run/secrets/kubernetes.io/serviceaccount" {
+			if mount.MountPath == vaultConfig.ServiceAccountTokenVolumeName {
 				serviceAccountMount = mount
 
 				break mountSearch
@@ -664,7 +664,7 @@ func getInitContainers(originalContainers []corev1.Container, podSecurityContext
 			},
 		})
 	} else if vaultConfig.Token == "" && (vaultConfig.UseAgent || vaultConfig.CtConfigMap != "") {
-		serviceAccountMount := getServiceAccountMount(originalContainers)
+		serviceAccountMount := getServiceAccountMount(originalContainers, vaultConfig)
 
 		containerVolMounts = append(containerVolMounts, serviceAccountMount, corev1.VolumeMount{
 			Name:      "vault-agent-config",
@@ -783,7 +783,7 @@ func getAgentContainers(originalContainers []corev1.Container, podSecurityContex
 		securityContext.Capabilities.Add = append(securityContext.Capabilities.Add, "SYS_PTRACE")
 	}
 
-	serviceAccountMount := getServiceAccountMount(originalContainers)
+	serviceAccountMount := getServiceAccountMount(originalContainers, vaultConfig)
 
 	containerVolMounts = append(containerVolMounts, serviceAccountMount, corev1.VolumeMount{
 		Name:      "agent-secrets",
