@@ -18,9 +18,9 @@
 {{/* Use an already externally defined Certificate by cert-manager. */}}
 {{/* all clientConfig.caBundle will be overridden by cert-manager */}}
 {{- else }}
-{{- $tlsCrt = required "Required when certificate.generate is false" .Values.certificate.server.tls.crt }}
-{{- $tlsKey = required "Required when certificate.generate is false" .Values.certificate.server.tls.key }}
-{{- $caCrt = required "Required when certificate.generate is false" .Values.certificate.ca.crt }}
+{{- $tlsCrt = required "Value certificate.server.tls.crt is required when certificate.generate is false" .Values.certificate.server.tls.crt }}
+{{- $tlsKey = required "Value certificate.server.tls.key is required when certificate.generate is false" .Values.certificate.server.tls.key }}
+{{- $caCrt = required "Value certificate.ca.crt is required when certificate.generate is false" .Values.certificate.ca.crt }}
 {{- end }}
 
 
