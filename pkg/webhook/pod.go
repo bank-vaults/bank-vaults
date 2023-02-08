@@ -375,20 +375,30 @@ func (mw *MutatingWebhook) mutateContainers(ctx context.Context, containers []co
 				},
 			}...)
 		}
-		if len(vaultConfig.VaultNamespace) > 0 {
-			container.Env = append(container.Env, []corev1.EnvVar{
-				{
-					Name:  "VAULT_NAMESPACE",
-					Value: vaultConfig.VaultNamespace,
-				},
-			}...)
-		}
 
 		if len(vaultConfig.TransitPath) > 0 {
 			container.Env = append(container.Env, []corev1.EnvVar{
 				{
 					Name:  "VAULT_TRANSIT_PATH",
 					Value: vaultConfig.TransitPath,
+				},
+			}...)
+		}
+
+		if vaultConfig.TransitBatchSize > 0 {
+			container.Env = append(container.Env, []corev1.EnvVar{
+				{
+					Name:  "VAULT_TRANSIT_BATCH_SIZE",
+					Value: strconv.Itoa(vaultConfig.TransitBatchSize),
+				},
+			}...)
+		}
+
+		if len(vaultConfig.VaultNamespace) > 0 {
+			container.Env = append(container.Env, []corev1.EnvVar{
+				{
+					Name:  "VAULT_NAMESPACE",
+					Value: vaultConfig.VaultNamespace,
 				},
 			}...)
 		}
