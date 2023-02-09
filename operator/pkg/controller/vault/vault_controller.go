@@ -1250,6 +1250,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			},
 		})
 	}
+	containers = withVaultContainers(v, containers)
 
 	affinity := &corev1.Affinity{
 		PodAntiAffinity: getPodAntiAffinity(v),
@@ -1640,6 +1641,10 @@ func withStatsdVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.
 
 func withVaultInitContainers(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
 	return append(containers, v.Spec.VaultInitContainers...)
+}
+
+func withVaultContainers(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
+	return append(containers, v.Spec.VaultContainers...)
 }
 
 func withVeleroContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {

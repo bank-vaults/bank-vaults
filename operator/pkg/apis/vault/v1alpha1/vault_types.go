@@ -320,7 +320,10 @@ type VaultSpec struct {
 	// default: velero/fsfreeze-pause:latest
 	VeleroFsfreezeImage string `json:"veleroFsfreezeImage,omitempty"`
 
-	// InitContainers add extra initContainers
+	// VaultContainers add extra containers
+	VaultContainers []v1.Container `json:"vaultContainers,omitempty"`
+
+	// VaultInitContainers add extra initContainers
 	VaultInitContainers []v1.Container `json:"vaultInitContainers,omitempty"`
 }
 
