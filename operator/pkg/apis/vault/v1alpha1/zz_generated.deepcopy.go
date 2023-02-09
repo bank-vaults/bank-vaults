@@ -709,6 +709,13 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.VaultContainers != nil {
+		in, out := &in.VaultContainers, &out.VaultContainers
+		*out = make([]v1.Container, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.VaultInitContainers != nil {
 		in, out := &in.VaultInitContainers, &out.VaultInitContainers
 		*out = make([]v1.Container, len(*in))
