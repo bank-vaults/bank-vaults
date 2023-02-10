@@ -75,6 +75,7 @@ var sanitizeEnvmap = map[string]envType{
 	"VAULT_AUTH_METHOD":            {login: false},
 	"VAULT_TRANSIT_KEY_ID":         {login: false},
 	"VAULT_TRANSIT_PATH":           {login: false},
+	"VAULT_TRANSIT_BATCH_SIZE":     {login: false},
 	"VAULT_IGNORE_MISSING_SECRETS": {login: false},
 	"VAULT_ENV_PASSTHROUGH":        {login: false},
 	"VAULT_JSON_LOG":               {login: false},
@@ -253,6 +254,7 @@ func main() {
 	config := injector.Config{
 		TransitKeyID:         os.Getenv("VAULT_TRANSIT_KEY_ID"),
 		TransitPath:          os.Getenv("VAULT_TRANSIT_PATH"),
+		TransitBatchSize:     cast.ToInt(os.Getenv("VAULT_TRANSIT_BATCH_SIZE")),
 		DaemonMode:           daemonMode,
 		IgnoreMissingSecrets: ignoreMissingSecrets,
 	}
