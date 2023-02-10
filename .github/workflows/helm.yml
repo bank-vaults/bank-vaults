@@ -98,13 +98,11 @@ jobs:
           CHART_PATH="${{ github.workspace }}/charts/${{ steps.set-chart-name.outputs.chart_name }}"
           EXPECTED_CHART_VERSION="$(echo "${{ steps.set-git-refname.outputs.git_refname }}" | awk -F '/' '{print $NF}')" || exit 1
           ACTUAL_CHART_VERSION="$(awk '/version: [0-9]+\.[0-9]+\.[0-9]+/ {print $2}' "${CHART_PATH}/Chart.yaml")" || exit 1
-
           if [ "${EXPECTED_CHART_VERSION}" != "${ACTUAL_CHART_VERSION}" ]; then
             printf >&2 "chart version mismatches, name: %s, expected version (from tag): %s, actual version (from chart): %s" "${{ steps.set-chart-name.outputs.chart_name }}" "${EXPECTED_CHART_VERSION}" "${ACTUAL_CHART_VERSION}"
             exit 1
           fi
-
-          if helm search repo "${{ env.HELM_PUSH_REPOSITORY_NAME }}/${{ steps.set-chart-name.outputs.chart_name }}" --version "${ACTUAL_CHART_VERSION}" --output json | jq --exit-status 'length > 0'; then
+          if helm search repo --regexp "\v${{ env.HELM_PUSH_REPOSITORY_NAME }}/${{ steps.set-chart-name.outputs.chart_name }}\v" --devel --version "${ACTUAL_CHART_VERSION}" --output json | jq --exit-status 'length > 0'; then
               printf >&2 "chart version already exists in the repository, repository: %s, name: %s, version: %s" "${{ env.HELM_PUSH_REPOSITORY_NAME }}" "${{ steps.set-chart-name.outputs.chart_name }}" "${ACTUAL_CHART_VERSION}"
               exit 1
           fi
