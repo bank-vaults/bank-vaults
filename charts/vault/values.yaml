@@ -204,7 +204,7 @@ vault:
 
     ui: true
 
-    # Uncomment this tot remove the need for the IPC_LOCK capability
+    # Uncomment this to remove the need for the IPC_LOCK capability
     # disable_mlock: true
 
     # See https://www.vaultproject.io/docs/configuration/storage/ for storage backends
