@@ -31,7 +31,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.43.0
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/slok/kubewebhook/v2 v2.1.0
 	github.com/spf13/cast v1.4.1
