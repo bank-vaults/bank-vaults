@@ -172,9 +172,9 @@ jobs:
   multi-cluster-acceptance-test:
     name: Multi-cluster acceptance test
     runs-on: ubuntu-latest
-
     env:
-      GO_VERSION: "1.17.8"
+      VERSION: latest
+      GO_VERSION: "1.19.2"
       K8S_VERSION: "v1.23.4"
       HELM_VERSION: "v3.8.0"
       KIND_VERSION: "v0.12.0"
@@ -197,6 +197,10 @@ jobs:
     - uses: engineerd/setup-kind@v0.5.0
       with:
         version: ${{ env.KIND_VERSION }}
+
+    - name: Build Docker images
+      run: |
+        make docker-operator
 
     - name: Install envtpl
       run: go install github.com/subfuzion/envtpl/...@428c2d7
