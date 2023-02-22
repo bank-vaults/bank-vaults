@@ -62,8 +62,36 @@ jobs:
 #        ## limits ssh access and adds the ssh public keys of the listed GitHub users
 #        limit-access-to-users: bonifaido
 
-  acceptance-test:
-    name: Acceptance test
+  vault-smoke-test:
+    name: Vault smoke test
+    runs-on: ubuntu-latest
+    env:
+      VERSION: latest
+
+    steps:
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Start kind cluster
+      run: |
+        kind version
+        kind create cluster --wait 1m
+
+    - name: Build Docker images
+      run: |
+        make docker
+
+    - name: Load Docker images to kind
+      run: |
+        kind load docker-image ghcr.io/banzaicloud/bank-vaults:latest
+
+    - name: Install Bank-Vaults chart
+      run: |
+        helm upgrade --install --wait vault ./charts/vault --set unsealer.image.tag=latest --set ingress.enabled=true --set "ingress.hosts[0]=localhost"
+
+  acceptance-test-operator:
+    name: Operator acceptance test
     runs-on: ubuntu-latest
     env:
       KURUN_VERSION: "0.5.5"
@@ -87,17 +115,11 @@ jobs:
 
     - name: Build Docker images
       run: |
-        make docker
         make docker-operator
-        make docker-vault-env
-        make docker-webhook
 
     - name: Load Docker images to kind
       run: |
-        kind load docker-image ghcr.io/banzaicloud/bank-vaults:latest
         kind load docker-image ghcr.io/banzaicloud/vault-operator:latest
-        kind load docker-image ghcr.io/banzaicloud/vault-secrets-webhook:latest
-        kind load docker-image ghcr.io/banzaicloud/vault-env:latest
 
     - name: Install socat and kurun
       run: |
@@ -106,9 +128,46 @@ jobs:
         # kurun
         curl -Lo kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-linux-amd64 && chmod +x kurun && sudo mv kurun /usr/local/bin/
 
-    - name: Operator and webhook acceptance test
+    - name: Operator acceptance test
       run: |
-        hack/acceptance-test.sh
+        hack/acceptance-test-operator.sh
+
+  acceptance-test-webhook:
+    name: Webhook acceptance test
+    runs-on: ubuntu-latest
+    env:
+      VERSION: latest
+
+    steps:
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Start kind cluster
+      run: |
+        kind version
+        kind create cluster --wait 1m
+
+    - name: Build Docker images
+      run: |
+        make docker-operator
+        make docker-vault-env
+        make docker-webhook
+
+    - name: Load Docker images to kind
+      run: |
+        kind load docker-image ghcr.io/banzaicloud/vault-operator:latest
+        kind load docker-image ghcr.io/banzaicloud/vault-secrets-webhook:latest
+        kind load docker-image ghcr.io/banzaicloud/vault-env:latest
+
+    - name: Webhook acceptance test
+      run: |
+        hack/acceptance-test-webhook.sh
 
   multi-cluster-acceptance-test:
     name: Multi-cluster acceptance test
