@@ -15,6 +15,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -61,6 +62,21 @@ func handlerFor(config mutating.WebhookConfig, recorder whwebhook.MetricsRecorde
 	wh = whwebhook.NewMeasuredWebhook(recorder, wh)
 
 	return whhttp.MustHandlerFor(whhttp.HandlerConfig{Webhook: wh, Logger: config.Logger})
+}
+
+func newHTTPServer(tlsCertFile string, tlsPrivateKeyFile string, listenAddress string, mux *http.ServeMux) *http.Server {
+	reloader, err := NewCertificateReloader(tlsCertFile, tlsPrivateKeyFile)
+	if err != nil {
+		panic("error loading tls certificate: " + err.Error())
+	}
+	srv := &http.Server{
+		Addr:    listenAddress,
+		Handler: mux,
+		TLSConfig: &tls.Config{
+			GetCertificate: reloader.GetCertificateFunc(),
+		},
+	}
+	return srv
 }
 
 func main() {
@@ -130,8 +146,9 @@ func main() {
 		logger.Infof("Listening on http://%s", listenAddress)
 		err = http.ListenAndServe(listenAddress, mux)
 	} else {
+		srv := newHTTPServer(tlsCertFile, tlsPrivateKeyFile, listenAddress, mux)
 		logger.Infof("Listening on https://%s", listenAddress)
-		err = http.ListenAndServeTLS(listenAddress, tlsCertFile, tlsPrivateKeyFile, mux)
+		err = srv.ListenAndServeTLS("", "")
 	}
 
 	if err != nil {
