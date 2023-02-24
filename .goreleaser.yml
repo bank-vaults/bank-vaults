@@ -20,7 +20,7 @@ builds:
         hooks:
             post:
             - xgo -targets {{ .Os }}/{{ .Arch }} -dest dist -ldflags '-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}' -pkg cmd/bank-vaults .
-            - bash -c "mkdir dist/bank-vaults_{{ .Os }}_{{ .Arch }}; mv dist/github.com/banzaicloud/bank-vaults-{{ .Os }}-{{ .Arch }} dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
+            - sudo bash -c "mkdir -p dist/bank-vaults_{{ .Os }}_{{ .Arch }}; mv dist/github.com/banzaicloud/bank-vaults-{{ .Os }}-{{ .Arch }} dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
 
     -   id: vault-env
         main: ./cmd/vault-env
