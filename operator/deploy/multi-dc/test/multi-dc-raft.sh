@@ -77,7 +77,7 @@ function infra_setup {
 function install_instance {
     local INSTANCE=$1
 
-    kind load docker-image ghcr.io/banzaicloud/vault-operator:latest --name "${INSTANCE}"
+    kind load image-archive /tmp/vault-operator.tar --name "${INSTANCE}"
 
     helm upgrade --install vault-operator ./charts/vault-operator --wait --set image.tag=latest --set image.pullPolicy=IfNotPresent --set image.bankVaultsTag=latest
 
