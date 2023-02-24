@@ -12,6 +12,7 @@ on:
       - 'README.md'
       - 'charts/**'
       - 'docs/**'
+  workflow_dispatch:
 
 jobs:
   Anchore-Build-Scan:
