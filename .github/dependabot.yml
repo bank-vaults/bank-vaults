@@ -3,10 +3,21 @@ updates:
   # Keep Docker dependencies up to date
   - package-ecosystem: "docker"
     directory: "/"
+    labels:
+      - "dependencies"
     schedule:
       interval: "daily"
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
+    labels:
+      - "dependencies"
+    schedule:
+      interval: "daily"
+  # Maintain dependecies for Go modules
+  - package-ecosystem: "gomod"
+    directory: "/"
+    labels:
+      - "dependencies"
     schedule:
       interval: "daily"
