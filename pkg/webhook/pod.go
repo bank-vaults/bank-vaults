@@ -814,7 +814,6 @@ func getAgentContainers(originalContainers []corev1.Container, podSecurityContex
 	}
 
 	if vaultConfig.AgentEnvVariables != "" {
-
 		var envVars []corev1.EnvVar
 		err := json.Unmarshal([]byte(vaultConfig.AgentEnvVariables), &envVars)
 		if err != nil {
