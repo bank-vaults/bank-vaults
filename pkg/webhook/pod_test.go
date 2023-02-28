@@ -957,7 +957,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Will mutate pod with agent-configmap annotations",
+			name: "Will mutate pod with agent-configmap annotations and envVariables",
 			fields: fields{
 				k8sClient: fake.NewSimpleClientset(),
 				registry: &MockRegistry{
@@ -992,6 +992,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					AgentImage:                    "vault:latest",
 					AgentImagePullPolicy:          "IfNotPresent",
 					ServiceAccountTokenVolumeName: "/var/run/secrets/kubernetes.io/serviceaccount",
+					AgentEnvVariables:             "[{\"Name\": \"SKIP_SETCAP\",\"Value\": \"1\"}]",
 				},
 			},
 			wantedPod: &corev1.Pod{
@@ -1017,6 +1018,10 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								{
 									Name:  "VAULT_SKIP_VERIFY",
 									Value: "false",
+								},
+								{
+									Name:  "SKIP_SETCAP",
+									Value: "1",
 								},
 							},
 							SecurityContext: agentContainerSecurityContext,
