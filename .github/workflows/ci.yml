@@ -203,7 +203,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-vault-operator
     env:
-      KURUN_VERSION: "0.5.5"
+      KURUN_VERSION: "0.6.4"
 
     steps:
 
