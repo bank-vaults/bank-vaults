@@ -65,7 +65,7 @@ auth:
           - DeveloperFullAccess
         orphan: true
 
-  # Allows creating roles in Vault which can be used later on for AWS 
+  # Allows creating roles in Vault which can be used later on for AWS
   # IAM based authentication.
   # See https://www.vaultproject.io/docs/auth/aws.html for
   # more information.
@@ -78,7 +78,7 @@ auth:
     config:
       access_key: ${env "AWS_ACCESS_KEY_ID"} # or you can put the credential literals directly here
       secret_key: ${env "AWS_SECRET_ACCESS_KEY"}
-      iam_server_id_header_value: vault-dev.example.com # consider setting this to the Vault server's DNS name 
+      iam_server_id_header_value: vault-dev.example.com # consider setting this to the Vault server's DNS name
     crossaccountrole:
     # Add cross account number and role to assume in the cross account
     # https://www.vaultproject.io/api/auth/aws/index.html#create-sts-role
@@ -96,7 +96,7 @@ auth:
       policies: allow_secrets
       period: 1h
 
-  # Allows creating group mappings in Vault which can be used later on for the LDAP 
+  # Allows creating group mappings in Vault which can be used later on for the LDAP
   # based authentication.
   # See https://www.vaultproject.io/docs/auth/ldap.html#configuration for
   # more information.
@@ -154,7 +154,7 @@ auth:
           -----END CERTIFICATE-----
         ttl: "3600"
 
-  # The azure auth method allows authentication against Vault using Azure Active Directory credentials. 
+  # The azure auth method allows authentication against Vault using Azure Active Directory credentials.
   # See https://www.vaultproject.io/docs/auth/azure.html for more information.
   - type: azure
     config:
@@ -167,12 +167,12 @@ auth:
     # See https://www.vaultproject.io/api/auth/azure/index.html#create-role
       - name: dev-mi
         policies: allow_secrets
-        bound_subscription_ids: 
+        bound_subscription_ids:
           - "00000000-0000-0000-0000-000000000000"
-        bound_service_principal_ids: 
+        bound_service_principal_ids:
           - "00000000-0000-0000-0000-000000000000"
 
-  # The userpass auth method allows authentication against Vault using Vault username/password credentials. 
+  # The userpass auth method allows authentication against Vault using Vault username/password credentials.
   # See https://www.vaultproject.io/docs/auth/userpass.html for more information.
   - type: userpass
     users:
@@ -290,7 +290,7 @@ secrets:
           credential_type: iam_user
           policy_arns:
             - arn:aws:iam::123456789012:policy/UsersManageOwnCredentials
-  
+
   # The Google Cloud Vault secrets engine dynamically generates Google Cloud service account keys and
   # OAuth tokens based on IAM policies.
   # See https://www.vaultproject.io/docs/secrets/gcp/index.html for more information

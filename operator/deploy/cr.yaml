@@ -91,7 +91,7 @@ spec:
   # Define a list of namespaces or use ["*"] for all namespaces.
   caNamespaces:
     - "vswh"
-    
+
   # Support for adding hostnames and IPs to the generated CA certificate.
   # tlsAdditionalHosts:
   #   - vault2.example.com
@@ -176,7 +176,8 @@ spec:
         options:
           version: 2
 
-      - type: pki
+      - path: pki
+        type: pki
         description: Vault PKI Backend
         config:
           default_lease_ttl: 168h

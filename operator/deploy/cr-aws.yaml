@@ -6,9 +6,9 @@ spec:
   size: 1
   image: vault:1.6.2
 
-  # Insted of credentialsConfig one can use IAM instance profiles, or kube2iam for example:
-    annotations:
-      iam.amazonaws.com/role: "role-arn..."
+  # Instead of credentialsConfig one can use IAM instance profiles, or kube2iam for example:
+  annotations:
+    iam.amazonaws.com/role: "role-arn..."
 
   # Describe where you would like to store the Vault unseal keys and root token
   # in S3 encrypted with KMS.
