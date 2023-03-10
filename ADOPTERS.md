@@ -4,6 +4,7 @@ This is a list of production adopters of Bank-Vaults (in alphabetical order):
 - [Aspect](https://www.aspect.com) is using Bank-Vaults to provision and configure Vault for the Aspect Via® Cloud Contact Centre Platform.
 - [Banzai Cloud](https://banzaicloud.com) is using Bank-Vaults to provision and configure Vault for the Pipeline control plane and also the mutating webhook to inject Secrets in the provisioned user clusters.
 - [Mintel](https://www.mintel.com) is using Bank-Vaults to provision and configure Vault to provide secrets to applications.
+- [PhishLabs](https://www.phishlabs.com) uses bank-vaults extensively. We take advantage of the ability to inject secrets into the runtime of our applications, thus limiting secrets being stored in Kubernetes Secrets.
 - [Pulselive](https://www.pulselive.com) is using Bank-Vaults to configure Vault in a GitOps workflow and the Vault Secrets Webhook to inject Secrets into a large number of microservices which deliver websites and apps to millions of sports fans worldwide.
 - [Samarkand Global](https://www.samarkand.global/) is using Bank-Vaults to provision and configure Vault and to provide secrets to applications running on k8s with Vault Secrets Webhook.
 - [SHE BASH LLC](https://shebash.io) is using Bank-Vaults to deliver secrets storage in Vault for all Kubernetes environments within the Department of Defense
