@@ -80,8 +80,6 @@ documentation](https://banzaicloud.com/docs/bank-vaults/contributing/).
 
 ## Bank-Vaults Support
 
-### Community Support
-
 If you encounter any problems that is not addressed in our documentation, [open an issue](https://github.com/banzaicloud/bank-vaults/issues) or talk to us on the [Banzai Cloud Slack channel #Bank-Vaults](https://banzaicloud.com/invite-slack/).
 
 If you find this project useful, help us:
@@ -90,10 +88,6 @@ If you find this project useful, help us:
 - If you use Bank-Vaults in a production environment, add yourself to the list of production [adopters](https://github.com/banzaicloud/bank-vaults/blob/main/ADOPTERS.md).:metal: <br>
 - Help new users with issues they may encounter :muscle:
 - Send a pull request with your new features and bug fixes :rocket:
-
-### Commercial Support
-
-If you are using Bank-Vaults in a production environment and [require commercial support, contact Banzai Cloud](https://banzaicloud.com/contact/), the company backing the development of Bank Vaults.
 
 ### Engineering Blog
 
