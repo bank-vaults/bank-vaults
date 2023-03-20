@@ -4,7 +4,6 @@ networking:
   apiServerPort: 6443
 kubeadmConfigPatches:
 - |
-  apiVersion: kubeadm.k8s.io/v1beta2
   kind: ClusterConfiguration
   apiServer:
     # https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/

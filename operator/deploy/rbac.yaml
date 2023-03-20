@@ -16,6 +16,7 @@ rules:
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get", "update", "patch"]
+
 ---
 
 kind: RoleBinding

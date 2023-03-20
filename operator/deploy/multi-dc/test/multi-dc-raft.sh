@@ -1,8 +1,6 @@
 #!/bin/bash
 
-set -euo pipefail
-
-# set -x
+set -xeo pipefail
 
 # REQUIREMENTS:
 # - kubectl
@@ -15,7 +13,9 @@ set -euo pipefail
 #
 
 METALLB_VERSION=v0.12.1
-export VAULT_TOKEN=$(uuidgen)
+VAULT_VERSION=1.6.2
+VAULT_TOKEN=$(uuidgen)
+export VAULT_TOKEN
 
 if [ $# = 0 ]; then
     echo "The Bank-Vaults Multi-DC CLI"
@@ -32,7 +32,7 @@ fi
 
 function waitfor {
     WAIT_MAX=0
-    until $@ &> /dev/null || [ $WAIT_MAX -eq 45 ]; do
+    until "$@" &> /dev/null || [ $WAIT_MAX -eq 45 ]; do
         sleep 1
         (( WAIT_MAX = WAIT_MAX + 1 ))
     done
@@ -48,15 +48,15 @@ function metallb_setup {
 
 function cidr_range {
     local cidr=$1
-    cidr ${cidr} | tr -d ' '
+    cidr "${cidr}" | tr -d ' '
 }
 
 function node_setup {
     local instance=$1
     local lb_subnet=$2
 
-    kind create cluster --name ${instance}
-    metallb_setup $(cidr_range ${lb_subnet})
+    kind create cluster --name "${instance}"
+    metallb_setup "$(cidr_range "${lb_subnet}")"
 }
 
 function infra_setup {
@@ -69,38 +69,43 @@ function infra_setup {
 
     node_setup tertiary 172.18.3.255/25
 
-    docker run -d --rm --network kind -e VAULT_DEV_ROOT_TOKEN_ID=${VAULT_TOKEN} --name central-vault vault
-    export CENTRAL_VAULT_ADDRESS=$(docker inspect central-vault --format '{{.NetworkSettings.Networks.kind.IPAddress}}')
+    docker run -d --rm --network kind -e VAULT_DEV_ROOT_TOKEN_ID="${VAULT_TOKEN}" --name central-vault vault:"${VAULT_VERSION}"
+    CENTRAL_VAULT_ADDRESS=$(docker inspect central-vault --format '{{.NetworkSettings.Networks.kind.IPAddress}}')
+    export CENTRAL_VAULT_ADDRESS
 }
 
 function install_instance {
     local INSTANCE=$1
 
-    helm upgrade --install vault-operator charts/vault-operator --wait --set image.tag=latest --set image.pullPolicy=Always --set image.bankVaultsTag=latest
+    kind load image-archive /tmp/vault-operator.tar --name "${INSTANCE}"
+
+    helm upgrade --install vault-operator ./charts/vault-operator --wait --set image.tag=latest --set image.pullPolicy=IfNotPresent --set image.bankVaultsTag=latest
 
     kubectl apply -f operator/deploy/rbac.yaml
-    envtpl operator/deploy/multi-dc/test/cr-${INSTANCE}.yaml | kubectl apply -f -
+    envtpl operator/deploy/multi-dc/test/cr-"${INSTANCE}".yaml | kubectl apply -f -
 
     echo "Waiting for for ${INSTANCE} vault instance..."
-    waitfor kubectl get pod/vault-${INSTANCE}-0
+    waitfor kubectl get pod/vault-"${INSTANCE}"-0
 
-    kubectl wait --for=condition=ready pod/vault-${INSTANCE}-0 --timeout=120s
+    kubectl wait --for=condition=ready pod/vault-"${INSTANCE}"-0 --timeout=180s
 }
 
 COMMAND=$1
 
-if [ $COMMAND = "install" ]; then
+if [ "$COMMAND" = "install" ]; then
 
     infra_setup
 
-    export CENTRAL_VAULT_ADDRESS=$(docker inspect central-vault --format '{{.NetworkSettings.Networks.kind.IPAddress}}')
+    CENTRAL_VAULT_ADDRESS=$(docker inspect central-vault --format '{{.NetworkSettings.Networks.kind.IPAddress}}')
+    export CENTRAL_VAULT_ADDRESS
 
     ## Primary
     kubectl config use-context kind-primary
 
     install_instance primary
 
-    export RAFT_LEADER_ADDRESS=$(kubectl get service vault-primary -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    RAFT_LEADER_ADDRESS=$(kubectl get service vault-primary -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    export RAFT_LEADER_ADDRESS
 
     kubectl get secrets vault-primary-tls -o json | jq 'del(.metadata.ownerReferences)' | jq 'del(.metadata.resourceVersion)' | jq 'del(.metadata.uid)' > vault-primary-tls.json
 
@@ -124,15 +129,17 @@ if [ $COMMAND = "install" ]; then
 
     echo -e "\nMulti-DC Vault cluster setup completed."
 
-elif [ $COMMAND = "status" ]; then
+elif [ "$COMMAND" = "status" ]; then
 
-    export VAULT_SKIP_VERIFY="true"
+    VAULT_SKIP_VERIFY="true"
+    export VAULT_SKIP_VERIFY
 
-    export VAULT_ADDR=https://$(implement_me):8200
+    VAULT_ADDR=https://$(implement_me):8200
+    export VAULT_ADDR
 
     vault operator raft list-peers -format json | jq
 
-elif [ $COMMAND = "uninstall" ]; then
+elif [ "$COMMAND" = "uninstall" ]; then
 
     kind delete cluster --name primary
     kind delete cluster --name secondary

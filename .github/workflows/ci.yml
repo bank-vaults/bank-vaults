@@ -4,8 +4,8 @@ env:
   GO_VERSION: 1.19.2
 jobs:
 
-  build:
-    name: Build
+  checks:
+    name: Checks
     runs-on: ubuntu-latest
 
     services:
@@ -53,6 +53,110 @@ jobs:
       env:
         VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
 
+  build-bank-vaults:
+    name: Build bank-vaults
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: bank-vaults:latest
+          outputs: type=docker,dest=/tmp/bank-vaults.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: bank-vaults
+          path: /tmp/bank-vaults.tar
+
+  build-vault-secrets-webhook:
+    name: Build webhook
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.webhook
+          tags: vault-secrets-webhook:latest
+          outputs: type=docker,dest=/tmp/vault-secrets-webhook.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: vault-secrets-webhook
+          path: /tmp/vault-secrets-webhook.tar
+
+  build-vault-operator:
+    name: Build operator
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.operator
+          tags: vault-operator:latest
+          outputs: type=docker,dest=/tmp/vault-operator.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: vault-operator
+          path: /tmp/vault-operator.tar
+
+  build-vault-env:
+    name: Build vault-env
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.vault-env
+          tags: vault-env:latest
+          outputs: type=docker,dest=/tmp/vault-env.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: vault-env
+          path: /tmp/vault-env.tar
+
 #    # Uncomment for debugging with SSH
 #    - name: Setup upterm session
 #      uses: lhotari/action-upterm@v1
@@ -62,13 +166,44 @@ jobs:
 #        ## limits ssh access and adds the ssh public keys of the listed GitHub users
 #        limit-access-to-users: bonifaido
 
-  acceptance-test:
-    name: Acceptance test
+  vault-smoke-test:
+    name: Vault smoke test
     runs-on: ubuntu-latest
+    needs: build-bank-vaults
+
+    steps:
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Start kind cluster
+      run: |
+        kind version
+        kind create cluster --wait 1m
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Download Bank-Vaults docker image
+      uses: actions/download-artifact@v3
+      with:
+        name: bank-vaults
+        path: /tmp
+
+    - name: Load Docker image to kind
+      run: |
+        kind load image-archive /tmp/bank-vaults.tar
+
+    - name: Install Bank-Vaults chart
+      run: |
+        helm upgrade --install --wait vault ./charts/vault --set unsealer.image.tag=latest --set ingress.enabled=true --set "ingress.hosts[0]=localhost"
+
+  acceptance-test-operator:
+    name: Operator acceptance test
+    runs-on: ubuntu-latest
+    needs: build-vault-operator
     env:
-      KURUN_VERSION: "0.5.5"
-      DOCKER_LATEST: 1
-      VERSION: latest
+      KURUN_VERSION: "0.6.4"
 
     steps:
 
@@ -85,19 +220,18 @@ jobs:
         kind version
         kind create cluster --config hack/kind.yaml --wait 1m
 
-    - name: Build Docker images
-      run: |
-        make docker
-        make docker-operator
-        make docker-vault-env
-        make docker-webhook
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
 
-    - name: Load Docker images to kind
+    - name: Download operator docker image
+      uses: actions/download-artifact@v3
+      with:
+        name: vault-operator
+        path: /tmp
+
+    - name: Load Docker image to kind
       run: |
-        kind load docker-image ghcr.io/banzaicloud/bank-vaults:latest
-        kind load docker-image ghcr.io/banzaicloud/vault-operator:latest
-        kind load docker-image ghcr.io/banzaicloud/vault-secrets-webhook:latest
-        kind load docker-image ghcr.io/banzaicloud/vault-env:latest
+        kind load image-archive /tmp/vault-operator.tar
 
     - name: Install socat and kurun
       run: |
@@ -106,16 +240,67 @@ jobs:
         # kurun
         curl -Lo kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-linux-amd64 && chmod +x kurun && sudo mv kurun /usr/local/bin/
 
-    - name: Operator and webhook acceptance test
+    - name: Operator acceptance test
       run: |
-        hack/acceptance-test.sh
+        hack/acceptance-test-operator.sh
+
+  acceptance-test-webhook:
+    name: Webhook acceptance test
+    runs-on: ubuntu-latest
+    needs: [build-vault-operator, build-vault-env, build-vault-secrets-webhook]
+
+    steps:
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Start kind cluster
+      run: |
+        kind version
+        kind create cluster --wait 1m
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Download operator docker image
+      uses: actions/download-artifact@v3
+      with:
+        name: vault-operator
+        path: /tmp
+
+    - name: Download vault-env docker image
+      uses: actions/download-artifact@v3
+      with:
+        name: vault-env
+        path: /tmp
+
+    - name: Download webhook docker image
+      uses: actions/download-artifact@v3
+      with:
+        name: vault-secrets-webhook
+        path: /tmp
+
+    - name: Load Docker image to kind
+      run: |
+        kind load image-archive /tmp/vault-operator.tar
+        kind load image-archive /tmp/vault-env.tar
+        kind load image-archive /tmp/vault-secrets-webhook.tar
+
+    - name: Webhook acceptance test
+      run: |
+        hack/acceptance-test-webhook.sh
 
   multi-cluster-acceptance-test:
-    name: Multi-cluster acceptance test
+    name: Operator multi-cluster acceptance test
     runs-on: ubuntu-latest
-
+    needs: build-vault-operator
     env:
-      GO_VERSION: "1.17.8"
+      GO_VERSION: "1.19.2"
       K8S_VERSION: "v1.23.4"
       HELM_VERSION: "v3.8.0"
       KIND_VERSION: "v0.12.0"
@@ -138,6 +323,15 @@ jobs:
     - uses: engineerd/setup-kind@v0.5.0
       with:
         version: ${{ env.KIND_VERSION }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Download operator docker image
+      uses: actions/download-artifact@v3
+      with:
+        name: vault-operator
+        path: /tmp
 
     - name: Install envtpl
       run: go install github.com/subfuzion/envtpl/...@428c2d7

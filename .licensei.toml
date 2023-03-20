@@ -12,6 +12,9 @@ ignored = [
   "github.com/ghodss/yaml", # MIT
   "sigs.k8s.io/yaml", # Forked from above
   "github.com/gogo/protobuf", # 3-Clause BSD
+  "logur.dev/adapter/logrus", # MIT
+  "logur.dev/logur", # MIT
+  "emperror.dev/errors", # MIT
 
   # Unsupported VCS
   "gopkg.in/fsnotify.v1",

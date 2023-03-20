@@ -22,6 +22,12 @@ linters:
         - exhaustivestruct
         - nlreturn
 
+        #deprecated
+        - ifshort
+        - varcheck
+        - structcheck
+        - deadcode
+
         # TODO: fixme
         - paralleltest
         - forcetypeassert
