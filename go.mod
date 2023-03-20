@@ -5,7 +5,7 @@ go 1.18
 require (
 	cloud.google.com/go/kms v1.1.0
 	cloud.google.com/go/storage v1.10.0
-	emperror.dev/errors v0.8.0
+	emperror.dev/errors v0.8.1
 	github.com/Azure/azure-sdk-for-go v46.4.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.12
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.3
@@ -15,7 +15,7 @@ require (
 	github.com/aliyun/aliyun-oss-go-sdk v2.0.4+incompatible
 	github.com/aws/aws-sdk-go v1.42.39
 	github.com/banzaicloud/bank-vaults/pkg/sdk v0.0.0
-	github.com/banzaicloud/k8s-objectmatcher v1.5.0
+	github.com/cisco-open/k8s-objectmatcher v1.9.0
 	github.com/cristalhq/jwt/v3 v3.0.14
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/google/go-cmp v0.5.6
@@ -87,7 +87,7 @@ require (
 	github.com/emicklei/go-restful v2.9.5+incompatible // indirect
 	github.com/envoyproxy/go-control-plane v0.10.1 // indirect
 	github.com/envoyproxy/protoc-gen-validate v0.6.2 // indirect
-	github.com/evanphx/json-patch v4.11.0+incompatible // indirect
+	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.2+incompatible // indirect
 	github.com/go-logr/logr v0.4.0 // indirect

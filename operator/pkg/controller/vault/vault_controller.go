@@ -30,7 +30,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/banzaicloud/k8s-objectmatcher/patch"
+	"github.com/cisco-open/k8s-objectmatcher/patch"
 	"github.com/hashicorp/vault/api"
 	"github.com/imdario/mergo"
 	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
