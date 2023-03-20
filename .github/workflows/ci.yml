@@ -126,7 +126,7 @@ jobs:
           outputs: type=docker,dest=/tmp/vault-operator.tar
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: vault-operator
           path: /tmp/vault-operator.tar
