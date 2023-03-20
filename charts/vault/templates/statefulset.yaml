@@ -102,6 +102,19 @@ spec:
           name: vault
         - containerPort: {{ add .Values.service.port 1 }}
           name: cluster
+        # This probe allows Vault extra time to be responsive in a HTTPS manner during startup
+        # See: https://www.vaultproject.io/api/system/init.html
+        startupProbe:
+          httpGet:
+            {{ if .Values.vault.config.listener.tcp.tls_disable }}
+            scheme: HTTP
+            {{ else }}
+            scheme: HTTPS
+            {{ end }}
+            path: /v1/sys/init
+            port: vault
+          periodSeconds: 10
+          failureThreshold: 18
         # This probe makes sure Vault is responsive in a HTTPS manner
         # See: https://www.vaultproject.io/api/system/init.html
         livenessProbe:
