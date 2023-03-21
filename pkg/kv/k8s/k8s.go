@@ -99,6 +99,9 @@ func (k *k8sStorage) Set(key string, val []byte) error {
 		}
 		_, err = k.client.CoreV1().Secrets(k.namespace).Create(context.Background(), secret, metav1.CreateOptions{})
 	} else if err == nil {
+		if secret.Data == nil {
+			secret.Data = map[string][]byte{}
+		}
 		secret.Data[key] = val
 		_, err = k.client.CoreV1().Secrets(k.namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
 	} else {
