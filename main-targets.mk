@@ -132,7 +132,7 @@ varexport-%: ; @echo $*=$($*)
 
 .PHONY: generate-code
 generate-code: ## Regenerate clientset, deepcopy funcs, listers and informers
-	./hack/update-codegen.sh v${CODE_GENERATOR_VERSION}
+	./scripts/update-codegen.sh v${CODE_GENERATOR_VERSION}
 
 bin/controller-gen-${CONTROLLER_GEN_VERSION}:
 	set -ex ;\
