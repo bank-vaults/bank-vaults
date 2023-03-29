@@ -14,7 +14,7 @@ spec:
   # NOTE: you will need a MySQL instance, grab one with:
   # helm upgrade --install mysql stable/mysql --set mysqlRootPassword=your-root-password --set mysqlDatabase=vault --set mysqlUser=vault --set mysqlPassword=secret --set 'initializationFiles.app-db\.sql=CREATE DATABASE IF NOT EXISTS app;'
 
-  # This example is best used together with deploy/test-dynamic-env-vars.yaml to demonstrate the usage of dynamic credential renewal in vault-env daemon mode.
+  # This example is best used together with test/deploy/test-dynamic-env-vars.yaml to demonstrate the usage of dynamic credential renewal in vault-env daemon mode.
 
   # A YAML representation of a final vault config file, this config represents
   # a HA config with MySQL.
@@ -37,7 +37,7 @@ spec:
     ui: true
 
   # See: https://banzaicloud.com/docs/bank-vaults/cli-tool/#example-external-vault-configuration
-  # The repository also contains a lot examples in the deploy/ and operator/deploy directories.
+  # The repository also contains a lot examples in the test/deploy and operator/deploy directories.
   externalConfig:
     policies:
       - name: allow_database

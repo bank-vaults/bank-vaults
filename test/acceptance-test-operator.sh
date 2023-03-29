@@ -52,18 +52,18 @@ kubectl delete -f operator/deploy/cr-statsd.yaml
 kubectl delete secret vault-unseal-keys
 
 # 1. test: test the external secrets watcher work and match as expected
-kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
+kubectl apply -f test/deploy/test-external-secrets-watch-deployment.yaml
 kubectl wait --for=condition=healthy --timeout=180s vault/vault
 test "$(kubectl get pod vault-0 -o jsonpath='{.metadata.annotations.vault\.banzaicloud\.io/watched-secrets-sum}')" = ""
-kubectl delete -f deploy/test-external-secrets-watch-deployment.yaml
+kubectl delete -f test/deploy/test-external-secrets-watch-deployment.yaml
 kubectl delete secret vault-unseal-keys
 
-kubectl apply -f deploy/test-external-secrets-watch-secrets.yaml
-kubectl apply -f deploy/test-external-secrets-watch-deployment.yaml
+kubectl apply -f test/deploy/test-external-secrets-watch-secrets.yaml
+kubectl apply -f test/deploy/test-external-secrets-watch-deployment.yaml
 kubectl wait --for=condition=healthy --timeout=120s vault/vault
 test "$(kubectl get pod vault-0 -o jsonpath='{.metadata.annotations.vault\.banzaicloud\.io/watched-secrets-sum}')" = "bac8dfa8bdf03009f89303c8eb4a6c8f2fd80eb03fa658f53d6d65eec14666d4"
-kubectl delete -f deploy/test-external-secrets-watch-deployment.yaml
-kubectl delete -f deploy/test-external-secrets-watch-secrets.yaml
+kubectl delete -f test/deploy/test-external-secrets-watch-deployment.yaml
+kubectl delete -f test/deploy/test-external-secrets-watch-secrets.yaml
 kubectl delete secret vault-unseal-keys
 
 # 2. test: Raft HA setup

@@ -6,7 +6,7 @@
 #
 # make -j webhook-up
 #
-# kubectl apply -f deploy/test-configmap-dev.yaml
+# kubectl apply -f test/deploy/test-configmap-dev.yaml
 # kubectl get configmap configmap-dev -o yaml
 #
 apiVersion: v1
