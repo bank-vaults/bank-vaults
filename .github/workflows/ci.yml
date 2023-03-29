@@ -218,7 +218,7 @@ jobs:
     - name: Start kind cluster
       run: |
         kind version
-        kind create cluster --config hack/kind.yaml --wait 1m
+        kind create cluster --config test/kind.yaml --wait 1m
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
@@ -242,7 +242,7 @@ jobs:
 
     - name: Operator acceptance test
       run: |
-        hack/acceptance-test-operator.sh
+        test/acceptance-test-operator.sh
 
   acceptance-test-webhook:
     name: Webhook acceptance test
@@ -293,7 +293,7 @@ jobs:
 
     - name: Webhook acceptance test
       run: |
-        hack/acceptance-test-webhook.sh
+        test/acceptance-test-webhook.sh
 
   multi-cluster-acceptance-test:
     name: Operator multi-cluster acceptance test

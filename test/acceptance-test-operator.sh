@@ -113,7 +113,7 @@ kubectl create namespace vswh # create the namespace beforehand, because we need
 kubectl apply -f operator/deploy/cr-oidc.yaml
 kubectl wait --for=condition=healthy --timeout=120s vault/vault
 
-kurun apply -f hack/oidc-pod.yaml
+kurun apply -f test/oidc-pod.yaml
 waitfor "kubectl get pod/oidc -o json | jq -e '.status.phase == \"Succeeded\"'"
 
 echo "Test has finished"
