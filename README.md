@@ -32,7 +32,6 @@
 
 </p>
 
-
 *Bank Vaults is a thick, tricky, shifty right with a fast and intense tube for experienced surfers only, located on Mentawai. Think heavy steel doors, secret unlocking combinations and burly guards with smack-down attitude. Watch out for clean-up sets.*
 
 *Bank-Vaults is an umbrella project which provides various tools for Vault to make using and operating Hashicorp Vault easier. It's a wrapper for the official Vault client with automatic token renewal and built-in Kubernetes support, dynamic database credential provider for Golang `database/sql` based clients. It has a CLI tool to automatically initialize, unseal, and configure Vault. It also provides a Kubernetes operator for provisioning, and a mutating webhook for injecting secrets.*
@@ -60,7 +59,6 @@ We use Vault across our large Kubernetes deployments and all the projects were `
 >We take bank-vaults' security and our users' trust very seriously. If you believe you have found a security issue in bank-vaults, please contact us at security@banzaicloud.com.
 
 Bank-Vaults is a core part of [Banzai Cloud Pipeline](https://github.com/banzaicloud/pipeline), a Cloud Native application and devops platform that natively supports multi- and hybrid-cloud deployments.
-
 
 ## Installing
 
