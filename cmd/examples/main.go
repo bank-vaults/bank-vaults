@@ -77,7 +77,10 @@ func gormExample() {
 // REQUIRED to start a Vault dev server with:
 // vault server -dev &
 func main() {
-	os.Setenv("VAULT_ADDR", "https://vault.default:8200")
+	if addr := os.Getenv("VAULT_ADDR"); addr == "" {
+		os.Setenv("VAULT_ADDR", "https://vault.default:8200")
+	}
+
 	os.Setenv("VAULT_SKIP_VERIFY", "true")
 	vaultExample()
 }
