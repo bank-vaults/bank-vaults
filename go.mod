@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/storage v1.30.1
 	emperror.dev/errors v0.8.1
 	github.com/Azure/azure-sdk-for-go v46.4.0+incompatible
-	github.com/Azure/go-autorest/autorest v0.11.12
+	github.com/Azure/go-autorest/autorest v0.11.28
 	github.com/Azure/go-autorest/autorest/adal v0.9.22 // indirect
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.3
 	github.com/Masterminds/semver/v3 v3.2.0
@@ -95,7 +95,7 @@ require (
 	github.com/go-openapi/spec v0.19.5 // indirect
 	github.com/go-openapi/swag v0.19.5 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.0.0 // indirect
+	github.com/golang-jwt/jwt/v4 v4.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
