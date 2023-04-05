@@ -18,7 +18,7 @@ require (
 	github.com/banzaicloud/bank-vaults/pkg/sdk v0.0.0
 	github.com/cisco-open/k8s-objectmatcher v1.9.0
 	github.com/cristalhq/jwt/v3 v3.0.14
-	github.com/fsnotify/fsnotify v1.5.1
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-containerregistry v0.8.0
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220105220605-d9bfbcb99e52
