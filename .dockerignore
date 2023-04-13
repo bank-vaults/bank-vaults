@@ -5,6 +5,6 @@ bin/
 docs/
 operator/build/
 vendor/
-hack/
+test/
 *.yaml
 *.yml

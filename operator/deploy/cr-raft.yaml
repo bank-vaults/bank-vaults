@@ -155,7 +155,7 @@ spec:
         cpu: "100m"
 
   # See: https://banzaicloud.com/docs/bank-vaults/cli-tool/#example-external-vault-configuration
-  # The repository also contains a lot examples in the deploy/ and operator/deploy directories.
+  # The repository also contains a lot examples in the test/deploy and operator/deploy directories.
   externalConfig:
     policies:
       - name: allow_secrets

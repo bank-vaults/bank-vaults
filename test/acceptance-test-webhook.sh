@@ -59,29 +59,29 @@ helm upgrade --install vault-secrets-webhook ./charts/vault-secrets-webhook \
 
 kubectl wait --namespace vswh --for=condition=ready --timeout=150s pods -l app.kubernetes.io/name=vault-secrets-webhook
 
-kubectl apply -f deploy/test-secret.yaml
+kubectl apply -f test/deploy/test-secret.yaml
 test "$(kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].username')" = "dockerrepouser"
 test "$(kubectl get secrets sample-secret -o jsonpath='{.data.\.dockerconfigjson}' | base64 --decode | jq -r '.auths[].password')" = "dockerrepopassword"
 test "$(kubectl get secrets sample-secret -o jsonpath='{.data.inline}' | base64 --decode)" = "Inline: secretId AWS_ACCESS_KEY_ID"
 
-kubectl apply -f deploy/test-configmap.yaml
+kubectl apply -f test/deploy/test-configmap.yaml
 test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id}')" = "secretId"
 test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id-formatted}')" = "AWS key in base64: c2VjcmV0SWQ="
 test "$(kubectl get cm sample-configmap -o jsonpath='{.binaryData.aws-access-key-id-binary}')" = "secretId"
 test "$(kubectl get cm sample-configmap -o jsonpath='{.data.aws-access-key-id-inline}')" = "AWS_ACCESS_KEY_ID: secretId AWS_SECRET_ACCESS_KEY: s3cr3t"
 
 # Make sure file templating works
-kubectl apply -f deploy/test-deploy-templating.yaml
+kubectl apply -f test/deploy/test-deploy-templating.yaml
 sleep 10
 kubectl wait pod -l app.kubernetes.io/name=test-templating --for=condition=ready --timeout=120s -A
 test "$(kubectl exec -it "$(kubectl get pods --selector=app.kubernetes.io/name=test-templating -o=jsonpath='{.items[0].metadata.name}')" -c alpine -- cat /vault/secrets/config.yaml | jq '.id' | xargs )" = "secretId"
 
-kubectl apply -f deploy/test-deployment-seccontext.yaml
+kubectl apply -f test/deploy/test-deployment-seccontext.yaml
 kubectl wait --for=condition=available deployment/hello-secrets-seccontext --timeout=120s
 check_webhook_seccontext
-kubectl delete -f deploy/test-deployment-seccontext.yaml
+kubectl delete -f test/deploy/test-deployment-seccontext.yaml
 
-kubectl apply -f deploy/test-deployment.yaml
+kubectl apply -f test/deploy/test-deployment.yaml
 kubectl wait --for=condition=available deployment/hello-secrets --timeout=120s
 
 echo "Test has finished"
