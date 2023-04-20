@@ -4,7 +4,7 @@ metadata:
   name: oidc
 spec:
   containers:
-    - image: kurun://cmd/examples/main.go
+    - image: kurun://../cmd/examples/main.go
       name: oidc
       volumeMounts:
         - mountPath: /var/run/secrets/tokens

@@ -60,6 +60,10 @@ We use Vault across our large Kubernetes deployments and all the projects were `
 
 Bank-Vaults is a core part of [Banzai Cloud Pipeline](https://github.com/banzaicloud/pipeline), a Cloud Native application and devops platform that natively supports multi- and hybrid-cloud deployments.
 
+## Supported Kubernetes and Vault versions
+
+This project aims to support the [latest supported Vault image versions](https://hub.docker.com/_/vault), and three Kubernetes minor versions excluding the latest one.
+
 ## Installing
 
 You usually don't need to use the CLI directly, rather you should install the charts and create Vault instances with the operator and use the webhook inside Kubernetes to mutate Kubernetes resources.

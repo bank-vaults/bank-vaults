@@ -166,42 +166,14 @@ jobs:
 #        ## limits ssh access and adds the ssh public keys of the listed GitHub users
 #        limit-access-to-users: bonifaido
 
-  vault-smoke-test:
-    name: Vault smoke test
+  acceptance-test:
+    name: Acceptance test
     runs-on: ubuntu-latest
-    needs: build-bank-vaults
-
-    steps:
-
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Start kind cluster
-      run: |
-        kind version
-        kind create cluster --wait 1m
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-
-    - name: Download Bank-Vaults docker image
-      uses: actions/download-artifact@v3
-      with:
-        name: bank-vaults
-        path: /tmp
-
-    - name: Load Docker image to kind
-      run: |
-        kind load image-archive /tmp/bank-vaults.tar
-
-    - name: Install Bank-Vaults chart
-      run: |
-        helm upgrade --install --wait vault ./charts/vault --set unsealer.image.tag=latest --set ingress.enabled=true --set "ingress.hosts[0]=localhost"
-
-  acceptance-test-operator:
-    name: Operator acceptance test
-    runs-on: ubuntu-latest
-    needs: build-vault-operator
+    needs: [build-bank-vaults, build-vault-operator, build-vault-env, build-vault-secrets-webhook]
+    strategy:
+      matrix:
+        k8s_version: ["v1.25.8", "v1.24.12", "v1.23.17"]
+        vault_version: ["1.13.1", "1.12.5", "1.11.9", "1.10.11"]
     env:
       KURUN_VERSION: "0.6.4"
 
@@ -218,54 +190,16 @@ jobs:
     - name: Start kind cluster
       run: |
         kind version
-        kind create cluster --config test/kind.yaml --wait 1m
+        kind create cluster --config test/kind.yaml --image kindest/node:${{ matrix.k8s_version }} --wait 1m
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    - name: Download operator docker image
+    - name: Download Bank-Vaults docker image
       uses: actions/download-artifact@v3
       with:
-        name: vault-operator
+        name: bank-vaults
         path: /tmp
-
-    - name: Load Docker image to kind
-      run: |
-        kind load image-archive /tmp/vault-operator.tar
-
-    - name: Install socat and kurun
-      run: |
-        # socat
-        sudo apt install socat
-        # kurun
-        curl -Lo kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-linux-amd64 && chmod +x kurun && sudo mv kurun /usr/local/bin/
-
-    - name: Operator acceptance test
-      run: |
-        test/acceptance-test-operator.sh
-
-  acceptance-test-webhook:
-    name: Webhook acceptance test
-    runs-on: ubuntu-latest
-    needs: [build-vault-operator, build-vault-env, build-vault-secrets-webhook]
-
-    steps:
-
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: ${{ env.GO_VERSION }}
-
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Start kind cluster
-      run: |
-        kind version
-        kind create cluster --wait 1m
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
 
     - name: Download operator docker image
       uses: actions/download-artifact@v3
@@ -285,15 +219,21 @@ jobs:
         name: vault-secrets-webhook
         path: /tmp
 
-    - name: Load Docker image to kind
+    - name: Load Docker images to kind
       run: |
+        kind load image-archive /tmp/bank-vaults.tar
         kind load image-archive /tmp/vault-operator.tar
         kind load image-archive /tmp/vault-env.tar
         kind load image-archive /tmp/vault-secrets-webhook.tar
 
-    - name: Webhook acceptance test
+    - name: Install kurun
       run: |
-        test/acceptance-test-webhook.sh
+        curl -Lo kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-linux-amd64 && chmod +x kurun && sudo mv kurun /usr/local/bin/
+
+    - name: Acceptance test
+      run: go test -v -timeout 900s -tags kubeall ./test
+      env:
+        VAULT_VERSION: ${{ matrix.vault_version }}
 
   multi-cluster-acceptance-test:
     name: Operator multi-cluster acceptance test

@@ -6,7 +6,6 @@ metadata:
     my-app.kubernetes.io/name: my-app-vault-agent
     branches: "true"
   name: my-app-vault-agent
-  namespace: default
 data:
   config.hcl: |
     vault {
@@ -44,7 +43,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vault-test
-  namespace: default
 spec:
   replicas: 1
   selector:
