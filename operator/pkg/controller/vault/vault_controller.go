@@ -1215,7 +1215,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Name:            "bank-vaults",
 			Command:         unsealCommand,
-			Args:            append(v.Spec.UnsealConfig.Options.ToArgs(), v.Spec.UnsealConfig.ToArgs(v)...),
+			Args:            v.Spec.UnsealConfig.ToArgs(v),
 			Env: withSidecarEnv(v, withTLSEnv(v, true, withCredentialsEnv(v, withCommonEnv(v, []corev1.EnvVar{
 				{
 					Name: "POD_NAME",

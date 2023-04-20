@@ -767,30 +767,17 @@ type UnsealOptions struct {
 	StoreRootToken  *bool `json:"storeRootToken,omitempty"`
 }
 
-func (uso UnsealOptions) ToArgs() []string {
-	args := []string{}
-	if uso.PreFlightChecks == nil || *uso.PreFlightChecks {
-		args = append(args, "--pre-flight-checks=true")
-	}
-	if uso.StoreRootToken != nil && !*uso.StoreRootToken {
-		args = append(args, "--store-root-token=false")
-	}
-
-	return args
-}
-
 // ToArgs returns the UnsealConfig as and argument array for bank-vaults
 func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 	args := []string{}
 
-	if usc.Options.PreFlightChecks == nil || *usc.Options.PreFlightChecks {
-		args = append(args,
-			"--pre-flight-checks=true")
+	// PreFlightChecks is true by default
+	if usc.Options.PreFlightChecks != nil && !*usc.Options.PreFlightChecks {
+		args = append(args, "--pre-flight-checks=false")
 	}
-
+	// StoreRootToken is true by default
 	if usc.Options.StoreRootToken != nil && !*usc.Options.StoreRootToken {
-		args = append(args,
-			"--store-root-token=false")
+		args = append(args, "--store-root-token=false")
 	}
 
 	if usc.Google != nil {
