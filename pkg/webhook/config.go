@@ -69,6 +69,7 @@ type VaultConfig struct {
 	AgentMemory                   resource.Quantity
 	AgentImage                    string
 	AgentImagePullPolicy          corev1.PullPolicy
+	AgentEnvVariables             string
 	ServiceAccountTokenVolumeName string
 	EnvImage                      string
 	EnvImagePullPolicy            corev1.PullPolicy
@@ -375,6 +376,10 @@ func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig 
 		vaultConfig.AgentImagePullPolicy = getPullPolicy(val)
 	} else {
 		vaultConfig.AgentImagePullPolicy = getPullPolicy(viper.GetString("vault_image_pull_policy"))
+	}
+
+	if val, ok := annotations["vault.security.banzaicloud.io/vault-agent-env-variables"]; ok {
+		vaultConfig.AgentEnvVariables = val
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/vault-namespace"]; ok {
