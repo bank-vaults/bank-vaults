@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/kms v1.9.0
 	cloud.google.com/go/storage v1.30.1
 	emperror.dev/errors v0.8.1
-	github.com/Azure/azure-sdk-for-go v50.2.0+incompatible
+	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.20
 	github.com/Azure/go-autorest/autorest/adal v0.9.22 // indirect
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.8
