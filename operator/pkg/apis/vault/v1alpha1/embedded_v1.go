@@ -54,7 +54,6 @@ type EmbeddedPodSpec struct {
 	// pod to perform user-initiated actions such as debugging. This list cannot be specified when
 	// creating a pod, and it cannot be modified by updating the pod spec. In order to add an
 	// ephemeral container to an existing pod, use the pod's ephemeralcontainers subresource.
-	// This field is alpha-level and is only honored by servers that enable the EphemeralContainers feature.
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge
@@ -66,7 +65,8 @@ type EmbeddedPodSpec struct {
 	// +optional
 	RestartPolicy v1.RestartPolicy `json:"restartPolicy,omitempty" protobuf:"bytes,3,opt,name=restartPolicy,casttype=RestartPolicy"`
 	// Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request.
-	// Value must be non-negative integer. The value zero indicates delete immediately.
+	// Value must be non-negative integer. The value zero indicates stop immediately via
+	// the kill signal (no opportunity to shut down).
 	// If this value is nil, the default grace period will be used instead.
 	// The grace period is the duration in seconds after the processes running in the pod are sent
 	// a termination signal and the time when the processes are forcibly halted with a kill signal.
@@ -91,6 +91,7 @@ type EmbeddedPodSpec struct {
 	// Selector which must match a node's labels for the pod to be scheduled on that node.
 	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
 	// +optional
+	// +mapType=atomic
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" protobuf:"bytes,7,rep,name=nodeSelector"`
 
 	// ServiceAccountName is the name of the ServiceAccount to use to run this pod.
@@ -140,8 +141,7 @@ type EmbeddedPodSpec struct {
 	// +optional
 	SecurityContext *v1.PodSecurityContext `json:"securityContext,omitempty" protobuf:"bytes,14,opt,name=securityContext"`
 	// ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec.
-	// If specified, these secrets will be passed to individual puller implementations for them to use. For example,
-	// in the case of docker, only DockerConfig type secrets are honored.
+	// If specified, these secrets will be passed to individual puller implementations for them to use.
 	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	// +optional
 	// +patchMergeKey=name
@@ -194,15 +194,14 @@ type EmbeddedPodSpec struct {
 	// If specified, all readiness gates will be evaluated for pod readiness.
 	// A pod is ready when all its containers are ready AND
 	// all conditions specified in the readiness gates have status equal to "True"
-	// More info: https://git.k8s.io/enhancements/keps/sig-network/0007-pod-ready%2B%2B.md
+	// More info: https://git.k8s.io/enhancements/keps/sig-network/580-pod-readiness-gates
 	// +optional
 	ReadinessGates []v1.PodReadinessGate `json:"readinessGates,omitempty" protobuf:"bytes,28,opt,name=readinessGates"`
 	// RuntimeClassName refers to a RuntimeClass object in the node.k8s.io group, which should be used
 	// to run this pod.  If no RuntimeClass resource matches the named class, the pod will not be run.
 	// If unset or empty, the "legacy" RuntimeClass will be used, which is an implicit class with an
 	// empty definition that uses the default runtime handler.
-	// More info: https://git.k8s.io/enhancements/keps/sig-node/runtime-class.md
-	// This is a beta feature as of Kubernetes v1.14.
+	// More info: https://git.k8s.io/enhancements/keps/sig-node/585-runtime-class
 	// +optional
 	RuntimeClassName *string `json:"runtimeClassName,omitempty" protobuf:"bytes,29,opt,name=runtimeClassName"`
 	// EnableServiceLinks indicates whether information about services should be injected into pod's
@@ -213,7 +212,6 @@ type EmbeddedPodSpec struct {
 	// PreemptionPolicy is the Policy for preempting pods with lower priority.
 	// One of Never, PreemptLowerPriority.
 	// Defaults to PreemptLowerPriority if unset.
-	// This field is beta-level, gated by the NonPreemptingPriority feature-gate.
 	// +optional
 	PreemptionPolicy *v1.PreemptionPolicy `json:"preemptionPolicy,omitempty" protobuf:"bytes,31,opt,name=preemptionPolicy"`
 	// Overhead represents the resource overhead associated with running a pod for a given RuntimeClass.
@@ -222,8 +220,7 @@ type EmbeddedPodSpec struct {
 	// The RuntimeClass admission controller will reject Pod create requests which have the overhead already
 	// set. If RuntimeClass is configured and selected in the PodSpec, Overhead will be set to the value
 	// defined in the corresponding RuntimeClass, otherwise it will remain unset and treated as zero.
-	// More info: https://git.k8s.io/enhancements/keps/sig-node/20190226-pod-overhead.md
-	// This field is alpha-level as of Kubernetes v1.16, and is only honored by servers that enable the PodOverhead feature.
+	// More info: https://git.k8s.io/enhancements/keps/sig-node/688-pod-overhead/README.md
 	// +optional
 	Overhead v1.ResourceList `json:"overhead,omitempty" protobuf:"bytes,32,opt,name=overhead"`
 	// TopologySpreadConstraints describes how a group of pods ought to spread across topology
@@ -243,6 +240,77 @@ type EmbeddedPodSpec struct {
 	// Default to false.
 	// +optional
 	SetHostnameAsFQDN *bool `json:"setHostnameAsFQDN,omitempty" protobuf:"varint,35,opt,name=setHostnameAsFQDN"`
+	// Specifies the OS of the containers in the pod.
+	// Some pod and container fields are restricted if this is set.
+	//
+	// If the OS field is set to linux, the following fields must be unset:
+	// -securityContext.windowsOptions
+	//
+	// If the OS field is set to windows, following fields must be unset:
+	// - spec.hostPID
+	// - spec.hostIPC
+	// - spec.hostUsers
+	// - spec.securityContext.seLinuxOptions
+	// - spec.securityContext.seccompProfile
+	// - spec.securityContext.fsGroup
+	// - spec.securityContext.fsGroupChangePolicy
+	// - spec.securityContext.sysctls
+	// - spec.shareProcessNamespace
+	// - spec.securityContext.runAsUser
+	// - spec.securityContext.runAsGroup
+	// - spec.securityContext.supplementalGroups
+	// - spec.containers[*].securityContext.seLinuxOptions
+	// - spec.containers[*].securityContext.seccompProfile
+	// - spec.containers[*].securityContext.capabilities
+	// - spec.containers[*].securityContext.readOnlyRootFilesystem
+	// - spec.containers[*].securityContext.privileged
+	// - spec.containers[*].securityContext.allowPrivilegeEscalation
+	// - spec.containers[*].securityContext.procMount
+	// - spec.containers[*].securityContext.runAsUser
+	// - spec.containers[*].securityContext.runAsGroup
+	// +optional
+	OS *v1.PodOS `json:"os,omitempty" protobuf:"bytes,36,opt,name=os"`
+
+	// Use the host's user namespace.
+	// Optional: Default to true.
+	// If set to true or not present, the pod will be run in the host user namespace, useful
+	// for when the pod needs a feature only available to the host user namespace, such as
+	// loading a kernel module with CAP_SYS_MODULE.
+	// When set to false, a new userns is created for the pod. Setting false is useful for
+	// mitigating container breakout vulnerabilities even allowing users to run their
+	// containers as root without actually having root privileges on the host.
+	// This field is alpha-level and is only honored by servers that enable the UserNamespacesSupport feature.
+	// +k8s:conversion-gen=false
+	// +optional
+	HostUsers *bool `json:"hostUsers,omitempty" protobuf:"bytes,37,opt,name=hostUsers"`
+
+	// SchedulingGates is an opaque list of values that if specified will block scheduling the pod.
+	// More info:  https://git.k8s.io/enhancements/keps/sig-scheduling/3521-pod-scheduling-readiness.
+	//
+	// This is an alpha-level feature enabled by PodSchedulingReadiness feature gate.
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=name
+	SchedulingGates []v1.PodSchedulingGate `json:"schedulingGates,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,38,opt,name=schedulingGates"`
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start. The resources
+	// will be made available to those containers which consume them
+	// by name.
+	//
+	// This is an alpha field and requires enabling the
+	// DynamicResourceAllocation feature gate.
+	//
+	// This field is immutable.
+	//
+	// +patchMergeKey=name
+	// +patchStrategy=merge,retainKeys
+	// +listType=map
+	// +listMapKey=name
+	// +featureGate=DynamicResourceAllocation
+	// +optional
+	ResourceClaims []v1.PodResourceClaim `json:"resourceClaims,omitempty" patchStrategy:"merge,retainKeys" patchMergeKey:"name" protobuf:"bytes,39,rep,name=resourceClaims"`
 }
 
 // EmbeddedPersistentVolumeClaim is an embeddable and controller-gen friendly version of k8s.io/api/core/v1.PersistentVolumeClaim.

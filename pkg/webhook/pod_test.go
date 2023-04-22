@@ -236,7 +236,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 						Command: []string{"/bin/bash"},
 						Args:    nil,
 						LivenessProbe: &corev1.Probe{
-							Handler: corev1.Handler{
+							ProbeHandler: corev1.ProbeHandler{
 								Exec: &corev1.ExecAction{
 									Command: []string{"/bin/bash"},
 								},
@@ -262,7 +262,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 					Args:         []string{"/bin/bash"},
 					VolumeMounts: []corev1.VolumeMount{{Name: "vault-env", MountPath: "/vault/"}},
 					LivenessProbe: &corev1.Probe{
-						Handler: corev1.Handler{
+						ProbeHandler: corev1.ProbeHandler{
 							Exec: &corev1.ExecAction{
 								Command: []string{"/vault/vault-env", "/bin/bash"},
 							},

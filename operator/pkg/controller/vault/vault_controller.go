@@ -1200,7 +1200,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			// This probe makes sure Vault is responsive in a HTTPS manner
 			// See: https://www.vaultproject.io/api/system/init.html
 			LivenessProbe: &corev1.Probe{
-				Handler: corev1.Handler{
+				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Scheme: getVaultURIScheme(v),
 						Port:   intstr.FromString(v.Spec.GetAPIPortName()),
@@ -1210,7 +1210,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			// This probe makes sure that only the active Vault instance gets traffic
 			// See: https://www.vaultproject.io/api/system/health.html
 			ReadinessProbe: &corev1.Probe{
-				Handler: corev1.Handler{
+				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Scheme: getVaultURIScheme(v),
 						Port:   intstr.FromString(v.Spec.GetAPIPortName()),
