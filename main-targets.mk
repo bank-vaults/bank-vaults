@@ -135,15 +135,18 @@ generate-code: ## Regenerate clientset, deepcopy funcs, listers and informers
 	./scripts/update-codegen.sh v${CODE_GENERATOR_VERSION}
 
 bin/controller-gen-${CONTROLLER_GEN_VERSION}:
+	@mkdir -p bin
 	set -ex ;\
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	go mod init tmp ;\
-	GOBIN=$(PWD)/bin/controller-gen-${CONTROLLER_GEN_VERSION} go get sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION} ;\
+	GOBIN=$(PWD)/bin/controller-gen-${CONTROLLER_GEN_VERSION}-bin/ go install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION} ;\
+	mv $(PWD)/bin/controller-gen-${CONTROLLER_GEN_VERSION}-bin/controller-gen $(PWD)/bin/controller-gen-${CONTROLLER_GEN_VERSION} ;\
+	rm -rf $(PWD)/bin/controller-gen-${CONTROLLER_GEN_VERSION}-bin ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR
 
 bin/controller-gen: bin/controller-gen-${CONTROLLER_GEN_VERSION}
-	ln -sf controller-gen-${CONTROLLER_GEN_VERSION}/controller-gen bin/controller-gen
+	ln -sf $(PWD)/bin/controller-gen-${CONTROLLER_GEN_VERSION} bin/controller-gen
 
 .PHONY: generate-crds
 generate-crds: bin/controller-gen ## Regenerate CRDs in the Helm chart and examples
