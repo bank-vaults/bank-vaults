@@ -15,50 +15,25 @@
 package log
 
 import (
-	"fmt"
-	"regexp"
-	"strings"
-
-	"emperror.dev/errors"
 	syslogformat "gopkg.in/mcuadros/go-syslog.v2/format"
+
+	"github.com/bank-vaults/vault-sdk/log"
 )
 
-const ConnectionError = "connection_error"
+// Deprecated: use [log.ConnectionError] instead.
+const ConnectionError = log.ConnectionError
 
-var (
-	logParserRegexp    = regexp.MustCompile("(level=[a-z]+) (msg=\\\".*\\\")( app=.*)")
-	pathNotFoundRegexp = regexp.MustCompile("(path not found:) ([a-z]+/[a-z]+/.*)(\\\")")
-	keyNotFoundRegexp  = regexp.MustCompile("('.*') (not found under path:) ([a-z]+/[a-z]+/.*)(\\\")")
-)
-
+// Deprecated: use [log.GetClientFromLog] instead.
 func GetClientFromLog(logParts syslogformat.LogParts) (string, error) {
-	ip := strings.Split(fmt.Sprintf("%s", logParts["client"]), ":")
-	if len(ip) < 2 {
-		return "", errors.New("failed to get client ip from error message")
-	}
-	return ip[0], nil
+	return log.GetClientFromLog(logParts)
 }
 
+// Deprecated: use [log.GetContentFromLog] instead.
 func GetContentFromLog(logParts syslogformat.LogParts) ([]string, error) {
-	content := logParserRegexp.FindStringSubmatch(fmt.Sprintf("%v", logParts["content"]))
-	if content == nil {
-		return nil, errors.New("parse error message failed")
-	}
-	return content, nil
+	return log.GetContentFromLog(logParts)
 }
 
+// Deprecated: use [log.ParseLogMessage] instead.
 func ParseLogMessage(content []string) map[string]string {
-	parsedError := make(map[string]string)
-	if !(strings.Contains(content[1], "error") || strings.Contains(content[1], "fatal")) {
-		return nil
-	}
-	if path := pathNotFoundRegexp.FindStringSubmatch(content[2]); path != nil {
-		parsedError[path[2]] = content[2]
-	} else if path := keyNotFoundRegexp.FindStringSubmatch(content[2]); path != nil {
-		parsedError[fmt.Sprintf("%s#%s", path[3], strings.Trim(path[1], "'"))] = content[2]
-	} else {
-		parsedError[ConnectionError] = fmt.Sprintf("%v %v", content[2], content[3])
-	}
-
-	return parsedError
+	return log.ParseLogMessage(content)
 }

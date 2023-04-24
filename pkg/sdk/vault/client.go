@@ -15,691 +15,174 @@
 package vault
 
 import (
-	"context"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
-
-	"cloud.google.com/go/compute/metadata"
-	credentials "cloud.google.com/go/iam/credentials/apiv1"
-	"emperror.dev/errors"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/fsnotify/fsnotify"
 	vaultapi "github.com/hashicorp/vault/api"
-	"github.com/leosayous21/go-azure-msi/msi"
-	"golang.org/x/oauth2/google"
-	"google.golang.org/api/iam/v1"
-	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
+
+	"github.com/bank-vaults/vault-sdk/vault"
 )
 
-const (
-	awsEC2PKCS7Url = "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7"
-	defaultJWTFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-)
-
-// NewData is a helper function for Vault KV Version two secret data creation
+// NewData is a helper function for Vault KV Version two secret data creation.
+//
+// Deprecated: use [vault.NewData] instead.
 func NewData(cas int, data map[string]interface{}) map[string]interface{} {
-	return map[string]interface{}{
-		"options": map[string]interface{}{"cas": cas},
-		"data":    data,
-	}
-}
-
-type clientOptions struct {
-	url            string
-	role           string
-	authPath       string
-	tokenPath      string
-	token          string
-	timeout        time.Duration
-	logger         Logger
-	authMethod     ClientAuthMethod
-	existingSecret string
-	vaultNamespace string
+	return vault.NewData(cas, data)
 }
 
 // ClientOption configures a Vault client using the functional options paradigm popularized by Rob Pike and Dave Cheney.
 // If you're unfamiliar with this style,
 // see https://commandcenter.blogspot.com/2014/01/self-referential-functions-and-design.html and
 // https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis.
-type ClientOption interface {
-	apply(o *clientOptions)
-}
+//
+// Deprecated: use [vault.ClientOption] instead.
+type ClientOption = vault.ClientOption
 
 // ClientURL is the vault url EX: https://my-vault.vault.org
-type ClientURL string
+//
+// Deprecated: use [vault.ClientURL] instead.
+type ClientURL = vault.ClientURL
 
-func (co ClientURL) apply(o *clientOptions) {
-	o.url = string(co)
-}
-
-// ClientRole is the vault role which the client would like to receive
-type ClientRole string
-
-func (co ClientRole) apply(o *clientOptions) {
-	o.role = string(co)
-}
+// ClientRole is the vault role which the client would like to receive.
+//
+// Deprecated: use [vault.ClientRole] instead.
+type ClientRole = vault.ClientRole
 
 // ClientAuthPath is the mount path where the auth method is enabled.
-type ClientAuthPath string
-
-func (co ClientAuthPath) apply(o *clientOptions) {
-	o.authPath = string(co)
-}
+//
+// Deprecated: use [vault.ClientAuthPath] instead.
+type ClientAuthPath = vault.ClientAuthPath
 
 // ClientTokenPath file where the Vault token can be found.
-type ClientTokenPath string
-
-func (co ClientTokenPath) apply(o *clientOptions) {
-	o.tokenPath = string(co)
-}
+//
+// Deprecated: use [vault.ClientTokenPath] instead.
+type ClientTokenPath = vault.ClientTokenPath
 
 // ClientToken is a Vault token.
-type ClientToken string
-
-func (co ClientToken) apply(o *clientOptions) {
-	o.token = string(co)
-}
+//
+// Deprecated: use [vault.ClientToken] instead.
+type ClientToken = vault.ClientToken
 
 // ClientTimeout after which the client fails.
-type ClientTimeout time.Duration
-
-func (co ClientTimeout) apply(o *clientOptions) {
-	o.timeout = time.Duration(co)
-}
+//
+// Deprecated: use [vault.ClientTimeout] instead.
+type ClientTimeout = vault.ClientTimeout
 
 // ClientLogger wraps a logur.Logger compatible logger to be used in the client.
-func ClientLogger(logger Logger) clientLogger { //nolint:revive
-	return clientLogger{logger: logger}
-}
-
-type clientLogger struct {
-	logger Logger
-}
-
-func (co clientLogger) apply(o *clientOptions) {
-	o.logger = co.logger
+//
+// Deprecated: use [vault.ClientLogger] instead.
+func ClientLogger(logger Logger) ClientOption {
+	return vault.ClientLogger(logger)
 }
 
 // ClientAuthMethod file where the Vault token can be found.
-type ClientAuthMethod string
+//
+// Deprecated: use [vault.ClientAuthMethod] instead.
+type ClientAuthMethod = vault.ClientAuthMethod
 
-func (co ClientAuthMethod) apply(o *clientOptions) {
-	o.authMethod = co
-}
+// Deprecated: use [vault.ExistingSecret] instead.
+type ExistingSecret = vault.ExistingSecret
 
-type ExistingSecret string
-
-func (co ExistingSecret) apply(o *clientOptions) {
-	o.existingSecret = string(co)
-}
-
-// Vault Enterprise Namespace (not Kubernetes namespace)
-type VaultNamespace string
-
-func (co VaultNamespace) apply(o *clientOptions) {
-	o.vaultNamespace = string(co)
-}
+// Vault Enterprise Namespace (not Kubernetes namespace).
+//
+// Deprecated: use [vault.VaultNamespace] instead.
+type VaultNamespace = vault.VaultNamespace
 
 const (
 	// AWSEC2AuthMethod is used for the Vault AWS EC2 auth method
 	// as described here: https://www.vaultproject.io/docs/auth/aws#ec2-auth-method
-	AWSEC2AuthMethod ClientAuthMethod = "aws-ec2"
+	//
+	// Deprecated: use [vault.AWSEC2AuthMethod] instead.
+	AWSEC2AuthMethod ClientAuthMethod = vault.AWSEC2AuthMethod
 
 	// AWSIAMAuthMethod is used for the Vault AWS IAM auth method
 	// as described here: https://www.vaultproject.io/docs/auth/aws#iam-auth-method
-	AWSIAMAuthMethod ClientAuthMethod = "aws-iam"
+	//
+	// Deprecated: use [vault.AWSIAMAuthMethod] instead.
+	AWSIAMAuthMethod ClientAuthMethod = vault.AWSIAMAuthMethod
 
 	// GCPGCEAuthMethod is used for the Vault GCP GCE auth method
 	// as described here: https://www.vaultproject.io/docs/auth/gcp#gce-login
-	GCPGCEAuthMethod ClientAuthMethod = "gcp-gce"
+	//
+	// Deprecated: use [vault.GCPGCEAuthMethod] instead.
+	GCPGCEAuthMethod ClientAuthMethod = vault.GCPGCEAuthMethod
 
 	// GCPIAMAuthMethod is used for the Vault GCP IAM auth method
 	// as described here: https://www.vaultproject.io/docs/auth/gcp#iam
-	GCPIAMAuthMethod ClientAuthMethod = "gcp-iam"
+	//
+	// Deprecated: use [vault.GCPIAMAuthMethod] instead.
+	GCPIAMAuthMethod ClientAuthMethod = vault.GCPIAMAuthMethod
 
 	// JWTAuthMethod is used for the Vault JWT/OIDC/GCP/Kubernetes auth methods
 	// as describe here:
 	// - https://www.vaultproject.io/docs/auth/jwt
 	// - https://www.vaultproject.io/docs/auth/kubernetes
 	// - https://www.vaultproject.io/docs/auth/gcp
-	JWTAuthMethod ClientAuthMethod = "jwt"
+	//
+	// Deprecated: use [vault.JWTAuthMethod] instead.
+	JWTAuthMethod ClientAuthMethod = vault.JWTAuthMethod
 
 	// AzureMSIAuthMethod is used for the vault Azure auth method
 	// as described here:
 	// - https://www.vaultproject.io/docs/auth/azure
-	AzureMSIAuthMethod ClientAuthMethod = "azure"
+	//
+	// Deprecated: use [vault.AzureMSIAuthMethod] instead.
+	AzureMSIAuthMethod ClientAuthMethod = vault.AzureMSIAuthMethod
 
 	// NamespacedSecretAuthMethod is used for per namespace secrets
-	NamespacedSecretAuthMethod ClientAuthMethod = "namespaced"
+	//
+	// Deprecated: use [vault.NamespacedSecretAuthMethod] instead.
+	NamespacedSecretAuthMethod ClientAuthMethod = vault.NamespacedSecretAuthMethod
 )
 
 // Client is a Vault client with Kubernetes support, token automatic renewing and
-// access to Transit Secret Engine wrapper
-type Client struct {
-	// Easy to use wrapper for transit secret engine calls
-	Transit *Transit
-
-	client       *vaultapi.Client
-	logical      *vaultapi.Logical
-	tokenWatcher *vaultapi.Renewer
-	closed       bool
-	watch        *fsnotify.Watcher
-	mu           sync.Mutex
-	logger       Logger
-}
+// access to Transit Secret Engine wrapper.
+//
+// Deprecated: use [vault.Client] instead.
+type Client = vault.Client
 
 // NewClient creates a new Vault client.
+//
+// Deprecated: use [vault.NewClient] instead.
 func NewClient(role string) (*Client, error) {
-	return NewClientWithOptions(ClientRole(role))
+	return vault.NewClient(role)
 }
 
 // NewClientWithOptions creates a new Vault client with custom options.
+//
+// Deprecated: use [vault.NewClientWithOptions] instead.
 func NewClientWithOptions(opts ...ClientOption) (*Client, error) {
-	config := vaultapi.DefaultConfig()
-	if config.Error != nil {
-		return nil, config.Error
-	}
-	return NewClientFromConfig(config, opts...)
+	return vault.NewClientWithOptions(opts...)
 }
 
 // NewClientWithConfig creates a new Vault client with custom configuration.
-// Deprecated: use NewClientFromConfig instead.
+//
+// Deprecated: use [vault.NewClientWithConfig] instead.
 func NewClientWithConfig(config *vaultapi.Config, role, path string) (*Client, error) {
-	return NewClientFromConfig(config, ClientRole(role), ClientAuthPath(path))
+	return vault.NewClientWithConfig(config, role, path)
 }
 
 // NewClientFromConfig creates a new Vault client from custom configuration.
+//
+// Deprecated: use [vault.NewClientFromConfig] instead.
 func NewClientFromConfig(config *vaultapi.Config, opts ...ClientOption) (*Client, error) {
-	rawClient, err := vaultapi.NewClient(config)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := NewClientFromRawClient(rawClient, opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	caCertPath := os.Getenv(vaultapi.EnvVaultCACert)
-	caCertReload := os.Getenv("VAULT_CACERT_RELOAD") != "false"
-
-	if caCertPath != "" && caCertReload {
-		watch, err := fsnotify.NewWatcher()
-		if err != nil {
-			return nil, err
-		}
-
-		caCertFile := filepath.Clean(caCertPath)
-		configDir, _ := filepath.Split(caCertFile)
-
-		_ = watch.Add(configDir)
-
-		go func() {
-			for {
-				client.mu.Lock()
-				if client.closed {
-					client.mu.Unlock()
-					break
-				}
-				client.mu.Unlock()
-
-				select {
-				case event := <-watch.Events:
-					// we only care about the CA cert file or the Secret mount directory (if in Kubernetes)
-					if filepath.Clean(event.Name) == caCertFile || filepath.Base(event.Name) == "..data" {
-						if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-							err := config.ReadEnvironment()
-							if err != nil {
-								client.logger.Error("failed to reload Vault config", map[string]interface{}{"err": err})
-							} else {
-								client.logger.Info("CA certificate reloaded")
-							}
-						}
-					}
-				case err := <-watch.Errors:
-					client.logger.Error("watcher error", map[string]interface{}{"err": err})
-				}
-			}
-		}()
-
-		client.watch = watch
-	}
-
-	return client, nil
+	return vault.NewClientFromConfig(config, opts...)
 }
 
 // NewClientFromRawClient creates a new Vault client from custom raw client.
+//
+// Deprecated: use [vault.NewClientFromRawClient] instead.
 func NewClientFromRawClient(rawClient *vaultapi.Client, opts ...ClientOption) (*Client, error) {
-	logical := rawClient.Logical()
-	transit := &Transit{
-		client: rawClient,
-	}
-	client := &Client{
-		Transit: transit,
-		client:  rawClient,
-		logical: logical,
-		logger:  noopLogger{},
-	}
-
-	var tokenWatcher *vaultapi.Renewer
-
-	o := &clientOptions{}
-
-	for _, opt := range opts {
-		opt.apply(o)
-	}
-
-	// Set logger
-	if o.logger != nil {
-		client.logger = o.logger
-	}
-
-	// Set URL if defined
-	if o.url != "" {
-		err := rawClient.SetAddress(o.url)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Default role
-	if o.role == "" {
-		o.role = "default"
-	}
-
-	// Default auth path
-	if o.authPath == "" {
-		o.authPath = "kubernetes"
-	}
-
-	if o.authMethod == "" {
-		o.authMethod = JWTAuthMethod
-	}
-
-	// Default token path
-	if o.tokenPath == "" {
-		o.tokenPath = os.Getenv("HOME") + "/.vault-token"
-		if env, ok := os.LookupEnv("VAULT_TOKEN_PATH"); ok {
-			o.tokenPath = env
-		}
-	}
-
-	// Set vault namespace if defined
-	if o.vaultNamespace != "" {
-		rawClient.SetNamespace(o.vaultNamespace)
-	}
-
-	// Default timeout
-	if o.timeout == 0 {
-		o.timeout = 10 * time.Second
-		if env, ok := os.LookupEnv("VAULT_CLIENT_TIMEOUT"); ok {
-			var err error
-			if o.timeout, err = time.ParseDuration(env); err != nil {
-				return nil, errors.Wrap(err, "could not parse timeout duration")
-			}
-		}
-	}
-
-	// Add token if set
-	if o.token != "" {
-		rawClient.SetToken(o.token)
-	} else if rawClient.Token() == "" {
-		token, err := ioutil.ReadFile(o.tokenPath)
-		if err == nil {
-			rawClient.SetToken(string(token))
-		} else {
-			// If VAULT_TOKEN, VAULT_TOKEN_PATH or ~/.vault-token wasn't provided,
-			// attempt to get one with supported JWT-based authentication methods
-			// (such as Kubernetes ServiceAccount JWT).
-
-			jwtFile := defaultJWTFile
-			if file := os.Getenv("KUBERNETES_SERVICE_ACCOUNT_TOKEN"); file != "" {
-				jwtFile = file
-			} else if file := os.Getenv("VAULT_JWT_FILE"); file != "" {
-				jwtFile = file
-			}
-
-			var loginDataFunc func() (map[string]interface{}, error)
-
-			switch o.authMethod { //nolint:exhaustive
-			case AWSEC2AuthMethod:
-				loginDataFunc = func() (map[string]interface{}, error) {
-					resp, err := http.Get(awsEC2PKCS7Url) //nolint:noctx
-					if err != nil {
-						return nil, err
-					}
-					defer resp.Body.Close()
-
-					if resp.StatusCode != http.StatusOK {
-						return nil, errors.Errorf("failed to get EC2 instance metadata: %s", resp.Status)
-					}
-
-					pkcs7Data, err := ioutil.ReadAll(resp.Body)
-					if err != nil {
-						return nil, err
-					}
-
-					pkcs7 := strings.ReplaceAll(string(pkcs7Data), "\n", "")
-
-					jwt, err := ioutil.ReadFile(jwtFile)
-					if err != nil {
-						return nil, err
-					}
-
-					nonce := fmt.Sprintf("%x", sha256.Sum256(jwt))
-
-					return map[string]interface{}{
-						"pkcs7": pkcs7,
-						"nonce": nonce,
-						"role":  o.role,
-					}, nil
-				}
-
-			case AWSIAMAuthMethod:
-				loginDataFunc = func() (map[string]interface{}, error) {
-					stsSession, err := session.NewSessionWithOptions(session.Options{
-						CredentialsProviderOptions: &session.CredentialsProviderOptions{
-							WebIdentityRoleProviderOptions: func(*stscreds.WebIdentityRoleProvider) {},
-						},
-					})
-					if err != nil {
-						return nil, err
-					}
-
-					var params *sts.GetCallerIdentityInput
-					svc := sts.New(stsSession)
-					stsRequest, _ := svc.GetCallerIdentityRequest(params)
-					singErr := stsRequest.Sign()
-					if singErr != nil {
-						return nil, singErr
-					}
-
-					headersJSON, err := json.Marshal(stsRequest.HTTPRequest.Header)
-					if err != nil {
-						return nil, err
-					}
-
-					requestBody, err := ioutil.ReadAll(stsRequest.HTTPRequest.Body)
-					if err != nil {
-						return nil, err
-					}
-
-					return map[string]interface{}{
-						"role":                    o.role,
-						"iam_http_request_method": stsRequest.HTTPRequest.Method,
-						"iam_request_url":         base64.StdEncoding.EncodeToString([]byte(stsRequest.HTTPRequest.URL.String())),
-						"iam_request_headers":     base64.StdEncoding.EncodeToString(headersJSON),
-						"iam_request_body":        base64.StdEncoding.EncodeToString(requestBody),
-					}, nil
-				}
-
-			case GCPGCEAuthMethod:
-				loginDataFunc = func() (map[string]interface{}, error) {
-					tokenSource, err := google.DefaultTokenSource(context.TODO(), iam.CloudPlatformScope)
-					if err != nil {
-						return nil, err
-					}
-
-					jwt, err := tokenSource.Token()
-					if err != nil {
-						return nil, err
-					}
-
-					return map[string]interface{}{
-						"jwt":  jwt,
-						"role": o.role,
-					}, nil
-				}
-
-			case GCPIAMAuthMethod:
-				loginDataFunc = func() (map[string]interface{}, error) {
-					c, err := credentials.NewIamCredentialsClient(context.TODO())
-					if err != nil {
-						return nil, err
-					}
-
-					metadataClient := metadata.NewClient(nil)
-					serviceAccountEmail, err := metadataClient.Email("default")
-					if err != nil {
-						return nil, err
-					}
-
-					jwtPayload := map[string]interface{}{
-						"aud": fmt.Sprintf("vault/%s", o.role),
-						"sub": serviceAccountEmail,
-						"exp": time.Now().Add(time.Minute * 10).Unix(),
-					}
-
-					payloadBytes, err := json.Marshal(jwtPayload)
-					if err != nil {
-						return nil, err
-					}
-
-					req := &credentialspb.SignJwtRequest{
-						Name:    fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccountEmail),
-						Payload: string(payloadBytes),
-					}
-					resp, err := c.SignJwt(context.TODO(), req)
-					if err != nil {
-						return nil, err
-					}
-
-					return map[string]interface{}{
-						"jwt":  resp.SignedJwt,
-						"role": o.role,
-					}, nil
-				}
-
-			case AzureMSIAuthMethod:
-				loginDataFunc = func() (map[string]interface{}, error) {
-					metadata, err := msi.GetInstanceMetadata()
-					if err != nil {
-						return nil, err
-					}
-					token, err := msi.GetMsiToken()
-					if err != nil {
-						return nil, err
-					}
-					return map[string]interface{}{
-						"role":                o.role,
-						"jwt":                 token.AccessToken,
-						"subscription_id":     metadata.SubscriptionId,
-						"resource_group_name": metadata.ResourceGroupName,
-						"vm_name":             metadata.VMName,
-						"vmss_name":           metadata.VMssName,
-					}, nil
-				}
-
-			case NamespacedSecretAuthMethod:
-				loginDataFunc = func() (map[string]interface{}, error) {
-					if len(o.existingSecret) > 0 {
-						return map[string]interface{}{
-							"jwt":  o.existingSecret,
-							"role": o.role,
-						}, nil
-					}
-
-					jwt, err := ioutil.ReadFile(jwtFile)
-					if err != nil {
-						return nil, err
-					}
-
-					return map[string]interface{}{
-						"jwt":  string(jwt),
-						"role": o.role,
-					}, nil
-				}
-
-			default:
-				loginDataFunc = func() (map[string]interface{}, error) {
-					jwt, err := ioutil.ReadFile(jwtFile)
-					if err != nil {
-						return nil, err
-					}
-
-					return map[string]interface{}{
-						"jwt":  string(jwt),
-						"role": o.role,
-					}, nil
-				}
-			}
-
-			initialTokenArrived := make(chan string, 1)
-			initialTokenSent := false
-
-			go func() {
-				for {
-					client.mu.Lock()
-					if client.closed {
-						client.mu.Unlock()
-						break
-					}
-					client.mu.Unlock()
-
-					// Projected SA JWTs do expire, so we need to move the reading logic into the loop
-					loginData, err := loginDataFunc()
-					if err != nil {
-						client.logger.Error("failed to read login data", map[string]interface{}{
-							"err":  err,
-							"type": o.authMethod,
-						})
-						continue
-					}
-
-					secret, err := logical.Write(fmt.Sprintf("auth/%s/login", o.authPath), loginData)
-					if err != nil {
-						client.logger.Error("failed to request new Vault token", map[string]interface{}{"err": err})
-						time.Sleep(1 * time.Second)
-						continue
-					}
-
-					if secret == nil {
-						client.logger.Debug("received empty answer from Vault, retrying")
-						time.Sleep(1 * time.Second)
-						continue
-					}
-
-					client.logger.Info("received new Vault token", map[string]interface{}{
-						"addr": o.url,
-						"role": o.role,
-						"path": o.authPath,
-					})
-
-					// Set the first token from the response
-					rawClient.SetToken(secret.Auth.ClientToken)
-
-					if !initialTokenSent {
-						initialTokenArrived <- secret.LeaseID
-						initialTokenSent = true
-					}
-
-					// Start the renewing process
-					tokenWatcher, err = rawClient.NewLifetimeWatcher(&vaultapi.LifetimeWatcherInput{Secret: secret})
-					if err != nil {
-						client.logger.Error("failed to watch Vault token", map[string]interface{}{"err": err})
-						continue
-					}
-
-					client.mu.Lock()
-					client.tokenWatcher = tokenWatcher
-					client.mu.Unlock()
-
-					go tokenWatcher.Start()
-
-					client.runRenewChecker(tokenWatcher)
-				}
-
-				client.logger.Info("Vault token renewal closed")
-			}()
-
-			select {
-			case <-initialTokenArrived:
-				client.logger.Info("initial Vault token arrived")
-
-			case <-time.After(o.timeout):
-				client.Close()
-				return nil, errors.Errorf("timeout [%s] during waiting for Vault token", o.timeout)
-			}
-		}
-	}
-
-	return client, nil
-}
-
-func (client *Client) runRenewChecker(tokenWatcher *vaultapi.Renewer) {
-	for {
-		select {
-		case err := <-tokenWatcher.DoneCh():
-			if err != nil {
-				client.logger.Error("error in Vault token renewal", map[string]interface{}{"err": err})
-			}
-			return
-		case o := <-tokenWatcher.RenewCh():
-			ttl, _ := o.Secret.TokenTTL()
-			client.logger.Info("renewed Vault token", map[string]interface{}{"ttl": ttl})
-		}
-	}
-}
-
-// Vault returns the underlying hashicorp Vault client.
-// Deprecated: use RawClient instead.
-func (client *Client) Vault() *vaultapi.Client {
-	return client.RawClient()
-}
-
-// RawClient returns the underlying raw Vault client.
-func (client *Client) RawClient() *vaultapi.Client {
-	return client.client
-}
-
-// Close stops the token renewing process of this client
-func (client *Client) Close() {
-	client.mu.Lock()
-	defer client.mu.Unlock()
-
-	client.closed = true
-
-	if client.tokenWatcher != nil {
-		client.tokenWatcher.Stop()
-	}
-
-	if client.watch != nil {
-		_ = client.watch.Close()
-	}
+	return vault.NewClientFromRawClient(rawClient, opts...)
 }
 
 // NewRawClient creates a new raw Vault client.
+//
+// Deprecated: use [vault.NewRawClient] instead.
 func NewRawClient() (*vaultapi.Client, error) {
-	config := vaultapi.DefaultConfig()
-	if config.Error != nil {
-		return nil, config.Error
-	}
-
-	config.HttpClient.Transport.(*http.Transport).TLSHandshakeTimeout = 5 * time.Second
-
-	return vaultapi.NewClient(config)
+	return vault.NewRawClient()
 }
 
 // NewInsecureRawClient creates a new raw Vault client with insecure TLS.
+//
+// Deprecated: use [vault.NewInsecureRawClient] instead.
 func NewInsecureRawClient() (*vaultapi.Client, error) {
-	config := vaultapi.DefaultConfig()
-	if config.Error != nil {
-		return nil, config.Error
-	}
-
-	config.HttpClient.Transport.(*http.Transport).TLSHandshakeTimeout = 5 * time.Second
-	config.HttpClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
-
-	return vaultapi.NewClient(config)
+	return vault.NewInsecureRawClient()
 }
