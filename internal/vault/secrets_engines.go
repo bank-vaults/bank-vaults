@@ -21,12 +21,11 @@ import (
 	"strings"
 
 	"emperror.dev/errors"
+	vaultpkg "github.com/bank-vaults/vault-sdk/vault"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
-
-	vaultpkg "github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 func isOverwriteProhibitedError(err error) bool {

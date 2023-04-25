@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"emperror.dev/errors"
+	"github.com/bank-vaults/vault-sdk/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
@@ -34,7 +35,6 @@ import (
 	logrusadapter "logur.dev/adapter/logrus"
 
 	"github.com/banzaicloud/bank-vaults/internal/injector"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 // The special value for VAULT_ENV which marks that the login token needs to be passed through to the application

@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"emperror.dev/errors"
+	"github.com/bank-vaults/vault-sdk/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	"github.com/slok/kubewebhook/v2/pkg/log"
@@ -36,7 +37,6 @@ import (
 	logrusadapter "logur.dev/adapter/logrus"
 
 	"github.com/banzaicloud/bank-vaults/internal/injector"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 type MutatingWebhook struct {

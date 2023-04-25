@@ -16,84 +16,24 @@ package tls
 
 import (
 	"crypto"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
-	"crypto/x509/pkix"
-	"net"
-	"time"
 
-	"emperror.dev/errors"
+	"github.com/bank-vaults/vault-sdk/tls"
 )
 
 // PeerCertificateRequest contains a set of options configurable for peer certificate generation.
-type PeerCertificateRequest struct {
-	Subject     pkix.Name
-	Validity    time.Duration
-	DNSNames    []string
-	IPAddresses []net.IP
-
-	notBefore time.Time
-}
+//
+// Deprecated: use [tls.PeerCertificateRequest] instead.
+type PeerCertificateRequest = tls.PeerCertificateRequest
 
 // PeerCertificate contains the generated certificate and key in PEM encoded format.
-type PeerCertificate struct {
-	Certificate []byte
-	Key         []byte
-}
+//
+// Deprecated: use [tls.PeerCertificate] instead.
+type PeerCertificate = tls.PeerCertificate
 
 // GeneratePeerCertificate generates peer TLS certificate and key signed by a parent CA.
+//
+// Deprecated: use [tls.GeneratePeerCertificate] instead.
 func GeneratePeerCertificate(req PeerCertificateRequest, signerCert *x509.Certificate, signerKey crypto.Signer) (*PeerCertificate, error) {
-	key, err := rsa.GenerateKey(rand.Reader, defaultKeyBits)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate rsa key")
-	}
-
-	keyBytes, err := keyToBytes(key)
-	if err != nil {
-		return nil, err
-	}
-
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate serial number")
-	}
-
-	validity := req.Validity
-	if validity < 1 {
-		validity = defaultValidity
-	}
-
-	notBefore := req.notBefore
-	if notBefore.IsZero() {
-		notBefore = time.Now()
-	}
-	notAfter := notBefore.Add(validity)
-
-	certTemplate := &x509.Certificate{
-		SerialNumber:          serialNumber,
-		Subject:               req.Subject,
-		IPAddresses:           req.IPAddresses,
-		DNSNames:              req.DNSNames,
-		NotBefore:             notBefore,
-		NotAfter:              notAfter,
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		BasicConstraintsValid: true,
-	}
-
-	cert, err := x509.CreateCertificate(rand.Reader, certTemplate, signerCert, key.Public(), signerKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create x509 certificate")
-	}
-
-	certBytes, err := certToBytes(cert)
-	if err != nil {
-		return nil, err
-	}
-
-	return &PeerCertificate{
-		Certificate: certBytes,
-		Key:         keyBytes,
-	}, nil
+	return tls.GeneratePeerCertificate(req, signerCert, signerKey)
 }

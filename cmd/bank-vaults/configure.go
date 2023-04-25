@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/fsnotify/fsnotify"
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
@@ -29,7 +30,6 @@ import (
 
 	"github.com/banzaicloud/bank-vaults/internal/configuration"
 	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 const (

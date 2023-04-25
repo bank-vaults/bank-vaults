@@ -16,79 +16,24 @@ package tls
 
 import (
 	"crypto"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
-	"crypto/x509/pkix"
-	"time"
 
-	"emperror.dev/errors"
+	"github.com/bank-vaults/vault-sdk/tls"
 )
 
-// ClientCertificateRequest contains a set of options configurable for client certificate generation
-type ClientCertificateRequest struct {
-	Subject  pkix.Name
-	Validity time.Duration
-
-	notBefore time.Time
-}
+// ClientCertificateRequest contains a set of options configurable for client certificate generation.
+//
+// Deprecated: use [tls.ClientCertificateRequest] instead.
+type ClientCertificateRequest = tls.ClientCertificateRequest
 
 // ClientCertificate contains the generated certificate and key in PEM encoded format.
-type ClientCertificate struct {
-	Certificate []byte
-	Key         []byte
-}
+//
+// Deprecated: use [tls.ClientCertificate] instead.
+type ClientCertificate = tls.ClientCertificate
 
 // GenerateClientCertificate generates client TLS certificate and key signed by a parent CA.
+//
+// Deprecated: use [tls.GenerateClientCertificate] instead.
 func GenerateClientCertificate(req ClientCertificateRequest, signerCert *x509.Certificate, signerKey crypto.Signer) (*ClientCertificate, error) {
-	key, err := rsa.GenerateKey(rand.Reader, defaultKeyBits)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate rsa key")
-	}
-
-	keyBytes, err := keyToBytes(key)
-	if err != nil {
-		return nil, err
-	}
-
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate serial number")
-	}
-
-	validity := req.Validity
-	if validity < 1 {
-		validity = defaultValidity
-	}
-
-	notBefore := req.notBefore
-	if notBefore.IsZero() {
-		notBefore = time.Now()
-	}
-	notAfter := notBefore.Add(validity)
-
-	certTemplate := &x509.Certificate{
-		SerialNumber:          serialNumber,
-		Subject:               req.Subject,
-		NotBefore:             notBefore,
-		NotAfter:              notAfter,
-		KeyUsage:              x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-		BasicConstraintsValid: true,
-	}
-
-	cert, err := x509.CreateCertificate(rand.Reader, certTemplate, signerCert, key.Public(), signerKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create x509 certificate")
-	}
-
-	certBytes, err := certToBytes(cert)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ClientCertificate{
-		Certificate: certBytes,
-		Key:         keyBytes,
-	}, nil
+	return tls.GenerateClientCertificate(req, signerCert, signerKey)
 }

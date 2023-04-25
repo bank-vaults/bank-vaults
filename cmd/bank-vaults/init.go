@@ -15,11 +15,11 @@
 package main
 
 import (
+	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 const (

@@ -18,8 +18,8 @@ import (
 	"log"
 	"os"
 
-	database "github.com/banzaicloud/bank-vaults/pkg/sdk/db"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
+	database "github.com/bank-vaults/vault-sdk/db"
+	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	logrusadapter "logur.dev/adapter/logrus"
