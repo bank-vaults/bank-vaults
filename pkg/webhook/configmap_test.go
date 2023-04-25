@@ -18,11 +18,12 @@
 package webhook
 
 import (
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
+	"testing"
+
+	"github.com/bank-vaults/vault-sdk/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	"testing"
 )
 
 func TestMutateConfigMap(t *testing.T) {

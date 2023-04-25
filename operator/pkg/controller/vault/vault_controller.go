@@ -30,6 +30,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	bvtls "github.com/bank-vaults/vault-sdk/tls"
+	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
 	"github.com/hashicorp/vault/api"
 	"github.com/imdario/mergo"
@@ -57,8 +59,6 @@ import (
 
 	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
 	vaultv1alpha1 "github.com/banzaicloud/bank-vaults/operator/pkg/apis/vault/v1alpha1"
-	bvtls "github.com/banzaicloud/bank-vaults/pkg/sdk/tls"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 var log = logf.Log.WithName("controller_vault")

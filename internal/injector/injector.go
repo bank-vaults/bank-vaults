@@ -20,12 +20,12 @@ import (
 	"strings"
 
 	"emperror.dev/errors"
+	"github.com/bank-vaults/vault-sdk/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 
 	"github.com/banzaicloud/bank-vaults/internal/configuration"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 const (

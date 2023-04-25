@@ -24,12 +24,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bank-vaults/vault-sdk/vault"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 )
 
 func assertKeyDoesNotExist(t *testing.T, m map[string]string, k string) {
