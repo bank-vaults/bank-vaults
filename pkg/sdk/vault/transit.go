@@ -14,15 +14,7 @@
 
 package vault
 
-import (
-	"regexp"
-
-	"github.com/bank-vaults/vault-sdk/vault"
-)
-
-// Example: vault:v1:8SDd3WHDOjf7mq69CyCqYjBXAiQQAVZRkFM13ok481zoCmHnSeDX9vyf7w==
-// ref: https://www.vaultproject.io/docs/secrets/transit/index.html#usage
-var transitEncryptedVariable = regexp.MustCompile(`^vault:v\d+:.+$`)
+import "github.com/bank-vaults/vault-sdk/vault"
 
 // Transit is a wrapper for Transit Secret Engine
 // ref: https://www.vaultproject.io/docs/secrets/transit/index.html
