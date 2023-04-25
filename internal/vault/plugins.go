@@ -17,7 +17,6 @@ package vault
 import (
 	"emperror.dev/errors"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/sirupsen/logrus"
 )
 
@@ -106,7 +105,7 @@ func getUnmanagedPlugins(
 
 func (v *vault) addManagedPlugins(managedPlugins []plugin) error {
 	for _, plugin := range managedPlugins {
-		pluginType, err := consts.ParsePluginType(plugin.Type)
+		pluginType, err := api.ParsePluginType(plugin.Type)
 		if err != nil {
 			return errors.Wrap(err, "error parsing type for plugin")
 		}
@@ -139,7 +138,7 @@ func (v *vault) removeUnmanagedPlugins(managedPlugins []plugin) error {
 
 	for existingPluginType, existingPluginNames := range unmanagedPlugins {
 		for existingPluginName := range existingPluginNames {
-			pluginType, err := consts.ParsePluginType(existingPluginType)
+			pluginType, err := api.ParsePluginType(existingPluginType)
 			if err != nil {
 				return errors.Wrap(err, "error parsing type for plugin")
 			}
