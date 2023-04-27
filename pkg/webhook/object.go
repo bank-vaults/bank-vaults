@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/banzaicloud/bank-vaults/internal/injector"
+	"github.com/banzaicloud/bank-vaults/internal/collector"
 )
 
 type element interface {
@@ -89,16 +90,16 @@ func traverseObject(o interface{}, secretInjector injector.SecretInjector) error
 	for e := range iterator {
 		switch s := e.Get().(type) {
 		case string:
-			if hasVaultPrefix(s) {
+			if collector.HasVaultPrefix(s) {
 				dataFromVault, err := secretInjector.GetDataFromVault(map[string]string{"data": s})
 				if err != nil {
 					return err
 				}
 
 				e.Set(dataFromVault["data"])
-			} else if injector.HasInlineVaultDelimiters(s) {
+			} else if collector.HasInlineVaultDelimiters(s) {
 				dataFromVault := s
-				for _, vaultSecretReference := range injector.FindInlineVaultDelimiters(s) {
+				for _, vaultSecretReference := range collector.FindInlineVaultDelimiters(s) {
 					mapData, err := secretInjector.GetDataFromVault(map[string]string{"data": vaultSecretReference[1]})
 					if err != nil {
 						return err

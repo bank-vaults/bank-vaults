@@ -1,4 +1,4 @@
-// Copyright © 2021 Banzai Cloud
+// Copyright © 2023 Banzai Cloud
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhook
+package collector
 
 import (
+	"regexp"
 	"strings"
 )
 
-func hasVaultPrefix(value string) bool {
+func HasVaultPrefix(value string) bool {
 	return strings.HasPrefix(value, "vault:") || strings.HasPrefix(value, ">>vault:")
+}
+
+var inlineMutationRegex = regexp.MustCompile(`\${([>]{0,2}vault:.*?#*}?)}`)
+
+func HasInlineVaultDelimiters(value string) bool {
+	return len(FindInlineVaultDelimiters(value)) > 0
+}
+
+func FindInlineVaultDelimiters(value string) [][]string {
+	return inlineMutationRegex.FindAllStringSubmatch(value, -1)
 }

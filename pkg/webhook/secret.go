@@ -23,6 +23,7 @@ import (
 	"emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/banzaicloud/bank-vaults/internal/collector"
 	"github.com/banzaicloud/bank-vaults/internal/injector"
 )
 
@@ -67,13 +68,13 @@ func secretNeedsMutation(secret *corev1.Secret) (bool, error) {
 				}
 
 				auth := string(authBytes)
-				if hasVaultPrefix(auth) {
+				if collector.HasVaultPrefix(auth) {
 					return true, nil
 				}
 			}
-		} else if hasVaultPrefix(string(value)) {
+		} else if collector.HasVaultPrefix(string(value)) {
 			return true, nil
-		} else if injector.HasInlineVaultDelimiters(string(value)) {
+		} else if collector.HasInlineVaultDelimiters(string(value)) {
 			return true, nil
 		}
 	}
@@ -135,7 +136,7 @@ func (mw *MutatingWebhook) mutateDockerCreds(secret *corev1.Secret, dc *dockerCr
 		}
 
 		auth := string(authBytes)
-		if hasVaultPrefix(auth) {
+		if collector.HasVaultPrefix(auth) {
 			split := strings.Split(auth, ":")
 			if len(split) != 4 {
 				return errors.New("splitting auth credentials failed")

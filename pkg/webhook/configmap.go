@@ -20,17 +20,18 @@ import (
 	"emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/banzaicloud/bank-vaults/internal/collector"
 	"github.com/banzaicloud/bank-vaults/internal/injector"
 )
 
 func configMapNeedsMutation(configMap *corev1.ConfigMap) bool {
 	for _, value := range configMap.Data {
-		if hasVaultPrefix(value) || injector.HasInlineVaultDelimiters(value) {
+		if collector.HasVaultPrefix(value) || collector.HasInlineVaultDelimiters(value) {
 			return true
 		}
 	}
 	for _, value := range configMap.BinaryData {
-		if hasVaultPrefix(string(value)) {
+		if collector.HasVaultPrefix(string(value)) {
 			return true
 		}
 	}
@@ -64,7 +65,7 @@ func (mw *MutatingWebhook) MutateConfigMap(configMap *corev1.ConfigMap, vaultCon
 	}
 
 	for key, value := range configMap.BinaryData {
-		if hasVaultPrefix(string(value)) {
+		if collector.HasVaultPrefix(string(value)) {
 			binaryData := map[string]string{
 				key: string(value),
 			}

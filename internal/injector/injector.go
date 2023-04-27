@@ -16,7 +16,6 @@ package injector
 
 import (
 	"encoding/json"
-	"regexp"
 	"strings"
 
 	"emperror.dev/errors"
@@ -25,6 +24,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 
+	"github.com/banzaicloud/bank-vaults/internal/collector"
 	"github.com/banzaicloud/bank-vaults/internal/configuration"
 )
 
@@ -65,8 +65,6 @@ func NewSecretInjector(config Config, client *vault.Client, renewer SecretRenewe
 		secretCache:  map[string]map[string]interface{}{},
 	}
 }
-
-var inlineMutationRegex = regexp.MustCompile(`\${([>]{0,2}vault:.*?#*}?)}`)
 
 func (i SecretInjector) FetchTransitSecrets(secrets []string) (map[string][]byte, error) {
 	if len(i.config.TransitKeyID) == 0 {
@@ -111,8 +109,8 @@ func (i SecretInjector) preprocessTransitSecrets(references *map[string]string, 
 
 	for _, value := range *references {
 		// decrypts value with Vault Transit Secret Engine
-		if HasInlineVaultDelimiters(value) {
-			for _, vaultSecretReference := range FindInlineVaultDelimiters(value) {
+		if collector.HasInlineVaultDelimiters(value) {
+			for _, vaultSecretReference := range collector.FindInlineVaultDelimiters(value) {
 				if i.client.Transit.IsEncrypted(vaultSecretReference[1]) {
 					secretSet[vaultSecretReference[1]] = true
 				}
@@ -142,9 +140,9 @@ func (i SecretInjector) preprocessTransitSecrets(references *map[string]string, 
 	}
 
 	for name, value := range *references {
-		if HasInlineVaultDelimiters(value) {
+		if collector.HasInlineVaultDelimiters(value) {
 			newValue := value
-			for _, vaultSecretReference := range FindInlineVaultDelimiters(value) {
+			for _, vaultSecretReference := range collector.FindInlineVaultDelimiters(value) {
 				if v, ok := i.transitCache[vaultSecretReference[0]]; ok {
 					newValue = strings.Replace(value, vaultSecretReference[0], string(v), -1)
 				}
@@ -179,8 +177,8 @@ func (i SecretInjector) InjectSecretsFromVault(references map[string]string, inj
 	}
 
 	for name, value := range references {
-		if HasInlineVaultDelimiters(value) {
-			for _, vaultSecretReference := range FindInlineVaultDelimiters(value) {
+		if collector.HasInlineVaultDelimiters(value) {
+			for _, vaultSecretReference := range collector.FindInlineVaultDelimiters(value) {
 				mapData, err := i.GetDataFromVault(map[string]string{name: vaultSecretReference[1]})
 				if err != nil {
 					return err
@@ -422,14 +420,6 @@ func (i SecretInjector) readVaultPath(path, versionOrData string, update bool) (
 	}
 
 	return secretData, nil
-}
-
-func HasInlineVaultDelimiters(value string) bool {
-	return len(FindInlineVaultDelimiters(value)) > 0
-}
-
-func FindInlineVaultDelimiters(value string) [][]string {
-	return inlineMutationRegex.FindAllStringSubmatch(value, -1)
 }
 
 func (i SecretInjector) GetDataFromVault(data map[string]string) (map[string]string, error) {

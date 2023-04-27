@@ -16,18 +16,20 @@ package webhook
 
 import (
 	"context"
-	"emperror.dev/errors"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
+
+	"emperror.dev/errors"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeVer "k8s.io/apimachinery/pkg/version"
-	"strconv"
-	"strings"
 
-	"github.com/banzaicloud/bank-vaults/internal/injector"
+	"github.com/banzaicloud/bank-vaults/internal/collector"
 )
 
 const (
@@ -237,7 +239,7 @@ func (mw *MutatingWebhook) mutateContainers(ctx context.Context, containers []co
 	for i, container := range containers {
 		var envVars []corev1.EnvVar
 		if len(container.EnvFrom) > 0 {
-			envFrom, err := mw.lookForEnvFrom(container.EnvFrom, vaultConfig.ObjectNamespace)
+			envFrom, err := collector.LookForEnvFrom(mw.k8sClient, container.EnvFrom, vaultConfig.ObjectNamespace)
 			if err != nil {
 				return false, err
 			}
@@ -245,11 +247,11 @@ func (mw *MutatingWebhook) mutateContainers(ctx context.Context, containers []co
 		}
 
 		for _, env := range container.Env {
-			if hasVaultPrefix(env.Value) || injector.HasInlineVaultDelimiters(env.Value) {
+			if collector.HasVaultPrefix(env.Value) || collector.HasInlineVaultDelimiters(env.Value) {
 				envVars = append(envVars, env)
 			}
 			if env.ValueFrom != nil {
-				valueFrom, err := mw.lookForValueFrom(env, vaultConfig.ObjectNamespace)
+				valueFrom, err := collector.LookForValueFrom(mw.k8sClient, env, vaultConfig.ObjectNamespace)
 				if err != nil {
 					return false, err
 				}
