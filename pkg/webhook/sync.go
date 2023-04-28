@@ -61,6 +61,13 @@ func (mw *MutatingWebhook) SyncDeployment(deployment *appsv1.Deployment, vaultCo
 	collector.CollectSecretsFromAnnotation(deployment, vaultSecrets)
 	mw.logger.Debug("Collecting secrets from annotations done")
 
+	// 3. Collect secrets from Consul templates
+	err = collector.CollectSecretsFromTemplates(mw.k8sClient, deployment, vaultSecrets)
+	if err != nil {
+		return errors.Wrap(err, "failed to collect secrets from templates")
+	}
+	mw.logger.Debug("Collecting secrets from templates done")
+
 	// Create a Vault client and get the current version of the secrets
 	vaultClient, err := mw.newVaultClient(vaultConfig)
 	if err != nil {

@@ -108,6 +108,14 @@ func syncDeployment(cmd *cobra.Command, args []string) {
 	collector.CollectSecretsFromAnnotation(deployment, vaultSecrets)
 	logger.Debug("Collecting secrets from annotations done")
 
+	// 3. Collect secrets from Consul templates
+	err = collector.CollectSecretsFromTemplates(k8sClient, deployment, vaultSecrets)
+	if err != nil {
+		logger.Errorln(err)
+		os.Exit(1)
+	}
+	logger.Debug("Collecting secrets from templates done")
+
 	if len(vaultSecrets) == 0 {
 		logger.Infof("No secrets found for deployment %s.%s", deployment.Namespace, deployment.Name)
 		os.Exit(0)

@@ -25,6 +25,8 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
+	"text/template"
 
 	"emperror.dev/errors"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
@@ -183,6 +185,70 @@ func CollectSecretsFromAnnotation(deployment *appsv1.Deployment, vaultSecrets ma
 			vaultSecrets[vaultEnvFromPathSecret] = 0
 		}
 	}
+}
+
+func CollectSecretsFromTemplates(
+	k8sClient kubernetes.Interface,
+	deployment *appsv1.Deployment,
+	vaultSecrets map[string]int,
+) error {
+	// Collect ConfigMap names that can hold Consul templates
+	var configMapNames []string
+	configMapNames = append(configMapNames, deployment.Spec.Template.GetAnnotations()["vault.security.banzaicloud.io/vault-agent-configmap"])
+	configMapNames = append(configMapNames, deployment.Spec.Template.GetAnnotations()["vault.security.banzaicloud.io/vault-ct-configmap"])
+
+	var secretsFromTemplates []string
+	for _, configMapName := range configMapNames {
+		if configMapName != "" {
+			// Get the annotation value
+			vaultAgentConfigMap, err := k8sClient.CoreV1().ConfigMaps(deployment.Namespace).Get(context.Background(), configMapName, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			// Get the secret path from the configmap
+			consulTemplate := vaultAgentConfigMap.Data["config.hcl"]
+			if consulTemplate != "" {
+				// Read from go template string
+				tmpl := template.New("config")
+				tmpl.Funcs(template.FuncMap{
+					"secret": func(keys ...string) interface{} {
+						secretsFromTemplates = append(secretsFromTemplates, keys[0])
+						return map[string]interface{}{"Data": map[string]interface{}{"data": map[string]interface{}{"": ""}}}
+					},
+				})
+				tmpl, err := tmpl.Parse(consulTemplate)
+				if err != nil {
+					return err
+				}
+
+				err = tmpl.Execute(io.Discard, nil)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	for _, secret := range secretsFromTemplates {
+		// Add "data" to the secret path
+		secretPathArray := strings.Split(secret, "/")
+		if secretPathArray[0] == "secret" {
+			secretPathArray = append(secretPathArray, "")
+			copy(secretPathArray[2:], secretPathArray[1:])
+			secretPathArray[1] = "data"
+			secret = strings.Join(secretPathArray, "/")
+			// Check if the secret already exists in the map
+			if _, ok := vaultSecrets[secret]; ok {
+				// We only need a secret path to be added once
+				continue
+			} else {
+				// Add the secret to the map
+				vaultSecrets[secret] = 0
+			}
+		}
+	}
+	return nil
 }
 
 func GetSecretVersionFromVault(vaultClient *vault.Client, secretPath string) (int, error) {
