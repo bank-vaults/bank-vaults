@@ -15,10 +15,16 @@
 package collector
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/gob"
+	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"io"
 	"regexp"
+	"sort"
+	"strconv"
 
 	"emperror.dev/errors"
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
@@ -193,4 +199,28 @@ func GetSecretVersionFromVault(vaultClient *vault.Client, secretPath string) (in
 	}
 
 	return 0, errors.Wrap(errors.New("Secret not found"), secretPath)
+}
+
+func CreateCollectedVaultSecretsHash(vaultSecrets map[string]int) (string, error) {
+	// Convert usedSecrets to an alphabetically ordered string slice
+	var usedSecretsSlice []string //nolint:prealloc
+	for k, v := range vaultSecrets {
+		usedSecretsSlice = append(usedSecretsSlice, k)
+		usedSecretsSlice = append(usedSecretsSlice, strconv.Itoa(v))
+	}
+	sort.Strings(usedSecretsSlice)
+
+	// Convert usedSecretsSlice to byte slice
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(usedSecretsSlice)
+	if err != nil {
+		return "", err
+	}
+	data := buf.Bytes()
+
+	// Create a sha256 hash
+	h := sha256.Sum256(data)
+	// Convert hash to hex string
+	return hex.EncodeToString(h[:]), nil
 }

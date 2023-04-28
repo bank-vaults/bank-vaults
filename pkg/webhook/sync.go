@@ -76,5 +76,16 @@ func (mw *MutatingWebhook) SyncDeployment(deployment *appsv1.Deployment, vaultCo
 		vaultSecrets[secretName] = currentVersion
 	}
 
+	// Create hash from the secrets
+	hashStr, err := collector.CreateCollectedVaultSecretsHash(vaultSecrets)
+	if err != nil {
+		return errors.Wrap(err, "failed to create hash from secrets")
+	}
+	mw.logger.Debugf("Hash from collected secrets with updated versions from Vault: %s", hashStr)
+
+	// Set the hash as an annotation on the deployent
+	deployment.Spec.Template.GetAnnotations()["alpha.vault.security.banzaicloud.io/secret-version-hash"] = hashStr
+
+	mw.logger.Debugf("Collect secrets from deployment: %s.%s done", deployment.GetNamespace(), deployment.GetName())
 	return nil
 }
