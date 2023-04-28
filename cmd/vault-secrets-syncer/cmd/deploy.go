@@ -15,10 +15,15 @@
 package cmd
 
 import (
+	"context"
 	"os"
 
+	"github.com/banzaicloud/bank-vaults/internal/collector"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // deployCmd represents the deploy command
@@ -59,6 +64,44 @@ func syncDeployment(cmd *cobra.Command, args []string) {
 		logger.Errorln("You must specify one argument")
 		os.Exit(1)
 	}
+
+	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: clientcmd.RecommendedHomeFile},
+		&clientcmd.ConfigOverrides{
+			CurrentContext: "",
+		}).ClientConfig()
+	if err != nil {
+		logger.Errorln(err)
+		os.Exit(1)
+	}
+
+	k8sClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		logger.Errorln(err)
+		os.Exit(1)
+	}
+
+	deployment, err := k8sClient.AppsV1().Deployments(cmd.Flag("namespace").Value.String()).Get(context.Background(), args[0], metav1.GetOptions{})
+	if err != nil {
+		logger.Errorln(err)
+		os.Exit(1)
+	}
+
+	if deployment.GetAnnotations()["alpha.vault.security.banzaicloud.io/reload-on-secret-change"] != "true" {
+		logger.Infoln("Reload on secret change is not enabled on this resource")
+		os.Exit(0)
+	}
+
+	// Create a map to store used Vault secrets and their versions
+	vaultSecrets := make(map[string]int)
+
+	// 1. Collect environment variables that need to be injected from Vault
+	err = collector.CollectDeploymentSecretsFromEnv(deployment, vaultSecrets)
+	if err != nil {
+		logger.Errorln(err)
+		os.Exit(1)
+	}
+	logger.Debug("Collecting secrets from envs done")
 
 	logger.Error("Syncing secrets from deployment failed")
 	os.Exit(1)

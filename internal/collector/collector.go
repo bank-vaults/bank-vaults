@@ -16,27 +16,55 @@ package collector
 
 import (
 	"context"
+	"regexp"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
-func getConfigmap(k8sClient kubernetes.Interface, cmName string, ns string) (*corev1.ConfigMap, error) {
-	configMap, err := k8sClient.CoreV1().ConfigMaps(ns).Get(context.Background(), cmName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return configMap, nil
-}
+func CollectDeploymentSecretsFromEnv(
+	deployment *appsv1.Deployment,
+	vaultSecrets map[string]int,
+) error {
+	var envVars []corev1.EnvVar
 
-func getSecret(k8sClient kubernetes.Interface, secretName string, ns string) (*corev1.Secret, error) {
-	secret, err := k8sClient.CoreV1().Secrets(ns).Get(context.Background(), secretName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
+	// Collect containers and initContainers from the deployment
+	var containers []corev1.Container
+	containers = append(containers, deployment.Spec.Template.Spec.Containers...)
+	containers = append(containers, deployment.Spec.Template.Spec.InitContainers...)
+
+	// Iterate through all containers and initContainers in the deployment
+	for _, container := range containers {
+		// List of environment variables to set in the container.
+		for _, env := range container.Env {
+			if HasVaultPrefix(env.Value) || HasInlineVaultDelimiters(env.Value) {
+				envVars = append(envVars, env)
+			}
+		}
 	}
-	return secret, nil
+
+	// Iterate through all environment variables and extract secrets
+	secretRegexp := regexp.MustCompile(`vault:(.*?)#`)
+	for _, envVar := range envVars {
+		// Get match group 1 from the regexp
+		secret := secretRegexp.FindStringSubmatch(envVar.Value)[1]
+		if secret != "" {
+			// Check if the secret already exists in the map
+			if _, ok := vaultSecrets[secret]; ok {
+				// We only need a secret path to be added once
+				continue
+			} else {
+				// Add the secret to the map
+				vaultSecrets[secret] = 0
+			}
+		}
+	}
+
+	return nil
 }
 
 func LookForEnvFrom(k8sClient kubernetes.Interface, envFrom []corev1.EnvFromSource, ns string) ([]corev1.EnvVar, error) {
@@ -120,4 +148,20 @@ func LookForValueFrom(k8sClient kubernetes.Interface, env corev1.EnvVar, ns stri
 		}
 	}
 	return nil, nil
+}
+
+func getConfigmap(k8sClient kubernetes.Interface, cmName string, ns string) (*corev1.ConfigMap, error) {
+	configMap, err := k8sClient.CoreV1().ConfigMaps(ns).Get(context.Background(), cmName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return configMap, nil
+}
+
+func getSecret(k8sClient kubernetes.Interface, secretName string, ns string) (*corev1.Secret, error) {
+	secret, err := k8sClient.CoreV1().Secrets(ns).Get(context.Background(), secretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return secret, nil
 }

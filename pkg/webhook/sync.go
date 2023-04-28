@@ -17,6 +17,8 @@ package webhook
 import (
 	"context"
 
+	"emperror.dev/errors"
+	"github.com/banzaicloud/bank-vaults/internal/collector"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	"github.com/slok/kubewebhook/v2/pkg/webhook/mutating"
 	appsv1 "k8s.io/api/apps/v1"
@@ -45,5 +47,15 @@ func (mw *MutatingWebhook) VaultSecretSyncMutator(ctx context.Context, ar *model
 
 func (mw *MutatingWebhook) SyncDeployment(deployment *appsv1.Deployment, vaultConfig VaultConfig) error {
 	mw.logger.Debugf("Collecting secrets from deployment: %s.%s...", deployment.GetNamespace(), deployment.GetName())
+
+	vaultSecrets := make(map[string]int)
+
+	// 1. Collect environment variables that need to be injected from Vault
+	err := collector.CollectDeploymentSecretsFromEnv(deployment, vaultSecrets)
+	if err != nil {
+		return errors.Wrap(err, "failed to collect secrets from envs")
+	}
+	mw.logger.Debug("Collecting secrets from envs done")
+
 	return nil
 }
