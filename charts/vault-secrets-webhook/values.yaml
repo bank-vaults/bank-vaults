@@ -141,6 +141,9 @@ deployment:
   # Strategy for the deployment
   strategy: {}
 
+# Enable automatic Vault secret synchronization on deployments
+deploymentSecretSync: false
+
 # A list of Kubernetes resource types to mutate as well:
 # Example: ["ingresses", "servicemonitors"]
 customResourceMutations: []

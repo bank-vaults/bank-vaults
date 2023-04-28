@@ -365,3 +365,64 @@ webhooks:
   sideEffects: {{ .Values.apiSideEffectValue }}
 {{- end }}
 {{- end }}
+{{- if .Values.deploymentSecretSync }}
+- name: sync.{{ template "vault-secrets-webhook.name" . }}.admission.banzaicloud.com
+  {{- if semverCompare ">=1.14-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
+  admissionReviewVersions: ["v1beta1"]
+  {{- if .Values.timeoutSeconds }}
+  timeoutSeconds: {{ .Values.timeoutSeconds }}
+  {{- end }}
+  {{- end }}
+  clientConfig:
+    {{- if .Values.webhookClientConfig.useUrl }}
+    url: {{ .Values.webhookClientConfig.url }}
+    {{- else }}
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: {{ template "vault-secrets-webhook.fullname" . }}
+      path: /deployment-secret-sync
+    {{- end }}
+    caBundle: {{ $caCrt }}
+  rules:
+  - operations:
+      - CREATE
+      - UPDATE
+    apiGroups:
+      - "*"
+    apiVersions:
+      - "*"
+    resources:
+      - deployments
+  failurePolicy: {{ .Values.customResourcesFailurePolicy }}
+  namespaceSelector:
+  {{- if $crNamespaceSelector.matchLabels }}
+    matchLabels:
+{{ toYaml $crNamespaceSelector.matchLabels | indent 6 }}
+  {{- end }}
+    matchExpressions:
+    {{- if $crNamespaceSelector.matchExpressions }}
+{{ toYaml $crNamespaceSelector.matchExpressions | indent 4 }}
+    {{- end }}
+    - key: name
+      operator: NotIn
+      values:
+      - {{ .Release.Namespace }}
+{{- if semverCompare ">=1.15-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
+  objectSelector:
+  {{- if $crObjectSelector.matchLabels }}
+    matchLabels:
+{{ toYaml $crObjectSelector.matchLabels | indent 6 }}
+  {{- end }}
+    matchExpressions:
+    {{- if $crObjectSelector.matchExpressions }}
+{{ toYaml $crObjectSelector.matchExpressions | indent 4 }}
+    {{- end }}
+    - key: security.banzaicloud.io/mutate
+      operator: NotIn
+      values:
+      - skip
+{{- end }}
+{{- if semverCompare ">=1.12-0" (include "vault-secrets-webhook.capabilities.kubeVersion" .) }}
+  sideEffects: {{ .Values.apiSideEffectValue }}
+{{- end }}
+{{- end }}

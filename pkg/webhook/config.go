@@ -85,6 +85,7 @@ type VaultConfig struct {
 	VaultServiceAccount           string
 	ObjectNamespace               string
 	MutateProbes                  bool
+	SecretSync                    bool
 	Token                         string
 }
 
@@ -429,6 +430,12 @@ func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig 
 		vaultConfig.TransitBatchSize = int(batchSize)
 	} else {
 		vaultConfig.TransitBatchSize = viper.GetInt("transit_batch_size")
+	}
+
+	if val, ok := annotations["alpha.vault.security.banzaicloud.io/reload-on-secret-change"]; ok {
+		vaultConfig.SecretSync, _ = strconv.ParseBool(val)
+	} else {
+		vaultConfig.SecretSync = false
 	}
 
 	vaultConfig.Token = viper.GetString("vault_token")
