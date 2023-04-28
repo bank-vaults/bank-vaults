@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sync-secrets
+  annotations:
+    vault.security.banzaicloud.io/vault-addr: "https://vault.default.svc.cluster.local:8200"
+    vault.security.banzaicloud.io/vault-role: "default"
+    vault.security.banzaicloud.io/vault-tls-secret: vault-tls
+    # vault.security.banzaicloud.io/vault-skip-verify: "true"
+    vault.security.banzaicloud.io/vault-path: "kubernetes"
+type: Opaque
+data:
+  AWS_SECRET_ACCESS_KEY: dmF1bHQ6c2VjcmV0L2RhdGEvYWNjb3VudHMvYXdzI0FXU19TRUNSRVRfQUNDRVNTX0tFWQ==
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sync-configmap
+  annotations:
+    vault.security.banzaicloud.io/vault-addr: "https://vault.default.svc.cluster.local:8200"
+    vault.security.banzaicloud.io/vault-role: "default"
+    vault.security.banzaicloud.io/vault-tls-secret: vault-tls
+    # vault.security.banzaicloud.io/vault-skip-verify: "true"
+    vault.security.banzaicloud.io/vault-path: "kubernetes"
+data:
+  AWS_ACCESS_KEY_ID: vault:secret/data/accounts/aws#AWS_ACCESS_KEY_ID
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/name: my-app
+    my-app.kubernetes.io/name: my-app-vault-agent
+    branches: "true"
+  name: my-app-vault-agent
+  namespace: default
+data:
+  config.hcl: |
+    vault {
+      // This is needed until https://github.com/hashicorp/vault/issues/7889
+      // gets fixed, otherwise it is automated by the webhook.
+      ca_cert = "/vault/tls/ca.crt"
+    }
+    auto_auth {
+      method "kubernetes" {
+        mount_path = "auth/kubernetes"
+        config = {
+          role = "default"
+        }
+      }
+      sink "file" {
+        config = {
+          path = "/vault/.vault-token"
+        }
+      }
+    }
+    template {
+      contents = <<EOH
+        {{- with secret "secret/mysql" }}
+        mysql_root_password: {{ .Data.data.MYSQL_ROOT_PASSWORD }}
+        {{ end }}
+      EOH
+      destination = "/vault/secrets/config.yaml"
+      command     = "/bin/sh -c \"kill -HUP $(pidof vault-demo-app) || true\""
+    }
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-secrets-sync
+  annotations:
+    vault.security.banzaicloud.io/vault-addr: "https://vault.default.svc.cluster.local:8200"
+    vault.security.banzaicloud.io/vault-tls-secret: vault-tls
+    alpha.vault.security.banzaicloud.io/reload-on-secret-change: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hello-secrets-sync
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hello-secrets-sync
+      annotations:
+        vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
+        vault.security.banzaicloud.io/vault-tls-secret: vault-tls
+        vault.security.banzaicloud.io/vault-env-from-path: "secret/data/dockerrepo"
+        vault.security.banzaicloud.io/vault-agent-configmap: "my-app-vault-agent"
+    spec:
+      containers:
+        - name: alpine
+          image: alpine
+          command: ["sh", "-c", "echo AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID && echo AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY && echo MYSQL_PASSWORD: $MYSQL_PASSWORD && cat /vault/secrets/config.yaml && echo DOCKER_REPO_USER: $DOCKER_REPO_USER && echo going to sleep... && sleep 10000"]
+          env:
+            - name: MYSQL_PASSWORD
+              value: vault:secret/data/mysql#MYSQL_PASSWORD
+          #   - name: AWS_ACCESS_KEY_ID
+          #     valueFrom:
+          #       configMapKeyRef:
+          #         name: sync-configmap
+          #         key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sync-secrets
+                  key: AWS_SECRET_ACCESS_KEY
+          envFrom:
+          - configMapRef:
+              name: sync-configmap
+          # - secretRef:
+          #     name: sync-secrets
