@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/banzaicloud/bank-vaults/internal/collector"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -106,6 +107,39 @@ func syncDeployment(cmd *cobra.Command, args []string) {
 	// 2. Collect secrets from vault.security.banzaicloud.io/vault-env-from-path annnotation
 	collector.CollectSecretsFromAnnotation(deployment, vaultSecrets)
 	logger.Debug("Collecting secrets from annotations done")
+
+	if len(vaultSecrets) == 0 {
+		logger.Infof("No secrets found for deployment %s.%s", deployment.Namespace, deployment.Name)
+		os.Exit(0)
+	}
+
+	// Create a Vault client and get the current version of the secrets
+	vaultClient, err := vault.NewClient("default")
+	if err != nil {
+		logger.Errorln(err)
+		os.Exit(1)
+	}
+	defer vaultClient.Close()
+
+	for secretPath := range vaultSecrets {
+		currentVersion, err := collector.GetSecretVersionFromVault(vaultClient, secretPath)
+		if err != nil {
+			logger.Errorln(err)
+			logger.Warnln(`Did you run the following commands?
+
+				kubectl port-forward vault-0 8200:8200
+
+				export VAULT_TOKEN=$(kubectl get secrets vault-unseal-keys -o jsonpath={.data.vault-root} | base64 --decode)
+
+				kubectl get secret vault-tls -o jsonpath="{.data.ca\.crt}" | base64 --decode > $PWD/vault-ca.crt
+				export VAULT_CACERT=$PWD/vault-ca.crt
+
+				export VAULT_ADDR=https://127.0.0.1:8200`)
+			os.Exit(1)
+		}
+		vaultSecrets[secretPath] = currentVersion
+	}
+	logger.Debugf("vaultSecrets: %+v", vaultSecrets)
 
 	logger.Error("Syncing secrets from deployment failed")
 	os.Exit(1)

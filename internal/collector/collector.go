@@ -16,8 +16,12 @@ package collector
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"regexp"
 
+	"emperror.dev/errors"
+	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -173,4 +177,20 @@ func CollectSecretsFromAnnotation(deployment *appsv1.Deployment, vaultSecrets ma
 			vaultSecrets[vaultEnvFromPathSecret] = 0
 		}
 	}
+}
+
+func GetSecretVersionFromVault(vaultClient *vault.Client, secretPath string) (int, error) {
+	secret, err := vaultClient.Vault().Logical().Read(secretPath)
+	if err != nil {
+		return 0, err
+	}
+	if secret != nil {
+		secretVersion, err := secret.Data["metadata"].(map[string]interface{})["version"].(json.Number).Int64()
+		if err != nil {
+			return 0, err
+		}
+		return int(secretVersion), nil
+	}
+
+	return 0, errors.Wrap(errors.New("Secret not found"), secretPath)
 }

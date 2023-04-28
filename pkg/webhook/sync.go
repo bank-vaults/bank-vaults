@@ -61,5 +61,20 @@ func (mw *MutatingWebhook) SyncDeployment(deployment *appsv1.Deployment, vaultCo
 	collector.CollectSecretsFromAnnotation(deployment, vaultSecrets)
 	mw.logger.Debug("Collecting secrets from annotations done")
 
+	// Create a Vault client and get the current version of the secrets
+	vaultClient, err := mw.newVaultClient(vaultConfig)
+	if err != nil {
+		return errors.Wrap(err, "failed to create vault client")
+	}
+	defer vaultClient.Close()
+
+	for secretName := range vaultSecrets {
+		currentVersion, err := collector.GetSecretVersionFromVault(vaultClient, secretName)
+		if err != nil {
+			return errors.Wrap(err, "failed to get secret version from vault")
+		}
+		vaultSecrets[secretName] = currentVersion
+	}
+
 	return nil
 }
