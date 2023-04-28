@@ -165,3 +165,12 @@ func getSecret(k8sClient kubernetes.Interface, secretName string, ns string) (*c
 	}
 	return secret, nil
 }
+
+func CollectSecretsFromAnnotation(deployment *appsv1.Deployment, vaultSecrets map[string]int) {
+	vaultEnvFromPathSecret := deployment.Spec.Template.GetAnnotations()["vault.security.banzaicloud.io/vault-env-from-path"]
+	if vaultEnvFromPathSecret != "" {
+		if _, ok := vaultSecrets[vaultEnvFromPathSecret]; !ok {
+			vaultSecrets[vaultEnvFromPathSecret] = 0
+		}
+	}
+}

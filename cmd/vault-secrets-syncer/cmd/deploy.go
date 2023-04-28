@@ -103,6 +103,10 @@ func syncDeployment(cmd *cobra.Command, args []string) {
 	}
 	logger.Debug("Collecting secrets from envs done")
 
+	// 2. Collect secrets from vault.security.banzaicloud.io/vault-env-from-path annnotation
+	collector.CollectSecretsFromAnnotation(deployment, vaultSecrets)
+	logger.Debug("Collecting secrets from annotations done")
+
 	logger.Error("Syncing secrets from deployment failed")
 	os.Exit(1)
 }

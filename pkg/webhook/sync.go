@@ -57,5 +57,9 @@ func (mw *MutatingWebhook) SyncDeployment(deployment *appsv1.Deployment, vaultCo
 	}
 	mw.logger.Debug("Collecting secrets from envs done")
 
+	// 2. Collect secrets from vault.security.banzaicloud.io/vault-env-from-path annnotation
+	collector.CollectSecretsFromAnnotation(deployment, vaultSecrets)
+	mw.logger.Debug("Collecting secrets from annotations done")
+
 	return nil
 }
