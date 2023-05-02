@@ -30,10 +30,13 @@ import (
 	"github.com/slok/kubewebhook/v2/pkg/webhook/mutating"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
 	logrusadapter "logur.dev/adapter/logrus"
+
+	"github.com/banzaicloud/bank-vaults/internal/collector"
 )
 
 type MutatingWebhook struct {
@@ -66,6 +69,107 @@ func (mw *MutatingWebhook) VaultSecretsMutator(ctx context.Context, ar *model.Ad
 	default:
 		return &mutating.MutatorResult{}, nil
 	}
+}
+
+func (mw *MutatingWebhook) getDataFromConfigmap(cmName string, ns string) (map[string]string, error) {
+	configMap, err := mw.k8sClient.CoreV1().ConfigMaps(ns).Get(context.Background(), cmName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return configMap.Data, nil
+}
+
+func (mw *MutatingWebhook) getDataFromSecret(secretName string, ns string) (map[string][]byte, error) {
+	secret, err := mw.k8sClient.CoreV1().Secrets(ns).Get(context.Background(), secretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return secret.Data, nil
+}
+
+func (mw *MutatingWebhook) lookForEnvFrom(envFrom []corev1.EnvFromSource, ns string) ([]corev1.EnvVar, error) {
+	var envVars []corev1.EnvVar
+
+	for _, ef := range envFrom {
+		if ef.ConfigMapRef != nil {
+			data, err := mw.getDataFromConfigmap(ef.ConfigMapRef.Name, ns)
+			if err != nil {
+				if apierrors.IsNotFound(err) || (ef.ConfigMapRef.Optional != nil && *ef.ConfigMapRef.Optional) {
+					continue
+				} else {
+					return envVars, err
+				}
+			}
+			for key, value := range data {
+				if collector.HasVaultPrefix(value) || collector.HasInlineVaultDelimiters(value) {
+					envFromCM := corev1.EnvVar{
+						Name:  key,
+						Value: value,
+					}
+					envVars = append(envVars, envFromCM)
+				}
+			}
+		}
+		if ef.SecretRef != nil {
+			data, err := mw.getDataFromSecret(ef.SecretRef.Name, ns)
+			if err != nil {
+				if apierrors.IsNotFound(err) || (ef.SecretRef.Optional != nil && *ef.SecretRef.Optional) {
+					continue
+				} else {
+					return envVars, err
+				}
+			}
+			for name, v := range data {
+				value := string(v)
+				if collector.HasVaultPrefix(value) || collector.HasInlineVaultDelimiters(value) {
+					envFromSec := corev1.EnvVar{
+						Name:  name,
+						Value: value,
+					}
+					envVars = append(envVars, envFromSec)
+				}
+			}
+		}
+	}
+	return envVars, nil
+}
+
+func (mw *MutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*corev1.EnvVar, error) {
+	if env.ValueFrom.ConfigMapKeyRef != nil {
+		data, err := mw.getDataFromConfigmap(env.ValueFrom.ConfigMapKeyRef.Name, ns)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, nil
+			}
+			return nil, err
+		}
+		value := data[env.ValueFrom.ConfigMapKeyRef.Key]
+		if collector.HasVaultPrefix(value) || collector.HasInlineVaultDelimiters(value) {
+			fromCM := corev1.EnvVar{
+				Name:  env.Name,
+				Value: value,
+			}
+			return &fromCM, nil
+		}
+	}
+	if env.ValueFrom.SecretKeyRef != nil {
+		data, err := mw.getDataFromSecret(env.ValueFrom.SecretKeyRef.Name, ns)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, nil
+			}
+			return nil, err
+		}
+		value := string(data[env.ValueFrom.SecretKeyRef.Key])
+		if collector.HasVaultPrefix(value) || collector.HasInlineVaultDelimiters(value) {
+			fromSecret := corev1.EnvVar{
+				Name:  env.Name,
+				Value: value,
+			}
+			return &fromSecret, nil
+		}
+	}
+	return nil, nil
 }
 
 func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Client, error) {

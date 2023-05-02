@@ -239,7 +239,7 @@ func (mw *MutatingWebhook) mutateContainers(ctx context.Context, containers []co
 	for i, container := range containers {
 		var envVars []corev1.EnvVar
 		if len(container.EnvFrom) > 0 {
-			envFrom, err := collector.LookForEnvFrom(mw.k8sClient, container.EnvFrom, vaultConfig.ObjectNamespace)
+			envFrom, err := mw.lookForEnvFrom(container.EnvFrom, vaultConfig.ObjectNamespace)
 			if err != nil {
 				return false, err
 			}
@@ -251,7 +251,7 @@ func (mw *MutatingWebhook) mutateContainers(ctx context.Context, containers []co
 				envVars = append(envVars, env)
 			}
 			if env.ValueFrom != nil {
-				valueFrom, err := collector.LookForValueFrom(mw.k8sClient, env, vaultConfig.ObjectNamespace)
+				valueFrom, err := mw.lookForValueFrom(env, vaultConfig.ObjectNamespace)
 				if err != nil {
 					return false, err
 				}

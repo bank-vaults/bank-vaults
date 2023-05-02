@@ -34,8 +34,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 func CollectDeploymentSecretsFromEnv(
@@ -77,105 +75,6 @@ func CollectDeploymentSecretsFromEnv(
 	}
 
 	return nil
-}
-
-func LookForEnvFrom(k8sClient kubernetes.Interface, envFrom []corev1.EnvFromSource, ns string) ([]corev1.EnvVar, error) {
-	var envVars []corev1.EnvVar
-
-	for _, env := range envFrom {
-		if env.ConfigMapRef != nil {
-			configmap, err := getConfigmap(k8sClient, env.ConfigMapRef.Name, ns)
-			if err != nil {
-				if apierrors.IsNotFound(err) || (env.ConfigMapRef.Optional != nil && *env.ConfigMapRef.Optional) {
-					continue
-				}
-				return envVars, err
-			}
-			for key, value := range configmap.Data {
-				if HasVaultPrefix(value) || HasInlineVaultDelimiters(value) {
-					envFromCM := corev1.EnvVar{
-						Name:  key,
-						Value: value,
-					}
-					envVars = append(envVars, envFromCM)
-				}
-			}
-		}
-		if env.SecretRef != nil {
-			secret, err := getSecret(k8sClient, env.SecretRef.Name, ns)
-			if err != nil {
-				if apierrors.IsNotFound(err) || (env.SecretRef.Optional != nil && *env.SecretRef.Optional) {
-					continue
-				}
-				return envVars, err
-			}
-			for name, v := range secret.Data {
-				value := string(v)
-				if HasVaultPrefix(value) || HasInlineVaultDelimiters(value) {
-					envFromSec := corev1.EnvVar{
-						Name:  name,
-						Value: value,
-					}
-					envVars = append(envVars, envFromSec)
-				}
-			}
-		}
-	}
-	return envVars, nil
-}
-
-func LookForValueFrom(k8sClient kubernetes.Interface, env corev1.EnvVar, ns string) (*corev1.EnvVar, error) {
-	if env.ValueFrom.ConfigMapKeyRef != nil {
-		configmap, err := getConfigmap(k8sClient, env.ValueFrom.ConfigMapKeyRef.Name, ns)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return nil, nil
-			}
-			return nil, err
-		}
-		value := configmap.Data[env.ValueFrom.ConfigMapKeyRef.Key]
-		if HasVaultPrefix(value) || HasInlineVaultDelimiters(value) {
-			fromCM := corev1.EnvVar{
-				Name:  env.Name,
-				Value: value,
-			}
-			return &fromCM, nil
-		}
-	}
-	if env.ValueFrom.SecretKeyRef != nil {
-		secret, err := getSecret(k8sClient, env.ValueFrom.SecretKeyRef.Name, ns)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return nil, nil
-			}
-			return nil, err
-		}
-		value := string(secret.Data[env.ValueFrom.SecretKeyRef.Key])
-		if HasVaultPrefix(value) || HasInlineVaultDelimiters(value) {
-			fromSecret := corev1.EnvVar{
-				Name:  env.Name,
-				Value: value,
-			}
-			return &fromSecret, nil
-		}
-	}
-	return nil, nil
-}
-
-func getConfigmap(k8sClient kubernetes.Interface, cmName string, ns string) (*corev1.ConfigMap, error) {
-	configMap, err := k8sClient.CoreV1().ConfigMaps(ns).Get(context.Background(), cmName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return configMap, nil
-}
-
-func getSecret(k8sClient kubernetes.Interface, secretName string, ns string) (*corev1.Secret, error) {
-	secret, err := k8sClient.CoreV1().Secrets(ns).Get(context.Background(), secretName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return secret, nil
 }
 
 func CollectSecretsFromAnnotation(deployment *appsv1.Deployment, vaultSecrets map[string]int) {
