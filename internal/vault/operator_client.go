@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/hashicorp/go-version"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -297,17 +296,15 @@ func (v *vault) Init() error {
 		return errors.Wrap(err, "error getting seal status")
 	}
 
-	initRequest := api.InitRequest{
-		SecretShares:    v.config.SecretShares,
-		SecretThreshold: v.config.SecretThreshold,
-	}
+	initRequest := api.InitRequest{}
 
-	minimumVersion, _ := version.NewVersion("1.12.0")
-	usedVersion, _ := version.NewVersion(sealResp.Version)
-
-	if sealResp.Type != "shamir" || usedVersion.LessThanOrEqual(minimumVersion) {
+	switch sealResp.RecoverySeal {
+	case true:
 		initRequest.RecoveryShares = v.config.SecretShares
 		initRequest.RecoveryThreshold = v.config.SecretThreshold
+	default:
+		initRequest.SecretShares = v.config.SecretShares
+		initRequest.SecretThreshold = v.config.SecretThreshold
 	}
 
 	resp, err := v.cl.Sys().Init(&initRequest)
