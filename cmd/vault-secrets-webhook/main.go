@@ -111,7 +111,6 @@ func main() {
 	whLogger := whlog.NewLogrus(logger)
 
 	mutator := webhook.ErrorLoggerMutator(mutatingWebhook.VaultSecretsMutator, whLogger)
-	syncMutator := webhook.ErrorLoggerMutator(mutatingWebhook.VaultSecretSyncMutator, whLogger)
 
 	promRegistry := prometheus.NewRegistry()
 	metricsRecorder, err := whmetrics.NewRecorder(whmetrics.RecorderConfig{Registry: promRegistry})
@@ -124,7 +123,7 @@ func main() {
 	secretHandler := handlerFor(mutating.WebhookConfig{ID: "vault-secrets-secret", Obj: &corev1.Secret{}, Logger: whLogger, Mutator: mutator}, metricsRecorder)
 	configMapHandler := handlerFor(mutating.WebhookConfig{ID: "vault-secrets-configmap", Obj: &corev1.ConfigMap{}, Logger: whLogger, Mutator: mutator}, metricsRecorder)
 	objectHandler := handlerFor(mutating.WebhookConfig{ID: "vault-secrets-object", Obj: &unstructured.Unstructured{}, Logger: whLogger, Mutator: mutator}, metricsRecorder)
-	deploymentSyncHandler := handlerFor(mutating.WebhookConfig{ID: "vault-secrets-deployment-sync", Obj: &appsv1.Deployment{}, Logger: whLogger, Mutator: syncMutator}, metricsRecorder)
+	deploymentSyncHandler := handlerFor(mutating.WebhookConfig{ID: "vault-secrets-deployment-sync", Obj: &appsv1.Deployment{}, Logger: whLogger, Mutator: mutator}, metricsRecorder)
 
 	mux := http.NewServeMux()
 	mux.Handle("/pods", podHandler)

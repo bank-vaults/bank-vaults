@@ -52,6 +52,13 @@ func (mw *MutatingWebhook) MutateConfigMap(configMap *corev1.ConfigMap, vaultCon
 
 	defer vaultClient.Close()
 
+	if vaultConfig.SecretSync {
+		err := mw.SyncConfigMap(configMap, vaultClient)
+		if err != nil {
+			return errors.Wrap(err, "setting secret hash for configmap sync failed")
+		}
+	}
+
 	config := injector.Config{
 		TransitKeyID:     vaultConfig.TransitKeyID,
 		TransitPath:      vaultConfig.TransitPath,

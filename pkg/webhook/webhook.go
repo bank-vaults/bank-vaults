@@ -28,6 +28,7 @@ import (
 	"github.com/slok/kubewebhook/v2/pkg/log"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	"github.com/slok/kubewebhook/v2/pkg/webhook/mutating"
+	appsv1 "k8s.io/api/apps/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -65,6 +66,9 @@ func (mw *MutatingWebhook) VaultSecretsMutator(ctx context.Context, ar *model.Ad
 
 	case *unstructured.Unstructured:
 		return &mutating.MutatorResult{MutatedObject: v}, mw.MutateObject(v, vaultConfig)
+
+	case *appsv1.Deployment:
+		return &mutating.MutatorResult{MutatedObject: v}, mw.SyncDeployment(v, vaultConfig)
 
 	default:
 		return &mutating.MutatorResult{}, nil

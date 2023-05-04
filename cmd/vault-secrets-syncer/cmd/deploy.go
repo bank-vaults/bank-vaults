@@ -22,7 +22,10 @@ import (
 	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -93,32 +96,10 @@ func syncDeployment(cmd *cobra.Command, args []string) {
 		os.Exit(0)
 	}
 
-	// Create a map to store used Vault secrets and their versions
-	vaultSecrets := make(map[string]int)
-
-	// 1. Collect environment variables that need to be injected from Vault
-	err = collector.CollectDeploymentSecretsFromEnv(deployment, vaultSecrets)
+	deploymentEnvVars, objectEnvVars, err := collector.CollectDeploymentEnvVars(k8sClient, deployment)
 	if err != nil {
 		logger.Errorln(err)
 		os.Exit(1)
-	}
-	logger.Debug("Collecting secrets from envs done")
-
-	// 2. Collect secrets from vault.security.banzaicloud.io/vault-env-from-path annnotation
-	collector.CollectSecretsFromAnnotation(deployment, vaultSecrets)
-	logger.Debug("Collecting secrets from annotations done")
-
-	// 3. Collect secrets from Consul templates
-	err = collector.CollectSecretsFromTemplates(k8sClient, deployment, vaultSecrets)
-	if err != nil {
-		logger.Errorln(err)
-		os.Exit(1)
-	}
-	logger.Debug("Collecting secrets from templates done")
-
-	if len(vaultSecrets) == 0 {
-		logger.Infof("No secrets found for deployment %s.%s", deployment.Namespace, deployment.Name)
-		os.Exit(0)
 	}
 
 	// Create a Vault client and get the current version of the secrets
@@ -129,6 +110,63 @@ func syncDeployment(cmd *cobra.Command, args []string) {
 	}
 	defer vaultClient.Close()
 
+	// Sync objects
+	for object, envVars := range objectEnvVars {
+		// Early return if the object is not annotated to be synced
+		if object.GetAnnotations()["alpha.vault.security.banzaicloud.io/reload-on-secret-change"] != "true" {
+			continue
+		}
+
+		err = syncObjectEnvVars(logger, k8sClient, vaultClient, object, envVars)
+		if err != nil {
+			logger.Errorln(err)
+			os.Exit(1)
+		}
+	}
+
+	// Sync deployment
+	err = syncObjectEnvVars(logger, k8sClient, vaultClient, deployment, deploymentEnvVars)
+	if err != nil {
+		logger.Errorln(err)
+		os.Exit(1)
+	}
+
+	logger.Info("Syncing secrets of deployment done")
+	os.Exit(0)
+}
+
+func syncObjectEnvVars(
+	logger *logrus.Entry,
+	k8sClient kubernetes.Interface,
+	vaultClient *vault.Client,
+	object metav1.Object,
+	envVars []corev1.EnvVar,
+) error {
+	// Create a map to store used Vault secrets and their versions
+	vaultSecrets := make(map[string]int)
+
+	// 1. Collect environment variables that need to be injected from Vault
+	collector.CollectSecretsFromEnvVars(envVars, vaultSecrets)
+
+	if deployment, ok := object.(*appsv1.Deployment); ok {
+		// 2. Collect secrets from vault.security.banzaicloud.io/vault-env-from-path annnotation
+		collector.CollectSecretsFromAnnotation(deployment, vaultSecrets)
+		logger.Debug("Collecting secrets from annotations done")
+
+		// 3. Collect secrets from Consul templates
+		err := collector.CollectSecretsFromTemplates(k8sClient, deployment, vaultSecrets)
+		if err != nil {
+			return err
+		}
+		logger.Debug("Collecting secrets from templates done")
+
+		if len(vaultSecrets) == 0 {
+			logger.Infof("No secrets found for deployment %s.%s", deployment.GetNamespace(), deployment.GetName())
+			return nil
+		}
+	}
+
+	// Get the current version of the secrets
 	for secretPath := range vaultSecrets {
 		currentVersion, err := collector.GetSecretVersionFromVault(vaultClient, secretPath)
 		if err != nil {
@@ -152,40 +190,43 @@ func syncDeployment(cmd *cobra.Command, args []string) {
 	// Hashing the secrets
 	hashStr, err := collector.CreateCollectedVaultSecretsHash(vaultSecrets)
 	if err != nil {
-		logger.Errorln(err)
-		os.Exit(1)
+		return err
 	}
-	logger.Debugf("Hashed vaultSecrets: %s", hashStr)
+	logger.Debugf("Hashed object vaultSecrets: %s", hashStr)
+
+	// Get the current hash from the object
+	var secretVersionHash string
+	if deployment, ok := object.(*appsv1.Deployment); ok {
+		secretVersionHash = deployment.Spec.Template.GetAnnotations()["alpha.vault.security.banzaicloud.io/secret-version-hash"]
+	} else {
+		secretVersionHash = object.GetAnnotations()["alpha.vault.security.banzaicloud.io/secret-version-hash"]
+	}
 
 	// Set the hash as an annotation on the deployment if it is different from the current once
-	secretVersionHash := deployment.Spec.Template.GetAnnotations()["alpha.vault.security.banzaicloud.io/secret-version-hash"]
-	if secretVersionHash != "" {
-		if secretVersionHash == hashStr {
-			logger.Infof("Secrets are up to date")
-			os.Exit(0)
-		} else {
-			logger.Infof("Secrets are out of date")
+	if secretVersionHash == hashStr {
+		logger.Infof("Secrets of object %s.%s are up to date", object.GetNamespace(), object.GetName())
+	} else {
+		logger.Infof("Secrets of object %s.%s are out of date", object.GetNamespace(), object.GetName())
+		if deployment, ok := object.(*appsv1.Deployment); ok {
 			deployment.Spec.Template.GetAnnotations()["alpha.vault.security.banzaicloud.io/secret-version-hash"] = hashStr
 			_, err := k8sClient.AppsV1().Deployments(deployment.Namespace).Update(context.Background(), deployment, metav1.UpdateOptions{})
 			if err != nil {
-				logger.Errorln(err)
-				os.Exit(1)
+				return err
 			}
-			logger.Infof("Secret version hash updated")
-			os.Exit(0)
 		}
-	} else {
-		logger.Infof("Setting secret version hash")
-		deployment.Spec.Template.GetAnnotations()["alpha.vault.security.banzaicloud.io/secret-version-hash"] = hashStr
-		_, err := k8sClient.AppsV1().Deployments(deployment.Namespace).Update(context.Background(), deployment, metav1.UpdateOptions{})
-		if err != nil {
-			logger.Errorln(err)
-			os.Exit(1)
+		if _, ok := object.(*corev1.ConfigMap); ok {
+			_, err := k8sClient.CoreV1().ConfigMaps(object.GetNamespace()).Patch(context.Background(), object.GetName(), types.MergePatchType, []byte(object.GetAnnotations()["kubectl.kubernetes.io/last-applied-configuration"]), metav1.PatchOptions{})
+			if err != nil {
+				return err
+			}
 		}
-		logger.Infof("Secret version hash set")
-		os.Exit(0)
+		if _, ok := object.(*corev1.Secret); ok {
+			_, err := k8sClient.CoreV1().Secrets(object.GetNamespace()).Patch(context.Background(), object.GetName(), types.MergePatchType, []byte(object.GetAnnotations()["kubectl.kubernetes.io/last-applied-configuration"]), metav1.PatchOptions{})
+			if err != nil {
+				return err
+			}
+		}
+		logger.Infof("Secret version hash of object %s.%s updated", object.GetNamespace(), object.GetName())
 	}
-
-	logger.Error("Syncing secrets from deployment failed")
-	os.Exit(1)
+	return nil
 }

@@ -8,6 +8,7 @@ metadata:
     vault.security.banzaicloud.io/vault-tls-secret: vault-tls
     # vault.security.banzaicloud.io/vault-skip-verify: "true"
     vault.security.banzaicloud.io/vault-path: "kubernetes"
+    alpha.vault.security.banzaicloud.io/reload-on-secret-change: "true"
 type: Opaque
 data:
   AWS_SECRET_ACCESS_KEY: dmF1bHQ6c2VjcmV0L2RhdGEvYWNjb3VudHMvYXdzI0FXU19TRUNSRVRfQUNDRVNTX0tFWQ==
@@ -24,6 +25,7 @@ metadata:
     vault.security.banzaicloud.io/vault-tls-secret: vault-tls
     # vault.security.banzaicloud.io/vault-skip-verify: "true"
     vault.security.banzaicloud.io/vault-path: "kubernetes"
+    alpha.vault.security.banzaicloud.io/reload-on-secret-change: "true"
 data:
   AWS_ACCESS_KEY_ID: vault:secret/data/accounts/aws#AWS_ACCESS_KEY_ID
 

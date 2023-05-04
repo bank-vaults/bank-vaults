@@ -99,6 +99,13 @@ func (mw *MutatingWebhook) MutateSecret(secret *corev1.Secret, vaultConfig Vault
 
 	defer vaultClient.Close()
 
+	if vaultConfig.SecretSync {
+		err := mw.SyncSecret(secret, vaultClient)
+		if err != nil {
+			return errors.Wrap(err, "setting secret hash for secret sync failed")
+		}
+	}
+
 	config := injector.Config{
 		TransitKeyID:     vaultConfig.TransitKeyID,
 		TransitPath:      vaultConfig.TransitPath,
