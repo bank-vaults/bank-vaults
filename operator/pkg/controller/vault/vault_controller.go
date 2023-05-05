@@ -1188,13 +1188,13 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			// This probe allows Vault extra time to be responsive in a HTTPS manner during startup
 			// See: https://www.vaultproject.io/api/system/init.html
 			StartupProbe: &corev1.Probe{
-				Handler: corev1.Handler{
+				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Scheme: getVaultURIScheme(v),
 						Port:   intstr.FromString(v.Spec.GetAPIPortName()),
 						Path:   "/v1/sys/init",
 					}},
-				PeriodSeconds: 10,
+				PeriodSeconds:    10,
 				FailureThreshold: 18,
 			},
 			// This probe makes sure Vault is responsive in a HTTPS manner
