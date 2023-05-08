@@ -30,7 +30,7 @@ import (
 	"text/template"
 
 	"emperror.dev/errors"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
+	"github.com/bank-vaults/vault-sdk/vault"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

@@ -18,8 +18,8 @@ import (
 	"context"
 	"os"
 
+	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/banzaicloud/bank-vaults/internal/collector"
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
