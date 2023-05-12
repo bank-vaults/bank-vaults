@@ -39,7 +39,6 @@ metadata:
     my-app.kubernetes.io/name: my-app-vault-agent
     branches: "true"
   name: my-app-vault-agent
-  namespace: default
 data:
   config.hcl: |
     vault {
@@ -98,7 +97,7 @@ spec:
       containers:
         - name: alpine
           image: alpine
-          command: ["sh", "-c", "echo AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID && echo AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY && echo MYSQL_PASSWORD: $MYSQL_PASSWORD && cat /vault/secrets/config.yaml && echo DOCKER_REPO_USER: $DOCKER_REPO_USER && echo going to sleep... && sleep 10000"]
+          command: ["sh", "-c", "sleep 15 && echo AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID && echo AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY && echo MYSQL_PASSWORD: $MYSQL_PASSWORD && cat /vault/secrets/config.yaml && echo DOCKER_REPO_USER: $DOCKER_REPO_USER && echo going to sleep... && sleep 10000"]
           env:
             - name: MYSQL_PASSWORD
               value: vault:secret/data/mysql#MYSQL_PASSWORD
@@ -117,3 +116,9 @@ spec:
               name: sync-configmap
           # - secretRef:
           #     name: sync-secrets
+          readinessProbe:
+            exec:
+              command:
+                - cat
+                - /vault/secrets/config.yaml
+            initialDelaySeconds: 15

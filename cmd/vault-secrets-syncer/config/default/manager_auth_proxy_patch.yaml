@@ -3,7 +3,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: controller-manager
+  name: vault-secrets-syncer
   namespace: system
 spec:
   template:
@@ -48,7 +48,7 @@ spec:
           requests:
             cpu: 5m
             memory: 64Mi
-      - name: manager
+      - name: vault-secrets-syncer
         args:
         - "--health-probe-bind-address=:8081"
         - "--metrics-bind-address=127.0.0.1:8080"

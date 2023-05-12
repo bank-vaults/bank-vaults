@@ -1,19 +1,19 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   labels:
-    app.kubernetes.io/name: clusterrolebinding
-    app.kubernetes.io/instance: manager-rolebinding
+    app.kubernetes.io/name: rolebinding
+    app.kubernetes.io/instance: leader-election-rolebinding
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: controller
     app.kubernetes.io/part-of: controller
     app.kubernetes.io/managed-by: kustomize
-  name: manager-rolebinding
+  name: leader-election-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: manager-role
+  kind: Role
+  name: leader-election-role
 subjects:
 - kind: ServiceAccount
-  name: controller-manager
+  name: vault-secrets-syncer
   namespace: system

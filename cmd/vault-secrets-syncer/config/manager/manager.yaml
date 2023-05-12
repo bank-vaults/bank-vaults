@@ -1,40 +1,40 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  labels:
-    control-plane: controller-manager
-    app.kubernetes.io/name: namespace
-    app.kubernetes.io/instance: system
-    app.kubernetes.io/component: manager
-    app.kubernetes.io/created-by: controller
-    app.kubernetes.io/part-of: controller
-    app.kubernetes.io/managed-by: kustomize
-  name: system
----
+# apiVersion: v1
+# kind: Namespace
+# metadata:
+#   labels:
+#     control-plane: vault-secrets-syncer
+#     app.kubernetes.io/name: namespace
+#     app.kubernetes.io/instance: system
+#     app.kubernetes.io/component: manager
+#     app.kubernetes.io/created-by: controller
+#     app.kubernetes.io/part-of: controller
+#     app.kubernetes.io/managed-by: kustomize
+#   name: system
+# ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: controller-manager
+  name: vault-secrets-syncer
   namespace: system
   labels:
-    control-plane: controller-manager
+    control-plane: vault-secrets-syncer
     app.kubernetes.io/name: deployment
-    app.kubernetes.io/instance: controller-manager
-    app.kubernetes.io/component: manager
+    app.kubernetes.io/instance: vault-secrets-syncer
+    app.kubernetes.io/component: controller
     app.kubernetes.io/created-by: controller
     app.kubernetes.io/part-of: controller
     app.kubernetes.io/managed-by: kustomize
 spec:
   selector:
     matchLabels:
-      control-plane: controller-manager
+      control-plane: vault-secrets-syncer
   replicas: 1
   template:
     metadata:
       annotations:
-        kubectl.kubernetes.io/default-container: manager
+        kubectl.kubernetes.io/default-container: vault-secrets-syncer
       labels:
-        control-plane: controller-manager
+        control-plane: vault-secrets-syncer
     spec:
       # TODO(user): Uncomment the following code to configure the nodeAffinity expression
       # according to the platforms which are supported by your solution.
@@ -67,11 +67,12 @@ spec:
         #   type: RuntimeDefault
       containers:
       - command:
-        - /manager
+        - /vault-secrets-syncer
         args:
         - --leader-elect
-        image: controller:latest
-        name: manager
+        image: vault-secrets-syncer:latest
+        imagePullPolicy: IfNotPresent
+        name: vault-secrets-syncer
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -98,5 +99,6 @@ spec:
           requests:
             cpu: 10m
             memory: 64Mi
-      serviceAccountName: controller-manager
+      serviceAccountName: vault-secrets-syncer
+      serviceAccount: vault-secrets-syncer
       terminationGracePeriodSeconds: 10

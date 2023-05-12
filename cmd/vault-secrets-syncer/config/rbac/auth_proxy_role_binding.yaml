@@ -15,5 +15,5 @@ roleRef:
   name: proxy-role
 subjects:
 - kind: ServiceAccount
-  name: controller-manager
+  name: vault-secrets-syncer
   namespace: system

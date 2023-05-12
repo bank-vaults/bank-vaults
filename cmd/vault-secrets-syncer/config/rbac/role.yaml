@@ -3,28 +3,40 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: manager-role
+  name: vault-secrets-syncer-role
 rules:
 - apiGroups:
-  - my.domain
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - patch
+- apiGroups:
+  - apps
   resources:
   - deployments
   verbs:
-  - create
-  - delete
   - get
   - list
   - patch
   - update
   - watch
 - apiGroups:
-  - my.domain
+  - apps
   resources:
   - deployments/finalizers
   verbs:
   - update
 - apiGroups:
-  - my.domain
+  - apps
   resources:
   - deployments/status
   verbs:
