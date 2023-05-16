@@ -163,10 +163,6 @@ apiSideEffectValue: NoneOnDryRun
 
 namespaceSelector:
   matchExpressions:
-    - key: name
-      operator: NotIn
-      values:
-        - kube-system
     # https://kubernetes.io/docs/reference/labels-annotations-taints/#kubernetes-io-metadata-name
     - key: kubernetes.io/metadata.name
       operator: NotIn

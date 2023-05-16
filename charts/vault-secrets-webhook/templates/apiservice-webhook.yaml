@@ -146,7 +146,7 @@ webhooks:
     {{- if $podsNamespaceSelector.matchExpressions }}
 {{ toYaml $podsNamespaceSelector.matchExpressions | indent 4 }}
     {{- end }}
-    - key: name
+    - key: kubernetes.io/metadata.name
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
@@ -209,7 +209,7 @@ webhooks:
     {{- if $secretsNamespaceSelector.matchExpressions }}
 {{ toYaml $secretsNamespaceSelector.matchExpressions | indent 4 }}
     {{- end }}
-    - key: name
+    - key: kubernetes.io/metadata.name
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
@@ -277,7 +277,7 @@ webhooks:
   {{- if $configmapsNamespaceSelector.matchExpressions }}
 {{ toYaml $configmapsNamespaceSelector.matchExpressions | indent 4 }}
   {{- end }}
-    - key: name
+    - key: kubernetes.io/metadata.name
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
@@ -342,7 +342,7 @@ webhooks:
     {{- if $crNamespaceSelector.matchExpressions }}
 {{ toYaml $crNamespaceSelector.matchExpressions | indent 4 }}
     {{- end }}
-    - key: name
+    - key: kubernetes.io/metadata.name
       operator: NotIn
       values:
       - {{ .Release.Namespace }}
