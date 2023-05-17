@@ -18,7 +18,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/slok/kubewebhook/v2/pkg/model"
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -89,9 +88,9 @@ type VaultConfig struct {
 	Token                         string
 }
 
-func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig {
+func ParseVaultConfig(obj metav1.Object) VaultConfig {
 	vaultConfig := VaultConfig{
-		ObjectNamespace: ar.Namespace,
+		ObjectNamespace: obj.GetNamespace(),
 	}
 
 	annotations := obj.GetAnnotations()

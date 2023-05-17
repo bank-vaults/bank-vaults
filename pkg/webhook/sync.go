@@ -54,7 +54,7 @@ func (mw *MutatingWebhook) SyncDeployment(deployment *appsv1.Deployment, vaultCo
 	mw.logger.Debug("Collecting secrets from templates done")
 
 	// Create a Vault client and get the current version of the secrets
-	vaultClient, err := mw.newVaultClient(vaultConfig)
+	vaultClient, err := NewVaultClientFromVaultConfig(mw.logger, mw.k8sClient, mw.namespace, vaultConfig)
 	if err != nil {
 		return errors.Wrap(err, "failed to create vault client")
 	}
@@ -67,6 +67,8 @@ func (mw *MutatingWebhook) SyncDeployment(deployment *appsv1.Deployment, vaultCo
 		}
 		vaultSecrets[secretName] = currentVersion
 	}
+
+	mw.logger.Infof("Current versions of secrets from Vault: %v", vaultSecrets)
 
 	// Create hash from the secrets
 	hashStr, err := collector.CreateCollectedVaultSecretsHash(vaultSecrets)

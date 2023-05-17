@@ -20,7 +20,9 @@ import (
 
 	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/banzaicloud/bank-vaults/internal/collector"
+	"github.com/banzaicloud/bank-vaults/pkg/webhook"
 	"github.com/go-logr/logr"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

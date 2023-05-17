@@ -45,7 +45,7 @@ func (mw *MutatingWebhook) MutateConfigMap(configMap *corev1.ConfigMap, vaultCon
 		return nil
 	}
 
-	vaultClient, err := mw.newVaultClient(vaultConfig)
+	vaultClient, err := NewVaultClientFromVaultConfig(mw.logger, mw.k8sClient, mw.namespace, vaultConfig)
 	if err != nil {
 		return errors.Wrap(err, "failed to create vault client")
 	}

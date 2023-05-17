@@ -20,8 +20,8 @@ import (
 	"emperror.dev/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/banzaicloud/bank-vaults/internal/injector"
 	"github.com/banzaicloud/bank-vaults/internal/collector"
+	"github.com/banzaicloud/bank-vaults/internal/injector"
 )
 
 type element interface {
@@ -122,7 +122,7 @@ func traverseObject(o interface{}, secretInjector injector.SecretInjector) error
 func (mw *MutatingWebhook) MutateObject(object *unstructured.Unstructured, vaultConfig VaultConfig) error {
 	mw.logger.Debugf("mutating object: %s.%s", object.GetNamespace(), object.GetName())
 
-	vaultClient, err := mw.newVaultClient(vaultConfig)
+	vaultClient, err := NewVaultClientFromVaultConfig(mw.logger, mw.k8sClient, mw.namespace, vaultConfig)
 	if err != nil {
 		return errors.Wrap(err, "failed to create vault client")
 	}

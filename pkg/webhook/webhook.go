@@ -35,9 +35,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
-	logrusadapter "logur.dev/adapter/logrus"
 
 	"github.com/banzaicloud/bank-vaults/internal/collector"
+	logrusadapter "logur.dev/adapter/logrus"
 )
 
 type MutatingWebhook struct {
@@ -48,7 +48,7 @@ type MutatingWebhook struct {
 }
 
 func (mw *MutatingWebhook) VaultSecretsMutator(ctx context.Context, ar *model.AdmissionReview, obj metav1.Object) (*mutating.MutatorResult, error) {
-	vaultConfig := parseVaultConfig(obj, ar)
+	vaultConfig := ParseVaultConfig(obj)
 
 	if vaultConfig.Skip {
 		return &mutating.MutatorResult{}, nil
@@ -176,7 +176,7 @@ func (mw *MutatingWebhook) lookForValueFrom(env corev1.EnvVar, ns string) (*core
 	return nil, nil
 }
 
-func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Client, error) {
+func NewVaultClientFromVaultConfig(logger *logrus.Entry, k8sClient kubernetes.Interface, namespace string, vaultConfig VaultConfig) (*vault.Client, error) {
 	clientConfig := vaultapi.DefaultConfig()
 	if clientConfig.Error != nil {
 		return nil, clientConfig.Error
@@ -191,7 +191,7 @@ func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 	}
 
 	if vaultConfig.TLSSecret != "" {
-		tlsSecret, err := mw.k8sClient.CoreV1().Secrets(mw.namespace).Get(
+		tlsSecret, err := k8sClient.CoreV1().Secrets(namespace).Get(
 			context.Background(),
 			vaultConfig.TLSSecret,
 			metav1.GetOptions{},
@@ -213,14 +213,14 @@ func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 	}
 
 	if vaultConfig.VaultServiceAccount != "" {
-		sa, err := mw.k8sClient.CoreV1().ServiceAccounts(vaultConfig.ObjectNamespace).Get(context.Background(), vaultConfig.VaultServiceAccount, metav1.GetOptions{})
+		sa, err := k8sClient.CoreV1().ServiceAccounts(vaultConfig.ObjectNamespace).Get(context.Background(), vaultConfig.VaultServiceAccount, metav1.GetOptions{})
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to retrieve specified service account on namespace "+vaultConfig.ObjectNamespace)
 		}
 
 		saToken := ""
 		if len(sa.Secrets) > 0 {
-			secret, err := mw.k8sClient.CoreV1().Secrets(vaultConfig.ObjectNamespace).Get(context.Background(), sa.Secrets[0].Name, metav1.GetOptions{})
+			secret, err := k8sClient.CoreV1().Secrets(vaultConfig.ObjectNamespace).Get(context.Background(), sa.Secrets[0].Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, errors.Wrap(err, "Failed to retrieve secret for service account "+sa.Secrets[0].Name+" in namespace "+vaultConfig.ObjectNamespace)
 			}
@@ -236,7 +236,7 @@ func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 				},
 			}
 
-			token, err := mw.k8sClient.CoreV1().ServiceAccounts(vaultConfig.ObjectNamespace).CreateToken(
+			token, err := k8sClient.CoreV1().ServiceAccounts(vaultConfig.ObjectNamespace).CreateToken(
 				context.Background(),
 				vaultConfig.VaultServiceAccount,
 				tokenRequest,
@@ -253,7 +253,7 @@ func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 			vault.ClientRole(vaultConfig.Role),
 			vault.ClientAuthPath(vaultConfig.Path),
 			vault.NamespacedSecretAuthMethod,
-			vault.ClientLogger(logrusadapter.NewFromEntry(mw.logger)),
+			vault.ClientLogger(logrusadapter.NewFromEntry(logger)),
 			vault.ExistingSecret(saToken),
 			vault.VaultNamespace(vaultConfig.VaultNamespace),
 		)
@@ -264,7 +264,7 @@ func (mw *MutatingWebhook) newVaultClient(vaultConfig VaultConfig) (*vault.Clien
 		vault.ClientRole(vaultConfig.Role),
 		vault.ClientAuthPath(vaultConfig.Path),
 		vault.ClientAuthMethod(vaultConfig.AuthMethod),
-		vault.ClientLogger(logrusadapter.NewFromEntry(mw.logger)),
+		vault.ClientLogger(logrusadapter.NewFromEntry(logger)),
 		vault.VaultNamespace(vaultConfig.VaultNamespace),
 	)
 }
