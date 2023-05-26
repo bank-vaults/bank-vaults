@@ -73,6 +73,15 @@ func getOrDefaultSecretData(m interface{}) (map[string]interface{}, error) {
 	return data, nil
 }
 
+func vaultKVVersion(secretPath string) string {
+	for _, v := range extConfig.Secrets {
+		if strings.HasPrefix(secretPath, v.Path) && v.Type == "kv" {
+			return v.Options["version"]
+		}
+	}
+	return ""
+}
+
 func readStartupSecret(startupSecret startupSecret) (string, map[string]interface{}, error) {
 	if len(startupSecret.Data.Data) > 0 && len(startupSecret.Data.SecretKeyRef) > 0 {
 		return "", nil, errors.New("the startup secret data source should be either 'data' or 'secretKeyRef'." +
@@ -81,6 +90,9 @@ func readStartupSecret(startupSecret startupSecret) (string, map[string]interfac
 
 	data := map[string]interface{}{
 		"data": startupSecret.Data.Data,
+	}
+	if vaultKVVersion(startupSecret.Path) == "1" {
+		data = startupSecret.Data.Data
 	}
 
 	if len(startupSecret.Data.SecretKeyRef) > 0 {
