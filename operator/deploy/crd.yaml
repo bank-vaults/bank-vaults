@@ -1152,6 +1152,10 @@ spec:
                     type: object
                   kubernetes:
                     properties:
+                      keyShares:
+                        type: integer
+                      keyThreshold:
+                        type: integer
                       secretName:
                         type: string
                       secretNamespace:

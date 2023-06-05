@@ -947,6 +947,22 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			strings.Join(secretLabels, ","),
 		)
 
+		// Same defaults as in Vault
+		shares, threshold := 5, 3
+		if usc.Kubernetes.KeyShares != nil && *usc.Kubernetes.KeyShares >= 1 {
+			shares = *usc.Kubernetes.KeyShares
+		}
+		if usc.Kubernetes.KeyThreshold != nil && *usc.Kubernetes.KeyThreshold >= 1 {
+			threshold = *usc.Kubernetes.KeyThreshold
+		}
+
+		args = append(args,
+			"--secret-shares",
+			fmt.Sprint(shares),
+			"--secret-threshold",
+			fmt.Sprint(threshold),
+		)
+
 	}
 
 	return args
@@ -961,6 +977,8 @@ func (usc *UnsealConfig) HSMDaemonNeeded() bool {
 type KubernetesUnsealConfig struct {
 	SecretNamespace string `json:"secretNamespace,omitempty"`
 	SecretName      string `json:"secretName,omitempty"`
+	KeyShares       *int   `json:"keyShares,omitempty"`
+	KeyThreshold    *int   `json:"keyThreshold,omitempty"`
 }
 
 // GoogleUnsealConfig holds the parameters for Google KMS based unsealing
@@ -973,7 +991,8 @@ type GoogleUnsealConfig struct {
 }
 
 // AlibabaUnsealConfig holds the parameters for Alibaba Cloud KMS based unsealing
-//  --alibaba-kms-region eu-central-1 --alibaba-kms-key-id 9d8063eb-f9dc-421b-be80-15d195c9f148 --alibaba-oss-endpoint oss-eu-central-1.aliyuncs.com --alibaba-oss-bucket bank-vaults
+//
+//	--alibaba-kms-region eu-central-1 --alibaba-kms-key-id 9d8063eb-f9dc-421b-be80-15d195c9f148 --alibaba-oss-endpoint oss-eu-central-1.aliyuncs.com --alibaba-oss-bucket bank-vaults
 type AlibabaUnsealConfig struct {
 	KMSRegion   string `json:"kmsRegion"`
 	KMSKeyID    string `json:"kmsKeyId"`
