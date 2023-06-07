@@ -1,6 +1,6 @@
 # ⚠️ Bank-Vaults is being migrated ⚠️
 
-As we [announce](https://github.com/banzaicloud/bank-vaults/discussions/1878) a couple weeks ago, Bank-Vaults is being migrated to a [new GitHub organization](https://github.com/bank-vaults).
+As we [announced](https://github.com/banzaicloud/bank-vaults/discussions/1878) a couple weeks ago, Bank-Vaults is being migrated to a [new GitHub organization](https://github.com/bank-vaults).
 
 New contributions may not be accepted in this repository depending on the state of the migration. We suggest that you open an issue before sending pull requests.
 
