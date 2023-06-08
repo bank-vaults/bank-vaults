@@ -53,6 +53,8 @@ spec:
   ca:
     secretName: {{ include "vault-secrets-webhook.rootCACertificate" . }}
 
+{{- end }}
+{{- if or .Values.certificate.useCertManager .Values.certificate.servingCertificate }}
 ---
 
 # Finally, generate a serving certificate for the webhook to use

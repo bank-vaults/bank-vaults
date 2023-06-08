@@ -44,7 +44,11 @@ Create chart name and version as used by the chart label.
 {{- end -}}
 
 {{- define "vault-secrets-webhook.servingCertificate" -}}
+{{- if .Values.certificate.servingCertificate -}}
+{{ .Values.certificate.servingCertificate }}
+{{- else -}}
 {{ printf "%s-webhook-tls" (include "vault-secrets-webhook.fullname" .) }}
+{{- end -}}
 {{- end -}}
 
 {{/*
