@@ -65,15 +65,6 @@ jobs:
           push: true
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
-      - name: Build vault-operator
-        uses: docker/build-push-action@v4
-        with:
-          tags: ghcr.io/banzaicloud/vault-operator:${{ steps.imagetag.outputs.value }}
-          file: Dockerfile.operator
-          platforms: ${{ env.PLATFORMS }}
-          push: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
       - name: Build vault-secrets-webhook
         uses: docker/build-push-action@v4
         with:
