@@ -58,7 +58,6 @@ type VaultConfig struct {
 	IgnoreMissingSecrets          string
 	VaultEnvPassThrough           string
 	ConfigfilePath                string
-	MutateConfigMap               bool
 	EnableJSONLog                 string
 	LogLevel                      string
 	AgentConfigMap                string
@@ -281,12 +280,6 @@ func parseVaultConfig(obj metav1.Object, ar *model.AdmissionReview) VaultConfig 
 		vaultConfig.RegistrySkipVerify, _ = strconv.ParseBool(val)
 	} else {
 		vaultConfig.RegistrySkipVerify, _ = strconv.ParseBool(viper.GetString("registry_skip_verify"))
-	}
-
-	if val, ok := annotations["vault.security.banzaicloud.io/mutate-configmap"]; ok {
-		vaultConfig.MutateConfigMap, _ = strconv.ParseBool(val)
-	} else {
-		vaultConfig.MutateConfigMap, _ = strconv.ParseBool(viper.GetString("mutate_configmap"))
 	}
 
 	if val, ok := annotations["vault.security.banzaicloud.io/log-level"]; ok {
