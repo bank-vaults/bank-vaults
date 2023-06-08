@@ -172,8 +172,8 @@ jobs:
     needs: [build-bank-vaults, build-vault-operator, build-vault-env, build-vault-secrets-webhook]
     strategy:
       matrix:
-        k8s_version: ["v1.25.8", "v1.24.12", "v1.23.17"]
-        vault_version: ["1.13.1", "1.12.5", "1.11.9", "1.10.11"]
+        k8s_version: ["v1.24.13", "v1.25.9", "v1.26.4", "v1.27.1" ]
+        vault_version: ["1.10.11", "1.11.10", "1.12.6", "1.13.2"]
     env:
       KURUN_VERSION: "0.6.4"
 
