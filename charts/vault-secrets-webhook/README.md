@@ -101,7 +101,7 @@ The following tables lists configurable parameters of the vault-secrets-webhook 
 | image.repository                   | image repo that contains the admission server                                 | `ghcr.io/banzaicloud/vault-secrets-webhook`              |
 | image.tag                          | image tag                                                                     | `.Chart.AppVersion`                                      |
 | image.imagePullSecrets             | image pull secrets for private repositories                                   | `[]`                                                     |
-| vaultEnv.repository                | image repo that contains the vault-env container                              | `ghcr.io/banzaicloud/vault-env`                          |
+| vaultEnv.repository                | image repo that contains the vault-env container                              | `ghcr.io/bank-vaults/vault-env`                          |
 | vaultEnv.tag                       | image tag for the vault-env container                                         | `.Chart.AppVersion`                                      |
 | namespaceSelector                  | namespace selector to use, will limit webhook scope                           | `{}`                                                     |
 | objectSelector                     | object selector to use, will limit webhook scope (K8s version 1.15+)          | `{}`                                                     |
