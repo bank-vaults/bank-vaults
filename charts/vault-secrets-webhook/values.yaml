@@ -48,7 +48,7 @@ webhookClientConfig:
   # url: https://example.com
 
 vaultEnv:
-  repository: ghcr.io/banzaicloud/vault-env
+  repository: ghcr.io/bank-vaults/vault-env
   # tag: ""
 
 env:
