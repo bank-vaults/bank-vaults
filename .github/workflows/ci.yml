@@ -105,7 +105,6 @@ jobs:
           name: vault-secrets-webhook
           path: /tmp/vault-secrets-webhook.tar
 
-
   build-vault-env:
     name: Build vault-env
     runs-on: ubuntu-latest
@@ -132,15 +131,6 @@ jobs:
           name: vault-env
           path: /tmp/vault-env.tar
 
-#    # Uncomment for debugging with SSH
-#    - name: Setup upterm session
-#      uses: lhotari/action-upterm@v1
-#      with:
-#        ## limits ssh access and adds the ssh public key for the user which triggered the workflow
-#        limit-access-to-actor: true
-#        ## limits ssh access and adds the ssh public keys of the listed GitHub users
-#        limit-access-to-users: bonifaido
-
   acceptance-test:
     name: Acceptance test
     runs-on: ubuntu-latest
@@ -149,8 +139,6 @@ jobs:
       matrix:
         k8s_version: ["v1.24.13", "v1.25.9", "v1.26.4", "v1.27.1" ]
         vault_version: ["1.10.11", "1.11.10", "1.12.6", "1.13.2"]
-    env:
-      KURUN_VERSION: "0.6.4"
 
     steps:
 
@@ -194,9 +182,12 @@ jobs:
         kind load image-archive /tmp/vault-env.tar
         kind load image-archive /tmp/vault-secrets-webhook.tar
 
-    - name: Install kurun
-      run: |
-        curl -Lo kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-linux-amd64 && chmod +x kurun && sudo mv kurun /usr/local/bin/
+   # # Uncomment for debugging with SSH
+   #  - name: Setup upterm session
+   #    uses: lhotari/action-upterm@v1
+   #    with:
+   #     limit-access-to-actor: true
+   #     limit-access-to-users: akijakya
 
     - name: Acceptance test
       run: go test -v -timeout 900s -tags kubeall ./test

@@ -158,19 +158,6 @@ func TestWebhook(t *testing.T) {
 		k8s.WaitUntilPodAvailable(t, webhookKubectlOptions, webhookPod.GetName(), 5, 10*time.Second)
 	}
 
-	// Prepare and apply resources for webhook testing
-	testResources := []string{
-		"deploy/test-secret.yaml",
-		"deploy/test-configmap.yaml",
-		"deploy/test-deploy-templating.yaml",
-		"deploy/test-deployment-seccontext.yaml",
-		"deploy/test-deployment.yaml",
-	}
-	for _, resource := range testResources {
-		k8s.KubectlApply(t, defaultKubectlOptions, resource)
-		defer k8s.KubectlDelete(t, defaultKubectlOptions, resource)
-	}
-
 	// Test 1: Secret testing
 	type v1 struct {
 		Username string `json:"username"`
@@ -186,6 +173,8 @@ func TestWebhook(t *testing.T) {
 		Auths auths `json:"auths"`
 	}
 
+	k8s.KubectlApply(t, defaultKubectlOptions, "deploy/test-secret.yaml")
+	time.Sleep(5 * time.Second)
 	secret := k8s.GetSecret(t, defaultKubectlOptions, "sample-secret")
 	var dockerconfigjson dockerconfig
 	err = json.Unmarshal(secret.Data[".dockerconfigjson"], &dockerconfigjson)
@@ -193,27 +182,38 @@ func TestWebhook(t *testing.T) {
 	require.Equal(t, "dockerrepouser", dockerconfigjson.Auths.V1.Username)
 	require.Equal(t, "dockerrepopassword", dockerconfigjson.Auths.V1.Password)
 	require.Equal(t, "Inline: secretId AWS_ACCESS_KEY_ID", string(secret.Data["inline"]))
+	k8s.KubectlDelete(t, defaultKubectlOptions, "deploy/test-secret.yaml")
 
 	// Test 2: Configmap testing
+	k8s.KubectlApply(t, defaultKubectlOptions, "deploy/test-configmap.yaml")
+	time.Sleep(5 * time.Second)
 	configMap := k8s.GetConfigMap(t, defaultKubectlOptions, "sample-configmap")
 	require.Equal(t, "secretId", string(configMap.Data["aws-access-key-id"]))
 	require.Equal(t, "AWS key in base64: c2VjcmV0SWQ=", string(configMap.Data["aws-access-key-id-formatted"]))
 	require.Equal(t, "AWS_ACCESS_KEY_ID: secretId AWS_SECRET_ACCESS_KEY: s3cr3t", string(configMap.Data["aws-access-key-id-inline"]))
 	require.Equal(t, "secretId", base64.StdEncoding.EncodeToString(configMap.BinaryData["aws-access-key-id-binary"]))
+	k8s.KubectlDelete(t, defaultKubectlOptions, "deploy/test-configmap.yaml")
 
 	// Test 3: File templating test
+	k8s.KubectlApply(t, defaultKubectlOptions, "deploy/test-deploy-templating.yaml")
 	templatingPods := waitUntilPodsCreated(t, defaultKubectlOptions, "test-templating", 12, 5*time.Second)
+	time.Sleep(5 * time.Second)
 	k8s.WaitUntilPodAvailable(t, defaultKubectlOptions, templatingPods[0].GetName(), 12, 10*time.Second)
 	templatingPodLogs := k8s.GetPodLogs(t, defaultKubectlOptions, &templatingPods[0], "alpine")
 	require.Equal(t, "\n    {\n      \"id\": \"secretId\",\n      \"key\": \"s3cr3t\"\n    }\n    \n  going to sleep...", templatingPodLogs)
+	k8s.KubectlDelete(t, defaultKubectlOptions, "deploy/test-deploy-templating.yaml")
 
 	// Test 4: Check deployment seccontext
+	k8s.KubectlApply(t, defaultKubectlOptions, "deploy/test-deployment-seccontext.yaml")
 	seccontextPods := waitUntilPodsCreated(t, defaultKubectlOptions, "hello-secrets-seccontext", 12, 5*time.Second)
 	k8s.WaitUntilPodAvailable(t, defaultKubectlOptions, seccontextPods[0].GetName(), 12, 10*time.Second)
+	k8s.KubectlDelete(t, defaultKubectlOptions, "deploy/test-deployment-seccontext.yaml")
 
 	// Test 5: Check deployment
+	k8s.KubectlApply(t, defaultKubectlOptions, "deploy/test-deployment.yaml")
 	pods := waitUntilPodsCreated(t, defaultKubectlOptions, "hello-secrets", 12, 5*time.Second)
 	k8s.WaitUntilPodAvailable(t, defaultKubectlOptions, pods[0].GetName(), 12, 10*time.Second)
+	k8s.KubectlDelete(t, defaultKubectlOptions, "deploy/test-deployment.yaml")
 
 	// Clean up
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, defaultKubectlOptions)
