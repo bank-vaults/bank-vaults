@@ -14,7 +14,6 @@ BINARY_NAME ?= bank-vaults
 DOCKER_REGISTRY ?= ghcr.io/banzaicloud
 DOCKER_IMAGE = ${DOCKER_REGISTRY}/bank-vaults
 WEBHOOK_DOCKER_IMAGE = ${DOCKER_REGISTRY}/vault-secrets-webhook
-OPERATOR_DOCKER_IMAGE = ${DOCKER_REGISTRY}/vault-operator
 VAULT_ENV_DOCKER_IMAGE = ${DOCKER_REGISTRY}/vault-env
 
 # Build variables
@@ -114,21 +113,6 @@ ifeq (${DOCKER_LATEST}, 1)
 	docker push ${DOCKER_IMAGE}:latest
 endif
 
-.PHONY: docker-operator
-docker-operator: ## Build a Docker image for the Operator
-	docker build ${DOCKER_BUILD_EXTRA_ARGS} -t ${OPERATOR_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.operator .
-ifeq (${DOCKER_LATEST}, 1)
-	docker tag ${OPERATOR_DOCKER_IMAGE}:${DOCKER_TAG} ${OPERATOR_DOCKER_IMAGE}:latest
-endif
-
-.PHONY: docker-operator-push
-docker-operator-push: ## Push a Docker image for the Operator
-	docker push ${OPERATOR_DOCKER_IMAGE}:${DOCKER_TAG}
-ifeq (${DOCKER_LATEST}, 1)
-	docker push ${OPERATOR_DOCKER_IMAGE}:latest
-endif
-
-
 .PHONY: test-%
 test-%: ## Run a specific test suite
 	@${MAKE} VERBOSE=0 GOTAGS=$* test
@@ -154,17 +138,6 @@ minor: ## Release a new minor version
 .PHONY: major
 major: ## Release a new major version
 	@${MAKE} release-$(shell git describe --abbrev=0 --tags | awk -F'[ .]' '{print $$1+1".0.0"}')
-
-.PHONY: operator-up
-operator-up:
-	kubectl replace -f operator/deploy/crd.yaml || kubectl create -f operator/deploy/crd.yaml
-	kubectl apply -f operator/deploy/rbac.yaml
-	OPERATOR_NAME=vault-dev go run operator/cmd/manager/main.go -verbose
-
-.PHONY: operator-down
-operator-down:
-	kubectl delete -f operator/deploy/crd.yaml
-	kubectl delete -f operator/deploy/rbac.yaml
 
 .PHONY: webhook-forward
 webhook-forward: ## Install the webhook chart and kurun to port-forward the local webhook into Kubernetes

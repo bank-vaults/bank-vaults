@@ -105,32 +105,6 @@ jobs:
           name: vault-secrets-webhook
           path: /tmp/vault-secrets-webhook.tar
 
-  build-vault-operator:
-    name: Build operator
-    runs-on: ubuntu-latest
-
-    steps:
-
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Build and push
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./Dockerfile.operator
-          tags: vault-operator:latest
-          outputs: type=docker,dest=/tmp/vault-operator.tar
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: vault-operator
-          path: /tmp/vault-operator.tar
-
   build-vault-env:
     name: Build vault-env
     runs-on: ubuntu-latest
@@ -157,25 +131,14 @@ jobs:
           name: vault-env
           path: /tmp/vault-env.tar
 
-#    # Uncomment for debugging with SSH
-#    - name: Setup upterm session
-#      uses: lhotari/action-upterm@v1
-#      with:
-#        ## limits ssh access and adds the ssh public key for the user which triggered the workflow
-#        limit-access-to-actor: true
-#        ## limits ssh access and adds the ssh public keys of the listed GitHub users
-#        limit-access-to-users: bonifaido
-
   acceptance-test:
     name: Acceptance test
     runs-on: ubuntu-latest
-    needs: [build-bank-vaults, build-vault-operator, build-vault-env, build-vault-secrets-webhook]
+    needs: [build-bank-vaults, build-vault-env, build-vault-secrets-webhook]
     strategy:
       matrix:
-        k8s_version: ["v1.25.8", "v1.24.12", "v1.23.17"]
-        vault_version: ["1.13.1", "1.12.5", "1.11.9", "1.10.11"]
-    env:
-      KURUN_VERSION: "0.6.4"
+        k8s_version: ["v1.24.13", "v1.25.9", "v1.26.4", "v1.27.1" ]
+        vault_version: ["1.10.11", "1.11.10", "1.12.6", "1.13.2"]
 
     steps:
 
@@ -190,7 +153,7 @@ jobs:
     - name: Start kind cluster
       run: |
         kind version
-        kind create cluster --config test/kind.yaml --image kindest/node:${{ matrix.k8s_version }} --wait 1m
+        kind create cluster --image kindest/node:${{ matrix.k8s_version }} --wait 1m
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
@@ -199,12 +162,6 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: bank-vaults
-        path: /tmp
-
-    - name: Download operator docker image
-      uses: actions/download-artifact@v3
-      with:
-        name: vault-operator
         path: /tmp
 
     - name: Download vault-env docker image
@@ -222,67 +179,17 @@ jobs:
     - name: Load Docker images to kind
       run: |
         kind load image-archive /tmp/bank-vaults.tar
-        kind load image-archive /tmp/vault-operator.tar
         kind load image-archive /tmp/vault-env.tar
         kind load image-archive /tmp/vault-secrets-webhook.tar
 
-    - name: Install kurun
-      run: |
-        curl -Lo kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-linux-amd64 && chmod +x kurun && sudo mv kurun /usr/local/bin/
+   # # Uncomment for debugging with SSH
+   #  - name: Setup upterm session
+   #    uses: lhotari/action-upterm@v1
+   #    with:
+   #     limit-access-to-actor: true
+   #     limit-access-to-users: akijakya
 
     - name: Acceptance test
       run: go test -v -timeout 900s -tags kubeall ./test
       env:
         VAULT_VERSION: ${{ matrix.vault_version }}
-
-  multi-cluster-acceptance-test:
-    name: Operator multi-cluster acceptance test
-    runs-on: ubuntu-latest
-    needs: build-vault-operator
-    env:
-      GO_VERSION: "1.19.2"
-      K8S_VERSION: "v1.23.4"
-      HELM_VERSION: "v3.8.0"
-      KIND_VERSION: "v0.12.0"
-
-    steps:
-
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: ${{ env.GO_VERSION }}
-
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - uses: azure/setup-helm@v3
-      with:
-         version: ${{ env.HELM_VERSION }}
-         token: ${{ secrets.GITHUB_TOKEN }}
-
-    - uses: engineerd/setup-kind@v0.5.0
-      with:
-        version: ${{ env.KIND_VERSION }}
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-
-    - name: Download operator docker image
-      uses: actions/download-artifact@v3
-      with:
-        name: vault-operator
-        path: /tmp
-
-    - name: Install envtpl
-      run: go install github.com/subfuzion/envtpl/...@428c2d7
-
-    - name: Install cidr
-      run: go install github.com/hankjacobs/cidr@master
-
-    - name: Build the Helm charts
-      run: |
-        helm dep build ./charts/vault-operator
-
-    - name: Operator Multi-DC Raft test
-      run: |
-        ./operator/deploy/multi-dc/test/multi-dc-raft.sh install

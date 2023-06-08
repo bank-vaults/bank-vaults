@@ -5,6 +5,8 @@ metadata:
 spec:
   size: 1
   image: vault:1.6.2
+  # specify a custom bank-vaults image with bankVaultsImage:
+  # bankVaultsImage: ghcr.io/banzaicloud/bank-vaults:latest
 
   # Common annotations for all created resources
   annotations:
@@ -26,7 +28,7 @@ spec:
   vaultConfigurerLabels:
     example.com/log-format: "string"
 
-  # Support for affinity Rules
+  # Support for affinity Rules, same as in PodSpec
   # affinity:
   #   nodeAffinity:
   #     requiredDuringSchedulingIgnoredDuringExecution:
@@ -57,6 +59,13 @@ spec:
   # forces you to expose your Service on a NodePort
   serviceType: ClusterIP
 
+  # Specify existing secret contains TLS certificate (accepted secret type: kubernetes.io/tls)
+  # If it is set, generating certificate will be disabled
+  # existingTlsSecretName: selfsigned-cert-tls
+
+  # Specify threshold for renewing certificates. Valid time units are "ns", "us", "ms", "s", "m", "h".
+  # tlsExpiryThreshold: 168h
+
   # Request an Ingress controller with the default configuration
   ingress:
     # Specify Ingress object annotations here, if TLS is enabled (which is by default)
@@ -68,44 +77,25 @@ spec:
     # See: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.13/#ingressspec-v1beta1-extensions
     spec: {}
 
-  vaultInitContainers:
-    - name: tls-setup
-      image: busybox
-      command:
-        - /bin/sh
-        - -c
-        - |
-          cp /tls/* /tlsdir/
-          chown 100:1000 /tlsdir/*
-          chmod 600 /tlsdir/*
-      volumeMounts:
-      - name: tls
-        mountPath: /tls
-      - name: tlsdir
-        mountPath: /tlsdir
-
   # Use local disk to store Vault file data, see config section.
   volumes:
     - name: vault-file
       persistentVolumeClaim:
         claimName: vault-file
-    - name: tlsdir
-      emptyDir: {}
-    - name: tls
-      secret:
-        secretName: postgres-tls
-        defaultMode: 256
 
   volumeMounts:
     - name: vault-file
       mountPath: /vault/file
-    - name: tlsdir
-      mountPath: /tlsdir
 
   # Support for distributing the generated CA certificate Secret to other namespaces.
   # Define a list of namespaces or use ["*"] for all namespaces.
   caNamespaces:
-    - "vswh"
+    - "webhook"
+
+  # Support for adding hostnames and IPs to the generated CA certificate.
+  # tlsAdditionalHosts:
+  #   - vault2.example.com
+  #   - 192.168.20.20
 
   # Describe where you would like to store the Vault unseal keys and root token.
   unsealConfig:
@@ -123,9 +113,8 @@ spec:
   # See https://www.vaultproject.io/docs/configuration/ for more information.
   config:
     storage:
-     postgresql:
-      connection_url: "postgres://vault-user@postgres-postgresql:5432/vault?sslmode=verify-full&sslcert=/tlsdir/client.crt&sslkey=/tlsdir/client.key&sslrootcert=/tlsdir/ca.crt"
-      table: "vault_kv_store"
+      file:
+        path: "${ .Env.VAULT_STORAGE_FILE }" # An example how Vault config environment interpolation can be used
     listener:
       tcp:
         address: "0.0.0.0:8200"
@@ -145,14 +134,39 @@ spec:
         rules: path "secret/*" {
           capabilities = ["create", "read", "update", "delete", "list"]
           }
+      - name: allow_pki
+        rules: path "pki/*" {
+          capabilities = ["create", "read", "update", "delete", "list"]
+          }
+
+    groups:
+      - name: admin1
+        policies:
+          - allow_secrets
+        metadata:
+          privileged: true
+        type: external
+      - name: admin2
+        policies:
+          - allow_secrets
+        metadata:
+          privileged: true
+        type: external
+
+    group-aliases:
+      - name: admin1
+        mountpath: token
+        group: admin1
+
+
     auth:
       - type: kubernetes
         roles:
           # Allow every pod in the default namespace to use the secret kv store
           - name: default
             bound_service_account_names: ["default", "vault-secrets-webhook", "vault"]
-            bound_service_account_namespaces: ["default", "vswh"]
-            policies: allow_secrets
+            bound_service_account_namespaces: ["default", "webhook"]
+            policies: ["allow_secrets", "allow_pki"]
             ttl: 1h
 
     secrets:
@@ -161,6 +175,27 @@ spec:
         description: General secrets.
         options:
           version: 2
+
+      - path: pki
+        type: pki
+        description: Vault PKI Backend
+        config:
+          default_lease_ttl: 168h
+          max_lease_ttl: 720h
+        configuration:
+          config:
+          - name: urls
+            issuing_certificates: https://vault.default:8200/v1/pki/ca
+            crl_distribution_points: https://vault.default:8200/v1/pki/crl
+          root/generate:
+          - name: internal
+            common_name: vault.default
+          roles:
+          - name: default
+            allowed_domains: localhost,pod,svc,default
+            allow_subdomains: true
+            generate_lease: true
+            ttl: 1m
 
     # Allows writing some secrets to Vault (useful for development purposes).
     # See https://www.vaultproject.io/docs/secrets/kv/index.html for more information.
@@ -190,6 +225,26 @@ spec:
     - name: VAULT_STORAGE_FILE
       value: "/vault/file"
 
+  # If you are using a custom certificate and are setting the hostname in a custom way
+  # sidecarEnvsConfig:
+  #   - name: VAULT_ADDR
+  #     value: https://vault.local:8200
+
+  # # https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+  # vaultPodSpec:
+  #   hostAliases:
+  #   - ip: "127.0.0.1"
+  #     hostnames:
+  #     - "vault.local"
+
+  # It is possible to override the Vault container directly:
+  # vaultContainerSpec:
+  #   lifecycle:
+  #     postStart:
+  #       exec:
+  #         command:
+  #              - setcap cap_ipc_lock=+ep /vault/plugins/orchestrate
+
   # Marks presence of Istio, which influences things like port namings
   istioEnabled: false
 
@@ -206,3 +261,17 @@ spec:
   resources:
     requests:
       storage: 1Gi
+
+# ---
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: vault-file
+# spec:
+#   capacity:
+#     storage: 1Gi
+#   accessModes:
+#   - ReadWriteOnce
+#   persistentVolumeReclaimPolicy: Recycle
+#   hostPath:
+#     path: /vault/file
