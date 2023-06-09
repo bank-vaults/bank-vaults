@@ -22,30 +22,11 @@ builds:
             - xgo -targets {{ .Os }}/{{ .Arch }} -dest dist -ldflags '-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}' -pkg cmd/bank-vaults .
             - sudo bash -c "mkdir -p dist/bank-vaults_{{ .Os }}_{{ .Arch }}; mv dist/github.com/banzaicloud/bank-vaults-{{ .Os }}-{{ .Arch }} dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
 
-    -   id: vault-env
-        main: ./cmd/vault-env
-        binary: vault-env
-        env:
-            - CGO_ENABLED=0
-        ldflags: "-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}"
-        goos:
-            - linux
-            - darwin
-        goarch:
-            - amd64
-            - arm64
 archives:
     -   id: bank-vaults
         name_template: "{{ .Binary }}-{{ .Os }}-{{ .Arch }}"
         builds:
             - bank-vaults
-        format_overrides:
-            - goos: windows
-              format: zip
-    -   id: vault-env
-        name_template: "{{ .Binary }}-{{ .Os }}-{{ .Arch }}"
-        builds:
-            - vault-env
         format_overrides:
             - goos: windows
               format: zip
