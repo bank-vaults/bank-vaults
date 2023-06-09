@@ -20,6 +20,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
+	"text/template"
 
 	"emperror.dev/errors"
 	"github.com/bank-vaults/vault-sdk/vault"
@@ -52,6 +54,24 @@ func (mw *MutatingWebhook) VaultSecretsMutator(ctx context.Context, ar *model.Ad
 	if vaultConfig.Skip {
 		return &mutating.MutatorResult{}, nil
 	}
+
+	// parse resulting vaultConfig.Role as potential template with fields of vaultConfig
+	tmpl, err := template.New("vaultRole").Option("missingkey=error").Parse(vaultConfig.Role)
+	if err != nil {
+		return &mutating.MutatorResult{}, errors.Wrap(err, "error parsing vault_role")
+	}
+	var vRoleBuf strings.Builder
+	if err = tmpl.Execute(&vRoleBuf, map[string]string{
+		"authmethod":     vaultConfig.AuthMethod,
+		"name":           obj.GetName(),
+		"namespace":      vaultConfig.ObjectNamespace,
+		"path":           vaultConfig.Path,
+		"serviceaccount": vaultConfig.VaultServiceAccount,
+	}); err != nil {
+		return &mutating.MutatorResult{}, errors.Wrap(err, "error templating vault_role")
+	}
+	vaultConfig.Role = vRoleBuf.String()
+	mw.logger.Debugf("vaultConfig.Role = '%s'", vaultConfig.Role)
 
 	switch v := obj.(type) {
 	case *corev1.Pod:
