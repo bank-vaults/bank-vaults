@@ -14,7 +14,6 @@ BINARY_NAME ?= bank-vaults
 DOCKER_REGISTRY ?= ghcr.io/banzaicloud
 DOCKER_IMAGE = ${DOCKER_REGISTRY}/bank-vaults
 WEBHOOK_DOCKER_IMAGE = ${DOCKER_REGISTRY}/vault-secrets-webhook
-VAULT_ENV_DOCKER_IMAGE = ${DOCKER_REGISTRY}/vault-env
 
 # Build variables
 BUILD_DIR ?= build
@@ -90,20 +89,6 @@ image-webhook: ## Build a webhook OCI image
 	buildah bud -t ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.webhook .
 ifeq (${IMAGE_LATEST}, 1)
 	buildah tag ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} ${WEBHOOK_DOCKER_IMAGE}:latest
-endif
-
-.PHONY: docker-vault-env
-docker-vault-env: ## Build a Docker-vault-env image
-	docker build -t ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.vault-env .
-ifeq (${DOCKER_LATEST}, 1)
-	docker tag ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} ${VAULT_ENV_DOCKER_IMAGE}:latest
-endif
-
-.PHONY: image-vault-env
-image-vault-env: ## Build an OCI vault-env image
-	buildah bud -t ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.vault-env .
-ifeq (${IMAGE_LATEST}, 1)
-	buildah tag ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} ${VAULT_ENV_DOCKER_IMAGE}:latest
 endif
 
 .PHONY: docker-push

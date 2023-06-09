@@ -3,7 +3,6 @@ Dockerfile*
 .git/
 bin/
 docs/
-operator/build/
 vendor/
 test/
 *.yaml
