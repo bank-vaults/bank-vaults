@@ -16,7 +16,7 @@ require (
 	github.com/bank-vaults/vault-sdk v0.9.0
 	github.com/cristalhq/jwt/v3 v3.0.14
 	github.com/fsnotify/fsnotify v1.6.0
-	github.com/hashicorp/go-uuid v1.0.2
+	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/api v1.9.1
 	github.com/jpillora/backoff v1.0.0
