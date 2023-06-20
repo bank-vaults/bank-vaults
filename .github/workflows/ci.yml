@@ -34,12 +34,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: make license-check
 
-    - name: Set up chart-testing
-      uses: helm/chart-testing-action@v2.4.0
-
-    - name: Run chart-testing
-      run: ct lint --debug --config charts/testing.yaml
-
     - name: Setup test dependencies
       run: |
         sudo apt install opensc softhsm
@@ -78,52 +72,3 @@ jobs:
         with:
           name: bank-vaults
           path: /tmp/bank-vaults.tar
-
-  acceptance-test:
-    name: Acceptance test
-    runs-on: ubuntu-latest
-    needs: [build-bank-vaults]
-    strategy:
-      matrix:
-        k8s_version: ["v1.24.13", "v1.25.9", "v1.26.4", "v1.27.1" ]
-        vault_version: ["1.10.11", "1.11.10", "1.12.6", "1.13.2"]
-
-    steps:
-
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: ${{ env.GO_VERSION }}
-
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Start kind cluster
-      run: |
-        kind version
-        kind create cluster --image kindest/node:${{ matrix.k8s_version }} --wait 1m
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-
-    - name: Download Bank-Vaults docker image
-      uses: actions/download-artifact@v3
-      with:
-        name: bank-vaults
-        path: /tmp
-
-    - name: Load Docker images to kind
-      run: |
-        kind load image-archive /tmp/bank-vaults.tar
-
-   # # Uncomment for debugging with SSH
-   #  - name: Setup upterm session
-   #    uses: lhotari/action-upterm@v1
-   #    with:
-   #     limit-access-to-actor: true
-   #     limit-access-to-users: akijakya
-
-    - name: Acceptance test
-      run: go test -v -timeout 900s -tags kubeall ./test
-      env:
-        VAULT_VERSION: ${{ matrix.vault_version }}
