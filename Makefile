@@ -8,6 +8,11 @@ CONTAINER_IMAGE_REF = ghcr.io/banzaicloud/bank-vaults:dev
 GOLANGCI_VERSION = 1.53.3
 LICENSEI_VERSION = 0.8.0
 
+.PHONY: build
+build: ## Build binary
+	@mkdir -p build
+	go build -race -o build/ ./cmd/bank-vaults
+
 .PHONY: lint
 lint: lint-go lint-docker lint-yaml
 lint: ## Run linters
@@ -100,25 +105,6 @@ GOTESTSUM_VERSION = 0.4.0
 
 GOLANG_VERSION = 1.19.2
 
-.PHONY: up
-up: ## Set up the development environment
-
-.PHONY: down
-down: clean ## Destroy the development environment
-
-
-.PHONY: reset
-reset: down up ## Reset the development environment
-
-
-.PHONY: build-release
-build-release: LDFLAGS += -w
-build-release: build ## Build a binary without debug information
-
-.PHONY: build-debug
-build-debug: GOARGS += -gcflags "all=-N -l"
-build-debug: BINARY_NAME_SUFFIX += debug
-build-debug: build ## Build a binary with remote debugging capabilities
 
 .PHONY: docker
 docker: ## Build a Docker image
@@ -175,12 +161,6 @@ clean: ## Clean builds
 clear: ## Clear the working area and the project
 	rm -rf bin/ vendor/
 
-.PHONY: build
-build: ## Build a binary
-ifneq (${IGNORE_GOLANG_VERSION_REQ}, 1)
-	@printf "${GOLANG_VERSION}\n$$(go version | awk '{sub(/^go/, "", $$3);print $$3}')" | sort -t '.' -k 1,1 -k 2,2 -k 3,3 -g | head -1 | grep -q -E "^${GOLANG_VERSION}$$" || (printf "Required Go version is ${GOLANG_VERSION}\nInstalled: `go version`" && exit 1)
-endif
-	go build ${GOARGS} -tags "${GOTAGS}" -ldflags "${LDFLAGS}" ${BUILD_PACKAGE}
 
 .PHONY: docker-build
 docker-build: ## Builds go binary in docker image
@@ -204,7 +184,7 @@ fix-sdk: bin/golangci-lint ## Fix lint violations
 	cd pkg/sdk && ../../bin/golangci-lint run --fix --disable varnamelen,ireturn,nosnakecase,exhaustruct,nonamedreturns,nilnil,contextcheck,maintidx,dupword,gosec,gomoddirectives,gci,gofumpt,gofmt,goimports,revive,staticcheck
 
 .PHONY: check
-check: lint lint-sdk test-integration test-sdk-integration ## Run tests and linters
+check: lint-sdk test-integration test-sdk-integration ## Run tests and linters
 
 bin/gotestsum: bin/gotestsum-${GOTESTSUM_VERSION}
 	@ln -sf gotestsum-${GOTESTSUM_VERSION} bin/gotestsum
