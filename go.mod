@@ -8,9 +8,7 @@ require (
 	emperror.dev/errors v0.8.1
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.27
-	github.com/Azure/go-autorest/autorest/adal v0.9.22 // indirect
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.12
-	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.193
 	github.com/aliyun/aliyun-oss-go-sdk v2.0.4+incompatible
@@ -18,11 +16,9 @@ require (
 	github.com/bank-vaults/vault-sdk v0.9.0
 	github.com/cristalhq/jwt/v3 v3.0.14
 	github.com/fsnotify/fsnotify v1.6.0
-	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/api v1.9.1
-	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/jpillora/backoff v1.0.0
 	github.com/json-iterator/go v1.1.12
 	github.com/miekg/pkcs11 v1.0.3
@@ -37,12 +33,9 @@ require (
 	golang.org/x/oauth2 v0.6.0
 	google.golang.org/api v0.114.0
 	google.golang.org/genproto v0.0.0-20230320184635-7606e756e683
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.26.1
 	k8s.io/client-go v0.26.1
-	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
-	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448 // indirect
 	sigs.k8s.io/controller-runtime v0.14.6
 )
 
@@ -54,6 +47,7 @@ require (
 	github.com/Azure/azure-pipeline-go v0.2.1 // indirect
 	github.com/Azure/azure-storage-blob-go v0.8.0 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
+	github.com/Azure/go-autorest/autorest/adal v0.9.18 // indirect
 	github.com/Azure/go-autorest/autorest/azure/cli v0.4.5 // indirect
 	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
 	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
@@ -61,6 +55,7 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
+	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v3 v3.0.0 // indirect
@@ -78,6 +73,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
+	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/google/wire v0.3.0 // indirect
@@ -93,6 +89,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.2 // indirect
 	github.com/huandu/xstrings v1.3.3 // indirect
+	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
@@ -138,10 +135,11 @@ require (
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
+	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
+	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-replace github.com/banzaicloud/bank-vaults/pkg/sdk => ./pkg/sdk
