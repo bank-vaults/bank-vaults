@@ -33,9 +33,10 @@ ignored = [
 ]
 
 [header]
-ignorePaths = ["vendor"]
+authors = ["Banzai Cloud"]
+ignorePaths = [".direnv", ".devenv", "vendor"]
 ignoreFiles = ["zz_generated.*.go"]
-template = """// Copyright © :YEAR: Banzai Cloud
+template = """// Copyright © :YEAR: :AUTHOR:
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
