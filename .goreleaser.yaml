@@ -35,3 +35,6 @@ checksum:
 
 changelog:
   skip: false
+
+release:
+  prerelease: auto
