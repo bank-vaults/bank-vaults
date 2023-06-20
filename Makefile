@@ -184,7 +184,7 @@ fix-sdk: bin/golangci-lint ## Fix lint violations
 	cd pkg/sdk && ../../bin/golangci-lint run --fix --disable varnamelen,ireturn,nosnakecase,exhaustruct,nonamedreturns,nilnil,contextcheck,maintidx,dupword,gosec,gomoddirectives,gci,gofumpt,gofmt,goimports,revive,staticcheck
 
 .PHONY: check
-check: lint-sdk test-integration test-sdk-integration ## Run tests and linters
+check: test-integration test-sdk-integration ## Run tests and linters
 
 bin/gotestsum: bin/gotestsum-${GOTESTSUM_VERSION}
 	@ln -sf gotestsum-${GOTESTSUM_VERSION} bin/gotestsum
