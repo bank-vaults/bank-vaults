@@ -9,8 +9,8 @@ on:
         default: 'info'
         type: choice
         options:
-        - 'info'
-        - 'debug'
+          - 'info'
+          - 'debug'
 
 jobs:
   validate-config-crud:

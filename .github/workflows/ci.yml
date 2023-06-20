@@ -1,8 +1,110 @@
 name: CI
-on: [pull_request]
-env:
-  GO_VERSION: 1.19.2
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
 jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Set up Nix
+        uses: cachix/install-nix-action@6ed004b9ccb68dbc28e7c85bee15fa93dbd214ac # v22
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare Nix shell
+        run: nix develop --impure .#ci
+
+      - name: Build
+        run: nix develop --impure .#ci -c make build
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Set up Nix
+        uses: cachix/install-nix-action@6ed004b9ccb68dbc28e7c85bee15fa93dbd214ac # v22
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare Nix shell
+        run: nix develop --impure .#ci
+
+      - name: Lint
+        run: nix develop --impure .#ci -c make lint
+
+  license-check:
+    name: License check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Set up Nix
+        uses: cachix/install-nix-action@6ed004b9ccb68dbc28e7c85bee15fa93dbd214ac # v22
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache license information
+        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        with:
+          path: .licensei.cache
+          key: licensei-v1-${{ github.ref_name }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            licensei-v1-${{ github.ref_name }}
+            licensei-v1-main
+            licensei-v1
+
+      - name: Prepare Nix shell
+        run: nix develop --impure .#ci
+
+      - name: Populate license cache
+        run: nix develop --impure .#ci -c licensei cache
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check licenses
+        run: nix develop --impure .#ci -c make license-check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dev:
+    name: Developer environment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Set up Nix
+        uses: cachix/install-nix-action@6ed004b9ccb68dbc28e7c85bee15fa93dbd214ac # v22
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check
+        run: nix flake check --impure
+
+      - name: Dev shell
+        run: nix develop --impure
 
   checks:
     name: Checks
@@ -18,57 +120,23 @@ jobs:
           - 8200:8200
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: ${{ env.GO_VERSION }}
-
-    - name: Check out code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0 # chart testing fails otherwise
-
-    - name: Check licenses
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: make license-check
-
-    - name: Setup test dependencies
-      run: |
-        sudo apt install opensc softhsm
-        sudo mkdir -p /var/lib/softhsm/tokens/
-        sudo softhsm2-util --init-token --free --label bank-vaults --so-pin banzai --pin banzai
-        sudo pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin banzai --token-label bank-vaults --label bank-vaults
-        sudo chown -R runner:docker /etc/softhsm /var/lib/softhsm
-
-    - name: Run verification
-      run: make check
-      env:
-        VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
-
-  build-bank-vaults:
-    name: Build bank-vaults
-    runs-on: ubuntu-latest
-
-    steps:
-
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Build and push
-        uses: docker/build-push-action@v4
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          context: .
-          file: ./Dockerfile
-          tags: bank-vaults:latest
-          outputs: type=docker,dest=/tmp/bank-vaults.tar
+          go-version: '1.20'
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: bank-vaults
-          path: /tmp/bank-vaults.tar
+      - name: Setup test dependencies
+        run: |
+          sudo apt install opensc softhsm
+          sudo mkdir -p /var/lib/softhsm/tokens/
+          sudo softhsm2-util --init-token --free --label bank-vaults --so-pin banzai --pin banzai
+          sudo pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin banzai --token-label bank-vaults --label bank-vaults
+          sudo chown -R runner:docker /etc/softhsm /var/lib/softhsm
+
+      - name: Run verification
+        run: make check
+        env:
+          VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf

@@ -1,47 +1,68 @@
 run:
-    timeout: 5m
+  timeout: 10m
 
 linters-settings:
-    golint:
-        min-confidence: 0.1
-    goimports:
-        local-prefixes: github.com/banzaicloud/bank-vaults
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/banzaicloud/bank-vaults)
+  goimports:
+    local-prefixes: github.com/banzaicloud/bank-vaults
 
 linters:
-    enable-all: true
-    disable:
-        - maligned
-        - funlen
-        - dupl
-        - nestif
-        - wsl
-        - lll
-        - interfacer
-        - exhaustivestruct
-        - nlreturn
+  enable-all: true
+  disable:
+    - maligned
+    - funlen
+    - dupl
+    - nestif
+    - wsl
+    - lll
+    - interfacer
+    - exhaustivestruct
+    - nlreturn
 
-        #deprecated
-        - ifshort
-        - varcheck
-        - structcheck
-        - deadcode
+    #deprecated
+    - ifshort
+    - varcheck
+    - structcheck
+    - deadcode
 
-        # TODO: fixme
-        - paralleltest
-        - forcetypeassert
-        - wrapcheck
-        - exportloopref
-        - cyclop
-        - godox
-        - godot
-        - gomnd
-        - gochecknoglobals
-        - gochecknoinits
-        - goconst
-        - gocognit
-        - golint
-        - scopelint
-        - gocritic
-        - stylecheck
-        - gocyclo
-        - testpackage
+    # TODO: fixme
+    - paralleltest
+    - forcetypeassert
+    - wrapcheck
+    - exportloopref
+    - cyclop
+    - godox
+    - godot
+    - gomnd
+    - gochecknoglobals
+    - gochecknoinits
+    - goconst
+    - gocognit
+    - golint
+    - scopelint
+    - gocritic
+    - stylecheck
+    - gocyclo
+    - testpackage
+    - varnamelen
+    - ireturn
+    - nosnakecase
+    - exhaustruct
+    - nonamedreturns
+    - nilnil
+    - contextcheck
+    - maintidx
+    - dupword
+    - gosec
+    - gomoddirectives
+    - gci
+    - gofumpt
+    - gofmt
+    - goimports
+    - revive
+    - staticcheck
+    - depguard

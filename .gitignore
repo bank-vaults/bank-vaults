@@ -1,51 +1,6 @@
-# Binaries for programs and plugins
-*.exe
-*.dll
-*.so
-*.dylib
-
-# Test binary, build with `go test -c`
-*.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
-
-/.licensei.cache
-
-./bank-vaults
-
-/vendor/
-
-/.licensei.cache
-bin/*
+/.devenv/
+/.direnv/
+/.pre-commit-config.yaml
+/bin/
 /build/
-
-# Helm
-**/*.tgz
-**/*.lock
-
-# Certificates
-*.csr
-*.pem
-
-# IDE integration
-/.idea/*
-!/.idea/copyright/
-!/.idea/*.iml
-!/.idea/externalDependencies.xml
-!/.idea/go.imports.xml
-!/.idea/modules.xml
-!/.idea/runConfigurations/
-!/.idea/scopes/
-Session.vim
-
-vault-config.yaml
-
-# goreleaser
-dist/
-
-# Vault configs
-*.hcl
-
-# VS Code config
-.vscode/
+/tmp/
