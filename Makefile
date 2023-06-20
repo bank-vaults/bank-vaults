@@ -35,8 +35,6 @@ DOCKER_TAG ?= ${VERSION}
 GOTESTSUM_VERSION = 0.4.0
 GOLANGCI_VERSION = 1.52.2
 LICENSEI_VERSION = 0.8.0
-CODE_GENERATOR_VERSION = 0.27.1
-CONTROLLER_GEN_VERSION = v0.11.4
 
 GOLANG_VERSION = 1.19.2
 
@@ -77,20 +75,6 @@ ifeq (${IMAGE_LATEST}, 1)
 	buildah tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
 endif
 
-.PHONY: docker-webhook
-docker-webhook: ## Build a Docker-webhook image
-	docker build ${DOCKER_BUILD_EXTRA_ARGS} -t ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.webhook .
-ifeq (${DOCKER_LATEST}, 1)
-	docker tag ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} ${WEBHOOK_DOCKER_IMAGE}:latest
-endif
-
-.PHONY: image-webhook
-image-webhook: ## Build a webhook OCI image
-	buildah bud -t ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.webhook .
-ifeq (${IMAGE_LATEST}, 1)
-	buildah tag ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} ${WEBHOOK_DOCKER_IMAGE}:latest
-endif
-
 .PHONY: docker-push
 docker-push: ## Push a Docker image
 	docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
@@ -123,17 +107,3 @@ minor: ## Release a new minor version
 .PHONY: major
 major: ## Release a new major version
 	@${MAKE} release-$(shell git describe --abbrev=0 --tags | awk -F'[ .]' '{print $$1+1".0.0"}')
-
-.PHONY: webhook-forward
-webhook-forward: ## Install the webhook chart and kurun to port-forward the local webhook into Kubernetes
-	kubectl create namespace vault-infra --dry-run -o yaml | kubectl apply -f -
-	kubectl label namespaces vault-infra name=vault-infra --overwrite
-	helm upgrade --install vault-secrets-webhook charts/vault-secrets-webhook --namespace vault-infra --set replicaCount=0 --set podsFailurePolicy=Fail --set secretsFailurePolicy=Fail --set configMapMutation=true --set configMapFailurePolicy=Fail
-	kurun port-forward localhost:8443 --namespace vault-infra --servicename vault-secrets-webhook --tlssecret vault-secrets-webhook-webhook-tls
-
-.PHONY: webhook-run ## Run run the webhook locally
-webhook-run:
-	KUBERNETES_NAMESPACE=vault-infra go run ./cmd/vault-secrets-webhook
-
-.PHONY: webhook-up ## Run the webhook and `kurun port-forward` in foreground. Use with make -j webhook-up
-webhook-up: webhook-run webhook-forward
