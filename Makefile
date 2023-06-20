@@ -1,5 +1,69 @@
 # A Self-Documenting Makefile: http://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 
+export PATH := $(abspath bin/):${PATH}
+
+CONTAINER_IMAGE_REF = ghcr.io/banzaicloud/bank-vaults:dev
+
+# Dependency versions
+GOLANGCI_VERSION = 1.53.3
+LICENSEI_VERSION = 0.8.0
+
+.PHONY: lint
+lint: lint-go lint-docker lint-yaml
+lint: ## Run linters
+
+.PHONY: lint-go
+lint-go:
+	golangci-lint run $(if ${CI},--out-format github-actions,)
+
+.PHONY: lint-docker
+lint-docker:
+	hadolint Dockerfile
+
+.PHONY: lint-yaml
+lint-yaml:
+	yamllint $(if ${CI},-f github,) --no-warnings .
+
+.PHONY: fmt
+fmt: ## Format code
+	golangci-lint run --fix
+
+.PHONY: license-check
+license-check: ## Run license check
+	licensei check
+	licensei header
+
+deps: bin/golangci-lint bin/licensei
+deps: ## Install dependencies
+
+bin/golangci-lint:
+	@mkdir -p bin
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- v${GOLANGCI_VERSION}
+
+bin/licensei:
+	@mkdir -p bin
+	curl -sfL https://raw.githubusercontent.com/goph/licensei/master/install.sh | bash -s -- v${LICENSEI_VERSION}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 OS = $(shell uname)
 
 DOCKER_BUILD_EXTRA_ARGS ?=
@@ -33,13 +97,8 @@ DOCKER_TAG ?= ${VERSION}
 
 # Dependency versions
 GOTESTSUM_VERSION = 0.4.0
-GOLANGCI_VERSION = 1.52.2
-LICENSEI_VERSION = 0.8.0
 
 GOLANG_VERSION = 1.19.2
-
-## include "generic" targets
-include main-targets.mk
 
 .PHONY: up
 up: ## Set up the development environment
@@ -107,3 +166,101 @@ minor: ## Release a new minor version
 .PHONY: major
 major: ## Release a new major version
 	@${MAKE} release-$(shell git describe --abbrev=0 --tags | awk -F'[ .]' '{print $$1+1".0.0"}')
+
+.PHONY: clean
+clean: ## Clean builds
+	rm -rf ${BUILD_DIR}/
+
+.PHONY: clear
+clear: ## Clear the working area and the project
+	rm -rf bin/ vendor/
+
+.PHONY: build
+build: ## Build a binary
+ifneq (${IGNORE_GOLANG_VERSION_REQ}, 1)
+	@printf "${GOLANG_VERSION}\n$$(go version | awk '{sub(/^go/, "", $$3);print $$3}')" | sort -t '.' -k 1,1 -k 2,2 -k 3,3 -g | head -1 | grep -q -E "^${GOLANG_VERSION}$$" || (printf "Required Go version is ${GOLANG_VERSION}\nInstalled: `go version`" && exit 1)
+endif
+	go build ${GOARGS} -tags "${GOTAGS}" -ldflags "${LDFLAGS}" ${BUILD_PACKAGE}
+
+.PHONY: docker-build
+docker-build: ## Builds go binary in docker image
+	docker run -it -v $(PWD):/go/src/${PACKAGE} -w /go/src/${PACKAGE} golang:${GOLANG_VERSION}-alpine go build -o ${BINARY_NAME}_linux ${BUILD_PACKAGE}
+
+.PHONY: debug
+debug: GOARGS += -gcflags "-N -l"
+debug: BINARY_NAME := ${BINARY_NAME}-debug
+debug: build ## Builds binary package
+
+.PHONY: debug-docker
+debug-docker: debug ## Builds binary package
+	docker build -t ghcr.io/banzaicloud/${BINARY_NAME}:debug -f Dockerfile.dev .
+
+.PHONY: lint-sdk
+lint-sdk: bin/golangci-lint ## Run linter
+	cd pkg/sdk && ../../bin/golangci-lint run --disable varnamelen,ireturn,nosnakecase,exhaustruct,nonamedreturns,nilnil,contextcheck,maintidx,dupword,gosec,gomoddirectives,gci,gofumpt,gofmt,goimports,revive,staticcheck
+
+.PHONY: fix-sdk
+fix-sdk: bin/golangci-lint ## Fix lint violations
+	cd pkg/sdk && ../../bin/golangci-lint run --fix --disable varnamelen,ireturn,nosnakecase,exhaustruct,nonamedreturns,nilnil,contextcheck,maintidx,dupword,gosec,gomoddirectives,gci,gofumpt,gofmt,goimports,revive,staticcheck
+
+.PHONY: check
+check: lint lint-sdk test-integration test-sdk-integration ## Run tests and linters
+
+bin/gotestsum: bin/gotestsum-${GOTESTSUM_VERSION}
+	@ln -sf gotestsum-${GOTESTSUM_VERSION} bin/gotestsum
+bin/gotestsum-${GOTESTSUM_VERSION}:
+	@mkdir -p bin
+	curl -L https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_${OS}_amd64.tar.gz | tar -zOxf - gotestsum > ./bin/gotestsum-${GOTESTSUM_VERSION} && chmod +x ./bin/gotestsum-${GOTESTSUM_VERSION}
+
+TEST_PKGS ?= ./...
+TEST_REPORT_NAME ?= results.xml
+.PHONY: test
+test: TEST_REPORT ?= main
+test: TEST_FORMAT ?= short
+test: SHELL = /bin/bash
+test: bin/gotestsum ## Run tests
+	@mkdir -p ${BUILD_DIR}/test_results/${TEST_REPORT}
+	bin/gotestsum --no-summary=skipped --junitfile ${BUILD_DIR}/test_results/${TEST_REPORT}/${TEST_REPORT_NAME} --format ${TEST_FORMAT} -- $(filter-out -v,${GOARGS}) $(if ${TEST_PKGS},${TEST_PKGS},./...)
+
+test-sdk: TEST_REPORT ?= sdk
+test-sdk: TEST_FORMAT ?= short
+test-sdk: SHELL = /bin/bash
+test-sdk: bin/gotestsum ## Run SDK tests
+	@mkdir -p ${BUILD_DIR}/test_results/${TEST_REPORT}
+	cd pkg/sdk && ../../bin/gotestsum --no-summary=skipped --junitfile ../../${BUILD_DIR}/test_results/${TEST_REPORT}/${TEST_REPORT_NAME} --format ${TEST_FORMAT} -- $(filter-out -v,${GOARGS}) $(if ${TEST_PKGS},${TEST_PKGS},./...)
+
+.PHONY: test-all
+test-all: ## Run all tests
+	@${MAKE} GOARGS="${GOARGS} -run .\*" TEST_REPORT=all test
+
+.PHONY: test-integration
+test-integration: ## Run integration tests
+	@${MAKE} GOARGS="${GOARGS} -tags=integration" TEST_REPORT=integration test
+
+.PHONY: test-sdk-integration
+test-sdk-integration: ## Run integration tests in sdk package
+	@${MAKE} GOARGS="${GOARGS} -tags=integration" TEST_REPORT=integration test-sdk
+
+bin/jq: bin/jq-${JQ_VERSION}
+	@ln -sf jq-${JQ_VERSION} bin/jq
+bin/jq-${JQ_VERSION}:
+	@mkdir -p bin
+ifeq (${OS}, Darwin)
+	curl -L https://github.com/stedolan/jq/releases/download/jq-${JQ_VERSION}/jq-osx-amd64 > ./bin/jq-${JQ_VERSION} && chmod +x ./bin/jq-${JQ_VERSION}
+endif
+ifeq (${OS}, Linux)
+	curl -L https://github.com/stedolan/jq/releases/download/jq-${JQ_VERSION}/jq-linux64 > ./bin/jq-${JQ_VERSION} && chmod +x ./bin/jq-${JQ_VERSION}
+endif
+
+.PHONY: list
+list: ## List all make targets
+	@$(MAKE) -pRrn : -f $(MAKEFILE_LIST) 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | egrep -v -e '^[^[:alnum:]]' -e '^$@$$' | sort
+
+.PHONY: help
+.DEFAULT_GOAL := help
+help:
+	@grep -h -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+
+# Variable outputting/exporting rules
+var-%: ; @echo $($*)
+varexport-%: ; @echo $*=$($*)
