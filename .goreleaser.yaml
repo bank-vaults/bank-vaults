@@ -7,11 +7,11 @@ builds:
   # Building of Bank-Vaults is a bit hacky since the pkcs11 package can't be built with simple Go Crosscompiling
   # so we need to use xgo, but that is not directly supported in GoReleaser, so we do the actual compilation with
   # xgo in post hooks for all targets.
-  - id: bank-vaults
-    main: ./cmd/template
-    binary: bank-vaults
+  - main: ./cmd/template
     env:
       - CGO_ENABLED=0
+    flags:
+      - -trimpath
     ldflags: "-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}"
     goos:
       - linux
@@ -21,14 +21,11 @@ builds:
       - arm64
     hooks:
       post:
-        - xgo -targets {{ .Os }}/{{ .Arch }} -dest dist -ldflags '-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}' -pkg cmd/bank-vaults .
-        - sudo bash -c "mkdir -p dist/bank-vaults_{{ .Os }}_{{ .Arch }}; mv dist/github.com/banzaicloud/bank-vaults-{{ .Os }}-{{ .Arch }} dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
+        - xgo -targets {{ .Os }}/{{ .Arch }} -dest build/dist -ldflags '-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}' -pkg cmd/bank-vaults .
+        - sudo bash -c "mkdir -p build/dist/bank-vaults_{{ .Os }}_{{ .Arch }}; mv build/dist/github.com/banzaicloud/bank-vaults-{{ .Os }}-{{ .Arch }} build/dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
 
 archives:
-  - id: bank-vaults
-    name_template: "{{ .Binary }}-{{ .Os }}-{{ .Arch }}"
-    builds:
-      - bank-vaults
+  - name_template: "{{ .Binary }}-{{ .Os }}-{{ .Arch }}"
     format_overrides:
       - goos: windows
         format: zip

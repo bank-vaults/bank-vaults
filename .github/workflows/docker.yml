@@ -56,12 +56,3 @@ jobs:
           push: true
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
-      - name: Build vault-secrets-webhook
-        uses: docker/build-push-action@v4
-        with:
-          tags: ghcr.io/banzaicloud/vault-secrets-webhook:${{ steps.imagetag.outputs.value }}
-          file: Dockerfile.webhook
-          platforms: ${{ env.PLATFORMS }}
-          push: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache

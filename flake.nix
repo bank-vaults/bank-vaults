@@ -36,6 +36,7 @@
               gnumake
 
               golangci-lint
+              goreleaser
 
               opensc
               softhsm
@@ -50,6 +51,7 @@
               hadolint
             ] ++ [
               self'.packages.licensei
+              self'.packages.xgo
             ];
 
             scripts = {
@@ -97,6 +99,22 @@
               "-s"
               "-X main.version=v${version}"
             ];
+          };
+
+          xgo = pkgs.buildGoModule rec {
+            pname = "xgo";
+            version = "0.28.0";
+
+            src = pkgs.fetchFromGitHub {
+              owner = "crazy-max";
+              repo = "xgo";
+              rev = "v${version}";
+              sha256 = "sha256-chkmQF5xSccHuY5yH9oSn243E92EmvKCGQdAEy3eMXw=";
+            };
+
+            vendorSha256 = null;
+
+            subPackages = [ "." ];
           };
         };
       };
