@@ -28,7 +28,7 @@ require (
 	github.com/spf13/cast v1.5.1
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 	gocloud.dev v0.30.0
 	golang.org/x/oauth2 v0.9.0
 	google.golang.org/api v0.128.0
