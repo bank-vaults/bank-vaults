@@ -42,6 +42,7 @@ RUN apk add --update --no-cache ca-certificates tzdata
 # RUN pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin banzai --token-label bank-vaults --label bank-vaults
 
 COPY --from=builder /usr/local/bin/bank-vaults /usr/local/bin/bank-vaults
+COPY --from=builder /usr/local/bin/template /usr/local/bin/template
 
 USER 65534
 
