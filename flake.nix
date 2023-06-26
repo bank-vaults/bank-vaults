@@ -35,6 +35,14 @@
             packages = with pkgs; [
               gnumake
 
+              # pkgsCross.gnu64.gcc
+              # pkgsCross.aarch64-multiplatform.gcc
+              (import inputs.nixpkgs {
+                inherit system;
+
+                crossSystem = pkgs.lib.systems.examples.gnu64;
+              }).gcc
+
               golangci-lint
               goreleaser
 
