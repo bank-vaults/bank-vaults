@@ -1,0 +1,86 @@
+purgeUnmanagedConfig:
+  enabled: true
+  # Each section will be excluded during the tests to test both cases (global enabled and individually excluded).
+  exclude:
+    audit: false
+    auth: false
+    group-aliases: false
+    groups: false
+    policies: false
+    secrets: false
+
+audit:
+  - path: audit_foo
+    type: file
+    options:
+      file_path: /tmp/foo.log
+  - path: audit_bar
+    type: file
+    options:
+      file_path: /tmp/foo.log
+  # The "path" would be defaulted to "type".
+  - type: file
+    options:
+      file_path: /tmp/file.log
+
+auth:
+  # The auth "auth_approle" is used in group-aliases tests.
+  - path: auth_approle
+    type: approle
+  - path: auth_foo
+    type: approle
+  - path: auth_bar
+    type: userpass
+  # The "path" would be defaulted to "type".
+  - type: userpass
+
+groups:
+  - name: group_foo
+    type: external
+    policies:
+      - policy_foo
+  - name: group_bar
+    type: external
+    policies:
+      - policy_bar
+
+group-aliases:
+  - name: group_aliases_foo
+    mountpath: auth_approle
+    group: group_foo
+  - name: group_aliases_bar
+    mountpath: auth_approle
+    group: group_bar
+
+policies:
+  - name: policy_foo
+    rules: |
+      path "foo" { capabilities = ["read"] }
+  - name: policy_bar
+    rules: |
+      path "bar" { capabilities = ["read"] }
+
+secrets:
+  # The secret "passwords" is used in startupSecrets tests.
+  - path: passwords
+    type: kv
+    options:
+      version: 2
+  - path: secret_foo
+    type: kv
+  - path: secret_bar
+    type: ssh
+  # The "path" would be defaulted to "type".
+  - type: ssh
+
+startupSecrets:
+  - type: kv
+    path: passwords/data/foo
+    data:
+      data:
+        secret: foo
+  - type: kv
+    path: passwords/data/bar
+    data:
+      data:
+        secret: bar
