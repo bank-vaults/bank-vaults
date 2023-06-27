@@ -38,6 +38,9 @@
               golangci-lint
               goreleaser
 
+              yq-go
+              jq
+
               opensc
               softhsm
 

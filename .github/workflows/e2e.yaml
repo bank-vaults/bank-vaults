@@ -1,0 +1,108 @@
+name: E2E tests
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      log-level:
+        description: 'Set log level for verbosity'
+        required: false
+        default: 'info'
+        type: choice
+        options:
+          - 'info'
+          - 'debug'
+
+jobs:
+  validate-config-crud:
+    name: Validate Config CRUD
+    runs-on: ubuntu-latest
+
+    services:
+      vault:
+        image: vault:1.13.3
+        options: >-
+          --name=vault
+          --cap-add=IPC_LOCK
+        env:
+          VAULT_DEV_ROOT_TOKEN_ID: 227e1cce-6bf7-30bb-2d2a-acc854318caf
+        ports:
+          - 8200:8200
+
+    env:
+      VAULT_ADDR: http://0.0.0.0:8200
+      VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
+      VAULT_LOG_FILE: vault.log
+      BANK_VAULTS_LOG_FILE: bank-vaults.log
+      BANK_VAULTS_CONFIG_FILE: /tmp/vault-config.yaml
+
+      # The input value changes according to the workflow context.
+      LOG_LEVEL: "${{ github.event.inputs.log-level || inputs.log-level }}"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Set up Nix
+        uses: cachix/install-nix-action@6ed004b9ccb68dbc28e7c85bee15fa93dbd214ac # v22
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build bank-vaults
+        run: nix develop --impure .#ci -c make build
+
+      - name: Run bank-vaults
+        run: |
+          touch "${BANK_VAULTS_CONFIG_FILE}"
+          nix develop --impure .#ci -c build/bank-vaults configure \
+            --mode dev \
+            --vault-config-file "${BANK_VAULTS_CONFIG_FILE}" \
+            &> "${BANK_VAULTS_LOG_FILE}" & disown
+
+      - name: Test group - Audit
+        if: always()
+        run: nix develop --impure .#ci -c bash e2e/validate-config-crud/test.sh "audit"
+
+      - name: Test group - Auth
+        if: always()
+        run: nix develop --impure .#ci -c bash e2e/validate-config-crud/test.sh "auth"
+
+      - name: Test group - Groups
+        if: always()
+        run: nix develop --impure .#ci -c bash e2e/validate-config-crud/test.sh "groups"
+
+      - name: Test group - Group-Aliases
+        if: always()
+        run: nix develop --impure .#ci -c bash e2e/validate-config-crud/test.sh "group-aliases"
+
+      - name: Test group - Policies
+        if: always()
+        run: nix develop --impure .#ci -c bash e2e/validate-config-crud/test.sh "policies"
+
+      - name: Test group - StartupSecrets
+        if: always()
+        run: nix develop --impure .#ci -c bash e2e/validate-config-crud/test.sh "startupSecrets"
+
+      - name: Test group - Secrets
+        if: always()
+        run: nix develop --impure .#ci -c bash e2e/validate-config-crud/test.sh "secrets"
+
+      - name: Print logs
+        if: always()
+        run: |
+          echo -e "\nVaults logs ..."
+          docker logs vault &> "${VAULT_LOG_FILE}"
+          cat "${VAULT_LOG_FILE}"
+
+          echo -e "\nBank-Vaults logs ..."
+          cat "${BANK_VAULTS_LOG_FILE}"
+
+      - name: Store log files
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        if: always()
+        with:
+          name: "[${{ github.job }}] logs"
+          path: |
+            ${{ env.VAULT_LOG_FILE }}
+            ${{ env.BANK_VAULTS_LOG_FILE }}

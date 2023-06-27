@@ -135,7 +135,7 @@ jobs:
 
     services:
       vault:
-        image: vault:1.6.2
+        image: vault:1.13.3
         env:
           SKIP_SETCAP: true
           VAULT_DEV_ROOT_TOKEN_ID: 227e1cce-6bf7-30bb-2d2a-acc854318caf
@@ -163,3 +163,7 @@ jobs:
         run: make check
         env:
           VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
+
+  e2e:
+    name: E2E tests
+    uses: ./.github/workflows/e2e.yaml
