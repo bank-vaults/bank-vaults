@@ -62,8 +62,9 @@ const (
 )
 
 const (
-	cfgAWSKMSRegion = "aws-kms-region"
-	cfgAWSKMSKeyID  = "aws-kms-key-id"
+	cfgAWSKMSRegion            = "aws-kms-region"
+	cfgAWSKMSKeyID             = "aws-kms-key-id"
+	cfgAWSKMSEncryptionContext = "aws-kms-encryption-context"
 )
 
 const (
@@ -118,6 +119,10 @@ const (
 // We need to pre-create a value and bind the the flag to this until
 // https://github.com/spf13/viper/issues/608 gets fixed.
 var k8sSecretLabels map[string]string
+
+var awsKmsEncryptionContext = map[string]string{
+	"Tool": "bank-vaults",
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "bank-vaults",
@@ -222,6 +227,7 @@ func init() {
 	// AWS KMS flags
 	configStringSliceVar(rootCmd, cfgAWSKMSRegion, nil, "The region of the AWS KMS key to encrypt values")
 	configStringSliceVar(rootCmd, cfgAWSKMSKeyID, nil, "The ID or ARN of the AWS KMS key to encrypt values")
+	configStringMapVar(rootCmd, cfgAWSKMSEncryptionContext, &awsKmsEncryptionContext, "The encryption context that AWS KMS will use to encrypt values")
 
 	// AWS S3 Object Storage flags
 	configStringSliceVar(rootCmd, cfgAWSS3Region, []string{"us-east-1"}, "The region to use for storing values in AWS S3")

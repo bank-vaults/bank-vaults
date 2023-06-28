@@ -107,6 +107,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		s3SSEAlgos := cfg.GetStringSlice(cfgAWS3SSEAlgo)
 		kmsRegions := cfg.GetStringSlice(cfgAWSKMSRegion)
 		kmsKeyIDs := cfg.GetStringSlice(cfgAWSKMSKeyID)
+		kmsKeyEncryptionContext := cfg.GetStringMapString(cfgAWSKMSEncryptionContext)
 
 		// Try to use the standard AWS region
 		// setting if not provided for KMS/S3
@@ -164,7 +165,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 				return nil, errors.Wrap(err, "error creating AWS S3 kv store")
 			}
 			if s3SSEAlgos[i] == "" {
-				kmsService, err := awskms.New(s3Service, kmsRegions[i], kmsKeyIDs[i])
+				kmsService, err := awskms.New(s3Service, kmsRegions[i], kmsKeyIDs[i], kmsKeyEncryptionContext)
 				if err != nil {
 					return nil, errors.Wrap(err, "error creating AWS KMS kv store")
 				}
