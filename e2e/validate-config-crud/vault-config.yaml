@@ -78,7 +78,7 @@ startupSecrets:
     path: passwords/data/foo
     data:
       data:
-        secret: foo
+        SECRET: foo
   - type: kv
     path: passwords/data/bar
     data:
