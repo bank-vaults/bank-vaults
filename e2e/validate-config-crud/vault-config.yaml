@@ -62,10 +62,14 @@ policies:
 
 secrets:
   # The secret "passwords" is used in startupSecrets tests.
-  - path: passwords
+  - path: passwords/v2
     type: kv
     options:
       version: 2
+  - path: passwords/v1
+    type: kv
+    options:
+      version: 1
   - path: secret_foo
     type: kv
   - path: secret_bar
@@ -75,12 +79,17 @@ secrets:
 
 startupSecrets:
   - type: kv
-    path: passwords/data/foo
+    path: passwords/v2/data/foo
     data:
       data:
         SECRET: foo
   - type: kv
-    path: passwords/data/bar
+    path: passwords/v2/data/bar
     data:
       data:
         secret: bar
+  - type: kv
+    path: passwords/v1/baz
+    data:
+      data:
+        secret: baz

@@ -268,8 +268,9 @@ startup_secrets_test () {
   #
   ## Case 1.
   echo -e "\nCase 1: Check startupSecrets in the config have been added."
-  test "$(vault kv get -field=SECRET passwords/foo)" == "foo"; test_case_passed
-  test "$(vault kv get -field=secret passwords/bar)" == "bar"; test_case_passed
+  test "$(vault kv get -field=SECRET passwords/v2/foo)" == "foo"; test_case_passed
+  test "$(vault kv get -field=secret passwords/v2/bar)" == "bar"; test_case_passed
+  test "$(vault kv get -field=secret passwords/v1/baz)" == "baz"; test_case_passed
 
   #
   ## Success.
