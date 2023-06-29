@@ -7,6 +7,9 @@ updates:
       - "area/dependencies"
     schedule:
       interval: "daily"
+    ignore:
+      - dependency-name: "github.com/spf13/viper"
+      - dependency-name: "gocloud.dev"
 
   - package-ecosystem: "docker"
     directory: "/"
