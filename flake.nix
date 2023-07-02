@@ -16,6 +16,29 @@
       systems = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
 
       perSystem = { config, self', inputs', pkgs, system, ... }: rec {
+
+        devShells = {
+          release = pkgs.mkShell {
+            buildInputs = with pkgs; [
+              git
+              go_1_20
+
+              goreleaser
+
+              pkg-config
+
+              opensc
+              softhsm
+
+              pkgsCross.aarch64-darwin.buildPackages.clang
+              # pkgsCross.aarch64-darwin.buildPackages.stdenv.cc.bintools
+              # pkgsCross.aarch64-darwin.buildPackages.bintools
+
+              # darwin.apple_sdk.frameworks.CoreFoundation
+              # darwin.apple_sdk.frameworks.Security
+            ];
+          };
+        };
         devenv.shells = {
           default = {
             languages = {
@@ -35,13 +58,18 @@
             packages = with pkgs; [
               gnumake
 
-              # pkgsCross.gnu64.gcc
-              # pkgsCross.aarch64-multiplatform.gcc
-              (import inputs.nixpkgs {
-                inherit system;
+              pkg-config
+              pkgsCross.gnu64.buildPackages.gcc
+              pkgsCross.aarch64-multiplatform.buildPackages.gcc
+              # pkgsCross.x86_64-darwin.buildPackages.gcc
+              # pkgsCross.aarch64-darwin.buildPackages.gcc
 
-                crossSystem = pkgs.lib.systems.examples.gnu64;
-              }).gcc
+              pkgsCross.aarch64-darwin.buildPackages.clang
+              pkgsCross.aarch64-darwin.buildPackages.stdenv.cc.bintools
+              pkgsCross.aarch64-darwin.buildPackages.bintools
+
+              darwin.apple_sdk.frameworks.CoreFoundation
+              darwin.apple_sdk.frameworks.Security
 
               golangci-lint
               goreleaser
@@ -76,6 +104,9 @@
 
             enterShell = ''
               versions
+
+              export CGO_CFLAGS_for_darwin_arm64="$CGO_CFLAGS $(go env CGO_CFLAGS) $(cat ${pkgs.pkgsCross.aarch64-darwin.buildPackages.stdenv.cc}/nix-support/{cc,libc}-cflags | awk 1 ORS=' ')"
+              export CGO_LDFLAGS_for_darwin_arm64="$CGO_LDFLAGS $(go env CGO_LDFLAGS) $(cat ${pkgs.pkgsCross.aarch64-darwin.buildPackages.stdenv.cc}/nix-support/{cc,libc}-ldflags | awk 1 ORS=' ') -F${pkgs.darwin.apple_sdk.frameworks.CoreFoundation}/Library/Frameworks -F${pkgs.darwin.apple_sdk.frameworks.Security}/Library/Frameworks"
             '';
 
             # https://github.com/cachix/devenv/issues/528#issuecomment-1556108767

@@ -7,22 +7,41 @@ builds:
   # Building of Bank-Vaults is a bit hacky since the pkcs11 package can't be built with simple Go Crosscompiling
   # so we need to use xgo, but that is not directly supported in GoReleaser, so we do the actual compilation with
   # xgo in post hooks for all targets.
-  - main: ./cmd/template
+  - main: ./cmd/bank-vaults
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
+      # complex, templated envs (v1.14+):
+      - >-
+        {{- if eq .Os "darwin" }}
+          {{- if eq .Arch "amd64"}}CC=o64-clang{{- end }}
+          {{- if eq .Arch "arm64"}}CC=aarch64-apple-darwin-cc{{- end }}
+        {{- end }}
+        {{- if eq .Os "linux" }}
+          {{- if eq .Arch "amd64"}}CC=x86_64-unknown-linux-gnu-gcc{{- end }}
+          {{- if eq .Arch "arm64"}}CC=aarch64-unknown-linux-gnu-gcc{{- end }}
+        {{- end }}
+      - >-
+        {{- if eq .Os "darwin" }}
+          {{- if eq .Arch "amd64"}}CXX=o64-clang{{- end }}
+          {{- if eq .Arch "arm64"}}CXX=aarch64-apple-darwin-c++{{- end }}
+        {{- end }}
+        {{- if eq .Os "linux" }}
+          {{- if eq .Arch "amd64"}}CXX=x86_64-unknown-linux-gnu-g++{{- end }}
+          {{- if eq .Arch "arm64"}}CXX=aarch64-unknown-linux-gnu-g++{{- end }}
+        {{- end }}
     flags:
       - -trimpath
     ldflags: "-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}"
     goos:
-      - linux
+      # - linux
       - darwin
     goarch:
-      - amd64
+      # - amd64
       - arm64
-    hooks:
-      post:
-        - xgo -targets {{ .Os }}/{{ .Arch }} -dest build/dist -ldflags '-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}' -pkg cmd/bank-vaults .
-        - sudo bash -c "mkdir -p build/dist/bank-vaults_{{ .Os }}_{{ .Arch }}; mv build/dist/github.com/banzaicloud/bank-vaults-{{ .Os }}-{{ .Arch }} build/dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
+    # hooks:
+    #   post:
+    #     - xgo -targets {{ .Os }}/{{ .Arch }} -dest build/dist -ldflags '-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}' -pkg cmd/bank-vaults .
+    #     - sudo bash -c "mkdir -p build/dist/bank-vaults_{{ .Os }}_{{ .Arch }}; mv build/dist/github.com/banzaicloud/bank-vaults-{{ .Os }}-{{ .Arch }} build/dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
 
 archives:
   - name_template: "{{ .Binary }}-{{ .Os }}-{{ .Arch }}"
