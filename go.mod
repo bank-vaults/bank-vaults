@@ -30,7 +30,7 @@ require (
 	github.com/spf13/viper v1.10.1
 	github.com/stretchr/testify v1.8.4
 	gocloud.dev v0.19.1-0.20200414210820-bb59d59f26d5
-	golang.org/x/oauth2 v0.9.0
+	golang.org/x/oauth2 v0.10.0
 	google.golang.org/api v0.130.0
 	google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc
 	k8s.io/api v0.27.3
@@ -41,7 +41,7 @@ require (
 
 require (
 	cloud.google.com/go v0.110.2 // indirect
-	cloud.google.com/go/compute v1.20.0 // indirect
+	cloud.google.com/go/compute v1.20.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v1.1.0 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.1 // indirect
