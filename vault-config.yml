@@ -43,9 +43,9 @@ auth:
     options:
       listing_visibility: "unauth"
     config:
-      organization: banzaicloud
+      organization: bank-vaults
     map:
-      # Map the banzaicloud dev team on GitHub to the dev policy in Vault
+      # Map the bank-vaults dev team on GitHub to the dev policy in Vault
       teams:
         dev: dev
       # Map myself to the root policy in Vault
@@ -117,7 +117,7 @@ auth:
       userdn: "ou=users,dc=example,dc=org"
       groupdn: "ou=groups,dc=example,dc=org"
     groups:
-      # Map the banzaicloud dev team on GitHub to the dev policy in Vault
+      # Map the bank-vaults dev team on GitHub to the dev policy in Vault
       developers:
         policies: allow_secrets
     # Map myself to the allow_secrets policy in Vault
@@ -135,7 +135,7 @@ auth:
     options:
       listing_visibility: "unauth"
     config:
-      organization: banzaicloud
+      organization: bank-vaults
       base_url: okta.com
 
   # The cert auth method allows authentication using SSL/TLS client certificates

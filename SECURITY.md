@@ -14,7 +14,7 @@ Thank you for improving the security of `bank-vaults`. We appreciate your effort
 responsible disclosure and will make every effort to acknowledge your
 contributions.
 
-If you believe you have found a security issue in bank-vaults, please contact us at security@banzaicloud.com.
+If you believe you have found a security issue in bank-vaults, please contact us at team@bank-vaults.dev.
 
 The lead maintainer will acknowledge your email within 48 hours, and will send a
 more detailed response within 48 hours indicating the next steps in handling
