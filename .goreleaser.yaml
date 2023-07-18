@@ -22,7 +22,7 @@ builds:
     hooks:
       post:
         - xgo -targets {{ .Os }}/{{ .Arch }} -dest build/dist -ldflags '-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}' -pkg cmd/bank-vaults .
-        - sudo bash -c "mkdir -p build/dist/bank-vaults_{{ .Os }}_{{ .Arch }}; mv build/dist/github.com/banzaicloud/bank-vaults-{{ .Os }}-{{ .Arch }} build/dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
+        - sudo bash -c "mkdir -p build/dist/bank-vaults_{{ .Os }}_{{ .Arch }}; mv build/dist/github.com/bank-vaults/bank-vaults-{{ .Os }}-{{ .Arch }} build/dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
 
 archives:
   - name_template: "{{ .Binary }}-{{ .Os }}-{{ .Arch }}"

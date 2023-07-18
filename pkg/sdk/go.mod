@@ -1,4 +1,4 @@
-module github.com/banzaicloud/bank-vaults/pkg/sdk
+module github.com/bank-vaults/bank-vaults/pkg/sdk
 
 go 1.18
 

@@ -24,7 +24,7 @@ import (
 	"github.com/miekg/pkcs11/p11"
 	"github.com/sirupsen/logrus"
 
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
+	"github.com/bank-vaults/bank-vaults/pkg/kv"
 )
 
 const noObjectsFoundErrMsg = "no objects found"

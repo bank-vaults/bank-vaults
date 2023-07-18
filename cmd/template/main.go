@@ -22,7 +22,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/banzaicloud/bank-vaults/internal/configuration"
+	"github.com/bank-vaults/bank-vaults/internal/configuration"
 )
 
 type arrayFlags []string

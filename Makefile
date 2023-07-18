@@ -2,7 +2,7 @@
 
 export PATH := $(abspath bin/):${PATH}
 
-CONTAINER_IMAGE_REF = ghcr.io/banzaicloud/bank-vaults:dev
+CONTAINER_IMAGE_REF = ghcr.io/bank-vaults/bank-vaults:dev
 
 # Dependency versions
 GOLANGCI_VERSION = 1.53.3
@@ -78,9 +78,9 @@ ifeq (${HOST_NETWORK}, 1)
 endif
 
 # Project variables
-PACKAGE = github.com/banzaicloud/bank-vaults
+PACKAGE = github.com/bank-vaults/bank-vaults
 BINARY_NAME ?= bank-vaults
-DOCKER_REGISTRY ?= ghcr.io/banzaicloud
+DOCKER_REGISTRY ?= ghcr.io/bank-vaults
 DOCKER_IMAGE = ${DOCKER_REGISTRY}/bank-vaults
 WEBHOOK_DOCKER_IMAGE = ${DOCKER_REGISTRY}/vault-secrets-webhook
 
@@ -173,7 +173,7 @@ debug: build ## Builds binary package
 
 .PHONY: debug-docker
 debug-docker: debug ## Builds binary package
-	docker build -t ghcr.io/banzaicloud/${BINARY_NAME}:debug -f Dockerfile.dev .
+	docker build -t ghcr.io/bank-vaults/${BINARY_NAME}:debug -f Dockerfile.dev .
 
 .PHONY: lint-sdk
 lint-sdk: bin/golangci-lint ## Run linter

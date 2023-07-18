@@ -20,7 +20,7 @@ import (
 
 	"emperror.dev/errors"
 
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
+	"github.com/bank-vaults/bank-vaults/pkg/kv"
 )
 
 type dev struct {

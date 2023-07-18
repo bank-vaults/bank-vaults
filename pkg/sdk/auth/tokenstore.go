@@ -17,7 +17,7 @@ package auth
 import (
 	"github.com/bank-vaults/vault-sdk/auth"
 
-	"github.com/banzaicloud/bank-vaults/pkg/sdk/vault"
+	"github.com/bank-vaults/bank-vaults/pkg/sdk/vault"
 )
 
 // Token represents an access token.

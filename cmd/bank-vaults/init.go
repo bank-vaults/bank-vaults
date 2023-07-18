@@ -19,7 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
+	internalVault "github.com/bank-vaults/bank-vaults/internal/vault"
 )
 
 const (
