@@ -1,4 +1,4 @@
-module github.com/banzaicloud/bank-vaults
+module github.com/bank-vaults/bank-vaults
 
 go 1.18
 

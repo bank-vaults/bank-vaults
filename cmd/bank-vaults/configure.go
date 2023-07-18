@@ -28,8 +28,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/banzaicloud/bank-vaults/internal/configuration"
-	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
+	"github.com/bank-vaults/bank-vaults/internal/configuration"
+	internalVault "github.com/bank-vaults/bank-vaults/internal/vault"
 )
 
 const (

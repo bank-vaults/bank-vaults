@@ -25,8 +25,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	awss3 "github.com/aws/aws-sdk-go/service/s3"
 
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
-	"github.com/banzaicloud/bank-vaults/pkg/kv/awskms"
+	"github.com/bank-vaults/bank-vaults/pkg/kv"
+	"github.com/bank-vaults/bank-vaults/pkg/kv/awskms"
 )
 
 type s3Storage struct {

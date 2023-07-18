@@ -21,7 +21,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 
-	internalVault "github.com/banzaicloud/bank-vaults/internal/vault"
+	internalVault "github.com/bank-vaults/bank-vaults/internal/vault"
 )
 
 const prometheusNS = "vault"

@@ -22,7 +22,7 @@ import (
 	"emperror.dev/errors"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
+	"github.com/bank-vaults/bank-vaults/pkg/kv"
 )
 
 type ossStorage struct {

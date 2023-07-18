@@ -22,7 +22,7 @@ import (
 	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/spf13/cast"
 
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
+	"github.com/bank-vaults/bank-vaults/pkg/kv"
 )
 
 type vaultStorage struct {

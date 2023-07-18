@@ -24,7 +24,7 @@ import (
 	cloudkms "google.golang.org/api/cloudkms/v1"
 	"google.golang.org/api/option"
 
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
+	"github.com/bank-vaults/bank-vaults/pkg/kv"
 )
 
 // googleKms is an implementation of the kv.Service interface, that encrypts

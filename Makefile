@@ -2,7 +2,7 @@
 
 export PATH := $(abspath bin/):${PATH}
 
-CONTAINER_IMAGE_REF = ghcr.io/banzaicloud/bank-vaults:dev
+CONTAINER_IMAGE_REF = ghcr.io/bank-vaults/bank-vaults:dev
 
 # Dependency versions
 GOLANGCI_VERSION = 1.53.3
@@ -78,9 +78,9 @@ ifeq (${HOST_NETWORK}, 1)
 endif
 
 # Project variables
-PACKAGE = github.com/banzaicloud/bank-vaults
+PACKAGE = github.com/bank-vaults/bank-vaults
 BINARY_NAME ?= bank-vaults
-DOCKER_REGISTRY ?= ghcr.io/banzaicloud
+DOCKER_REGISTRY ?= ghcr.io/bank-vaults
 DOCKER_IMAGE = ${DOCKER_REGISTRY}/bank-vaults
 WEBHOOK_DOCKER_IMAGE = ${DOCKER_REGISTRY}/vault-secrets-webhook
 
@@ -173,18 +173,10 @@ debug: build ## Builds binary package
 
 .PHONY: debug-docker
 debug-docker: debug ## Builds binary package
-	docker build -t ghcr.io/banzaicloud/${BINARY_NAME}:debug -f Dockerfile.dev .
-
-.PHONY: lint-sdk
-lint-sdk: bin/golangci-lint ## Run linter
-	cd pkg/sdk && ../../bin/golangci-lint run --disable varnamelen,ireturn,nosnakecase,exhaustruct,nonamedreturns,nilnil,contextcheck,maintidx,dupword,gosec,gomoddirectives,gci,gofumpt,gofmt,goimports,revive,staticcheck
-
-.PHONY: fix-sdk
-fix-sdk: bin/golangci-lint ## Fix lint violations
-	cd pkg/sdk && ../../bin/golangci-lint run --fix --disable varnamelen,ireturn,nosnakecase,exhaustruct,nonamedreturns,nilnil,contextcheck,maintidx,dupword,gosec,gomoddirectives,gci,gofumpt,gofmt,goimports,revive,staticcheck
+	docker build -t ghcr.io/bank-vaults/${BINARY_NAME}:debug -f Dockerfile.dev .
 
 .PHONY: check
-check: test-integration test-sdk-integration ## Run tests and linters
+check: test-integration ## Run tests and linters
 
 bin/gotestsum: bin/gotestsum-${GOTESTSUM_VERSION}
 	@ln -sf gotestsum-${GOTESTSUM_VERSION} bin/gotestsum
@@ -202,13 +194,6 @@ test: bin/gotestsum ## Run tests
 	@mkdir -p ${BUILD_DIR}/test_results/${TEST_REPORT}
 	bin/gotestsum --no-summary=skipped --junitfile ${BUILD_DIR}/test_results/${TEST_REPORT}/${TEST_REPORT_NAME} --format ${TEST_FORMAT} -- $(filter-out -v,${GOARGS}) $(if ${TEST_PKGS},${TEST_PKGS},./...)
 
-test-sdk: TEST_REPORT ?= sdk
-test-sdk: TEST_FORMAT ?= short
-test-sdk: SHELL = /bin/bash
-test-sdk: bin/gotestsum ## Run SDK tests
-	@mkdir -p ${BUILD_DIR}/test_results/${TEST_REPORT}
-	cd pkg/sdk && ../../bin/gotestsum --no-summary=skipped --junitfile ../../${BUILD_DIR}/test_results/${TEST_REPORT}/${TEST_REPORT_NAME} --format ${TEST_FORMAT} -- $(filter-out -v,${GOARGS}) $(if ${TEST_PKGS},${TEST_PKGS},./...)
-
 .PHONY: test-all
 test-all: ## Run all tests
 	@${MAKE} GOARGS="${GOARGS} -run .\*" TEST_REPORT=all test
@@ -216,10 +201,6 @@ test-all: ## Run all tests
 .PHONY: test-integration
 test-integration: ## Run integration tests
 	@${MAKE} GOARGS="${GOARGS} -tags=integration" TEST_REPORT=integration test
-
-.PHONY: test-sdk-integration
-test-sdk-integration: ## Run integration tests in sdk package
-	@${MAKE} GOARGS="${GOARGS} -tags=integration" TEST_REPORT=integration test-sdk
 
 bin/jq: bin/jq-${JQ_VERSION}
 	@ln -sf jq-${JQ_VERSION} bin/jq

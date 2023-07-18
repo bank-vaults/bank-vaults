@@ -1,11 +1,11 @@
-## Bank-Vault Core Maintainers
+## Bank-Vaults Core Maintainers
 
 | Maintainer | GitHub ID | Affiliation |
 | ---------- | --------- | ----------- |
 | Jürgen Weber | [jurgenweber](https://github.com/jurgenweber) | [hipages](https://hipagesgroup.com.au) |
 | Francesco Ciocchetti | [primeroz](https://github.com/primeroz) | Individual |
 | Cosmin Cojocar | [ccojocar](https://github.com/ccojocar) | [Jenkins X](https://jenkins-x.io) |
-| Nandor Kracser  | [bonifaido](https://github.com/bonifaido) | [Banzai Cloud](https://banzaicloud.com) |
-| Peter Balogh | [pbalogh-sa](https://github.com/pbalogh-sa) | [Banzai Cloud](https://banzaicloud.com) |
-| Balint Molnar | [baluchicken](https://github.com/baluchicken) | [Banzai Cloud](https://banzaicloud.com) |
-| Janos Matyas | [matyix](https://github.com/matyix) | [Banzai Cloud](https://banzaicloud.com) |
+| Mark Sagi-Kazar  | [sagikazarmark](https://github.com/sagikazarmark) | [Outshift](https://outshift.com) (by Cisco) |
+| Nandor Kracser  | [bonifaido](https://github.com/bonifaido) | [Outshift](https://outshift.com) (by Cisco) |
+| Peter Balogh | [pbalogh-sa](https://github.com/pbalogh-sa) | [Outshift](https://outshift.com) (by Cisco) |
+| Janos Matyas | [matyix](https://github.com/matyix) | [Outshift](https://outshift.com) (by Cisco) |

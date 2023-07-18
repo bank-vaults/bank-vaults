@@ -6,9 +6,9 @@ linters-settings:
     sections:
       - standard
       - default
-      - prefix(github.com/banzaicloud/bank-vaults)
+      - prefix(github.com/bank-vaults/bank-vaults)
   goimports:
-    local-prefixes: github.com/banzaicloud/bank-vaults
+    local-prefixes: github.com/bank-vaults/bank-vaults
 
 linters:
   enable-all: true

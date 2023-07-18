@@ -20,7 +20,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/banzaicloud/bank-vaults/pkg/kv"
+	"github.com/bank-vaults/bank-vaults/pkg/kv"
 	"github.com/stretchr/testify/assert"
 )
 
