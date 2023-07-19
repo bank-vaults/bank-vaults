@@ -20,7 +20,7 @@ jobs:
 
     services:
       vault:
-        image: hashicorp/vault:1.13.3
+        image: hashicorp/vault:1.14.0
         options: >-
           --name=vault
           --cap-add=IPC_LOCK
