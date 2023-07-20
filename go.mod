@@ -3,7 +3,7 @@ module github.com/bank-vaults/bank-vaults
 go 1.18
 
 require (
-	cloud.google.com/go/kms v1.13.0
+	cloud.google.com/go/kms v1.14.0
 	cloud.google.com/go/storage v1.31.0
 	emperror.dev/errors v0.8.1
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
