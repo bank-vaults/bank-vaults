@@ -17,12 +17,15 @@ package azurekv
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 
 	"emperror.dev/errors"
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 
 	"github.com/bank-vaults/bank-vaults/pkg/kv"
 )
@@ -30,8 +33,7 @@ import (
 // azureKeyVault is an implementation of the kv.Service interface, that encrypts
 // and decrypts and stores data using Azure Key Vault.
 type azureKeyVault struct {
-	client       *keyvault.BaseClient
-	vaultBaseURL string
+	client *azsecrets.Client
 }
 
 var _ kv.Service = &azureKeyVault{}
@@ -42,19 +44,39 @@ func New(name string) (kv.Service, error) {
 		return nil, errors.Errorf("invalid Key Vault specified: '%s'", name)
 	}
 
-	keyClient := keyvault.New()
-	keyClient.Authorizer = GetKeyvaultAuthorizer()
+	// File based auth is not supported in the new SDK, hence this workaround
+	if _, ok := os.LookupEnv("AZURE_AUTH_LOCATION"); ok {
+		settings, err := auth.GetSettingsFromFile()
+		if err != nil {
+			log.Fatal(err)
+		}
+		os.Setenv(auth.TenantID, settings.Values[auth.TenantID])
+		os.Setenv(auth.ClientID, settings.Values[auth.ClientID])
+		os.Setenv(auth.ClientSecret, settings.Values[auth.ClientSecret])
+	}
+
+	// Create a credential using the NewDefaultAzureCredential type.
+	cred, err := azidentity.NewDefaultAzureCredential(nil)
+	if err != nil {
+		log.Fatalf("failed to obtain a credential: %v", err)
+	}
+
+	// Establish a connection to the Key Vault client
+	vaultBaseURL := fmt.Sprintf("https://%s.%s", name, "vault.azure.net")
+	client, err := azsecrets.NewClient(vaultBaseURL, cred, nil)
+	if err != nil {
+		log.Fatalf("failed to create Key Vault client: %v", err)
+	}
 
 	return &azureKeyVault{
-		client:       &keyClient,
-		vaultBaseURL: fmt.Sprintf("https://%s.%s", name, azure.PublicCloud.KeyVaultDNSSuffix),
+		client: client,
 	}, nil
 }
 
 func (a *azureKeyVault) Get(key string) ([]byte, error) {
-	bundle, err := a.client.GetSecret(context.Background(), a.vaultBaseURL, key, "")
+	bundle, err := a.client.GetSecret(context.Background(), key, "", nil)
 	if err != nil {
-		var aerr autorest.DetailedError
+		var aerr *azcore.ResponseError
 		if errors.As(err, &aerr) && aerr.StatusCode == http.StatusNotFound {
 			return nil, kv.NewNotFoundError("error getting secret for key '%s': %s", key, err.Error())
 		}
@@ -67,11 +89,7 @@ func (a *azureKeyVault) Get(key string) ([]byte, error) {
 
 func (a *azureKeyVault) Set(key string, val []byte) error {
 	value := string(val)
-	parameters := keyvault.SecretSetParameters{
-		Value: &value,
-	}
-
-	_, err := a.client.SetSecret(context.Background(), a.vaultBaseURL, key, parameters)
-
+	parameters := azsecrets.SetSecretParameters{Value: &value}
+	_, err := a.client.SetSecret(context.Background(), key, parameters, nil)
 	return errors.Wrapf(err, "failed to set key: %s", key)
 }
