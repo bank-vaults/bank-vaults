@@ -3,7 +3,7 @@ module github.com/bank-vaults/bank-vaults
 go 1.18
 
 require (
-	cloud.google.com/go/kms v1.14.0
+	cloud.google.com/go/kms v1.15.0
 	cloud.google.com/go/storage v1.31.0
 	emperror.dev/errors v0.8.1
 	github.com/Masterminds/sprig/v3 v3.2.3
