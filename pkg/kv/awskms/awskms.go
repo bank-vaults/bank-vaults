@@ -85,12 +85,10 @@ func (a *awsKMS) Get(key string) ([]byte, error) {
 
 func (a *awsKMS) encrypt(plainText []byte) ([]byte, error) {
 	out, err := a.kmsService.Encrypt(&kms.EncryptInput{
-		KeyId:     aws.String(a.kmsID),
-		Plaintext: plainText,
-		EncryptionContext: map[string]*string{
-			"Tool": aws.String("bank-vaults"),
-		},
-		GrantTokens: []*string{},
+		KeyId:             aws.String(a.kmsID),
+		Plaintext:         plainText,
+		EncryptionContext: a.encryptionContext,
+		GrantTokens:       []*string{},
 	})
 	if err != nil {
 		return nil, errors.WrapIf(err, "failed to encrypt with KMS client")
