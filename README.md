@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://bank-vaults.dev">
-    <img src="resources/logo.png" width="150" alt="Bank-Vaults logo" />
+    <img src="resources/logo.png" width="300" alt="Bank-Vaults logo" />
   </a>
 
   <h1 align="center">
