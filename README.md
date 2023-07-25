@@ -1,4 +1,12 @@
-<p align="center"><img src="docs/images/logo/bank-vaults-logo-vertical.svg" width="270"></p>
+<p align="center">
+  <a href="https://bank-vaults.dev">
+    <img src="resources/logo.png" width="300" alt="Bank-Vaults logo" />
+  </a>
+
+  <h1 align="center">
+    Bank-Vaults
+  </h1>
+</p>
 
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bank-vaults/bank-vaults/ci.yaml?branch=main&style=flat-square)](https://github.com/bank-vaults/bank-vaults/actions/workflows/ci.yaml?query=workflow%3ACI)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/bank-vaults/bank-vaults/badge?style=flat-square)](https://api.securityscorecards.dev/projects/github.com/bank-vaults/bank-vaults)
