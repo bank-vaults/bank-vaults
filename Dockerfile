@@ -29,21 +29,29 @@ RUN xx-verify /usr/local/bin/bank-vaults
 RUN go build -o /usr/local/bin/template ./cmd/template/
 RUN xx-verify /usr/local/bin/template
 
-
-FROM alpine:3.18.2@sha256:82d1e9d7ed48a7523bdebc18cf6290bdb97b82302a8a9c27d4fe885949ea94d1
+FROM alpine:3.18.2@sha256:82d1e9d7ed48a7523bdebc18cf6290bdb97b82302a8a9c27d4fe885949ea94d1 AS common
 
 RUN apk add --update --no-cache ca-certificates tzdata
 
-# RUN apk add --no-cache ccid opensc pcsc-lite-libs softhsm
-
-# Initializing SoftHSM to be able to create a working example (only for dev),
-# sharing the HSM device is emulated with a pre-created keypair in the image.
-# RUN softhsm2-util --init-token --free --label bank-vaults --so-pin banzai --pin banzai
-# RUN pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin banzai --token-label bank-vaults --label bank-vaults
+# Install tools for accessing smart cards
+RUN apk add --no-cache ccid opensc pcsc-lite-libs
 
 COPY --from=builder /usr/local/bin/bank-vaults /usr/local/bin/bank-vaults
 COPY --from=builder /usr/local/bin/template /usr/local/bin/template
 
+ENTRYPOINT ["bank-vaults"]
+
+FROM common AS softhsm
+
+RUN apk add --no-cache softhsm
+
+# Initializing SoftHSM to be able to create a working example (only for dev),
+# sharing the HSM device is emulated with a pre-created keypair in the image.
+RUN softhsm2-util --init-token --free --label bank-vaults --so-pin bank-vaults --pin bank-vaults
+RUN pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin bank-vaults --token-label bank-vaults --label bank-vaults
+
 USER 65534
 
-ENTRYPOINT ["bank-vaults"]
+FROM common
+
+USER 65534
