@@ -45,12 +45,12 @@ FROM common AS softhsm
 
 RUN apk add --no-cache softhsm
 
+USER 65534
+
 # Initializing SoftHSM to be able to create a working example (only for dev),
 # sharing the HSM device is emulated with a pre-created keypair in the image.
 RUN softhsm2-util --init-token --free --label bank-vaults --so-pin bank-vaults --pin bank-vaults
 RUN pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin bank-vaults --token-label bank-vaults --label bank-vaults
-
-USER 65534
 
 FROM common
 
