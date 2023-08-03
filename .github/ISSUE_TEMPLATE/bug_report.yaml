@@ -1,0 +1,96 @@
+name: 🐛 Bug report
+description: Report a bug to help us improve Bank-Vaults
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for submitting a bug report!
+
+        Please fill out the template below to make it easier to debug your problem.
+
+        If you are not sure if it is a bug or not, you can contact us via the available [support channels](https://github.com/bank-vaults/bank-vaults/issues/new/choose).
+  - type: checkboxes
+    attributes:
+      label: Preflight Checklist
+      description: Please ensure you've completed all of the following.
+      options:
+        - label: I have searched the [issue tracker](https://www.github.com/bank-vaults/bank-vaults/issues) for an issue that matches the one I want to file, without success.
+          required: true
+        - label: I am not looking for support or already pursued the available [support channels](https://github.com/bank-vaults/bank-vaults/issues/new/choose) without success.
+          required: true
+  - type: input
+    attributes:
+      label: Operator Version
+      description: What version of the Operator are you using?
+      placeholder: 1.20.0
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Installation Type
+      description: How did you install the Operator?
+      options:
+        - Official Helm chart
+        - Custom Helm chart
+        - Other (specify below)
+  - type: input
+    attributes:
+      label: Bank-Vaults Version
+      description: What version of the Bank-Vaults CLI are you using?
+      placeholder: leave empty if you haven't specified a custom version
+  - type: input
+    attributes:
+      label: Kubernetes Version
+      description: What version of Kubernetes are you using?
+      placeholder: 1.27.0
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Kubernetes Distribution/Provisioner
+      description: Which Kubernetes distribution/privisioner are you using?
+      placeholder: e.g. GKE, EKS, AKS etc
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Actual Behavior
+      description: A clear description of what actually happens.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps To Reproduce
+      description: Steps to reproduce the behavior if it is not self-explanatory.
+      placeholder: |
+        1. In this environment...
+        2. With this config...
+        3. Run '...'
+        4. See error...
+  - type: textarea
+    attributes:
+      label: Configuration
+      description: Contents of Vault CustomResource.
+      render: yaml
+      placeholder: |
+        apiVersion: "vault.banzaicloud.com/v1alpha1"
+        kind: "Vault"
+        metadata:
+          name: "vault"
+        # ...
+  - type: textarea
+    attributes:
+      label: Logs
+      description: Operator application logs (if relevant).
+      render: shell
+  - type: textarea
+    attributes:
+      label: Additional Information
+      description: Links? References? Anything that will give us more context about the issue that you are encountering!
