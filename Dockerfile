@@ -38,6 +38,7 @@ RUN apk add --no-cache ccid opensc pcsc-lite-libs
 
 COPY --from=builder /usr/local/bin/bank-vaults /usr/local/bin/bank-vaults
 COPY --from=builder /usr/local/bin/template /usr/local/bin/template
+COPY --from=builder /usr/local/src/bank-vaults/scripts/pcscd-entrypoint.sh /usr/local/bin/pcscd-entrypoint.sh
 
 ENTRYPOINT ["bank-vaults"]
 
