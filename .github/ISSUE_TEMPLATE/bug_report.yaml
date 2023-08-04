@@ -49,17 +49,6 @@ body:
         4. See error...
   - type: textarea
     attributes:
-      label: Configuration
-      description: Contents of Vault CustomResource.
-      render: yaml
-      placeholder: |
-        apiVersion: "vault.banzaicloud.com/v1alpha1"
-        kind: "Vault"
-        metadata:
-          name: "vault"
-        # ...
-  - type: textarea
-    attributes:
       label: Logs
       description: Bank-Vaults CLI logs (if relevant).
       render: shell
