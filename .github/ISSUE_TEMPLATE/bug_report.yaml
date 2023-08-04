@@ -1,6 +1,6 @@
 name: 🐛 Bug report
 description: Report a bug to help us improve Bank-Vaults
-labels: [bug]
+labels: [kind/bug]
 body:
   - type: markdown
     attributes:
@@ -19,40 +19,13 @@ body:
           required: true
         - label: I am not looking for support or already pursued the available [support channels](https://github.com/bank-vaults/bank-vaults/issues/new/choose) without success.
           required: true
+        - label: I agree to follow the [Code of Conduct](https://bank-vaults.dev/docs/code-of-conduct/).
+          required: true
   - type: input
     attributes:
-      label: Operator Version
-      description: What version of the Operator are you using?
-      placeholder: 1.20.0
-    validations:
-      required: true
-  - type: dropdown
-    attributes:
-      label: Installation Type
-      description: How did you install the Operator?
-      options:
-        - Official Helm chart
-        - Custom Helm chart
-        - Other (specify below)
-  - type: input
-    attributes:
-      label: Bank-Vaults Version
+      label: Version
       description: What version of the Bank-Vaults CLI are you using?
-      placeholder: leave empty if you haven't specified a custom version
-  - type: input
-    attributes:
-      label: Kubernetes Version
-      description: What version of Kubernetes are you using?
-      placeholder: 1.27.0
-    validations:
-      required: true
-  - type: input
-    attributes:
-      label: Kubernetes Distribution/Provisioner
-      description: Which Kubernetes distribution/privisioner are you using?
-      placeholder: e.g. GKE, EKS, AKS etc
-    validations:
-      required: true
+      placeholder: 1.20.0
   - type: textarea
     attributes:
       label: Expected Behavior
@@ -88,7 +61,7 @@ body:
   - type: textarea
     attributes:
       label: Logs
-      description: Operator application logs (if relevant).
+      description: Bank-Vaults CLI logs (if relevant).
       render: shell
   - type: textarea
     attributes:
