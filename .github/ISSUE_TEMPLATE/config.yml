@@ -1,0 +1,17 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📖 Documentation enhancement
+    url: https://github.com/bank-vaults/bank-vaults.dev/issues
+    about: Suggest an improvement to the documentation
+
+  - name: ❓ Ask a question
+    url: https://github.com/orgs/bank-vaults/discussions/new?category=q-a
+    about: Ask and discuss questions with other Bank-Vaults community members
+
+  - name: 📚 Documentation
+    url: https://bank-vaults.dev/docs/
+    about: Check the documentation for help
+
+  - name: 💬 Slack channel
+    url: https://emergingtechcommunity.slack.com/messages/bank-vaults
+    about: Please ask and answer questions here
