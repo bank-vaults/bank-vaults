@@ -1,5 +1,6 @@
 name: 🎉 Feature request
 description: Suggest an idea for Bank-Vaults
+labels: [kind/enhancement]
 body:
   - type: markdown
     attributes:
