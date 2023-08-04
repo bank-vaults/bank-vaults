@@ -95,8 +95,8 @@ github.com/Masterminds/semver/v3 v3.2.0/go.mod h1:qvl/7zhW3nngYb5+80sSMF+FG2BjYr
 github.com/Masterminds/sprig/v3 v3.2.3 h1:eL2fZNezLomi0uOLqjQoN6BfsDD+fyLtgbJMAj9n6YA=
 github.com/Masterminds/sprig/v3 v3.2.3/go.mod h1:rXcFaZ2zZbLRJv/xSysmlgIM1u11eBaRMhvYXJNkGuM=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
-github.com/aliyun/alibaba-cloud-sdk-go v1.62.504 h1:pckQ1tq0Z9KX6hnLvFdodt2a2LtJ07DLD6BlMG7hNvU=
-github.com/aliyun/alibaba-cloud-sdk-go v1.62.504/go.mod h1:Api2AkmMgGaSUAhmk76oaFObkoeCPc/bKAqcyplPODs=
+github.com/aliyun/alibaba-cloud-sdk-go v1.62.506 h1:XiNVYzlw7EEEZyGIMs3ZMH5QvM1cdE1RFGKM4ZTBaks=
+github.com/aliyun/alibaba-cloud-sdk-go v1.62.506/go.mod h1:Api2AkmMgGaSUAhmk76oaFObkoeCPc/bKAqcyplPODs=
 github.com/aliyun/aliyun-oss-go-sdk v2.2.8+incompatible h1:6JF1bjhT0WN2srEmijfOFtVWwV91KZ6dJY1/JbdtGrI=
 github.com/aliyun/aliyun-oss-go-sdk v2.2.8+incompatible/go.mod h1:T/Aws4fEfogEE9v+HPhhw+CntffsBHJ8nXQCwKr0/g8=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
