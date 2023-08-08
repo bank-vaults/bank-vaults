@@ -73,8 +73,8 @@ func getOrDefaultSecretData(m interface{}) (map[string]interface{}, error) {
 	return data, nil
 }
 
-func vaultKVVersion(secretPath string) string {
-	for _, v := range extConfig.Secrets {
+func vaultKVVersion(secretPath string, secretEngines []secretEngine) string {
+	for _, v := range secretEngines {
 		if strings.HasPrefix(secretPath, v.Path) && v.Type == "kv" {
 			return v.Options["version"]
 		}
@@ -82,7 +82,7 @@ func vaultKVVersion(secretPath string) string {
 	return ""
 }
 
-func readStartupSecret(startupSecret startupSecret) (string, map[string]interface{}, error) {
+func readStartupSecret(startupSecret startupSecret, secretEngines []secretEngine) (string, map[string]interface{}, error) {
 	if len(startupSecret.Data.Data) > 0 && len(startupSecret.Data.SecretKeyRef) > 0 {
 		return "", nil, errors.New("the startup secret data source should be either 'data' or 'secretKeyRef'." +
 			"They are mutually exclusive and cannot be used together")
@@ -91,7 +91,7 @@ func readStartupSecret(startupSecret startupSecret) (string, map[string]interfac
 	data := map[string]interface{}{
 		"data": startupSecret.Data.Data,
 	}
-	if vaultKVVersion(startupSecret.Path) == "1" {
+	if vaultKVVersion(startupSecret.Path, secretEngines) == "1" {
 		data = startupSecret.Data.Data
 	}
 
@@ -125,11 +125,11 @@ func generateCertPayload(data interface{}) (map[string]interface{}, error) {
 }
 
 func (v *vault) configureStartupSecrets() error {
-	managedStartupSecrets := extConfig.StartupSecrets
+	managedStartupSecrets := v.externalConfig.StartupSecrets
 	for _, startupSecret := range managedStartupSecrets {
 		switch startupSecret.Type {
 		case "kv":
-			path, data, err := readStartupSecret(startupSecret)
+			path, data, err := readStartupSecret(startupSecret, v.externalConfig.Secrets)
 			if err != nil {
 				return errors.Wrap(err, "unable to read 'kv' startup secret")
 			}
@@ -144,7 +144,7 @@ func (v *vault) configureStartupSecrets() error {
 			}
 
 		case "pki":
-			path, data, err := readStartupSecret(startupSecret)
+			path, data, err := readStartupSecret(startupSecret, v.externalConfig.Secrets)
 			if err != nil {
 				return errors.Wrap(err, "unable to read 'pki' startup secret")
 			}

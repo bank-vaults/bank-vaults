@@ -101,7 +101,7 @@ func (v *vault) getUnmanagedPolicies(managedPolicies []policy) map[string]bool {
 }
 
 func (v *vault) removeUnmanagedPolicies(managedPolicies []policy) error {
-	if !extConfig.PurgeUnmanagedConfig.Enabled || extConfig.PurgeUnmanagedConfig.Exclude.Policies {
+	if !v.externalConfig.PurgeUnmanagedConfig.Enabled || v.externalConfig.PurgeUnmanagedConfig.Exclude.Policies {
 		logrus.Debugf("purge config is disabled, no unmanaged policies will be removed")
 		return nil
 	}
@@ -121,7 +121,7 @@ func (v *vault) configurePolicies() error {
 	if err != nil {
 		return errors.Wrap(err, "error while getting list of auth engines")
 	}
-	managedPolicies, err := initPoliciesConfig(extConfig.Policies, auths)
+	managedPolicies, err := initPoliciesConfig(v.externalConfig.Policies, auths)
 	if err != nil {
 		return errors.Wrap(err, "error while initializing policies config")
 	}

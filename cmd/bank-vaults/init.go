@@ -37,7 +37,7 @@ storing the keys in the given backend.
 
 It will not unseal the Vault instance after initialising.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		store, err := kvStoreForConfig(c)
+		store, err := kvStoreForConfig(vCfg)
 		if err != nil {
 			logrus.Fatalf("error creating kv store: %s", err.Error())
 		}
@@ -47,7 +47,7 @@ It will not unseal the Vault instance after initialising.`,
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
 		}
 
-		v, err := internalVault.New(store, cl, vaultConfigForConfig(c))
+		v, err := internalVault.New(store, cl, vaultConfigForConfig(vCfg))
 		if err != nil {
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}

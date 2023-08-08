@@ -15,21 +15,21 @@
 package main
 
 import (
+	"encoding/json"
+	"github.com/ghodss/yaml"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/bank-vaults/bank-vaults/internal/configuration"
+	internalVault "github.com/bank-vaults/bank-vaults/internal/vault"
 	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/fsnotify/fsnotify"
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
-	"github.com/bank-vaults/bank-vaults/internal/configuration"
-	internalVault "github.com/bank-vaults/bank-vaults/internal/vault"
 )
 
 const (
@@ -47,13 +47,13 @@ var configureCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var unsealConfig unsealCfg
 
-		runOnce := c.GetBool(cfgOnce)
-		errorFatal := c.GetBool(cfgFatal)
-		unsealConfig.unsealPeriod = c.GetDuration(cfgUnsealPeriod)
-		vaultConfigFiles := c.GetStringSlice(cfgVaultConfigFile)
-		disableMetrics := c.GetBool(cfgDisableMetrics)
+		runOnce := vCfg.GetBool(cfgOnce)
+		errorFatal := vCfg.GetBool(cfgFatal)
+		unsealConfig.unsealPeriod = vCfg.GetDuration(cfgUnsealPeriod)
+		vaultConfigFiles := vCfg.GetStringSlice(cfgVaultConfigFile)
+		disableMetrics := vCfg.GetBool(cfgDisableMetrics)
 
-		store, err := kvStoreForConfig(c)
+		store, err := kvStoreForConfig(vCfg)
 		if err != nil {
 			logrus.Fatalf("error creating kv store: %s", err.Error())
 		}
@@ -63,7 +63,7 @@ var configureCmd = &cobra.Command{
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
 		}
 
-		v, err := internalVault.New(store, cl, vaultConfigForConfig(c))
+		v, err := internalVault.New(store, cl, vaultConfigForConfig(vCfg))
 		if err != nil {
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
@@ -78,7 +78,7 @@ var configureCmd = &cobra.Command{
 			}()
 		}
 
-		configurations := make(chan *viper.Viper, len(vaultConfigFiles))
+		configurations := make(chan configFile, len(vaultConfigFiles))
 
 		for i, vaultConfigFile := range vaultConfigFiles {
 			vaultConfigFiles[i] = filepath.Clean(vaultConfigFile)
@@ -101,7 +101,7 @@ var configureCmd = &cobra.Command{
 
 		for config := range configurations {
 
-			logrus.Infoln("applying config file :", config.ConfigFileUsed())
+			logrus.Infoln("applying config file :", config.filePath)
 
 			func() {
 				for {
@@ -124,7 +124,7 @@ var configureCmd = &cobra.Command{
 
 					logrus.Info("vault is unsealed, configuring...")
 
-					if err = v.Configure(config); err != nil {
+					if err = v.Configure(config.data); err != nil {
 						logrus.Errorf("error configuring vault: %s", err.Error())
 						if errorFatal {
 							os.Exit(1)
@@ -132,7 +132,7 @@ var configureCmd = &cobra.Command{
 
 						failedConfigurationsCount++
 						// Failed configuration handler - Increase the backoff sleep
-						go handleConfigurationError(config.ConfigFileUsed(), configurations, b.Duration())
+						go handleConfigurationError(config.filePath, configurations, b.Duration())
 
 						return
 					}
@@ -149,7 +149,21 @@ var configureCmd = &cobra.Command{
 	},
 }
 
-func handleConfigurationError(vaultConfigFile string, configurations chan *viper.Viper, sleepTime time.Duration) {
+type fileType int8
+
+const (
+	jsonFileType fileType = iota + 1
+	yamlFileType
+)
+
+type configFile struct {
+	filePath string
+	fileType fileType
+
+	data map[string]interface{}
+}
+
+func handleConfigurationError(vaultConfigFile string, configurations chan configFile, sleepTime time.Duration) {
 	// This handler will sleep for a exponential backoff amount of time and re-inject the failed configuration into the
 	// configurations channel to be re-applied to vault
 	// Eventually consistent model - all recovarable errors (5xx and configs that depend on other configs) will be eventually fixed
@@ -159,7 +173,7 @@ func handleConfigurationError(vaultConfigFile string, configurations chan *viper
 	configurations <- parseConfiguration(vaultConfigFile)
 }
 
-func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.Viper) {
+func watchConfigurations(vaultConfigFiles []string, configurations chan configFile) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		logrus.Fatal(err)
@@ -212,10 +226,8 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan *viper.V
 	}
 }
 
-func parseConfiguration(vaultConfigFile string) *viper.Viper {
-	config := viper.New()
-
-	vaultConfig, err := ioutil.ReadFile(vaultConfigFile)
+func parseConfiguration(filepath string) configFile {
+	vaultConfig, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		logrus.Fatalf("error reading vault config template: %s", err.Error())
 	}
@@ -227,14 +239,29 @@ func parseConfiguration(vaultConfigFile string) *viper.Viper {
 		logrus.Fatalf("error executing vault config template: %s", err.Error())
 	}
 
-	config.SetConfigFile(vaultConfigFile)
+	// We will only deal with raw JSON, but we want to support other file types
+	jsonData := buffer.Bytes()
+	fileType := jsonFileType
 
-	err = config.ReadConfig(buffer)
-	if err != nil {
-		logrus.Fatalf("error parsing vault config file: %s", err.Error())
+	// If the original data was YAML, this will pass
+	if convertedJson, err := yaml.YAMLToJSON(jsonData); err == nil {
+		jsonData = convertedJson
+		fileType = yamlFileType
+	} else {
+		logrus.WithError(err).Debugf("could not convert YAML to JSON, parsing raw JSON...")
 	}
 
-	return config
+	// Load JSON data into map
+	var data map[string]interface{}
+	if err := json.Unmarshal(jsonData, &data); err != nil {
+		logrus.Fatalf("error parsing vault config file: %v", err)
+	}
+
+	return configFile{
+		filePath: filepath,
+		fileType: fileType,
+		data:     data,
+	}
 }
 
 func stringInSlice(list []string, match string) bool {

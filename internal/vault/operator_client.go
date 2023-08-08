@@ -18,7 +18,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"github.com/mitchellh/mapstructure"
 	"net/http"
 	"os"
 	"runtime"
@@ -26,14 +26,37 @@ import (
 	"time"
 
 	"emperror.dev/errors"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
-// DefaultConfigFile is the name of the default config file
-const DefaultConfigFile = "vault-config.yml"
+const (
+	// DefaultConfigFile is the name of the default config file
+	DefaultConfigFile = "vault-config.yml"
+
+	keyRootToken = "vault-root"
+	keyTest      = "vault-test"
+)
+
+// Vault is an interface that can be used to attempt to perform actions against
+// a Vault server.
+type Vault interface {
+	Init() error
+	RaftInitialized() (bool, error)
+	RaftJoin(string) error
+	Sealed() (bool, error)
+	Active() (bool, error)
+	Unseal() error
+	Leader() (bool, error)
+	LeaderAddress() (string, error)
+	Configure(config map[string]interface{}) error
+}
+
+type KVService interface {
+	Set(key string, value []byte) error
+	Get(key string) ([]byte, error)
+}
 
 // Config holds the configuration of the Vault initialization
 type Config struct {
@@ -49,32 +72,6 @@ type Config struct {
 
 	// should the KV backend be tested first to validate access rights
 	PreFlightChecks bool
-}
-
-// vault is an implementation of the Vault interface that will perform actions
-// against a Vault server, using a provided KMS to retrieve
-type vault struct {
-	keyStore    KVService
-	cl          *api.Client
-	config      *Config
-	rotateCache map[string]bool
-}
-
-// Interface check
-var _ Vault = &vault{}
-
-// Vault is an interface that can be used to attempt to perform actions against
-// a Vault server.
-type Vault interface {
-	Init() error
-	RaftInitialized() (bool, error)
-	RaftJoin(string) error
-	Sealed() (bool, error)
-	Active() (bool, error)
-	Unseal() error
-	Leader() (bool, error)
-	LeaderAddress() (string, error)
-	Configure(config *viper.Viper) error
 }
 
 type purgeUnmanagedConfig struct {
@@ -102,13 +99,6 @@ type externalConfig struct {
 	StartupSecrets       []startupSecret      `mapstructure:"startupSecrets"`
 }
 
-var extConfig externalConfig
-
-type KVService interface {
-	Set(key string, value []byte) error
-	Get(key string) ([]byte, error)
-}
-
 type kvTester struct {
 	Service KVService
 }
@@ -124,6 +114,18 @@ func (t kvTester) Test(key string) error {
 	return t.Service.Set(key, []byte(key))
 }
 
+var _ Vault = &vault{}
+
+// vault is an implementation of the Vault interface that will perform actions
+// against a Vault server, using a provided KMS to retrieve
+type vault struct {
+	keyStore       KVService
+	cl             *api.Client
+	config         *Config
+	externalConfig *externalConfig
+	rotateCache    map[string]bool
+}
+
 // New returns a new vault Vault, or an error.
 func New(k KVService, cl *api.Client, config Config) (Vault, error) {
 	if config.SecretShares < config.SecretThreshold {
@@ -131,10 +133,11 @@ func New(k KVService, cl *api.Client, config Config) (Vault, error) {
 	}
 
 	return &vault{
-		keyStore:    k,
-		cl:          cl,
-		config:      &config,
-		rotateCache: map[string]bool{},
+		keyStore:       k,
+		cl:             cl,
+		config:         &config,
+		rotateCache:    map[string]bool{},
+		externalConfig: &externalConfig{},
 	}, nil
 }
 
@@ -188,7 +191,7 @@ func (v *vault) LeaderAddress() (string, error) {
 func (v *vault) Unseal() error {
 	defer runtime.GC()
 	for i := 0; ; i++ {
-		keyID := v.unsealKeyForID(i)
+		keyID := keyUnsealForID(i)
 
 		logrus.Debugf("retrieving key from kms service...")
 		k, err := v.keyStore.Get(keyID)
@@ -213,19 +216,6 @@ func (v *vault) Unseal() error {
 			return errors.New("failed to unseal vault, are you using the right unseal keys?")
 		}
 	}
-}
-
-type notFoundError interface {
-	NotFound() bool
-}
-
-func isNotFoundError(err error) bool {
-	var notFoundErr notFoundError
-	if errors.As(err, &notFoundErr) && notFoundErr.NotFound() {
-		return true
-	}
-
-	return false
 }
 
 func (v *vault) keyStoreNotFound(key string) (bool, error) {
@@ -265,7 +255,7 @@ func (v *vault) Init() error {
 	// test backend first
 	if v.config.PreFlightChecks {
 		tester := kvTester{Service: v.keyStore}
-		err = tester.Test(v.testKey())
+		err = tester.Test(keyTest)
 		if err != nil {
 			return errors.Wrap(err, "error testing keystore before init")
 		}
@@ -273,12 +263,12 @@ func (v *vault) Init() error {
 
 	// test for an existing keys
 	keys := []string{
-		v.rootTokenKey(),
+		keyRootToken,
 	}
 
 	// add unseal keys
 	for i := 0; i <= v.config.SecretShares; i++ {
-		keys = append(keys, v.unsealKeyForID(i))
+		keys = append(keys, keyUnsealForID(i))
 	}
 
 	// test every key
@@ -314,7 +304,7 @@ func (v *vault) Init() error {
 	}
 
 	for i, k := range resp.Keys {
-		keyID := v.unsealKeyForID(i)
+		keyID := keyUnsealForID(i)
 		err := v.keyStoreSet(keyID, []byte(k))
 		if err != nil {
 			return errors.Wrapf(err, "error storing unseal key '%s'", keyID)
@@ -324,7 +314,7 @@ func (v *vault) Init() error {
 	}
 
 	for i, k := range resp.RecoveryKeys {
-		keyID := v.recoveryKeyForID(i)
+		keyID := keyRecoveryForID(i)
 		err := v.keyStoreSet(keyID, []byte(k))
 		if err != nil {
 			return errors.Wrapf(err, "error storing recovery key '%s'", keyID)
@@ -378,7 +368,7 @@ func (v *vault) Init() error {
 	}
 
 	if v.config.StoreRootToken {
-		rootTokenKey := v.rootTokenKey()
+		rootTokenKey := keyRootToken
 		if err = v.keyStoreSet(rootTokenKey, []byte(resp.RootToken)); err != nil {
 			return errors.Wrapf(err, "error storing root token '%s' in key'%s'", rootToken, rootTokenKey)
 		}
@@ -390,15 +380,15 @@ func (v *vault) Init() error {
 	return nil
 }
 
-// in our case Vault is initialized when root key is stored in the Cloud KMS
+// RaftInitialized in our case Vault is initialized when root key is stored in the Cloud KMS
 func (v *vault) RaftInitialized() (bool, error) {
-	rootToken, err := v.keyStore.Get(v.rootTokenKey())
+	rootToken, err := v.keyStore.Get(keyRootToken)
 	if err != nil {
 		if isNotFoundError(err) {
 			return false, nil
 		}
 
-		return false, errors.Wrapf(err, "unable to get key '%s'", v.rootTokenKey())
+		return false, errors.Wrapf(err, "unable to get key '%s'", keyRootToken)
 	}
 
 	if len(rootToken) > 0 {
@@ -438,7 +428,7 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 	}
 
 	if raftCacertFile != "" {
-		leaderCACert, err := ioutil.ReadFile(raftCacertFile)
+		leaderCACert, err := os.ReadFile(raftCacertFile)
 		if err != nil {
 			return errors.Wrap(err, "error reading vault raft CA certificate")
 		}
@@ -460,15 +450,15 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 	return errors.New("vault hasn't joined raft cluster")
 }
 
-func (v *vault) Configure(config *viper.Viper) error {
+func (v *vault) Configure(config map[string]interface{}) error {
 	var rootToken []byte
 
 	logrus.Debugf("retrieving key from kms service...")
 
 	if v.config.StoreRootToken {
-		rootToken, err := v.keyStore.Get(v.rootTokenKey())
+		rootToken, err := v.keyStore.Get(keyRootToken)
 		if err != nil {
-			return errors.Wrapf(err, "unable to get key '%s'", v.rootTokenKey())
+			return errors.Wrapf(err, "unable to get key '%s'", keyRootToken)
 		}
 		v.cl.SetToken(string(rootToken))
 	} else {
@@ -489,7 +479,7 @@ func (v *vault) Configure(config *viper.Viper) error {
 
 		// Iterate over existing unseal keys
 		for i := 0; i < response.Required; i++ {
-			keyID := v.unsealKeyForID(i)
+			keyID := keyUnsealForID(i)
 			logrus.Debugf("retrieving key from kms service...")
 			k, err := v.keyStore.Get(keyID)
 			if err != nil {
@@ -545,15 +535,28 @@ func (v *vault) Configure(config *viper.Viper) error {
 	defer v.cl.SetToken("")
 	defer func() { rootToken = nil }()
 
-	// The extConfig var should be rest with every configuration change to remove any leftovers from previous unmarshal.
-	extConfig = externalConfig{}
-
-	// UnmarshalExact is used for safety to avoid mistakes like typos in the config keys, which could lead to deletion
-	// in Vault if the purge config is enabled.
-	err := config.UnmarshalExact(&extConfig)
-	if err != nil {
-		return errors.Wrap(err, "error loading externalConfig")
+	// Create deep copy of vault externalConfig
+	var extConfig externalConfig
+	if err := mapstructure.Decode(v.externalConfig, &extConfig); err != nil {
+		return errors.Wrap(err, "error while copying externalConfig")
 	}
+
+	// Load config and merge into externalConfig
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		// ErrorUnused is used for safety to avoid mistakes like typos in the config keys, which could lead to deletion
+		// in Vault if the purge config is enabled.
+		ErrorUnused: true,
+		Result:      &extConfig,
+	})
+	if err != nil {
+		return errors.Wrap(err, "error creating externalConfig decoder")
+	}
+	if err = decoder.Decode(config); err != nil {
+		return errors.Wrap(err, "error decoding externalConfig")
+	}
+
+	// Update vault external config with merged
+	v.externalConfig = &extConfig
 
 	if err = v.configureAuditDevices(); err != nil {
 		return errors.Wrap(err, "error configuring audit devices for vault")
@@ -586,22 +589,6 @@ func (v *vault) Configure(config *viper.Viper) error {
 	return err
 }
 
-func (*vault) unsealKeyForID(i int) string {
-	return fmt.Sprint("vault-unseal-", i)
-}
-
-func (*vault) recoveryKeyForID(i int) string {
-	return fmt.Sprint("vault-recovery-", i)
-}
-
-func (*vault) rootTokenKey() string {
-	return "vault-root"
-}
-
-func (*vault) testKey() string {
-	return "vault-test"
-}
-
 func (v *vault) writeWithWarningCheck(path string, data map[string]interface{}) (*api.Secret, error) {
 	sec, err := v.cl.Logical().Write(path, data)
 	if err != nil {
@@ -613,6 +600,19 @@ func (v *vault) writeWithWarningCheck(path string, data map[string]interface{}) 
 		}
 	}
 	return sec, nil
+}
+
+type notFoundError interface {
+	NotFound() bool
+}
+
+func isNotFoundError(err error) bool {
+	var notFoundErr notFoundError
+	if errors.As(err, &notFoundErr) && notFoundErr.NotFound() {
+		return true
+	}
+
+	return false
 }
 
 // XORBytes takes two byte slices and XORs them together, returning the final
@@ -653,4 +653,12 @@ func XORBase64(a, b string) ([]byte, error) {
 	}
 
 	return XORBytes(aBytes, bBytes)
+}
+
+func keyUnsealForID(i int) string {
+	return fmt.Sprint("vault-unseal-", i)
+}
+
+func keyRecoveryForID(i int) string {
+	return fmt.Sprint("vault-recovery-", i)
 }

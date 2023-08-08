@@ -469,7 +469,7 @@ func (v *vault) getUnmanagedAuthMethods(managedAuthMethods []auth) map[string]*a
 
 // Disables any auth method that's not managed if purgeUnmanagedConfig option is enabled
 func (v *vault) removeUnmanagedAuthMethods(unmanagedAuths map[string]*api.MountOutput) error {
-	if len(unmanagedAuths) == 0 || !extConfig.PurgeUnmanagedConfig.Enabled || extConfig.PurgeUnmanagedConfig.Exclude.Auth {
+	if len(unmanagedAuths) == 0 || !v.externalConfig.PurgeUnmanagedConfig.Enabled || v.externalConfig.PurgeUnmanagedConfig.Exclude.Auth {
 		return nil
 	}
 
@@ -484,7 +484,7 @@ func (v *vault) removeUnmanagedAuthMethods(unmanagedAuths map[string]*api.MountO
 }
 
 func (v *vault) configureAuthMethods() error {
-	managedAuths := initAuthConfig(extConfig.Auth)
+	managedAuths := initAuthConfig(v.externalConfig.Auth)
 	unmanagedAuths := v.getUnmanagedAuthMethods(managedAuths)
 
 	if err := v.addManagedAuthMethods(managedAuths); err != nil {

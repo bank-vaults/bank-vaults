@@ -339,8 +339,8 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) e
 }
 
 func (v *vault) removeUnmanagedSecretsEngines(unmanagedSecretsEngines map[string]bool) error {
-	if len(unmanagedSecretsEngines) == 0 || !extConfig.PurgeUnmanagedConfig.Enabled ||
-		extConfig.PurgeUnmanagedConfig.Exclude.Secrets {
+	if len(unmanagedSecretsEngines) == 0 || !v.externalConfig.PurgeUnmanagedConfig.Enabled ||
+		v.externalConfig.PurgeUnmanagedConfig.Exclude.Secrets {
 		return nil
 	}
 
@@ -355,7 +355,7 @@ func (v *vault) removeUnmanagedSecretsEngines(unmanagedSecretsEngines map[string
 }
 
 func (v *vault) configureSecretsEngines() error {
-	managedSecretsEngines := initSecretsEnginesConfig(extConfig.Secrets)
+	managedSecretsEngines := initSecretsEnginesConfig(v.externalConfig.Secrets)
 	unmanagedSecretsEngines := v.getUnmanagedSecretsEngines(managedSecretsEngines)
 
 	if err := v.addManagedSecretsEngines(managedSecretsEngines); err != nil {
