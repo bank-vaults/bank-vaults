@@ -58,16 +58,16 @@ from one of the followings:
 	Run: func(cmd *cobra.Command, args []string) {
 		var unsealConfig unsealCfg
 
-		unsealConfig.unsealPeriod = vCfg.GetDuration(cfgUnsealPeriod)
-		unsealConfig.proceedInit = vCfg.GetBool(cfgInit)
-		unsealConfig.runOnce = vCfg.GetBool(cfgOnce)
-		unsealConfig.auto = vCfg.GetBool(cfgAuto)
-		unsealConfig.raft = vCfg.GetBool(cfgRaft)
-		unsealConfig.raftLeaderAddress = vCfg.GetString(cfgRaftLeaderAddress)
-		unsealConfig.raftSecondary = vCfg.GetBool(cfgRaftSecondary)
-		unsealConfig.raftHAStorage = vCfg.GetBool(cfgRaftHAStorage)
+		unsealConfig.unsealPeriod = c.GetDuration(cfgUnsealPeriod)
+		unsealConfig.proceedInit = c.GetBool(cfgInit)
+		unsealConfig.runOnce = c.GetBool(cfgOnce)
+		unsealConfig.auto = c.GetBool(cfgAuto)
+		unsealConfig.raft = c.GetBool(cfgRaft)
+		unsealConfig.raftLeaderAddress = c.GetString(cfgRaftLeaderAddress)
+		unsealConfig.raftSecondary = c.GetBool(cfgRaftSecondary)
+		unsealConfig.raftHAStorage = c.GetBool(cfgRaftHAStorage)
 
-		store, err := kvStoreForConfig(vCfg)
+		store, err := kvStoreForConfig(c)
 		if err != nil {
 			logrus.Fatalf("error creating kv store: %s", err.Error())
 		}
@@ -77,7 +77,7 @@ from one of the followings:
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
 		}
 
-		v, err := internalVault.New(store, cl, vaultConfigForConfig(vCfg))
+		v, err := internalVault.New(store, cl, vaultConfigForConfig(c))
 		if err != nil {
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}

@@ -28,7 +28,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var vCfg = viper.New()
+var c = viper.New()
 
 const (
 	cfgSecretShares    = "secret-shares"
@@ -150,39 +150,39 @@ func execute() {
 
 func configBoolVar(cmd *cobra.Command, key string, defaultValue bool, description string) {
 	cmd.PersistentFlags().Bool(key, defaultValue, description)
-	_ = vCfg.BindPFlag(key, cmd.PersistentFlags().Lookup(key))
+	_ = c.BindPFlag(key, cmd.PersistentFlags().Lookup(key))
 }
 
 func configDurationVar(cmd *cobra.Command, key string, defaultValue time.Duration, description string) {
 	cmd.PersistentFlags().Duration(key, defaultValue, description)
-	_ = vCfg.BindPFlag(key, cmd.PersistentFlags().Lookup(key))
+	_ = c.BindPFlag(key, cmd.PersistentFlags().Lookup(key))
 }
 
 func configIntVar(cmd *cobra.Command, key string, defaultValue int, description string) {
 	cmd.PersistentFlags().Int(key, defaultValue, description)
-	_ = vCfg.BindPFlag(key, cmd.PersistentFlags().Lookup(key))
+	_ = c.BindPFlag(key, cmd.PersistentFlags().Lookup(key))
 }
 
 func configStringVar(cmd *cobra.Command, key, defaultValue, description string) {
 	cmd.PersistentFlags().String(key, defaultValue, description)
-	_ = vCfg.BindPFlag(key, cmd.PersistentFlags().Lookup(key))
+	_ = c.BindPFlag(key, cmd.PersistentFlags().Lookup(key))
 }
 
 func configStringSliceVar(cmd *cobra.Command, key string, defaultValue []string, description string) {
 	cmd.PersistentFlags().StringSlice(key, defaultValue, description)
-	_ = vCfg.BindPFlag(key, cmd.PersistentFlags().Lookup(key))
+	_ = c.BindPFlag(key, cmd.PersistentFlags().Lookup(key))
 }
 
 func configStringMapVar(cmd *cobra.Command, key string, value *map[string]string, defaultValue map[string]string, description string) {
 	cmd.PersistentFlags().StringToStringVar(value, key, defaultValue, description)
-	_ = vCfg.BindPFlag(key, cmd.PersistentFlags().Lookup(key))
+	_ = c.BindPFlag(key, cmd.PersistentFlags().Lookup(key))
 }
 
 func init() {
-	vCfg.SetEnvPrefix("bank_vaults")
+	c.SetEnvPrefix("bank_vaults")
 	replacer := strings.NewReplacer("-", "_")
-	vCfg.SetEnvKeyReplacer(replacer)
-	vCfg.AutomaticEnv()
+	c.SetEnvKeyReplacer(replacer)
+	c.AutomaticEnv()
 
 	// Select mode
 	configStringVar(

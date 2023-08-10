@@ -36,7 +36,7 @@ const (
 	DefaultConfigFile = "vault-config.yml"
 
 	keyRootToken = "vault-root"
-	keyTest      = "vault-test"
+	keyTestField = "vault-test"
 )
 
 // Vault is an interface that can be used to attempt to perform actions against
@@ -255,7 +255,7 @@ func (v *vault) Init() error {
 	// test backend first
 	if v.config.PreFlightChecks {
 		tester := kvTester{Service: v.keyStore}
-		err = tester.Test(keyTest)
+		err = tester.Test(keyTestField)
 		if err != nil {
 			return errors.Wrap(err, "error testing keystore before init")
 		}
@@ -368,11 +368,10 @@ func (v *vault) Init() error {
 	}
 
 	if v.config.StoreRootToken {
-		rootTokenKey := keyRootToken
-		if err = v.keyStoreSet(rootTokenKey, []byte(resp.RootToken)); err != nil {
-			return errors.Wrapf(err, "error storing root token '%s' in key'%s'", rootToken, rootTokenKey)
+		if err = v.keyStoreSet(keyRootToken, []byte(resp.RootToken)); err != nil {
+			return errors.Wrapf(err, "error storing root token '%s' in key'%s'", rootToken, keyRootToken)
 		}
-		logrus.WithField("key", rootTokenKey).Info("root token stored in key store")
+		logrus.WithField("key", keyRootToken).Info("root token stored in key store")
 	} else if v.config.InitRootToken == "" {
 		logrus.WithField("root-token", resp.RootToken).Warnf("won't store root token in key store, this token grants full privileges to vault, so keep this secret")
 	}

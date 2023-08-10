@@ -15,15 +15,13 @@
 package main
 
 import (
-	"encoding/json"
-	"github.com/ghodss/yaml"
-	"io/ioutil"
+	"github.com/bank-vaults/bank-vaults/internal/configuration"
+	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/bank-vaults/bank-vaults/internal/configuration"
 	internalVault "github.com/bank-vaults/bank-vaults/internal/vault"
 	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/fsnotify/fsnotify"
@@ -38,6 +36,11 @@ const (
 	cfgDisableMetrics  = "disable-metrics"
 )
 
+type configFile struct {
+	Path string
+	Data map[string]interface{}
+}
+
 var configureCmd = &cobra.Command{
 	Use:   "configure",
 	Short: "Configures a Vault based on a YAML/JSON configuration file",
@@ -47,13 +50,13 @@ var configureCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var unsealConfig unsealCfg
 
-		runOnce := vCfg.GetBool(cfgOnce)
-		errorFatal := vCfg.GetBool(cfgFatal)
-		unsealConfig.unsealPeriod = vCfg.GetDuration(cfgUnsealPeriod)
-		vaultConfigFiles := vCfg.GetStringSlice(cfgVaultConfigFile)
-		disableMetrics := vCfg.GetBool(cfgDisableMetrics)
+		runOnce := c.GetBool(cfgOnce)
+		errorFatal := c.GetBool(cfgFatal)
+		unsealConfig.unsealPeriod = c.GetDuration(cfgUnsealPeriod)
+		vaultConfigFiles := c.GetStringSlice(cfgVaultConfigFile)
+		disableMetrics := c.GetBool(cfgDisableMetrics)
 
-		store, err := kvStoreForConfig(vCfg)
+		store, err := kvStoreForConfig(c)
 		if err != nil {
 			logrus.Fatalf("error creating kv store: %s", err.Error())
 		}
@@ -63,7 +66,7 @@ var configureCmd = &cobra.Command{
 			logrus.Fatalf("error connecting to vault: %s", err.Error())
 		}
 
-		v, err := internalVault.New(store, cl, vaultConfigForConfig(vCfg))
+		v, err := internalVault.New(store, cl, vaultConfigForConfig(c))
 		if err != nil {
 			logrus.Fatalf("error creating vault helper: %s", err.Error())
 		}
@@ -78,7 +81,7 @@ var configureCmd = &cobra.Command{
 			}()
 		}
 
-		configurations := make(chan configFile, len(vaultConfigFiles))
+		configurations := make(chan *configFile, len(vaultConfigFiles))
 
 		for i, vaultConfigFile := range vaultConfigFiles {
 			vaultConfigFiles[i] = filepath.Clean(vaultConfigFile)
@@ -101,7 +104,7 @@ var configureCmd = &cobra.Command{
 
 		for config := range configurations {
 
-			logrus.Infoln("applying config file :", config.filePath)
+			logrus.Infoln("applying config file :", config.Path)
 
 			func() {
 				for {
@@ -124,7 +127,7 @@ var configureCmd = &cobra.Command{
 
 					logrus.Info("vault is unsealed, configuring...")
 
-					if err = v.Configure(config.data); err != nil {
+					if err = v.Configure(config.Data); err != nil {
 						logrus.Errorf("error configuring vault: %s", err.Error())
 						if errorFatal {
 							os.Exit(1)
@@ -132,7 +135,7 @@ var configureCmd = &cobra.Command{
 
 						failedConfigurationsCount++
 						// Failed configuration handler - Increase the backoff sleep
-						go handleConfigurationError(config.filePath, configurations, b.Duration())
+						go handleConfigurationError(config.Path, configurations, b.Duration())
 
 						return
 					}
@@ -149,21 +152,7 @@ var configureCmd = &cobra.Command{
 	},
 }
 
-type fileType int8
-
-const (
-	jsonFileType fileType = iota + 1
-	yamlFileType
-)
-
-type configFile struct {
-	filePath string
-	fileType fileType
-
-	data map[string]interface{}
-}
-
-func handleConfigurationError(vaultConfigFile string, configurations chan configFile, sleepTime time.Duration) {
+func handleConfigurationError(vaultConfigFile string, configurations chan<- *configFile, sleepTime time.Duration) {
 	// This handler will sleep for a exponential backoff amount of time and re-inject the failed configuration into the
 	// configurations channel to be re-applied to vault
 	// Eventually consistent model - all recovarable errors (5xx and configs that depend on other configs) will be eventually fixed
@@ -173,7 +162,7 @@ func handleConfigurationError(vaultConfigFile string, configurations chan config
 	configurations <- parseConfiguration(vaultConfigFile)
 }
 
-func watchConfigurations(vaultConfigFiles []string, configurations chan configFile) {
+func watchConfigurations(vaultConfigFiles []string, configurations chan<- *configFile) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		logrus.Fatal(err)
@@ -226,41 +215,29 @@ func watchConfigurations(vaultConfigFiles []string, configurations chan configFi
 	}
 }
 
-func parseConfiguration(filepath string) configFile {
-	vaultConfig, err := ioutil.ReadFile(filepath)
+func parseConfiguration(vaultConfigFile string) *configFile {
+	// Read file
+	vaultConfig, err := os.ReadFile(vaultConfigFile)
 	if err != nil {
 		logrus.Fatalf("error reading vault config template: %s", err.Error())
 	}
 
+	// Replace env templating data
 	templater := configuration.NewTemplater(configuration.DefaultLeftDelimiter, configuration.DefaultRightDelimiter)
-
 	buffer, err := templater.EnvTemplate(string(vaultConfig))
 	if err != nil {
 		logrus.Fatalf("error executing vault config template: %s", err.Error())
 	}
 
-	// We will only deal with raw JSON, but we want to support other file types
-	jsonData := buffer.Bytes()
-	fileType := jsonFileType
-
-	// If the original data was YAML, this will pass
-	if convertedJson, err := yaml.YAMLToJSON(jsonData); err == nil {
-		jsonData = convertedJson
-		fileType = yamlFileType
-	} else {
-		logrus.WithError(err).Debugf("could not convert YAML to JSON, parsing raw JSON...")
-	}
-
-	// Load JSON data into map
+	// Load YAML data into map
 	var data map[string]interface{}
-	if err := json.Unmarshal(jsonData, &data); err != nil {
+	if err := yaml.Unmarshal(buffer.Bytes(), &data); err != nil {
 		logrus.Fatalf("error parsing vault config file: %v", err)
 	}
 
-	return configFile{
-		filePath: filepath,
-		fileType: fileType,
-		data:     data,
+	return &configFile{
+		Path: vaultConfigFile,
+		Data: data,
 	}
 }
 
