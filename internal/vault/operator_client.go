@@ -534,18 +534,19 @@ func (v *vault) Configure(config map[string]interface{}) error {
 	defer v.cl.SetToken("")
 	defer func() { rootToken = nil }()
 
-	// Create deep copy of vault externalConfig
-	var extConfig externalConfig
-	if err := mapstructure.Decode(v.externalConfig, &extConfig); err != nil {
+	// Deep copy current vault externalConfig
+	var loadedConfig externalConfig
+	if err := mapstructure.Decode(v.externalConfig, &loadedConfig); err != nil {
 		return errors.Wrap(err, "error while copying externalConfig")
 	}
 
-	// Load config and merge into externalConfig
+	// Load and merge config from input
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		// ErrorUnused is used for safety to avoid mistakes like typos in the config keys, which could lead to deletion
 		// in Vault if the purge config is enabled.
-		ErrorUnused: true,
-		Result:      &extConfig,
+		ErrorUnused:      true,
+		WeaklyTypedInput: true,
+		Result:           &loadedConfig,
 	})
 	if err != nil {
 		return errors.Wrap(err, "error creating externalConfig decoder")
@@ -554,8 +555,8 @@ func (v *vault) Configure(config map[string]interface{}) error {
 		return errors.Wrap(err, "error decoding externalConfig")
 	}
 
-	// Update vault external config with merged
-	v.externalConfig = &extConfig
+	// Update vault externalConfig with loaded data
+	v.externalConfig = &loadedConfig
 
 	if err = v.configureAuditDevices(); err != nil {
 		return errors.Wrap(err, "error configuring audit devices for vault")
