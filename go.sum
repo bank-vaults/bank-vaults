@@ -412,8 +412,8 @@ github.com/prometheus/common v0.42.0 h1:EKsfXEYo4JpWMHH5cg+KOUWeuJSov1Id8zGR8eeI
 github.com/prometheus/common v0.42.0/go.mod h1:xBwqVerjNdUDjgODMpudtOMwlOwf2SaTr1yjz4b7Zbc=
 github.com/prometheus/procfs v0.10.1 h1:kYK1Va/YMlutzCGazswoHKo//tZVlFpKYh+PymziUAg=
 github.com/prometheus/procfs v0.10.1/go.mod h1:nwNm2aOCAYw8uTR/9bWRREkZFxAUcWzPHWJq+XBB/FM=
-github.com/ramizpolic/multiparser v0.1.0 h1:tm+7HOJB1hTfe6WVB8FWrSF6sI24IMz+Ylig3AtxBUQ=
-github.com/ramizpolic/multiparser v0.1.0/go.mod h1:aZYzWWdZ0P/FdPpD5jjSFTuiCCN6j3C8jsNR7IQSiYw=
+github.com/ramizpolic/multiparser v1.0.0 h1:H/K+xyaNLqEG3LeUvPizQpfMiiU7EzQDU4WjVd4jE3E=
+github.com/ramizpolic/multiparser v1.0.0/go.mod h1:aZYzWWdZ0P/FdPpD5jjSFTuiCCN6j3C8jsNR7IQSiYw=
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rogpeppe/go-internal v1.11.0 h1:cWPaGQEPrBb5/AsnsZesgZZ9yb1OQ+GOISoDNXVBh4M=

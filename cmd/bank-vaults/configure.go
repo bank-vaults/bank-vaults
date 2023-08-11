@@ -238,7 +238,7 @@ func parseConfiguration(parser multiparser.Parser, vaultConfigFile string) *conf
 
 	// Load raw data into map
 	var data map[string]interface{}
-	if err := parser.Unmarshal(buffer.Bytes(), &data); err != nil {
+	if err := parser.Parse(buffer.Bytes(), &data); err != nil {
 		logrus.Fatalf("error parsing vault config file: %v", err)
 	}
 
