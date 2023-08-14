@@ -4,7 +4,8 @@ approved = [
   "bsd-3-clause",
   "bsd-2-clause",
   "mpl-2.0",
-  "isc"
+  "isc",
+  "busl-1.1"
 ]
 
 ignored = [
@@ -15,6 +16,7 @@ ignored = [
   "logur.dev/adapter/logrus", # MIT
   "logur.dev/logur", # MIT
   "emperror.dev/errors", # MIT
+  "github.com/hashicorp/vault/api", # BUSL-1.1
 
   # Unsupported VCS
   "gopkg.in/fsnotify.v1",
