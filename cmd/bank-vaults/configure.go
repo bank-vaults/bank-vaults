@@ -15,20 +15,21 @@
 package main
 
 import (
-	"github.com/bank-vaults/bank-vaults/internal/configuration"
-	"github.com/ramizpolic/multiparser"
-	"github.com/ramizpolic/multiparser/parser"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	internalVault "github.com/bank-vaults/bank-vaults/internal/vault"
 	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/fsnotify/fsnotify"
 	"github.com/jpillora/backoff"
+	"github.com/ramizpolic/multiparser"
+	"github.com/ramizpolic/multiparser/parser"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/bank-vaults/bank-vaults/internal/configuration"
+	internalVault "github.com/bank-vaults/bank-vaults/internal/vault"
 )
 
 const (

@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/mitchellh/mapstructure"
 	"net/http"
 	"os"
 	"runtime"
@@ -28,6 +27,7 @@ import (
 	"emperror.dev/errors"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
+	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 )
 
