@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	cloud.google.com/go/kms v1.15.1
-	cloud.google.com/go/storage v1.31.0
+	cloud.google.com/go/storage v1.32.0
 	emperror.dev/errors v0.8.1
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.511
