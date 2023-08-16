@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package vault
 
 import (
@@ -208,7 +209,7 @@ func (v *vault) addManagedGroups(managedGroups []group) error {
 }
 
 func (v *vault) removeUnmanagedGroups(managedGroups []group) error {
-	if !extConfig.PurgeUnmanagedConfig.Enabled || extConfig.PurgeUnmanagedConfig.Exclude.Groups {
+	if !v.externalConfig.PurgeUnmanagedConfig.Enabled || v.externalConfig.PurgeUnmanagedConfig.Exclude.Groups {
 		logrus.Debugf("purge config is disabled, no unmanaged groups will be removed")
 		return nil
 	}
@@ -309,7 +310,7 @@ func getUnmanagedGroupAliases(existingGroupAliases map[string]string, managedGro
 }
 
 func (v *vault) removeUnmanagedGroupAliases(managedGroupAliases []groupAlias) error {
-	if !extConfig.PurgeUnmanagedConfig.Enabled || extConfig.PurgeUnmanagedConfig.Exclude.GroupAliases {
+	if !v.externalConfig.PurgeUnmanagedConfig.Enabled || v.externalConfig.PurgeUnmanagedConfig.Exclude.GroupAliases {
 		logrus.Debugf("purge config is disabled, no unmanaged group-alias will be removed")
 		return nil
 	}
@@ -336,8 +337,8 @@ func (v *vault) removeUnmanagedGroupAliases(managedGroupAliases []groupAlias) er
 // Configure groups and group-aliases.
 
 func (v *vault) configureIdentityGroups() error {
-	managedGroups := extConfig.Groups
-	managedGroupAliases := extConfig.GroupAliases
+	managedGroups := v.externalConfig.Groups
+	managedGroupAliases := v.externalConfig.GroupAliases
 
 	if err := v.addManagedGroups(managedGroups); err != nil {
 		return errors.Wrap(err, "error while adding groups")

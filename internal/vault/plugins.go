@@ -128,7 +128,7 @@ func (v *vault) addManagedPlugins(managedPlugins []plugin) error {
 }
 
 func (v *vault) removeUnmanagedPlugins(managedPlugins []plugin) error {
-	if !extConfig.PurgeUnmanagedConfig.Enabled || extConfig.PurgeUnmanagedConfig.Exclude.Plugins {
+	if !v.externalConfig.PurgeUnmanagedConfig.Enabled || v.externalConfig.PurgeUnmanagedConfig.Exclude.Plugins {
 		logrus.Debugf("purge config is disabled, no unmanaged plugins will be removed")
 		return nil
 	}
@@ -159,7 +159,7 @@ func (v *vault) removeUnmanagedPlugins(managedPlugins []plugin) error {
 }
 
 func (v *vault) configurePlugins() error {
-	managedPlugins := extConfig.Plugins
+	managedPlugins := v.externalConfig.Plugins
 
 	if err := v.addManagedPlugins(managedPlugins); err != nil {
 		return errors.Wrap(err, "error while adding plugins")
