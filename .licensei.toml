@@ -15,6 +15,7 @@ ignored = [
   "logur.dev/adapter/logrus", # MIT
   "logur.dev/logur", # MIT
   "emperror.dev/errors", # MIT
+  "github.com/hashicorp/vault/api", # MPL-2.0
 
   # Unsupported VCS
   "gopkg.in/fsnotify.v1",
