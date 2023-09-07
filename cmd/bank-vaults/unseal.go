@@ -49,7 +49,7 @@ var unsealCmd = &cobra.Command{
 	Use:   "unseal",
 	Short: "Unseals Vault with with unseal keys stored in one of the supported Cloud Provider options.",
 	Long: `It will continuously attempt to unseal the target Vault instance, by retrieving unseal keys
-from one of the followings:
+from one of the following:
 - Google Cloud KMS keyring (backed by GCS)
 - AWS KMS keyring (backed by S3)
 - Azure Key Vault

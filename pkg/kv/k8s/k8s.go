@@ -69,7 +69,7 @@ func New(namespace, secret string, labels map[string]string) (kv.Service, error)
 		ownerReference = &metav1.OwnerReference{}
 		err := json.Unmarshal([]byte(ownerReferenceJSON), ownerReference)
 		if err != nil {
-			return nil, errors.Wrap(err, "error unmarhsaling OwnerReference")
+			return nil, errors.Wrap(err, "error unmarshaling OwnerReference")
 		}
 	}
 

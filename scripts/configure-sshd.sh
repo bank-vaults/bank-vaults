@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script configures your sshd daemon with the SSH certificats from Vault.
+# This script configures your sshd daemon with the SSH certificates from Vault.
 # It assumes that it is running in automation on a VM with Vault AppRole, thus needs:
 #  - VAULT_ROLE_ID: the AppRole's RoleID
 #  - VAULT_SECRET_ID: the AppRole's SecretID

@@ -70,7 +70,7 @@ func (v *vault) getExistingPlugins() (map[string]map[string]bool, error) {
 			if !builtinPlugins[existingPluginType.String()][existingPluginName] {
 				// Since the builtinPlugins map is non-exclusive, we still need to make sure that the existing plugin
 				// is not builtin plugin (for example, if Vault got some more builtin plugins).
-				// Hopfully that should be replaced when Vault exposes the builtin plugins only via the API.
+				// Hopefully that should be replaced when Vault exposes the builtin plugins only via the API.
 				input := api.GetPluginInput{
 					Name: existingPluginName,
 					Type: existingPluginType,

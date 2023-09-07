@@ -52,7 +52,7 @@ func initAuthConfig(auths []auth) []auth {
 
 		// Convert `map[interface{}]interface{}` to `map[string]interface{}` before sending the config to Vault API.
 		// That's because the config data can have a sub dict (like `provider_config` in JWT/OIDC).
-		// Without this conversion, Vault API will retrun the following error:
+		// Without this conversion, Vault API will return the following error:
 		// `json: unsupported type: map[interface {}]interface {}`
 		for key, value := range auths[index].Config {
 			switch val := value.(type) {
