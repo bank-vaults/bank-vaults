@@ -16,7 +16,6 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -67,7 +66,7 @@ func main() {
 			log.Fatalf("error executing template: %s", err.Error())
 		}
 
-		err = ioutil.WriteFile(filename, buffer.Bytes(), 0600)
+		err = os.WriteFile(filename, buffer.Bytes(), 0600)
 		if err != nil {
 			log.Fatalf("error writing template file: %s", err.Error())
 		}
@@ -81,7 +80,7 @@ func main() {
 			source := templateArray[0]
 			destination := templateArray[1]
 
-			templateText, err := ioutil.ReadFile(source)
+			templateText, err := os.ReadFile(source)
 			if err != nil {
 				log.Fatalf("error reading template file: %s", err.Error())
 			}
@@ -91,7 +90,7 @@ func main() {
 				log.Fatalf("error executing template: %s", err.Error())
 			}
 
-			err = ioutil.WriteFile(destination, templatedText.Bytes(), 0600)
+			err = os.WriteFile(destination, templatedText.Bytes(), 0600)
 			if err != nil {
 				log.Fatalf("error writing template file %q: %s", destination, err.Error())
 			}

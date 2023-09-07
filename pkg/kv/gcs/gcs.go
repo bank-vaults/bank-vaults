@@ -17,7 +17,7 @@ package gcs
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 
 	"cloud.google.com/go/storage"
 	"emperror.dev/errors"
@@ -69,7 +69,7 @@ func (g *gcsStorage) Get(key string) ([]byte, error) {
 
 	defer r.Close()
 
-	b, err := ioutil.ReadAll(r)
+	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error reading object with key '%s'", n)
 	}

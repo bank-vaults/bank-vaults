@@ -17,7 +17,7 @@ package s3
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 
 	"emperror.dev/errors"
 	"github.com/aws/aws-sdk-go/aws"
@@ -101,7 +101,7 @@ func (s3 *s3Storage) Get(key string) ([]byte, error) {
 		return nil, errors.Wrapf(err, "error getting object for key '%s'", n)
 	}
 
-	b, err := ioutil.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 
 	if err != nil {
