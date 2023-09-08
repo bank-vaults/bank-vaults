@@ -103,7 +103,7 @@ func (v *vault) removeUnmanagedAudits(unmanagedAudits map[string]bool) error {
 	}
 
 	for auditPath := range unmanagedAudits {
-		logrus.Infof("removing unmanged audit device %s", auditPath)
+		logrus.Infof("removing unmanaged audit device %s", auditPath)
 		err := v.cl.Sys().DisableAudit(auditPath)
 		if err != nil {
 			return errors.Wrapf(err, "error disabling %s audit in vault", auditPath)

@@ -41,15 +41,15 @@ import (
 )
 
 const (
-	// DefaultLeftDelimiter is the default left-hand delimeter that will be used for the templates
+	// DefaultLeftDelimiter is the default left-hand delimiter that will be used for the templates
 	DefaultLeftDelimiter = "${"
-	// DefaultRightDelimiter is the default right-hand delimeter that will be used for the templates
+	// DefaultRightDelimiter is the default right-hand delimiter that will be used for the templates
 	DefaultRightDelimiter = "}"
 )
 
 const templateName = "config"
 
-// Templater is used to hold the delimeters used to configure the template engine
+// Templater is used to hold the delimiters used to configure the template engine
 type Templater struct {
 	leftDelimiter  string
 	rightDelimiter string

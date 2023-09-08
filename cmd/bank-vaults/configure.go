@@ -163,8 +163,8 @@ var configureCmd = &cobra.Command{
 func handleConfigurationError(parser multiparser.Parser, vaultConfigFile string, configurations chan<- *configFile, sleepTime time.Duration) {
 	// This handler will sleep for a exponential backoff amount of time and re-inject the failed configuration into the
 	// configurations channel to be re-applied to vault
-	// Eventually consistent model - all recovarable errors (5xx and configs that depend on other configs) will be eventually fixed
-	// non recovarable errors will be retried and keep failing every MAX BACKOFF seconds, increasing the error counters ont he vault-configurator pod.
+	// Eventually consistent model - all recoverable errors (5xx and configs that depend on other configs) will be eventually fixed
+	// non recoverable errors will be retried and keep failing every MAX BACKOFF seconds, increasing the error counters ont he vault-configurator pod.
 	logrus.Infof("Failed applying configuration file: %s , sleeping for %s before trying again", vaultConfigFile, sleepTime)
 	time.Sleep(sleepTime)
 	configurations <- parseConfiguration(parser, vaultConfigFile)

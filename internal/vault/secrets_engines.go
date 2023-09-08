@@ -32,9 +32,9 @@ func isOverwriteProhibitedError(err error) bool {
 	return strings.Contains(err.Error(), "delete them before reconfiguring")
 }
 
-// secretEnginesWihtoutNameConfig holds the secret engine types where
+// secretEnginesWithoutNameConfig holds the secret engine types where
 // the name shouldn't be part of the config path
-var secretEnginesWihtoutNameConfig = map[string]bool{
+var secretEnginesWithoutNameConfig = map[string]bool{
 	"ad":       true,
 	"alicloud": true,
 	"azure":    true,
@@ -162,7 +162,7 @@ func (v *vault) getUnmanagedSecretsEngines(managedSecretsEngines []secretEngine)
 
 func configNeedsNoName(secretEngineType string, configOption string) bool {
 	if configOption == "config" {
-		_, ok := secretEnginesWihtoutNameConfig[secretEngineType]
+		_, ok := secretEnginesWithoutNameConfig[secretEngineType]
 		return ok
 	}
 

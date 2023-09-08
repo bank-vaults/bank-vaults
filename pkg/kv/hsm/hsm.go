@@ -186,11 +186,11 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	var encrypt cryptoFunc
 
 	if info.ManufacturerID == "OpenSC Project" {
-		log.Info("this HSM doesn't support on-device encryption, extracting public key and doing encrytion on the computer")
+		log.Info("this HSM doesn't support on-device encryption, extracting public key and doing encryption on the computer")
 
 		publicKeyValue, err := p11.Object(publicKey).Value()
 		if err != nil {
-			return nil, errors.WrapIf(err, "can't get puclic key value")
+			return nil, errors.WrapIf(err, "can't get public key value")
 		}
 
 		publicKey, err := x509.ParsePKCS1PublicKey(publicKeyValue)

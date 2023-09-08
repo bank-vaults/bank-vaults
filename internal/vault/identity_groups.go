@@ -279,7 +279,7 @@ func (v *vault) addManagedGroupAliases(managedGroupAliases []groupAlias) error {
 }
 
 func (v *vault) getExistingGroupAliases() (map[string]string, error) {
-	existinGroupAliases := make(map[string]string)
+	existingGroupAliases := make(map[string]string)
 
 	existingGroupAliasesRaw, err := v.cl.Logical().ReadWithData(
 		"identity/group-alias/id", map[string][]string{"list": {"true"}})
@@ -295,10 +295,10 @@ func (v *vault) getExistingGroupAliases() (map[string]string, error) {
 	existingGroupAliasesData := cast.ToStringMap(existingGroupAliasesRaw.Data["key_info"])
 	for existingGroupAliasID, existingGroupAliasRaw := range existingGroupAliasesData {
 		existingGroupAlias := cast.ToStringMapString(existingGroupAliasRaw)
-		existinGroupAliases[existingGroupAlias["name"]] = existingGroupAliasID
+		existingGroupAliases[existingGroupAlias["name"]] = existingGroupAliasID
 	}
 
-	return existinGroupAliases, nil
+	return existingGroupAliases, nil
 }
 
 func getUnmanagedGroupAliases(existingGroupAliases map[string]string, managedGroupAliases []groupAlias) map[string]string {
