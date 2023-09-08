@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strings"
@@ -190,7 +189,7 @@ func gcpKmsDecrypt(encodedString string, projectID string, location string, keyR
 }
 
 func fileContent(path string) (string, error) {
-	r, err := ioutil.ReadFile(path)
+	r, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}

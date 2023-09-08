@@ -17,7 +17,7 @@ package alibabaoss
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 
 	"emperror.dev/errors"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
@@ -74,7 +74,7 @@ func (o *ossStorage) Get(key string) ([]byte, error) {
 		return nil, errors.Wrapf(err, "error getting object for key '%s'", objectKey)
 	}
 
-	b, err := ioutil.ReadAll(body)
+	b, err := io.ReadAll(body)
 	defer body.Close()
 
 	if err != nil {

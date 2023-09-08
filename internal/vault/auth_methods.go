@@ -16,7 +16,6 @@ package vault
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -208,11 +207,11 @@ func (v *vault) addAdditionalAuthConfig(authMethod auth) error {
 }
 
 func (v *vault) kubernetesAuthConfigDefault() (map[string]interface{}, error) {
-	kubernetesCACert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	kubernetesCACert, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 	if err != nil {
 		return nil, errors.WrapIf(err, "failed to read ca.crt")
 	}
-	tokenReviewerJWT, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	tokenReviewerJWT, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 	if err != nil {
 		return nil, errors.WrapIf(err, "failed to read serviceaccount token")
 	}

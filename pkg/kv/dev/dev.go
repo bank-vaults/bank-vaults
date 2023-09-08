@@ -15,7 +15,6 @@
 package dev
 
 import (
-	"io/ioutil"
 	"os"
 
 	"emperror.dev/errors"
@@ -32,7 +31,7 @@ func New() (service kv.Service, err error) {
 	rootToken := []byte(os.Getenv("VAULT_TOKEN"))
 
 	if len(rootToken) == 0 {
-		rootToken, err = ioutil.ReadFile(os.Getenv("HOME") + "/.vault-token")
+		rootToken, err = os.ReadFile(os.Getenv("HOME") + "/.vault-token")
 		if err != nil {
 			return nil, errors.Wrap(err, "error creating dev client")
 		}
