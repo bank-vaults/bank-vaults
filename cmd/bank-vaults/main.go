@@ -116,7 +116,7 @@ const (
 	cfgOnce         = "once"
 )
 
-// We need to pre-create a value and bind the the flag to this until
+// We need to pre-create a value and bind the flag to this until
 // https://github.com/spf13/viper/issues/608 gets fixed.
 var (
 	k8sSecretLabels         map[string]string

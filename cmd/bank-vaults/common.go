@@ -256,7 +256,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			k8sSecretLabels,
 		)
 		if err != nil {
-			return nil, errors.Wrap(err, "error creating K8S Secret with with kv store")
+			return nil, errors.Wrap(err, "error creating K8S Secret with kv store")
 		}
 
 		config := hsm.Config{
