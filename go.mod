@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/storage v1.32.0
 	emperror.dev/errors v0.8.1
 	github.com/Masterminds/sprig/v3 v3.2.3
-	github.com/aliyun/alibaba-cloud-sdk-go v1.62.545
+	github.com/aliyun/alibaba-cloud-sdk-go v1.62.547
 	github.com/aliyun/aliyun-oss-go-sdk v2.2.9+incompatible
 	github.com/aws/aws-sdk-go v1.45.4
 	github.com/bank-vaults/vault-sdk v0.9.0
