@@ -28,6 +28,9 @@ linters:
     - varcheck
     - structcheck
     - deadcode
+    - golint
+    - scopelint
+    - nosnakecase
 
     # TODO: fixme
     - paralleltest
@@ -42,21 +45,16 @@ linters:
     - gochecknoinits
     - goconst
     - gocognit
-    - golint
-    - scopelint
     - gocritic
     - stylecheck
     - gocyclo
     - testpackage
     - varnamelen
     - ireturn
-    - nosnakecase
     - exhaustruct
     - nonamedreturns
     - nilnil
-    - contextcheck
     - maintidx
-    - dupword
     - gosec
     - gomoddirectives
     - gci
