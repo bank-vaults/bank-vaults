@@ -54,8 +54,7 @@ func initAuthConfig(auths []auth) []auth {
 		// Without this conversion, Vault API will return the following error:
 		// `json: unsupported type: map[interface {}]interface {}`
 		for key, value := range auths[index].Config {
-			switch val := value.(type) {
-			case map[interface{}]interface{}:
+			if val, ok := value.(map[interface{}]interface{}); ok {
 				auths[index].Config[key] = cast.ToStringMap(val)
 			}
 		}

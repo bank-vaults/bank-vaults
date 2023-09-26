@@ -36,7 +36,6 @@ linters:
     - paralleltest
     - forcetypeassert
     - wrapcheck
-    - exportloopref
     - cyclop
     - godox
     - godot
@@ -45,8 +44,6 @@ linters:
     - gochecknoinits
     - goconst
     - gocognit
-    - gocritic
-    - stylecheck
     - gocyclo
     - testpackage
     - varnamelen
@@ -55,12 +52,9 @@ linters:
     - nonamedreturns
     - nilnil
     - maintidx
-    - gosec
     - gomoddirectives
     - gci
     - gofumpt
     - gofmt
-    - goimports
-    - revive
     - staticcheck
     - depguard

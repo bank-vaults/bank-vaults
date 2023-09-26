@@ -34,7 +34,7 @@ type policy struct {
 func initPoliciesConfig(policiesConfig []policy, mounts map[string]*api.MountOutput) ([]policy, error) {
 	for index, policy := range policiesConfig {
 		for k, v := range mounts {
-			policy.Rules = strings.Replace(policy.Rules, fmt.Sprintf("__accessor__%s", strings.TrimRight(k, "/")), v.Accessor, -1)
+			policy.Rules = strings.ReplaceAll(policy.Rules, fmt.Sprintf("__accessor__%s", strings.TrimRight(k, "/")), v.Accessor)
 		}
 		//
 		// Format HCL polices.

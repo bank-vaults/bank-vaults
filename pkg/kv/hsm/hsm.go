@@ -81,7 +81,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	for _, s := range slots {
 		if config.TokenLabel == "" {
 			if s.ID() == config.SlotID {
-				slot = &s //nolint:gosec
+				slot = &s //nolint:gosec,exportloopref
 				log.Infof("found HSM slot %d in HSM by slot ID", slot.ID())
 
 				break
@@ -92,7 +92,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 				return nil, errors.WrapIf(err, "can't query token info from slot")
 			}
 			if tokenInfo.Label == config.TokenLabel {
-				slot = &s //nolint:gosec
+				slot = &s //nolint:gosec,exportloopref
 				log.Infof("found HSM slot %d in HSM by token label", slot.ID())
 
 				break
@@ -160,7 +160,8 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	privateKeyObj, privateKeyErr := session.FindObject(privateKeyAttributes)
 
 	// ignore "no objects found" errors and generate a key
-	if publicKeyErr != nil && privateKeyErr != nil {
+	switch {
+	case publicKeyErr != nil && privateKeyErr != nil:
 		log.Info("generating key pair in HSM...")
 
 		request := generateRSAKeyPairRequest(config.KeyLabel)
@@ -171,12 +172,12 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 
 		publicKey = keyPair.Public
 		privateKey = keyPair.Private
-	} else if publicKeyErr == nil && privateKeyErr == nil {
+	case publicKeyErr == nil && privateKeyErr == nil:
 		log.Infof("found objects with label %q in HSM", config.KeyLabel)
 
 		publicKey = p11.PublicKey(publicKeyObj)
 		privateKey = p11.PrivateKey(privateKeyObj)
-	} else {
+	default:
 		return nil, errors.WrapIf(errors.Combine(publicKeyErr, privateKeyErr), "only one of the keys found with the specified label")
 	}
 
@@ -256,8 +257,8 @@ func (h *hsmCrypto) Set(key string, value []byte) error {
 }
 
 /*
-	Purpose: Generate RSA keypair with a given tokenLabel and persistence.
-	tokenLabel: string to set as the token labels
+Purpose: Generate RSA keypair with a given tokenLabel and persistence.
+tokenLabel: string to set as the token labels
 */
 func generateRSAKeyPairRequest(tokenLabel string) p11.GenerateKeyPairRequest {
 	mechanism := *pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_KEY_PAIR_GEN, nil)
