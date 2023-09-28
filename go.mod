@@ -9,7 +9,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.568
 	github.com/aliyun/aliyun-oss-go-sdk v2.2.9+incompatible
-	github.com/aws/aws-sdk-go v1.45.17
+	github.com/aws/aws-sdk-go v1.45.18
 	github.com/bank-vaults/vault-sdk v0.9.0
 	github.com/cristalhq/jwt/v3 v3.1.0
 	github.com/fsnotify/fsnotify v1.6.0
