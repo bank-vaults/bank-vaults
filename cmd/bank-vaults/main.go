@@ -116,17 +116,6 @@ const (
 	cfgOnce         = "once"
 )
 
-// We need to pre-create a value and bind the flag to this until
-// https://github.com/spf13/viper/issues/608 gets fixed.
-var (
-	k8sSecretLabels         map[string]string
-	awsKmsEncryptionContext map[string]string
-)
-
-var defaultAwsKmsEncryptionContext = map[string]string{
-	"Tool": "bank-vaults",
-}
-
 var rootCmd = &cobra.Command{
 	Use:   "bank-vaults",
 	Short: "Automates initialization, unsealing and configuration of Hashicorp Vault.",
@@ -173,8 +162,8 @@ func configStringSliceVar(cmd *cobra.Command, key string, defaultValue []string,
 	_ = c.BindPFlag(key, cmd.PersistentFlags().Lookup(key))
 }
 
-func configStringMapVar(cmd *cobra.Command, key string, value *map[string]string, defaultValue map[string]string, description string) {
-	cmd.PersistentFlags().StringToStringVar(value, key, defaultValue, description)
+func configStringMapVar(cmd *cobra.Command, key string, defaultValue map[string]string, description string) {
+	cmd.PersistentFlags().StringToString(key, defaultValue, description)
 	_ = c.BindPFlag(key, cmd.PersistentFlags().Lookup(key))
 }
 
@@ -230,7 +219,7 @@ func init() {
 	// AWS KMS flags
 	configStringSliceVar(rootCmd, cfgAWSKMSRegion, nil, "The region of the AWS KMS key to encrypt values")
 	configStringSliceVar(rootCmd, cfgAWSKMSKeyID, nil, "The ID or ARN of the AWS KMS key to encrypt values")
-	configStringMapVar(rootCmd, cfgAWSKMSEncryptionContext, &awsKmsEncryptionContext, defaultAwsKmsEncryptionContext, "The encryption context that AWS KMS will use to encrypt values")
+	configStringMapVar(rootCmd, cfgAWSKMSEncryptionContext, map[string]string{"Tool": "bank-vaults"}, "The encryption context that AWS KMS will use to encrypt values")
 
 	// AWS S3 Object Storage flags
 	configStringSliceVar(rootCmd, cfgAWSS3Region, []string{"us-east-1"}, "The region to use for storing values in AWS S3")
@@ -265,7 +254,7 @@ func init() {
 	// K8S Secret Storage flags
 	configStringVar(rootCmd, cfgK8SNamespace, "", "The namespace of the K8S Secret to store values in")
 	configStringVar(rootCmd, cfgK8SSecret, "", "The name of the K8S Secret to store values in")
-	configStringMapVar(rootCmd, cfgK8SLabels, &k8sSecretLabels, map[string]string{}, "The labels of the K8S Secret to store values in")
+	configStringMapVar(rootCmd, cfgK8SLabels, map[string]string{}, "The labels of the K8S Secret to store values in")
 
 	// HSM flags
 	configStringVar(rootCmd, cfgHSMModulePath, "", "The library path of the HSM device")

@@ -240,7 +240,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		k8s, err := k8s.New(
 			cfg.GetString(cfgK8SNamespace),
 			cfg.GetString(cfgK8SSecret),
-			k8sSecretLabels,
+			cfg.GetStringMapString(cfgK8SLabels),
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "error creating K8S Secret kv store")
@@ -253,7 +253,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		k8s, err := k8s.New(
 			cfg.GetString(cfgK8SNamespace),
 			cfg.GetString(cfgK8SSecret),
-			k8sSecretLabels,
+			cfg.GetStringMapString(cfgK8SLabels),
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "error creating K8S Secret with kv store")
