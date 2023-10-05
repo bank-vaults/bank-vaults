@@ -118,5 +118,5 @@ func (e prometheusExporter) Run() error {
 	logrus.Infof("vault metrics exporter enabled: %s%s", metricsAddr, metricsPath)
 	prometheus.MustRegister(&e)
 	http.DefaultServeMux.Handle(metricsPath, promhttp.Handler())
-	return http.ListenAndServe(metricsAddr, http.DefaultServeMux)
+	return http.ListenAndServe(metricsAddr, http.DefaultServeMux) //nolint:gosec
 }

@@ -231,11 +231,11 @@ func (v *vault) keyStoreSet(key string, val []byte) error {
 	notFound, err := v.keyStoreNotFound(key)
 	if notFound {
 		return v.keyStore.Set(key, val)
-	} else if err == nil {
-		return errors.Errorf("error setting key '%s': it already exists", key)
-	} else {
-		return errors.Wrapf(err, "error setting key '%s'", key)
 	}
+	if err == nil {
+		return errors.Errorf("error setting key '%s': it already exists", key)
+	}
+	return errors.Wrapf(err, "error setting key '%s'", key)
 }
 
 // Init initializes Vault if is not initialized already

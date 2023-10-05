@@ -42,7 +42,7 @@ func New() (service kv.Service, err error) {
 	return
 }
 
-func (d *dev) Set(key string, val []byte) error {
+func (d *dev) Set(_ string, _ []byte) error {
 	return nil
 }
 

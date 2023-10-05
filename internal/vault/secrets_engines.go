@@ -233,8 +233,7 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) e
 				// `json: unsupported type: map[interface {}]interface {}`
 				// So check and replace by `map[string]interface{}` before using it.
 				for k, v := range subConfigData {
-					switch val := v.(type) {
-					case map[interface{}]interface{}:
+					if val, ok := v.(map[interface{}]interface{}); ok {
 						subConfigData[k] = cast.ToStringMap(val)
 					}
 				}
