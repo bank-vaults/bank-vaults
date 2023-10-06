@@ -19,9 +19,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/bank-vaults/internal/configuration"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/bank-vaults/bank-vaults/internal/configuration"
 )
 
 type arrayFlags []string

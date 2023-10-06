@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bank-vaults/internal/configuration"
 	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/fsnotify/fsnotify"
 	"github.com/jpillora/backoff"
@@ -28,7 +29,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/bank-vaults/bank-vaults/internal/configuration"
 	internalVault "github.com/bank-vaults/bank-vaults/internal/vault"
 )
 
