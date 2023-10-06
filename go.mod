@@ -29,7 +29,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	gocloud.dev v0.34.0
 	golang.org/x/oauth2 v0.12.0
-	google.golang.org/api v0.144.0
+	google.golang.org/api v0.145.0
 	google.golang.org/genproto v0.0.0-20230913181813-007df8e322eb
 	k8s.io/api v0.28.2
 	k8s.io/apimachinery v0.28.2
