@@ -27,7 +27,7 @@ require (
 	github.com/spf13/viper v1.10.1
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/oauth2 v0.12.0
-	google.golang.org/api v0.144.0
+	google.golang.org/api v0.146.0
 	k8s.io/api v0.28.2
 	k8s.io/apimachinery v0.28.2
 	k8s.io/client-go v0.28.2
