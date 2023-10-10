@@ -103,7 +103,7 @@ DOCKER_TAG ?= ${VERSION}
 # Dependency versions
 GOTESTSUM_VERSION = 0.4.0
 
-GOLANG_VERSION = 1.19.2
+GOLANG_VERSION = 1.21.1
 
 
 .PHONY: docker
