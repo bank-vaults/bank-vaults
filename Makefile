@@ -13,6 +13,11 @@ build: ## Build binary
 	@mkdir -p build
 	go build -race -o build/ ./cmd/bank-vaults
 
+.PHONY: gen-docs
+gen-docs: ## Generate CLI documentation
+	@mkdir -p "build/docs"
+	go run -tags=gen_docs ./cmd/bank-vaults gen-docs "build/docs"
+
 .PHONY: lint
 lint: lint-go lint-docker lint-yaml
 lint: ## Run linters
@@ -48,23 +53,6 @@ bin/golangci-lint:
 bin/licensei:
 	@mkdir -p bin
 	curl -sfL https://raw.githubusercontent.com/goph/licensei/master/install.sh | bash -s -- v${LICENSEI_VERSION}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
