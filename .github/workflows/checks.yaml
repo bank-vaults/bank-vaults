@@ -1,0 +1,18 @@
+name: PR Checks
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-commits:
+    name: Verify Commits
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Block Merge Commits
+        uses: Morishiri/block-merge-commits-action@v1.0.1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
