@@ -15,7 +15,7 @@
 package awskms
 
 import (
-        "encoding/base64"
+	"strings"
 
 	"emperror.dev/errors"
 	"github.com/aws/aws-sdk-go/aws"
@@ -73,7 +73,9 @@ func (a *awsKMS) decrypt(cipherText []byte) ([]byte, error) {
 		return nil, errors.WrapIf(err, "failed to decrypt with KMS client")
 	}
 
-	return base64.StdEncoding.DecodeString(string(out.Plaintext))
+	trimKey := strings.TrimSpace(string(out.Plaintext))
+
+	return []byte(trimKey), nil
 }
 
 func (a *awsKMS) Get(key string) ([]byte, error) {
