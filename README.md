@@ -8,10 +8,11 @@
   </h1>
 </p>
 
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/bank-vaults/bank-vaults)
+<br>
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bank-vaults/bank-vaults/ci.yaml?branch=main&style=flat-square)](https://github.com/bank-vaults/bank-vaults/actions/workflows/ci.yaml?query=workflow%3ACI)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/bank-vaults/bank-vaults/badge?style=flat-square)](https://api.securityscorecards.dev/projects/github.com/bank-vaults/bank-vaults)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/7871/badge)](https://www.bestpractices.dev/projects/7871)
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/bank-vaults/bank-vaults)
 
 *Bank Vaults is a thick, tricky, shifty right with a fast and intense tube for experienced surfers only, located on Mentawai.
 Think heavy steel doors, secret unlocking combinations and burly guards with smack-down attitude. Watch out for clean-up sets.*
@@ -54,7 +55,41 @@ _Alternatively, install [Go](https://go.dev/dl/) on your computer then run `make
 
 Make sure Docker is installed with Compose and Buildx.
 
-For further details, please refer to the [documentation](https://bank-vaults.dev/docs/development/).
+Fetch required tools:
+
+```shell
+make deps
+```
+
+Run the test suite:
+
+```shell
+make test
+```
+
+Run linters:
+
+```shell
+make lint # pass -j option to run them in parallel
+```
+
+Some linter violations can automatically be fixed:
+
+```shell
+make fmt
+```
+
+Build artifacts locally:
+
+```shell
+make artifacts
+```
+
+Once you are done, you can clean project dependencies:
+
+```shell
+make clean
+```
 
 ## Credits
 
