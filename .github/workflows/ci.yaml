@@ -188,10 +188,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
+      - name: Set up Nix
+        uses: cachix/install-nix-action@6a9a9e84a173d90b3ffb42c5ddaf9ea033fad011 # v23
         with:
-          go-version: '1.20'
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up magic Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@8a218f9e264e9c3803c9a1ee1c30d8e4ab55be63 # v2
+
+      - name: Set up Go cache
+        uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3.3.2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ github.job }}-${{ runner.os }}-go-
 
       - name: Setup test dependencies
         run: |
@@ -201,8 +215,11 @@ jobs:
           sudo pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin banzai --token-label bank-vaults --label bank-vaults
           sudo chown -R runner:docker /etc/softhsm /var/lib/softhsm
 
+      - name: Prepare Nix shell
+        run: nix develop --impure .#ci
+
       - name: Run verification
-        run: make check
+        run: nix develop --impure .#ci -c make check
         env:
           VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
 
