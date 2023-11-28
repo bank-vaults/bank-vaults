@@ -1,0 +1,21 @@
+name: PR Sync
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+jobs:
+  check:
+    uses: bank-vaults/.github/.github/workflows/_pr_check.yml@main
+    permissions:
+      pull-requests: write
+
+  sync:
+    uses: bank-vaults/.github/.github/workflows/_pr_sync.yml@main
+    permissions:
+      pull-requests: write
+      issues: write
