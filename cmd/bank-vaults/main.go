@@ -17,13 +17,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -133,7 +133,8 @@ func execute() {
 	}()
 
 	if err := rootCmd.Execute(); err != nil {
-		logrus.Fatalf("error executing command: %s", err.Error())
+		slog.Error(fmt.Sprintf("error executing command: %s", err.Error()))
+		os.Exit(1)
 	}
 }
 

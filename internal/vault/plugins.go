@@ -15,9 +15,11 @@
 package vault
 
 import (
+	"fmt"
+	"log/slog"
+
 	"emperror.dev/errors"
 	"github.com/hashicorp/vault/api"
-	"github.com/sirupsen/logrus"
 )
 
 // A non-exclusive map of Vault builtin plugins to avoid calling Vault API for each plugin.
@@ -76,7 +78,7 @@ func (v *vault) getExistingPlugins() (map[string]map[string]bool, error) {
 					Type: existingPluginType,
 				}
 
-				logrus.Debugf("check if %s/%s is a builtin plugin or not", existingPluginType, existingPluginName)
+				slog.Debug(fmt.Sprintf("check if %s/%s is a builtin plugin or not", existingPluginType, existingPluginName))
 				existingPlugin, err := v.cl.Sys().GetPlugin(&input)
 				if err != nil {
 					return nil, errors.Wrapf(err, "failed to retrieve plugin %s/%s", existingPluginType, existingPluginName)
@@ -117,8 +119,8 @@ func (v *vault) addManagedPlugins(managedPlugins []plugin) error {
 			Type:    pluginType,
 		}
 
-		logrus.Infof("adding plugin %s (%s)", plugin.Name, plugin.Type)
-		logrus.Debugf("plugin input %#v", input)
+		slog.Info(fmt.Sprintf("adding plugin %s (%s)", plugin.Name, plugin.Type))
+		slog.Debug(fmt.Sprintf("plugin input %#v", input))
 		if err = v.cl.Sys().RegisterPlugin(&input); err != nil {
 			return errors.Wrapf(err, "error adding plugin %s/%s in vault", plugin.Type, plugin.Name)
 		}
@@ -129,7 +131,7 @@ func (v *vault) addManagedPlugins(managedPlugins []plugin) error {
 
 func (v *vault) removeUnmanagedPlugins(managedPlugins []plugin) error {
 	if !v.externalConfig.PurgeUnmanagedConfig.Enabled || v.externalConfig.PurgeUnmanagedConfig.Exclude.Plugins {
-		logrus.Debugf("purge config is disabled, no unmanaged plugins will be removed")
+		slog.Debug("purge config is disabled, no unmanaged plugins will be removed")
 		return nil
 	}
 
@@ -148,7 +150,7 @@ func (v *vault) removeUnmanagedPlugins(managedPlugins []plugin) error {
 				Type: pluginType,
 			}
 
-			logrus.Infof("removing plugin %s (%s)", existingPluginName, existingPluginType)
+			slog.Info(fmt.Sprintf("removing plugin %s (%s)", existingPluginName, existingPluginType))
 			if err := v.cl.Sys().DeregisterPlugin(&input); err != nil {
 				return errors.Wrapf(err, "error removing plugin %s/%s in vault", existingPluginType, existingPluginName)
 			}

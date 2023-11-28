@@ -17,6 +17,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -24,7 +25,6 @@ import (
 	vaultpkg "github.com/bank-vaults/vault-sdk/vault"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/mapstructure"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 )
 
@@ -87,7 +87,7 @@ func (v *vault) mountExists(path string) (bool, error) {
 	if err != nil {
 		return false, errors.Wrap(err, "error reading mounts from vault")
 	}
-	logrus.Debugf("already existing mounts: %+v", mounts)
+	slog.Debug(fmt.Sprintf("already existing mounts: %+v", mounts))
 
 	return mounts[path+"/"] != nil, nil
 }
@@ -106,18 +106,18 @@ func (v *vault) rotateSecretEngineCredentials(secretEngineType, path, name, conf
 	}
 
 	if _, ok := v.rotateCache[rotatePath]; !ok {
-		logrus.Infoln("doing credential rotation at", rotatePath)
+		slog.Info(fmt.Sprintf("doing credential rotation at %s", rotatePath))
 
 		_, err := v.writeWithWarningCheck(rotatePath, nil)
 		if err != nil {
 			return errors.Wrapf(err, "error rotating credentials for '%s' config in vault", configPath)
 		}
 
-		logrus.Infoln("credential got rotated at", rotatePath)
+		slog.Info(fmt.Sprintf("credential got rotated at %s", rotatePath))
 
 		v.rotateCache[rotatePath] = true
 	} else {
-		logrus.Infoln("credentials were rotated previously for", rotatePath)
+		slog.Info(fmt.Sprintf("credentials were rotated previously for %s", rotatePath))
 	}
 
 	return nil
@@ -197,15 +197,15 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) e
 				SealWrap:    secretEngine.SealWrap,
 			}
 
-			logrus.Infof("adding secret engine %s (%s)", secretEngine.Path, secretEngine.Type)
-			logrus.Debugf("secret engine input %#v", mountInput)
+			slog.Info(fmt.Sprintf("adding secret engine %s (%s)", secretEngine.Path, secretEngine.Type))
+			slog.Debug(fmt.Sprintf("secret engine input %#v", mountInput))
 			err = v.cl.Sys().Mount(secretEngine.Path, &mountInput)
 			if err != nil {
 				return errors.Wrapf(err, "error mounting %s into vault", secretEngine.Path)
 			}
 		} else {
 			// If the secret engine is already mounted, only update its config in place.
-			logrus.Infof("tuning already existing secret engine %s/", secretEngine.Path)
+			slog.Info(fmt.Sprintf("tuning already existing secret engine %s/", secretEngine.Path))
 			err = v.cl.Sys().TuneMount(secretEngine.Path, mountConfigInput)
 			if err != nil {
 				return errors.Wrapf(err, "error tuning %s in vault", secretEngine.Path)
@@ -289,7 +289,7 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) e
 						if createOnly {
 							reason = "create_only"
 						}
-						logrus.Infof("Secret at configpath %s already exists, %s was set so this will not be updated", configPath, reason)
+						slog.Info(fmt.Sprintf("Secret at configpath %s already exists, %s was set so this will not be updated", configPath, reason))
 						shouldUpdate = false
 					}
 				}
@@ -298,7 +298,7 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) e
 					sec, err := v.writeWithWarningCheck(configPath, subConfigData)
 					if err != nil {
 						if isOverwriteProhibitedError(err) {
-							logrus.Infoln("can't reconfigure", configPath, "please delete it manually")
+							slog.Info(fmt.Sprintf("can't reconfigure %s, please delete it manually", configPath))
 
 							continue
 						}
@@ -344,7 +344,7 @@ func (v *vault) removeUnmanagedSecretsEngines(unmanagedSecretsEngines map[string
 	}
 
 	for secretEnginePath := range unmanagedSecretsEngines {
-		logrus.Infof("removing secret engine path %s ", secretEnginePath)
+		slog.Info(fmt.Sprintf("removing secret engine path %s ", secretEnginePath))
 		if err := v.cl.Sys().Unmount(secretEnginePath); err != nil {
 			return errors.Wrapf(err, "error unmounting %s secret engine from vault", secretEnginePath)
 		}

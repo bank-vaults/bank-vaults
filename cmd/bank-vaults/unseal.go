@@ -15,11 +15,12 @@
 package main
 
 import (
+	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
 	"github.com/bank-vaults/vault-sdk/vault"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	internalVault "github.com/bank-vaults/bank-vaults/internal/vault"
@@ -69,55 +70,63 @@ from one of the following:
 
 		store, err := kvStoreForConfig(c)
 		if err != nil {
-			logrus.Fatalf("error creating kv store: %s", err.Error())
+			slog.Error(fmt.Sprintf("error creating kv store: %s", err.Error()))
+			os.Exit(1)
 		}
 
 		cl, err := vault.NewRawClient()
 		if err != nil {
-			logrus.Fatalf("error connecting to vault: %s", err.Error())
+			slog.Error(fmt.Sprintf("error connecting to vault: %s", err.Error()))
+			os.Exit(1)
 		}
 
 		v, err := internalVault.New(store, cl, vaultConfigForConfig(c))
 		if err != nil {
-			logrus.Fatalf("error creating vault helper: %s", err.Error())
+			slog.Error(fmt.Sprintf("error creating vault helper: %s", err.Error()))
+			os.Exit(1)
 		}
 
 		metrics := prometheusExporter{Vault: v, Mode: "unseal"}
 		go func() {
 			err := metrics.Run()
 			if err != nil {
-				logrus.Fatalf("error creating prometheus exporter: %s", err.Error())
+				slog.Error(fmt.Sprintf("error creating prometheus exporter: %s", err.Error()))
+				os.Exit(1)
 			}
 		}()
 
 		if unsealConfig.proceedInit && unsealConfig.raft {
-			logrus.Info("joining leader vault...")
+			slog.Info("joining leader vault...")
 
 			initialized, err := v.RaftInitialized()
 			if err != nil {
 				sealed, sErr := v.Sealed()
 				if sErr != nil || sealed {
-					logrus.Fatalf("error checking if vault is initialized: %s", err.Error())
+					slog.Error(fmt.Sprintf("error checking if vault is initialized: %s", err.Error()))
+					os.Exit(1)
 				}
-				logrus.Warnf("error checking if vault is initialized, but vault is unsealed so continuing: %s", err.Error())
+				slog.Warn(fmt.Sprintf("error checking if vault is initialized, but vault is unsealed so continuing: %s", err.Error()))
 			}
 
 			// If this is the first instance we have to init it, this happens once in the clusters lifetime
 			if !initialized && !unsealConfig.raftSecondary {
-				logrus.Info("initializing vault...")
+				slog.Info("initializing vault...")
 				if err := v.Init(); err != nil {
-					logrus.Fatalf("error initializing vault: %s", err.Error())
+					slog.Error(fmt.Sprintf("error initializing vault: %s", err.Error()))
+					os.Exit(1)
 				}
 			} else {
-				logrus.Info("joining raft cluster...")
+				slog.Info("joining raft cluster...")
 				if err := v.RaftJoin(unsealConfig.raftLeaderAddress); err != nil {
-					logrus.Fatalf("error joining leader vault: %s", err.Error())
+					slog.Error(fmt.Sprintf("error joining leader vault: %s", err.Error()))
+					os.Exit(1)
 				}
 			}
 		} else if unsealConfig.proceedInit {
-			logrus.Info("initializing vault...")
+			slog.Info("initializing vault...")
 			if err := v.Init(); err != nil {
-				logrus.Fatalf("error initializing vault: %s", err.Error())
+				slog.Error(fmt.Sprintf("error initializing vault: %s", err.Error()))
+				os.Exit(1)
 			}
 		}
 
@@ -138,30 +147,30 @@ from one of the following:
 }
 
 func unseal(unsealConfig unsealCfg, v internalVault.Vault) {
-	logrus.Debug("checking if vault is sealed...")
+	slog.Debug("checking if vault is sealed...")
 	sealed, err := v.Sealed()
 	if err != nil {
-		logrus.Errorf("error checking if vault is sealed: %s", err.Error())
+		slog.Error(fmt.Sprintf("error checking if vault is sealed: %s", err.Error()))
 		exitIfNecessary(unsealConfig, 1)
 		return
 	}
 
 	// If vault is not sealed, we stop here and wait for another unsealPeriod
 	if !sealed {
-		logrus.Debug("vault is not sealed")
+		slog.Debug("vault is not sealed")
 		exitIfNecessary(unsealConfig, 0)
 		return
 	}
 
-	logrus.Info("vault is sealed, unsealing")
+	slog.Info("vault is sealed, unsealing")
 
 	if err = v.Unseal(); err != nil {
-		logrus.Errorf("error unsealing vault: %s", err.Error())
+		slog.Error(fmt.Sprintf("error unsealing vault: %s", err.Error()))
 		exitIfNecessary(unsealConfig, 1)
 		return
 	}
 
-	logrus.Info("successfully unsealed vault")
+	slog.Info("successfully unsealed vault")
 
 	exitIfNecessary(unsealConfig, 0)
 }
@@ -169,7 +178,7 @@ func unseal(unsealConfig unsealCfg, v internalVault.Vault) {
 func raftJoin(v internalVault.Vault) bool {
 	leaderAddress, err := v.LeaderAddress()
 	if err != nil {
-		logrus.Errorf("error checking leader vault: %s", err.Error())
+		slog.Error(fmt.Sprintf("error checking leader vault: %s", err.Error()))
 		return false
 	}
 
@@ -177,7 +186,7 @@ func raftJoin(v internalVault.Vault) bool {
 	// so we should ask it join.
 	if leaderAddress == "" {
 		if err = v.RaftJoin(""); err != nil {
-			logrus.Errorf("error joining leader vault: %s", err.Error())
+			slog.Error(fmt.Sprintf("error joining leader vault: %s", err.Error()))
 			return false
 		}
 	}

@@ -15,8 +15,11 @@
 package main
 
 import (
+	"fmt"
+	"log/slog"
+	"os"
+
 	"github.com/bank-vaults/vault-sdk/vault"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	internalVault "github.com/bank-vaults/bank-vaults/internal/vault"
@@ -39,21 +42,25 @@ It will not unseal the Vault instance after initialising.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		store, err := kvStoreForConfig(c)
 		if err != nil {
-			logrus.Fatalf("error creating kv store: %s", err.Error())
+			slog.Error(fmt.Sprintf("error creating kv store: %s", err.Error()))
+			os.Exit(1)
 		}
 
 		cl, err := vault.NewRawClient()
 		if err != nil {
-			logrus.Fatalf("error connecting to vault: %s", err.Error())
+			slog.Error(fmt.Sprintf("error connecting to vault: %s", err.Error()))
+			os.Exit(1)
 		}
 
 		v, err := internalVault.New(store, cl, vaultConfigForConfig(c))
 		if err != nil {
-			logrus.Fatalf("error creating vault helper: %s", err.Error())
+			slog.Error(fmt.Sprintf("error creating vault helper: %s", err.Error()))
+			os.Exit(1)
 		}
 
 		if err = v.Init(); err != nil {
-			logrus.Fatalf("error initialising vault: %s", err.Error())
+			slog.Error(fmt.Sprintf("error initialising vault: %s", err.Error()))
+			os.Exit(1)
 		}
 	},
 }

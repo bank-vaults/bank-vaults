@@ -15,8 +15,10 @@
 package multi
 
 import (
+	"fmt"
+	"log/slog"
+
 	"emperror.dev/errors"
-	"github.com/sirupsen/logrus"
 
 	"github.com/bank-vaults/bank-vaults/pkg/kv"
 )
@@ -31,7 +33,7 @@ func New(services []kv.Service) kv.Service {
 }
 
 func (f *multi) Set(key string, val []byte) error {
-	logrus.Infof("setting key %q in all %d key/value Services", key, len(f.services))
+	slog.Info(fmt.Sprintf("setting key %q in all %d key/value Services", key, len(f.services)))
 	for _, service := range f.services {
 		err := service.Set(key, val)
 		if err != nil {
@@ -52,7 +54,7 @@ func (f *multi) Get(key string) ([]byte, error) {
 			if kv.IsNotFoundError(err) {
 				return nil, err //nolint:wrapcheck
 			}
-			logrus.Infof("error finding key %q in key/value Service, trying next one: %s", key, err)
+			slog.Info(fmt.Sprintf("error finding key %q in key/value Service, trying next one: %s", key, err))
 			multiErr = errors.Append(multiErr, err)
 		} else {
 			return val, nil
