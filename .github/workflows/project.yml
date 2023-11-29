@@ -1,0 +1,13 @@
+name: Project
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+jobs:
+  common:
+    uses: bank-vaults/.github/.github/workflows/_project-common.yml@main
+    permissions:
+      issues: write
+      pull-requests: write

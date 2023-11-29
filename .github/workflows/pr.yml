@@ -1,0 +1,16 @@
+name: PR
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+jobs:
+  common:
+    uses: bank-vaults/.github/.github/workflows/_pr-common.yml@main
+    permissions:
+      pull-requests: write
+      issues: write
