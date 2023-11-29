@@ -9,8 +9,8 @@ on:
       - synchronize
 
 jobs:
-  sync:
-    uses: bank-vaults/.github/.github/workflows/_pr-sync.yml@main
+  common:
+    uses: bank-vaults/.github/.github/workflows/_pr-common.yml@main
     permissions:
       pull-requests: write
       issues: write

@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  sync:
-    uses: bank-vaults/.github/.github/workflows/_project-sync.yml@main
+  common:
+    uses: bank-vaults/.github/.github/workflows/_project-common.yml@main
     permissions:
       issues: write
       pull-requests: write
