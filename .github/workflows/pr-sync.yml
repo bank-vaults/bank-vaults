@@ -1,4 +1,4 @@
-name: PR Sync
+name: PR
 
 on:
   pull_request_target:
@@ -9,13 +9,8 @@ on:
       - synchronize
 
 jobs:
-  check:
-    uses: bank-vaults/.github/.github/workflows/_pr_check.yml@main
-    permissions:
-      pull-requests: write
-
   sync:
-    uses: bank-vaults/.github/.github/workflows/_pr_sync.yml@main
+    uses: bank-vaults/.github/.github/workflows/_pr-sync.yml@main
     permissions:
       pull-requests: write
       issues: write
