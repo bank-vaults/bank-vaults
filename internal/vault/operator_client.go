@@ -44,7 +44,7 @@ const (
 type Vault interface {
 	Init() error
 	RaftInitialized() (bool, error)
-	RaftJoin(string) error
+	RaftJoin(leaderAddress string) error
 	Sealed() (bool, error)
 	Active() (bool, error)
 	Unseal() error

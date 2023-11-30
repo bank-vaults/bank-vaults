@@ -50,7 +50,7 @@ const (
 )
 
 const (
-	cfgGoogleCloudKMSProject   = "google-cloud-kms-project" //nolint:gosec
+	cfgGoogleCloudKMSProject   = "google-cloud-kms-project"
 	cfgGoogleCloudKMSLocation  = "google-cloud-kms-location"
 	cfgGoogleCloudKMSKeyRing   = "google-cloud-kms-key-ring"
 	cfgGoogleCloudKMSCryptoKey = "google-cloud-kms-crypto-key"

@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -206,7 +207,7 @@ func watchConfigurations(parser multiparser.Parser, vaultConfigFiles []string, c
 		err := watcher.Add(configDir)
 		if err != nil {
 			slog.Error(err.Error())
-			os.Exit(1)
+			runtime.Goexit()
 		}
 	}
 
