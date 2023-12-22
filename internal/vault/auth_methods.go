@@ -16,15 +16,15 @@ package vault
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
 	"emperror.dev/errors"
-	"github.com/cristalhq/jwt/v3"
+	jwt "github.com/cristalhq/jwt/v3"
 	"github.com/hashicorp/vault/api"
 	json "github.com/json-iterator/go"
 	"github.com/mitchellh/mapstructure"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 )
 
@@ -407,7 +407,7 @@ func (v *vault) addManagedAuthMethods(managedAuths []auth) error {
 
 		// We have to filter all existing auths, not to re-enable them as that would raise an error
 		if existingAuths[authMethod.Path] == nil {
-			logrus.Infof("adding auth method %s (%s)", authMethod.Path, authMethod.Type)
+			slog.Info(fmt.Sprintf("adding auth method %s (%s)", authMethod.Path, authMethod.Type))
 			err := v.cl.Sys().EnableAuthWithOptions(authMethod.Path, &options)
 			if err != nil {
 				return errors.Wrapf(err, "error enabling %s auth method in vault", authMethod.Path)
@@ -416,7 +416,7 @@ func (v *vault) addManagedAuthMethods(managedAuths []auth) error {
 
 		// If auth method exists but has additional mount options
 		if hasMountOptions {
-			logrus.Infof("tuning existing auth %s (%s)", authMethod.Path, authMethod.Type)
+			slog.Info(fmt.Sprintf("tuning existing auth %s (%s)", authMethod.Path, authMethod.Type))
 			// all auth methods are mounted below auth/
 			tunePath := fmt.Sprintf("auth/%s", authMethod.Path)
 			err := v.cl.Sys().TuneMount(tunePath, authConfigInput)
@@ -472,7 +472,7 @@ func (v *vault) removeUnmanagedAuthMethods(unmanagedAuths map[string]*api.MountO
 	}
 
 	for authMethod := range unmanagedAuths {
-		logrus.Infof("removing auth method %s ", authMethod)
+		slog.Info(fmt.Sprintf("removing auth method %s ", authMethod))
 		err := v.cl.Sys().DisableAuth(authMethod)
 		if err != nil {
 			return errors.Wrapf(err, "error disabling %s auth method in vault", authMethod)

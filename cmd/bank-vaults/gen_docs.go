@@ -21,12 +21,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-	"github.com/spf13/cobra/doc"
+	"log/slog"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/cobra/doc"
 )
 
 var genDocsCmd = &cobra.Command{
@@ -60,7 +61,7 @@ generated_file: true
 			return err
 		}
 
-		logrus.Infof("Successfully generated and saved docs to dir=%s", outputDir)
+		slog.Info(fmt.Sprintf("Successfully generated and saved docs to dir=%s", outputDir))
 		return nil
 	},
 }

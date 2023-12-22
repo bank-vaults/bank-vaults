@@ -17,13 +17,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -50,7 +50,7 @@ const (
 )
 
 const (
-	cfgGoogleCloudKMSProject   = "google-cloud-kms-project" //nolint:gosec
+	cfgGoogleCloudKMSProject   = "google-cloud-kms-project"
 	cfgGoogleCloudKMSLocation  = "google-cloud-kms-location"
 	cfgGoogleCloudKMSKeyRing   = "google-cloud-kms-key-ring"
 	cfgGoogleCloudKMSCryptoKey = "google-cloud-kms-crypto-key"
@@ -133,7 +133,8 @@ func execute() {
 	}()
 
 	if err := rootCmd.Execute(); err != nil {
-		logrus.Fatalf("error executing command: %s", err.Error())
+		slog.Error(fmt.Sprintf("error executing command: %s", err.Error()))
+		os.Exit(1)
 	}
 }
 

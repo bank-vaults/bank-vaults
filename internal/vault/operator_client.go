@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"runtime"
@@ -25,10 +26,9 @@ import (
 	"time"
 
 	"emperror.dev/errors"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/mapstructure"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -44,7 +44,7 @@ const (
 type Vault interface {
 	Init() error
 	RaftInitialized() (bool, error)
-	RaftJoin(string) error
+	RaftJoin(leaderAddress string) error
 	Sealed() (bool, error)
 	Active() (bool, error)
 	Unseal() error
@@ -193,19 +193,19 @@ func (v *vault) Unseal() error {
 	for i := 0; ; i++ {
 		keyID := keyUnsealForID(i)
 
-		logrus.Debugf("retrieving key from kms service...")
+		slog.Debug("retrieving key from kms service...")
 		k, err := v.keyStore.Get(keyID)
 		if err != nil {
 			return errors.Wrapf(err, "unable to get key '%s'", keyID)
 		}
 
-		logrus.Debugf("sending unseal request to vault...")
+		slog.Debug("sending unseal request to vault...")
 		resp, err := v.cl.Sys().Unseal(string(k))
 		if err != nil {
 			return errors.Wrap(err, "fail to send unseal request to vault")
 		}
 
-		logrus.Debugf("got unseal response: %+v", *resp)
+		slog.Debug(fmt.Sprintf("got unseal response: %+v", *resp))
 
 		if !resp.Sealed {
 			return nil
@@ -245,12 +245,12 @@ func (v *vault) Init() error {
 		return errors.Wrap(err, "error testing if vault is initialized")
 	}
 	if initialized {
-		logrus.Info("vault is already initialized")
+		slog.Info("vault is already initialized")
 
 		return nil
 	}
 
-	logrus.Info("initializing vault")
+	slog.Info("initializing vault")
 
 	// test backend first
 	if v.config.PreFlightChecks {
@@ -310,7 +310,7 @@ func (v *vault) Init() error {
 			return errors.Wrapf(err, "error storing unseal key '%s'", keyID)
 		}
 
-		logrus.WithField("key", keyID).Info("unseal key stored in key store")
+		slog.With(slog.String("key", keyID)).Info("unseal key stored in key store")
 	}
 
 	for i, k := range resp.RecoveryKeys {
@@ -320,14 +320,14 @@ func (v *vault) Init() error {
 			return errors.Wrapf(err, "error storing recovery key '%s'", keyID)
 		}
 
-		logrus.WithField("key", keyID).Info("recovery key stored in key store")
+		slog.With(slog.String("key", keyID)).Info("recovery key stored in key store")
 	}
 
 	rootToken := resp.RootToken
 
 	// this sets up a predefined root token
 	if v.config.InitRootToken != "" {
-		logrus.Info("setting up init root token, waiting for vault to be unsealed")
+		slog.Info("setting up init root token, waiting for vault to be unsealed")
 
 		wait := time.Second * 2
 		for {
@@ -336,9 +336,9 @@ func (v *vault) Init() error {
 				break
 			}
 			if err == nil {
-				logrus.Info("vault still sealed, wait for unsealing")
+				slog.Info("vault still sealed, wait for unsealing")
 			} else {
-				logrus.Infof("vault not reachable: %s", err.Error())
+				slog.Info(fmt.Sprintf("vault not reachable: %s", err.Error()))
 			}
 
 			time.Sleep(wait)
@@ -371,9 +371,9 @@ func (v *vault) Init() error {
 		if err = v.keyStoreSet(keyRootToken, []byte(resp.RootToken)); err != nil {
 			return errors.Wrapf(err, "error storing root token '%s' in key'%s'", rootToken, keyRootToken)
 		}
-		logrus.WithField("key", keyRootToken).Info("root token stored in key store")
+		slog.With(slog.String("key", keyRootToken)).Info("root token stored in key store")
 	} else if v.config.InitRootToken == "" {
-		logrus.WithField("root-token", resp.RootToken).Warnf("won't store root token in key store, this token grants full privileges to vault, so keep this secret")
+		slog.With(slog.String("root-token", resp.RootToken)).Warn("won't store root token in key store, this token grants full privileges to vault, so keep this secret")
 	}
 
 	return nil
@@ -407,7 +407,7 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 		}
 
 		if initialized {
-			logrus.Info("vault is already initialized, skipping raft join")
+			slog.Info("vault is already initialized, skipping raft join")
 
 			return nil
 		}
@@ -441,7 +441,7 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 	}
 
 	if response.Joined {
-		logrus.Info("vault joined raft cluster")
+		slog.Info("vault joined raft cluster")
 
 		return nil
 	}
@@ -452,7 +452,7 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 func (v *vault) Configure(config map[string]interface{}) error {
 	var rootToken []byte
 
-	logrus.Debugf("retrieving key from kms service...")
+	slog.Debug("retrieving key from kms service...")
 
 	if v.config.StoreRootToken {
 		rootToken, err := v.keyStore.Get(keyRootToken)
@@ -466,7 +466,7 @@ func (v *vault) Configure(config map[string]interface{}) error {
 		var encodedRootToken string
 		var OTPLength int
 
-		logrus.Debugf("initiating generate-root token process...")
+		slog.Debug("initiating generate-root token process...")
 
 		response, err := v.cl.Sys().GenerateRootInit("", "")
 		if err != nil {
@@ -479,7 +479,7 @@ func (v *vault) Configure(config map[string]interface{}) error {
 		// Iterate over existing unseal keys
 		for i := 0; i < response.Required; i++ {
 			keyID := keyUnsealForID(i)
-			logrus.Debugf("retrieving key from kms service...")
+			slog.Debug("retrieving key from kms service...")
 			k, err := v.keyStore.Get(keyID)
 			if err != nil {
 				return errors.Wrapf(err, "unable to get key '%s'", keyID)
@@ -596,7 +596,7 @@ func (v *vault) writeWithWarningCheck(path string, data map[string]interface{}) 
 	}
 	if sec != nil {
 		for _, warning := range sec.Warnings {
-			logrus.Warn(warning)
+			slog.Warn(warning)
 		}
 	}
 	return sec, nil

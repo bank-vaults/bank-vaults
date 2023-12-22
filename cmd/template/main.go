@@ -16,11 +16,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
 	"github.com/bank-vaults/internal/configuration"
-	log "github.com/sirupsen/logrus"
 )
 
 type arrayFlags []string
@@ -49,7 +50,8 @@ func main() {
 
 	delimitersArray := strings.Split(delimiters, ":")
 	if len(delimitersArray) != 2 {
-		log.Fatal("delims must be two mnemonics delimited by a :")
+		slog.Error("delims must be two mnemonics delimited by a :")
+		os.Exit(1)
 	}
 
 	leftDelimiter := delimitersArray[0]
@@ -62,18 +64,21 @@ func main() {
 	if vaultConfig != "" {
 		buffer, err := templater.EnvTemplate(vaultConfig)
 		if err != nil {
-			log.Fatalf("error executing template: %s", err.Error())
+			slog.Error(fmt.Sprintf("error executing template: %s", err.Error()))
+			os.Exit(1)
 		}
 
 		err = os.WriteFile(filename, buffer.Bytes(), 0600)
 		if err != nil {
-			log.Fatalf("error writing template file: %s", err.Error())
+			slog.Error(fmt.Sprintf("error writing template file: %s", err.Error()))
+			os.Exit(1)
 		}
 	} else {
 		for _, t := range templates {
 			templateArray := strings.Split(t, ":")
 			if len(templateArray) != 2 {
-				log.Fatal("template must be two filenames delimited by a :")
+				slog.Error("template must be two filenames delimited by a :")
+				os.Exit(1)
 			}
 
 			source := templateArray[0]
@@ -81,17 +86,20 @@ func main() {
 
 			templateText, err := os.ReadFile(source)
 			if err != nil {
-				log.Fatalf("error reading template file: %s", err.Error())
+				slog.Error(fmt.Sprintf("error reading template file: %s", err.Error()))
+				os.Exit(1)
 			}
 
 			templatedText, err := templater.EnvTemplate(string(templateText))
 			if err != nil {
-				log.Fatalf("error executing template: %s", err.Error())
+				slog.Error(fmt.Sprintf("error executing template: %s", err.Error()))
+				os.Exit(1)
 			}
 
 			err = os.WriteFile(destination, templatedText.Bytes(), 0600)
 			if err != nil {
-				log.Fatalf("error writing template file %q: %s", destination, err.Error())
+				slog.Error(fmt.Sprintf("error writing template file %q: %s", destination, err.Error()))
+				os.Exit(1)
 			}
 		}
 	}

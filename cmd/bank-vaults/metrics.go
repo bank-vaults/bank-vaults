@@ -15,11 +15,12 @@
 package main
 
 import (
+	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
 
 	internalVault "github.com/bank-vaults/bank-vaults/internal/vault"
 )
@@ -83,13 +84,13 @@ func (e *prometheusExporter) Collect(ch chan<- prometheus.Metric) {
 	if e.Mode == "unseal" {
 		sealed, err := e.Vault.Sealed()
 		if err != nil {
-			logrus.Errorf("error checking if vault is sealed: %s", err.Error())
+			slog.Error(fmt.Sprintf("error checking if vault is sealed: %s", err.Error()))
 			return
 		}
 
 		leader, err := e.Vault.Leader()
 		if err != nil {
-			logrus.Errorf("error checking if vault is leader: %s", err.Error())
+			slog.Error(fmt.Sprintf("error checking if vault is leader: %s", err.Error()))
 			return
 		}
 
@@ -115,7 +116,7 @@ func (e *prometheusExporter) Collect(ch chan<- prometheus.Metric) {
 func (e prometheusExporter) Run() error {
 	metricsPath := "/metrics"
 	metricsAddr := ":9091"
-	logrus.Infof("vault metrics exporter enabled: %s%s", metricsAddr, metricsPath)
+	slog.Info(fmt.Sprintf("vault metrics exporter enabled: %s%s", metricsAddr, metricsPath))
 	prometheus.MustRegister(&e)
 	http.DefaultServeMux.Handle(metricsPath, promhttp.Handler())
 	return http.ListenAndServe(metricsAddr, http.DefaultServeMux) //nolint:gosec

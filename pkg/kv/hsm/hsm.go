@@ -18,11 +18,13 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"fmt"
+	"log/slog"
+	"os"
 
 	"emperror.dev/errors"
 	"github.com/miekg/pkcs11"
 	"github.com/miekg/pkcs11/p11"
-	"github.com/sirupsen/logrus"
 
 	"github.com/bank-vaults/bank-vaults/pkg/kv"
 )
@@ -36,7 +38,7 @@ type hsmCrypto struct {
 	publicKey  p11.PublicKey
 	privateKey p11.PrivateKey
 	storage    kv.Service
-	log        *logrus.Logger
+	log        *slog.Logger
 	session    p11.Session
 	encrypt    cryptoFunc
 	decrypt    cryptoFunc
@@ -53,7 +55,7 @@ type Config struct {
 
 // New returns a HSM backed KV encryptor. Currently RSA keys are supported only.
 func New(config Config, storage kv.Service) (kv.Service, error) {
-	log := logrus.New()
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
 	if config.KeyLabel == "" {
 		return nil, errors.New("key label is required")
@@ -69,20 +71,20 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 		return nil, errors.Wrap(err, "failed to get module info")
 	}
 
-	log.Infof("HSM Information %+v", info)
+	log.Info(fmt.Sprintf("HSM Information %+v", info))
 
 	slots, err := module.Slots()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list module slots")
 	}
 
-	log.Infof("HSM Searching for slot in HSM slots %+v", slots)
+	log.Info(fmt.Sprintf("HSM Searching for slot in HSM slots %+v", slots))
 	var slot *p11.Slot
 	for _, s := range slots {
 		if config.TokenLabel == "" {
 			if s.ID() == config.SlotID {
 				slot = &s //nolint:gosec,exportloopref
-				log.Infof("found HSM slot %d in HSM by slot ID", slot.ID())
+				log.Info(fmt.Sprintf("found HSM slot %d in HSM by slot ID", slot.ID()))
 
 				break
 			}
@@ -93,7 +95,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 			}
 			if tokenInfo.Label == config.TokenLabel {
 				slot = &s //nolint:gosec,exportloopref
-				log.Infof("found HSM slot %d in HSM by token label", slot.ID())
+				log.Info(fmt.Sprintf("found HSM slot %d in HSM by token label", slot.ID()))
 
 				break
 			}
@@ -109,7 +111,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 		return nil, errors.WrapIf(err, "can't query token info from slot")
 	}
 
-	log.Infof("HSM TokenInfo %+v", tokenInfo)
+	log.Info(fmt.Sprintf("HSM TokenInfo %+v", tokenInfo))
 
 	bestMechanism := pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)
 
@@ -132,7 +134,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 		return nil, errors.WrapIf(err, "can't get HSM slot info")
 	}
 
-	log.Infof("HSM SlotInfo for slot %d: %+v", config.SlotID, slotInfo)
+	log.Info(fmt.Sprintf("HSM SlotInfo for slot %d: %+v", config.SlotID, slotInfo))
 
 	session, err := slot.OpenWriteSession()
 	if err != nil {
@@ -173,7 +175,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 		publicKey = keyPair.Public
 		privateKey = keyPair.Private
 	case publicKeyErr == nil && privateKeyErr == nil:
-		log.Infof("found objects with label %q in HSM", config.KeyLabel)
+		log.Info(fmt.Sprintf("found objects with label %q in HSM", config.KeyLabel))
 
 		publicKey = p11.PublicKey(publicKeyObj)
 		privateKey = p11.PrivateKey(privateKeyObj)
