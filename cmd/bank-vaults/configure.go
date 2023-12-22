@@ -103,7 +103,13 @@ var configureCmd = &cobra.Command{
 		}
 
 		if !runOnce {
-			go watchConfigurations(parser, vaultConfigFiles, configurations)
+			go func() {
+				err := watchConfigurations(parser, vaultConfigFiles, configurations)
+				if err != nil {
+					slog.Error(fmt.Sprintf("error watching configuration: %v", err))
+					os.Exit(1)
+				}
+			}()
 		} else {
 			close(configurations)
 		}
@@ -176,13 +182,11 @@ func handleConfigurationError(parser multiparser.Parser, vaultConfigFile string,
 	configurations <- parseConfiguration(parser, vaultConfigFile)
 }
 
-func watchConfigurations(parser multiparser.Parser, vaultConfigFiles []string, configurations chan<- *configFile) {
+func watchConfigurations(parser multiparser.Parser, vaultConfigFiles []string, configurations chan<- *configFile) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		slog.Error(err.Error())
-		os.Exit(1)
+		return fmt.Errorf("cannot create watcher: %w", err)
 	}
-
 	defer watcher.Close()
 
 	// Map used to match on kubernetes ..data to files inside of directory
@@ -205,10 +209,7 @@ func watchConfigurations(parser multiparser.Parser, vaultConfigFiles []string, c
 		slog.Info(fmt.Sprintf("watching directory for changes: %s", configDir))
 		err := watcher.Add(configDir)
 		if err != nil {
-			slog.Error(err.Error())
-			// close watcher manually to avoid leaking memory on force exits
-			_ = watcher.Close()
-			os.Exit(1)
+			return fmt.Errorf("cannot watch %s: %w", configDir, err)
 		}
 	}
 
@@ -228,7 +229,7 @@ func watchConfigurations(parser multiparser.Parser, vaultConfigFiles []string, c
 				}
 			}
 		case err := <-watcher.Errors:
-			slog.Error(fmt.Sprintf("watcher event error: %s", err.Error()))
+			return fmt.Errorf("watcher exited with error: %w", err)
 		}
 	}
 }
