@@ -85,8 +85,8 @@ github.com/aliyun/alibaba-cloud-sdk-go v1.62.643/go.mod h1:CJJYa1ZMxjlN/NbXEwmej
 github.com/aliyun/aliyun-oss-go-sdk v3.0.1+incompatible h1:so4m5rRA32Tc5GgKg/5gKUu0CRsYmVO3ThMP6T3CwLc=
 github.com/aliyun/aliyun-oss-go-sdk v3.0.1+incompatible/go.mod h1:T/Aws4fEfogEE9v+HPhhw+CntffsBHJ8nXQCwKr0/g8=
 github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
-github.com/aws/aws-sdk-go v1.49.8 h1:gKgEiyJ8CPnr4r6pS06WfNXvp6z34JER1pBIwuocvVA=
-github.com/aws/aws-sdk-go v1.49.8/go.mod h1:LF8svs817+Nz+DmiMQKTO3ubZ/6IaTpq3TjupRn3Eqk=
+github.com/aws/aws-sdk-go v1.49.14 h1:AZ7wfESxXuqQElXRnDCaohJSUSaf2s7c2uPB7g5js/w=
+github.com/aws/aws-sdk-go v1.49.14/go.mod h1:LF8svs817+Nz+DmiMQKTO3ubZ/6IaTpq3TjupRn3Eqk=
 github.com/aws/aws-sdk-go-v2 v1.20.0 h1:INUDpYLt4oiPOJl0XwZDK2OVAVf0Rzo+MGVTv9f+gy8=
 github.com/aws/aws-sdk-go-v2 v1.20.0/go.mod h1:uWOr0m0jDsiWw8nnXiqZ+YG6LdvAlGYDLLf2NmHZoy4=
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.11 h1:/MS8AzqYNAhhRNalOmxUvYs8VEbNGifTnzhPFdcRQkQ=
