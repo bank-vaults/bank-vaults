@@ -170,6 +170,10 @@ func configNeedsNoName(secretEngineType string, configOption string) bool {
 		return true
 	}
 
+	if secretEngineType == "transit" && configOption == "cache-config" {
+		return true
+	}
+
 	return false
 }
 
