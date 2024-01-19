@@ -126,7 +126,7 @@ jobs:
         if: inputs.publish
 
       - name: Upload image as artifact
-        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
+        uses: actions/upload-artifact@694cdabd8bdb0f10b2cea11669e1bf5453eed0a6 # v4.2.0
         with:
           name: "[${{ github.job }}] OCI tarball"
           path: image.tar
@@ -142,7 +142,7 @@ jobs:
         run: skopeo --override-os linux --override-arch amd64 --insecure-policy copy --additional-tag ${{ steps.image-name.outputs.value }}:${{ steps.meta.outputs.version }} oci:image docker-archive:docker.tar
 
       - name: Upload image as artifact
-        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
+        uses: actions/upload-artifact@694cdabd8bdb0f10b2cea11669e1bf5453eed0a6 # v4.2.0
         with:
           name: "[${{ github.job }}] Docker tarball"
           path: docker.tar
@@ -156,7 +156,7 @@ jobs:
           output: trivy-results.sarif
 
       - name: Upload Trivy scan results as artifact
-        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
+        uses: actions/upload-artifact@694cdabd8bdb0f10b2cea11669e1bf5453eed0a6 # v4.2.0
         with:
           name: "[${{ github.job }}] Trivy scan results"
           path: trivy-results.sarif
@@ -202,7 +202,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
+        uses: actions/upload-artifact@694cdabd8bdb0f10b2cea11669e1bf5453eed0a6 # v4.2.0
         with:
           name: "[${{ github.job }}] Goreleaser output"
           path: |
