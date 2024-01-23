@@ -20,6 +20,9 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/jpillora/backoff"
 
 	"emperror.dev/errors"
 	vaultpkg "github.com/bank-vaults/vault-sdk/vault"
@@ -174,6 +177,13 @@ func configNeedsNoName(secretEngineType string, configOption string) bool {
 }
 
 func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) error {
+	b := &backoff.Backoff{
+		Min:    500 * time.Millisecond,
+		Max:    60 * time.Second,
+		Factor: 2,
+		Jitter: false,
+	}
+
 	for _, secretEngine := range managedSecretsEngines {
 		mountExists, err := v.mountExists(secretEngine.Path)
 		if err != nil {
@@ -199,16 +209,41 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) e
 
 			slog.Info(fmt.Sprintf("adding secret engine %s (%s)", secretEngine.Path, secretEngine.Type))
 			slog.Debug(fmt.Sprintf("secret engine input %#v", mountInput))
-			err = v.cl.Sys().Mount(secretEngine.Path, &mountInput)
-			if err != nil {
-				return errors.Wrapf(err, "error mounting %s into vault", secretEngine.Path)
+			for {
+				err = v.cl.Sys().Mount(secretEngine.Path, &mountInput)
+
+				if err != nil {
+					d := b.Duration()
+					slog.Info(fmt.Sprintf("error mounting %s into vault: %s, waiting %s before trying again...", secretEngine.Path, err.Error(), d))
+
+					if d == b.Max {
+						// Stop retrying after reaching the max backoff time
+						return errors.Wrapf(err, "error mounting %s into vault after several attempts", secretEngine.Path)
+					}
+					time.Sleep(d)
+					continue
+				}
+				b.Reset()
+				break // if successful, break out of the loop
 			}
 		} else {
 			// If the secret engine is already mounted, only update its config in place.
 			slog.Info(fmt.Sprintf("tuning already existing secret engine %s/", secretEngine.Path))
-			err = v.cl.Sys().TuneMount(secretEngine.Path, mountConfigInput)
-			if err != nil {
-				return errors.Wrapf(err, "error tuning %s in vault", secretEngine.Path)
+			for {
+				err = v.cl.Sys().TuneMount(secretEngine.Path, mountConfigInput)
+				if err != nil {
+					d := b.Duration()
+					slog.Info(fmt.Sprintf("error tuning %s: %s, waiting %s before trying again...", secretEngine.Path, err.Error(), d))
+
+					if d == b.Max {
+						// Stop retrying after reaching the max backoff time
+						return errors.Wrapf(err, "error mounting %s into vault after several attempts", secretEngine.Path)
+					}
+					time.Sleep(d)
+					continue
+				}
+				b.Reset()
+				break
 			}
 		}
 
