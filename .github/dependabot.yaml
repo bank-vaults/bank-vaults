@@ -6,18 +6,33 @@ updates:
     labels:
       - "area/dependencies"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
+      time: "16:00"
+    open-pull-requests-limit: 10
+    groups:
+      k8s:
+        patterns:
+          - "k8s.io/api"
+          - "k8s.io/apimachinery"
+          - "k8s.io/client-go"
 
   - package-ecosystem: "docker"
     directory: "/"
     labels:
       - "area/dependencies"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
+      time: "16:00"
+    open-pull-requests-limit: 10
 
   - package-ecosystem: "github-actions"
     directory: "/"
     labels:
       - "area/dependencies"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
+      time: "16:00"
+    open-pull-requests-limit: 10
