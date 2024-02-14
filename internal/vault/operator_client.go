@@ -468,6 +468,11 @@ func (v *vault) Configure(config map[string]interface{}) error {
 
 		slog.Debug("initiating generate-root token process...")
 
+		// Cancel any inflight root token generation that is a remnant from a previous attempt
+		err := v.cl.Sys().GenerateRootCancel()
+		if err != nil {
+			return errors.Wrapf(err, "unable to cancel generate root token process")
+		}
 		response, err := v.cl.Sys().GenerateRootInit("", "")
 		if err != nil {
 			return errors.Wrapf(err, "unable to initiate generate-root token process")
