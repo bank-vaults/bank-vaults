@@ -476,9 +476,20 @@ func (v *vault) Configure(config map[string]interface{}) error {
 		nonce = response.Nonce
 		OTPLength = response.OTPLength
 
-		// Iterate over existing unseal keys
+		sealResp, err := v.cl.Sys().SealStatus()
+		if err != nil {
+			return errors.Wrap(err, "error getting seal status")
+		}
+
+		// Iterate over existing unseal/recovery keys
 		for i := 0; i < response.Required; i++ {
-			keyID := keyUnsealForID(i)
+			var keyID string
+			if sealResp.RecoverySeal {
+				keyID = keyRecoveryForID(i)
+			} else {
+				keyID = keyUnsealForID(i)
+			}
+
 			slog.Debug("retrieving key from kms service...")
 			k, err := v.keyStore.Get(keyID)
 			if err != nil {
