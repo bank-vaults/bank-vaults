@@ -65,6 +65,7 @@ func New(store kv.Service, region string, kmsID string, encryptionContext map[st
 
 func (a *awsKMS) decrypt(cipherText []byte) ([]byte, error) {
 	out, err := a.kmsService.Decrypt(&kms.DecryptInput{
+		KeyId:             aws.String(a.kmsID),
 		CiphertextBlob:    cipherText,
 		EncryptionContext: a.encryptionContext,
 		GrantTokens:       []*string{},
