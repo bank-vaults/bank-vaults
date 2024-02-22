@@ -15,7 +15,11 @@ ignored = [
   "logur.dev/adapter/logrus", # MIT
   "logur.dev/logur", # MIT
   "emperror.dev/errors", # MIT
-  "github.com/hashicorp/vault/api", # MPL-2.0
+  "github.com/hashicorp/vault/api", # Mozilla Public License 2.0
+  "github.com/hashicorp/vault/api/auth/aws", # Mozilla Public License 2.0
+  "github.com/hashicorp/vault/api/auth/azure", # Mozilla Public License 2.0
+  "github.com/hashicorp/vault/api/auth/gcp", # Mozilla Public License 2.0
+  "github.com/hashicorp/vault/api/auth/kubernetes", # Mozilla Public License 2.0
 
   # Unsupported VCS
   "gopkg.in/fsnotify.v1",
