@@ -42,7 +42,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.2
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.5.1
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.5.2 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.0.1
+	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.1.0
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.0.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.2.0 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
