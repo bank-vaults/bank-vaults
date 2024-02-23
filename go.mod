@@ -3,7 +3,7 @@ module github.com/bank-vaults/bank-vaults
 go 1.21
 
 require (
-	cloud.google.com/go/storage v1.36.0
+	cloud.google.com/go/storage v1.38.0
 	emperror.dev/errors v0.8.1
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.680
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
