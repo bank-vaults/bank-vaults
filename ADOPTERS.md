@@ -15,4 +15,4 @@ This is a list of production adopters of Bank-Vaults (in alphabetical order):
 - [Vase.ai](https://vase.ai) is using Bank-vaults with the Vault Secrets Webhook to pull secrets from vault in to be used in their CI/CD pipelines.
 - [ViaBill](https://viabill.com/) is using Bank-Vaults to provision and configure Vault, providing secrets for multiple services and applications.
 - [Vonage](https://www.vonage.com/business/) is using Bank-Vaults to provision and configure Vault to provide secrets to application that are on cloud(k8s) and on premise(approle) and also as a transit engine. Uses AWS KMS, S3 and DynamoDB and will be migrated to use raft backend.
-- [Wildlife Studios](https://wildlifestudios.com/) is using the Vault Secrets Webhook on more than a dozen Kubernetes clusters to provide both static secrets injected with secret-init, as well as dynamic secrets with vault-agent.
+- [Wildlife Studios](https://wildlifestudios.com/) is using the Vault Secrets Webhook on more than a dozen Kubernetes clusters to provide both static secrets injected with vault-env, as well as dynamic secrets with vault-agent.
