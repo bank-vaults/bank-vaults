@@ -42,7 +42,7 @@ Some of the usage patterns are highlighted through these blog posts:
 - [Backing up Vault with Velero](https://banzaicloud.com/blog/vault-backup-velero/)
 - [Vault replication across multiple datacenters on Kubernetes](https://banzaicloud.com/blog/vault-multi-datacenter/)
 - [More blog posts about Bank-Vaults](https://banzaicloud.com/tags/bank-vaults/)
-- [Bank Vault Configuration Helm Chart](https://github.com/rljohnsn/bank-vault-config/tree/main)
+- [Bank Vaults Configuration Helm Chart](https://github.com/rljohnsn/bank-vault-config/tree/main)
 
 ## Documentation
 
