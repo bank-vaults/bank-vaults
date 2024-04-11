@@ -7,7 +7,7 @@ require (
 	emperror.dev/errors v0.8.1
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.712
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
-	github.com/aws/aws-sdk-go v1.51.18
+	github.com/aws/aws-sdk-go v1.51.19
 	github.com/bank-vaults/internal v0.3.0
 	github.com/bank-vaults/vault-sdk v0.9.3
 	github.com/cristalhq/jwt/v3 v3.1.0
