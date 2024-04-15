@@ -1,58 +1,21 @@
-FROM --platform=$BUILDPLATFORM tonistiigi/xx:1.4.0@sha256:0cd3f05c72d6c9b038eb135f91376ee1169ef3a330d34e418e65e2a5c2e9c0d4 AS xx
-
-FROM --platform=$BUILDPLATFORM golang:1.22.2-alpine3.18@sha256:d995eb689a0c123590a3d34c65f57f3a118bda3fa26f92da5e089ae7d8fd81a0 AS builder
-
-COPY --from=xx / /
-
-RUN apk add --update --no-cache ca-certificates make git curl clang lld
-
-ARG TARGETPLATFORM
-
-RUN xx-apk --update --no-cache add musl-dev gcc
-
-RUN xx-go --wrap
-
-WORKDIR /usr/local/src/bank-vaults
-
-ARG GOPROXY
-
+ARG BASE_IMAGE
+# See
+# https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
+# for info on BUILDPLATFORM, TARGETOS, TARGETARCH, etc.
+FROM --platform=$BUILDPLATFORM golang:1.22.2 AS builder
+WORKDIR /go/src/github.com/bank-vaults
 ENV CGO_ENABLED=1
-
-COPY go.* ./
+COPY go.* .
+ARG GOPROXY
 RUN go mod download
-
 COPY . .
+ARG TARGETOS
+ARG TARGETARCH
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /go/src/github.com/bank-vaults ./cmd/bank-vaults/
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /go/src/github.com/template ./cmd/template/
 
-RUN go build -o /usr/local/bin/bank-vaults ./cmd/bank-vaults/
-RUN xx-verify /usr/local/bin/bank-vaults
-
-RUN go build -o /usr/local/bin/template ./cmd/template/
-RUN xx-verify /usr/local/bin/template
-
-FROM alpine:3.19.1@sha256:c5b1261d6d3e43071626931fc004f70149baeba2c8ec672bd4f27761f8e1ad6b AS common
-
-RUN apk add --update --no-cache ca-certificates tzdata
-
-# Install tools for accessing smart cards
-RUN apk add --no-cache ccid opensc pcsc-lite-libs
-
-COPY --from=builder /usr/local/bin/bank-vaults /usr/local/bin/bank-vaults
-COPY --from=builder /usr/local/bin/template /usr/local/bin/template
-COPY --from=builder /usr/local/src/bank-vaults/scripts/pcscd-entrypoint.sh /usr/local/bin/pcscd-entrypoint.sh
-
-ENTRYPOINT ["bank-vaults"]
-
-FROM common AS softhsm
-
-RUN apk add --no-cache softhsm
-
-USER 65534
-
-# Initializing SoftHSM to be able to create a working example (only for dev),
-# sharing the HSM device is emulated with a pre-created keypair in the image.
-RUN softhsm2-util --init-token --free --label bank-vaults --so-pin bank-vaults --pin bank-vaults
-RUN pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin bank-vaults --token-label bank-vaults --label bank-vaults
-
-FROM common
-
-USER 65534
+FROM $BASE_IMAGE
+COPY --from=builder /go/src/github.com/bank-vaults /bin/bank-vaults
+COPY --from=builder /go/src/github.com/template /bin/template
+COPY --from=builder /go/src/github.com/bank-vaults/scripts/pcscd-entrypoint.sh /bin/pcscd-entrypoint.sh
+ENTRYPOINT ["/bin/bank-vaults/bank-vaults"]
