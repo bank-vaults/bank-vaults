@@ -14,7 +14,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/hcl v1.0.1-vault-5
-	github.com/hashicorp/vault/api v1.12.2
+	github.com/hashicorp/vault/api v1.13.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/json-iterator/go v1.1.12
 	github.com/miekg/pkcs11 v1.1.1
@@ -32,6 +32,8 @@ require (
 	k8s.io/client-go v0.29.4
 	sigs.k8s.io/controller-runtime v0.17.3
 )
+
+require github.com/go-jose/go-jose/v4 v4.0.1 // indirect
 
 require (
 	cloud.google.com/go v0.112.1 // indirect
@@ -81,7 +83,6 @@ require (
 	github.com/evanphx/json-patch/v5 v5.8.0 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
