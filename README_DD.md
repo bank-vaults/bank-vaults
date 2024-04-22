@@ -24,6 +24,6 @@ docker run --name "$CONTAINER_NAME" -it "$IMAGE_ID"
 ```bash
 VERSION_NAME="dummy"
 COMMIT_HASH="TODO"
-git tag -a "$VERSION_NAME" "COMMIT_HASH" -m "Vault banks image release"
+git tag -a "$VERSION_NAME" "$COMMIT_HASH" -m "Vault banks image release"
 git push origin "$VERSION_NAME"
 ```
