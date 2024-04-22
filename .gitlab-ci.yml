@@ -9,3 +9,6 @@ test:
 
 build-docker-image:
   extends: .build-docker-image
+  variables:
+    DOCKERFILE_NAME: "Dockerfile.dd"
+
