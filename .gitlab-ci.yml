@@ -1,0 +1,11 @@
+include: https://gitlab-templates.ddbuild.io/compute-delivery/v2/compute-delivery.yml
+
+test:
+  stage: verify
+  tags: [ "arch:amd64" ]
+  image: registry.ddbuild.io/images/mirror/golang:1.21.5
+  script:
+    - make test
+
+build-docker-image:
+  extends: .build-docker-image
