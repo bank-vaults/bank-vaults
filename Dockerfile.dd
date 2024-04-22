@@ -1,3 +1,7 @@
+# Let's build this image on top of GBI, to follow Datadog's best practices,
+# which explains why the latest FROM points to a GBI.
+# Moreover, as we don't need to interface woth smart cards or HSM, I removed the installation of related packages.
+
 ARG BASE_IMAGE
 # See
 # https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
