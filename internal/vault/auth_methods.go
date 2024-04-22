@@ -97,7 +97,11 @@ func (v *vault) addAdditionalAuthConfig(authMethod auth) error {
 		if err != nil {
 			return errors.Wrap(err, "error configuring github mappings for vault")
 		}
-
+	case "plugin":
+		err := v.configureGenericAuthRoles(authMethod.Type, authMethod.Path, "role", authMethod.Roles)
+		if err != nil {
+			return errors.Wrap(err, "error configuring plugin auth roles for vault")
+		}
 	case "aws":
 		err := v.configureAwsConfig(authMethod.Path, authMethod.Config)
 		if err != nil {
@@ -237,6 +241,16 @@ func (v *vault) configureAwsConfig(path string, config map[string]interface{}) e
 	_, err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config/client", path), config)
 	if err != nil {
 		return errors.Wrap(err, "error putting aws config into vault")
+	}
+
+	return nil
+}
+
+func (v *vault) configureAwsIdentityIntegration(path string, config map[string]interface{}) error {
+	// https://developer.hashicorp.com/vault/api-docs/auth/aws#configure-identity-integration
+	_, err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config/identity", path), config)
+	if err != nil {
+		return errors.Wrap(err, "error configuring aws identity integration into vault")
 	}
 
 	return nil
@@ -414,6 +428,29 @@ func (v *vault) addManagedAuthMethods(managedAuths []auth) error {
 		err := v.addAdditionalAuthConfig(authMethod)
 		if err != nil {
 			return errors.Wrapf(err, "error while adding auth method config")
+		}
+
+		// This configuration only makes sense if authentication is done against AWS
+		// However, AWS authentication can be configured using an "aws" or "plugin" backend.
+		// Since it's not specific for only one backend type,
+		// this code lives in this function rather than in addAdditionalAuthConfig
+		if authMethod.Config != nil {
+			for configOption, configDataRaw := range authMethod.Config {
+				slog.Debug(fmt.Sprintf("Handling auth method config option: %s", configOption))
+				switch configOption {
+				case "aws-identity-integration":
+					configData, err := cast.ToStringMapE(configDataRaw)
+					if err != nil {
+						return errors.Wrap(err, "error converting configDataRaw for aws-identity-integration configuration")
+					}
+					err = v.configureAwsIdentityIntegration(authMethod.Path, configData)
+					if err != nil {
+						return errors.Wrap(err, "error configuring plugin identity integration")
+					}
+				default:
+					return errors.Wrap(err, "Unmanaged configuration option")
+				}
+			}
 		}
 	}
 
