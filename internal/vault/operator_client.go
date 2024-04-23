@@ -578,16 +578,16 @@ func (v *vault) Configure(config map[string]interface{}) error {
 		return errors.Wrap(err, "error configuring audit devices for vault")
 	}
 
+	if err = v.configurePlugins(); err != nil {
+		return errors.Wrap(err, "error configuring plugins for vault")
+	}
+
 	if err = v.configureAuthMethods(); err != nil {
 		return errors.Wrap(err, "error configuring auth methods for vault")
 	}
 
 	if err = v.configureIdentityGroups(); err != nil {
 		return errors.Wrap(err, "error writing groups configurations for vault")
-	}
-
-	if err = v.configurePlugins(); err != nil {
-		return errors.Wrap(err, "error configuring plugins for vault")
 	}
 
 	if err = v.configurePolicies(); err != nil {

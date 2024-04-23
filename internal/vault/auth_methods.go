@@ -104,6 +104,11 @@ func (v *vault) addAdditionalAuthConfig(authMethod auth) error {
 		if err != nil {
 			return errors.Wrap(err, "error configuring github mappings for vault")
 		}
+	case "plugin":
+		err := v.configureGenericAuthRoles(authMethod.Type, authMethod.Path, "role", authMethod.Roles)
+		if err != nil {
+			return errors.Wrap(err, "error configuring plugin auth roles for vault")
+		}
 	case "aws":
 		err := v.configureAwsConfig(authMethod.Path, authMethod.Config)
 		if err != nil {
