@@ -11,4 +11,4 @@ build-docker-image:
   extends: .build-docker-image
   variables:
     BUILDER_IMAGE: "images/mirror/golang:1.22.1"
-    DOCKERFILE_NAME: "Dockerfile.dd"
+    EXTRA_ARGS: "-f Dockerfile.dd"
