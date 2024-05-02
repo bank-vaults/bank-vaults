@@ -33,6 +33,8 @@ import (
 	"github.com/bank-vaults/bank-vaults/pkg/kv/hsm"
 	"github.com/bank-vaults/bank-vaults/pkg/kv/k8s"
 	"github.com/bank-vaults/bank-vaults/pkg/kv/multi"
+	"github.com/bank-vaults/bank-vaults/pkg/kv/oci"
+	"github.com/bank-vaults/bank-vaults/pkg/kv/ocikms"
 	"github.com/bank-vaults/bank-vaults/pkg/kv/s3"
 	kvvault "github.com/bank-vaults/bank-vaults/pkg/kv/vault"
 )
@@ -184,6 +186,26 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 		}
 
 		return akv, nil
+
+	case cfgModeValueOCI:
+		ociOs, err := oci.New(
+			cfg.GetString(cfgOciBucketNamespace),
+			cfg.GetString(cfgOciBucketName),
+			cfg.GetString(cfgOciBucketPrefix),
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "error creating oracle object storage kv store")
+		}
+
+		ociKms, err := ocikms.New(ociOs,
+			cfg.GetString(cfgOciKeyOCID),
+			cfg.GetString(cfgOciCryptographicEndpoint),
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "error creating oracle kms kv store")
+		}
+
+		return ociKms, nil
 
 	case cfgModeValueAlibabaKMSOSS:
 		accessKeyID := cfg.GetString(cfgAlibabaAccessKeyID)
