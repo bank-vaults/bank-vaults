@@ -16,7 +16,6 @@ PACKAGE = github.com/bank-vaults/bank-vaults
 BINARY_NAME ?= bank-vaults
 DOCKER_REGISTRY ?= ghcr.io/bank-vaults
 DOCKER_IMAGE = ${DOCKER_REGISTRY}/bank-vaults
-WEBHOOK_DOCKER_IMAGE = ${DOCKER_REGISTRY}/secrets-webhook
 CONTAINER_IMAGE_REF = ghcr.io/bank-vaults/bank-vaults:dev
 
 # Build variables
