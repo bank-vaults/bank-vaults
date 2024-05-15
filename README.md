@@ -22,8 +22,8 @@ Think heavy steel doors, secret unlocking combinations and burly guards with sma
 Bank-Vaults is an umbrella project which provides various tools for Cloud Native secret management, including:
 
 - Bank-Vaults CLI to make configuring Hashicorp Vault easier
-- [Vault operator](https://github.com/bank-vaults/vault-operator/) to make operating Hashicorp Vault on top of Kubernetes easier
-- [Vault secrets webhook](https://github.com/bank-vaults/vault-secrets-webhook) to inject secrets directly into Kubernetes pods
+- [Vault Operator](https://github.com/bank-vaults/vault-operator/) to make operating Hashicorp Vault on top of Kubernetes easier
+- [Secrets Webhook](https://github.com/bank-vaults/secrets-webhook) to inject secrets directly into Kubernetes pods
 - [Vault SDK](https://github.com/bank-vaults/vault-sdk) to make working with Vault easier in Go
 - and others
 
