@@ -29,7 +29,7 @@ RUN xx-verify /usr/local/bin/bank-vaults
 RUN go build -o /usr/local/bin/template ./cmd/template/
 RUN xx-verify /usr/local/bin/template
 
-FROM alpine:3.19.1@sha256:c5b1261d6d3e43071626931fc004f70149baeba2c8ec672bd4f27761f8e1ad6b AS common
+FROM alpine:3.20.0@sha256:77726ef6b57ddf65bb551896826ec38bc3e53f75cdde31354fbffb4f25238ebd AS common
 
 RUN apk add --update --no-cache ca-certificates tzdata
 
