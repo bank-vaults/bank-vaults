@@ -50,7 +50,7 @@ var configureCmd = &cobra.Command{
 	Long: `This configuration is an extension to what is available through the Vault configuration:
 			https://www.vaultproject.io/docs/configuration/index.html. With this it is possible to
 			configure secret engines, auth methods, etc...`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		var unsealConfig unsealCfg
 
 		runOnce := c.GetBool(cfgOnce)

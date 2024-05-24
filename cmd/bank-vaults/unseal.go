@@ -56,7 +56,7 @@ from one of the following:
 - Azure Key Vault
 - Alibaba KMS (backed by OSS)
 - Kubernetes Secrets (should be used only for development purposes)`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		var unsealConfig unsealCfg
 
 		unsealConfig.unsealPeriod = c.GetDuration(cfgUnsealPeriod)
