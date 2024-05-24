@@ -24,7 +24,10 @@
             };
 
             services = {
-              vault.enable = true;
+              vault = {
+                enable = true;
+                package = self'.packages.vault;
+              };
             };
 
             pre-commit.hooks = {
@@ -94,7 +97,7 @@
               sha256 = "sha256-Pvjmvfk0zkY2uSyLwAtzWNn5hqKImztkf8S6OhX8XoM=";
             };
 
-            vendorSha256 = "sha256-ZIpZ2tPLHwfWiBywN00lPI1R7u7lseENIiybL3+9xG8=";
+            vendorHash = "sha256-ZIpZ2tPLHwfWiBywN00lPI1R7u7lseENIiybL3+9xG8=";
 
             subPackages = [ "cmd/licensei" ];
 
@@ -102,6 +105,33 @@
               "-w"
               "-s"
               "-X main.version=v${version}"
+            ];
+          };
+
+          vault = pkgs.buildGoModule rec {
+            pname = "vault";
+            version = "1.14.8";
+
+            src = pkgs.fetchFromGitHub {
+              owner = "hashicorp";
+              repo = "vault";
+              rev = "v${version}";
+              sha256 = "sha256-sGCODCBgsxyr96zu9ntPmMM/gHVBBO+oo5+XsdbCK4E=";
+            };
+
+            vendorHash = "sha256-zpHjZjgCgf4b2FAJQ22eVgq0YGoVvxGYJ3h/3ZRiyrQ=";
+
+            proxyVendor = true;
+
+            subPackages = [ "." ];
+
+            tags = [ "vault" ];
+            ldflags = [
+              "-s"
+              "-w"
+              "-X github.com/hashicorp/vault/sdk/version.GitCommit=${src.rev}"
+              "-X github.com/hashicorp/vault/sdk/version.Version=${version}"
+              "-X github.com/hashicorp/vault/sdk/version.VersionPrerelease="
             ];
           };
 
@@ -116,7 +146,7 @@
               sha256 = "sha256-chkmQF5xSccHuY5yH9oSn243E92EmvKCGQdAEy3eMXw=";
             };
 
-            vendorSha256 = null;
+            vendorHash = null;
 
             subPackages = [ "." ];
           };
