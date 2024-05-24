@@ -20,7 +20,7 @@
           default = {
             languages = {
               go.enable = true;
-              go.package = pkgs.go_1_21;
+              go.package = pkgs.go_1_22;
             };
 
             services = {
@@ -137,13 +137,13 @@
 
           xgo = pkgs.buildGoModule rec {
             pname = "xgo";
-            version = "0.28.0";
+            version = "0.32.0";
 
             src = pkgs.fetchFromGitHub {
               owner = "crazy-max";
               repo = "xgo";
               rev = "v${version}";
-              sha256 = "sha256-chkmQF5xSccHuY5yH9oSn243E92EmvKCGQdAEy3eMXw=";
+              sha256 = "sha256-eqTutGdGgbQ67mw3LQYoIzEASpvYa8taGL6qEjMDJVc=";
             };
 
             vendorHash = null;
