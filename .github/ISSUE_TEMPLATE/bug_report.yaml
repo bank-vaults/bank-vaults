@@ -9,7 +9,7 @@ body:
 
         Please fill out the template below to make it easier to debug your problem.
 
-        If you are not sure if it is a bug or not, you can contact us via the available [support channels](https://github.com/bank-vaults/bank-vaults/issues/new/choose).
+        If you are not sure if it is a bug or not, you can contact us via the available [support channels](https://bank-vaults.dev/docs/support).
   - type: checkboxes
     attributes:
       label: Preflight Checklist
@@ -17,9 +17,9 @@ body:
       options:
         - label: I have searched the [issue tracker](https://www.github.com/bank-vaults/bank-vaults/issues) for an issue that matches the one I want to file, without success.
           required: true
-        - label: I am not looking for support or already pursued the available [support channels](https://github.com/bank-vaults/bank-vaults/issues/new/choose) without success.
+        - label: I am not looking for support or already pursued the available [support channels](https://bank-vaults.dev/docs/support) without success.
           required: true
-        - label: I agree to follow the [Code of Conduct](https://bank-vaults.dev/docs/code-of-conduct/).
+        - label: I agree to follow the [Code of Conduct](https://bank-vaults.dev/docs/code-of-conduct).
           required: true
   - type: input
     attributes:
