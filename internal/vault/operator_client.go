@@ -154,7 +154,7 @@ func (v *vault) Active() (bool, error) {
 	req := v.cl.NewRequest("GET", "/v1/sys/health")
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	resp, err := v.cl.RawRequestWithContext(ctx, req)
+	resp, err := v.cl.RawRequestWithContext(ctx, req) //nolint
 	if err != nil {
 		return false, errors.Wrap(err, "error checking status")
 	}

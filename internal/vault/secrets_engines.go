@@ -22,11 +22,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jpillora/backoff"
-
 	"emperror.dev/errors"
 	vaultpkg "github.com/bank-vaults/vault-sdk/vault"
 	"github.com/hashicorp/vault/api"
+	"github.com/jpillora/backoff"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cast"
 )
@@ -303,7 +302,7 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) e
 					secretExists := false
 					if configOption == "root/generate" { // the pki generate call is a different beast
 						req := v.cl.NewRequest("GET", fmt.Sprintf("/v1/%s/ca", secretEngine.Path))
-						resp, err := v.cl.RawRequestWithContext(context.Background(), req)
+						resp, err := v.cl.RawRequestWithContext(context.Background(), req) //nolint
 						if resp != nil {
 							defer resp.Body.Close()
 						}
