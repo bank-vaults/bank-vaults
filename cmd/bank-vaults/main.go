@@ -270,6 +270,7 @@ func init() {
 	// Misc common flags
 	configBoolVar(rootCmd, cfgOnce, false, "Run configure/unseal only once")
 	configDurationVar(configureCmd, cfgUnsealPeriod, time.Second*5, "How often to attempt to unseal the Vault instance")
+	configDurationVar(configureCmd, cfgRekeyRetryPeriod, time.Second*5, "How often to attempt to rekey the Vault instance")
 }
 
 func main() {

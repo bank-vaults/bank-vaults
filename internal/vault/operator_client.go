@@ -15,6 +15,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -29,6 +30,10 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/ProtonMail/go-crypto/openpgp"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
 const (
@@ -48,6 +53,7 @@ type Vault interface {
 	Sealed() (bool, error)
 	Active() (bool, error)
 	Unseal() error
+	Rekey(pgpKeys []string) error
 	Leader() (bool, error)
 	LeaderAddress() (string, error)
 	Configure(config map[string]interface{}) error
@@ -214,6 +220,75 @@ func (v *vault) Unseal() error {
 		// if progress is 0, we failed to unseal vault.
 		if resp.Progress == 0 {
 			return errors.New("failed to unseal vault, are you using the right unseal keys?")
+		}
+	}
+}
+
+func (v *vault) Rekey(pgpKeys []string) error {
+	defer runtime.GC()
+	slog.Debug("starting rekey process...")
+
+	slog.Debug("checking rekey status...")
+	respStatus, err := v.cl.Sys().RekeyStatus()
+	var nonce string
+	if err != nil {
+		return errors.Wrapf(err, "unable to check rekey status")
+	}
+
+	//		TODO: get cfg Params with keybase usernames
+	keys, err := FetchKeybasePubkeys(pgpKeys)
+	if err != nil {
+		return errors.Wrapf(err, "Unable to fetch Keybase PGP keys")
+	}
+
+	if !respStatus.Started {
+		rekeyRequest := api.RekeyInitRequest{
+			SecretShares:    v.config.SecretShares,
+			SecretThreshold: v.config.SecretThreshold,
+			PGPKeys:         keys,
+		}
+		resp, err := v.cl.Sys().RekeyInit(&rekeyRequest)
+
+		if err != nil {
+			return errors.Wrapf(err, "unable to start rekey Init process")
+		}
+
+		if resp.Nonce == "" {
+			return errors.New("failed to init rekey operation. Vault auth token is incorect? ")
+		}
+
+		nonce = resp.Nonce
+	} else {
+		nonce = respStatus.Nonce
+	}
+
+	for i := 0; ; i++ {
+		keyID := keyUnsealForID(i)
+
+		slog.Debug("retrieving key from kms service...")
+		k, err := v.keyStore.Get(keyID)
+		if err != nil {
+			return errors.Wrapf(err, "unable to get key '%s'", keyID)
+		}
+
+		slog.Debug("sending rekey update request to vault...")
+		resp, err := v.cl.Sys().RekeyUpdate(string(k), nonce)
+		if err != nil {
+			return errors.Wrap(err, "fail to send rekey update request to vault")
+		}
+
+		if resp.Complete {
+			for i, k := range resp.KeysB64 {
+				keyID := pgpKeys[i] + "-" + keyUnsealForID(i)
+				err := v.keyStoreSet(keyID, []byte(k))
+				if err != nil {
+					return errors.Wrapf(err, "error storing unseal key '%s'", keyID)
+				}
+
+				slog.With(slog.String("key", keyID)).Info("unseal key stored in key store")
+			}
+
+			return nil
 		}
 	}
 }
@@ -677,4 +752,108 @@ func keyUnsealForID(i int) string {
 
 func keyRecoveryForID(i int) string {
 	return fmt.Sprint("vault-recovery-", i)
+}
+
+const (
+	kbPrefix = "keybase:"
+)
+
+// FetchKeybasePubkeys fetches public keys from Keybase given a set of
+// usernames, which are derived from correctly formatted input entries. It
+// doesn't use their client code due to both the API and the fact that it is
+// considered alpha and probably best not to rely on it.  The keys are returned
+// as base64-encoded strings.
+func FetchKeybasePubkeys(input []string) ([]string, error) {
+	client := cleanhttp.DefaultClient()
+	if client == nil {
+		return nil, fmt.Errorf("unable to create an http client")
+	}
+
+	if len(input) == 0 {
+		return nil, nil
+	}
+
+	usernames := make([]string, 0, len(input))
+	for _, v := range input {
+		if strings.HasPrefix(v, kbPrefix) {
+			usernames = append(usernames, strings.TrimPrefix(v, kbPrefix))
+		}
+	}
+
+	if len(usernames) == 0 {
+		return nil, nil
+	}
+
+	ret := make([]string, len(usernames))
+	url := fmt.Sprintf("https://keybase.io/_/api/1.0/user/lookup.json?usernames=%s&fields=public_keys", strings.Join(usernames, ","))
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	type PublicKeys struct {
+		Primary struct {
+			Bundle string
+		}
+	}
+
+	type LThem struct {
+		PublicKeys `json:"public_keys"`
+	}
+
+	type KbResp struct {
+		Status struct {
+			Name string
+		}
+		Them []LThem
+	}
+
+	out := &KbResp{
+		Them: []LThem{},
+	}
+
+	if err := jsonutil.DecodeJSONFromReader(resp.Body, out); err != nil {
+		return nil, err
+	}
+
+	if out.Status.Name != "OK" {
+		return nil, fmt.Errorf("got non-OK response: %q", out.Status.Name)
+	}
+
+	missingNames := make([]string, 0, len(usernames))
+	var keyReader *bytes.Reader
+	serializedEntity := bytes.NewBuffer(nil)
+	for i, themVal := range out.Them {
+		if themVal.Primary.Bundle == "" {
+			missingNames = append(missingNames, usernames[i])
+			continue
+		}
+		keyReader = bytes.NewReader([]byte(themVal.Primary.Bundle))
+		entityList, err := openpgp.ReadArmoredKeyRing(keyReader)
+		if err != nil {
+			return nil, err
+		}
+		if len(entityList) != 1 {
+			return nil, fmt.Errorf("primary key could not be parsed for user %q", usernames[i])
+		}
+		if entityList[0] == nil {
+			return nil, fmt.Errorf("primary key was nil for user %q", usernames[i])
+		}
+
+		serializedEntity.Reset()
+		err = entityList[0].Serialize(serializedEntity)
+		if err != nil {
+			return nil, fmt.Errorf("error serializing entity for user %q: %w", usernames[i], err)
+		}
+
+		// The API returns values in the same ordering requested, so this should properly match
+		ret[i] = base64.StdEncoding.EncodeToString(serializedEntity.Bytes())
+	}
+
+	if len(missingNames) > 0 {
+		return nil, fmt.Errorf("unable to fetch keys for user(s) %q from keybase", strings.Join(missingNames, ","))
+	}
+
+	return ret, nil
 }
