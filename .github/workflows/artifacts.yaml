@@ -61,6 +61,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb # v3.3.0
 
+      - name: Set up Cosign
+        uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
+
       - name: Set image name
         id: image-name
         run: echo "value=ghcr.io/${{ github.repository }}" >> "$GITHUB_OUTPUT"
@@ -116,6 +119,19 @@ jobs:
           cache-to: type=gha,mode=max
           outputs: ${{ steps.build-output.outputs.value }}
           # push: ${{ inputs.publish }}
+
+      - name: Sign image with GitHub OIDC Token
+        if: inputs.publish
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          images=""
+          for tag in ${TAGS}; do
+            images+="${tag}@${DIGEST} "
+          done
+          
+          cosign sign --yes ${images}
 
       - name: Set image ref
         id: image-ref
