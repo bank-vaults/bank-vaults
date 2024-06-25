@@ -16,7 +16,7 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
-    ldflags: "-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}"
+    ldflags: "-s -w -X main.Version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}"
     main: ./cmd/template
     goos:
       - linux
@@ -26,7 +26,7 @@ builds:
       - arm64
     hooks:
       post:
-        - xgo -targets {{ .Os }}/{{ .Arch }} -dest build/dist -ldflags '-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}' -pkg cmd/bank-vaults .
+        - xgo -targets {{ .Os }}/{{ .Arch }} -dest build/dist -ldflags '-s -w -X main.Version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}' -pkg cmd/bank-vaults .
         - sudo bash -c "mkdir -p build/dist/bank-vaults_{{ .Os }}_{{ .Arch }}; mv build/dist/github.com/bank-vaults/bank-vaults-{{ .Os }}-{{ .Arch }} build/dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
 
 archives:

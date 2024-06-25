@@ -24,6 +24,8 @@ import (
 	"github.com/bank-vaults/internal/configuration"
 )
 
+var Version = "v1.31.1"
+
 type arrayFlags []string
 
 func (i *arrayFlags) String() string {

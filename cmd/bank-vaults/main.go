@@ -28,7 +28,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var c = viper.New()
+var Version = "v1.31.1"
 
 const (
 	cfgSecretShares    = "secret-shares"
@@ -124,6 +124,8 @@ const (
 	cfgUnsealPeriod = "unseal-period"
 	cfgOnce         = "once"
 )
+
+var c = viper.New()
 
 var rootCmd = &cobra.Command{
 	Use:   "bank-vaults",
