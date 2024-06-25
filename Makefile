@@ -73,9 +73,13 @@ ifeq (${DOCKER_LATEST}, 1)
 	docker push ${DOCKER_IMAGE}:latest
 endif
 
+.PHONY: binary-snapshot
+binary-snapshot: ## Build binary snapshot
+	VERSION=v${GORELEASER_VERSION} ${GORELEASER_BIN} release --clean --skip=publish --snapshot
+
 .PHONY: artifacts
 artifacts: ## Build binary and Docker image
-artifacts: build docker
+artifacts: binary-snapshot docker
 
 .PHONY: clean
 clean: ## Clear the working area and the project
@@ -195,16 +199,20 @@ gen-docs: ## Generate CLI documentation
 
 ##@ Dependencies
 
-deps: bin/golangci-lint bin/licensei
+deps: bin/golangci-lint bin/licensei bin/cosign bin/goreleaser
 deps: ## Install dependencies
 
 # Dependency versions
 GOLANGCI_VERSION = 1.53.3
 LICENSEI_VERSION = 0.8.0
+COSIGN_VERSION = 2.2.2
+GORELEASER_VERSION = 2.0.0
 
 # Dependency binaries
 GOLANGCI_LINT_BIN := golangci-lint
 LICENSEI_BIN := licensei
+COSIGN_BIN := cosign
+GORELEASER_BIN := goreleaser
 
 # TODO: add support for hadolint and yamllint dependencies
 HADOLINT_BIN := hadolint
@@ -214,6 +222,8 @@ YAMLLINT_BIN := yamllint
 ifneq ($(wildcard ./bin/.),)
 	GOLANGCI_LINT_BIN := bin/$(GOLANGCI_LINT_BIN)
 	LICENSEI_BIN := bin/$(LICENSEI_BIN)
+	COSIGN_BIN := bin/$(COSIGN_BIN)
+	GORELEASER_BIN := bin/$(GORELEASER_BIN)
 endif
 
 bin/golangci-lint:
@@ -223,3 +233,25 @@ bin/golangci-lint:
 bin/licensei:
 	@mkdir -p bin
 	curl -sfL https://raw.githubusercontent.com/goph/licensei/master/install.sh | bash -s -- v${LICENSEI_VERSION}
+
+bin/cosign:
+	@mkdir -p bin
+	@OS=$$(uname -s); \
+	case $$OS in \
+		"Linux") \
+			curl -sSfL https://github.com/sigstore/cosign/releases/download/v${COSIGN_VERSION}/cosign-linux-amd64 -o bin/cosign; \
+			;; \
+		"Darwin") \
+			curl -sSfL https://github.com/sigstore/cosign/releases/download/v${COSIGN_VERSION}/cosign-darwin-arm64 -o bin/cosign; \
+			;; \
+		*) \
+			echo "Unsupported OS: $$OS"; \
+			exit 1; \
+			;; \
+	esac
+	@chmod +x bin/cosign
+
+bin/goreleaser:
+	@mkdir -p bin
+	curl -sfL https://goreleaser.com/static/run -o bin/goreleaser
+	@chmod +x bin/goreleaser

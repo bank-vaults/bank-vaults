@@ -210,7 +210,7 @@ jobs:
         with:
           cond: ${{ inputs.release }}
           if_true: goreleaser release
-          if_false: goreleaser release --skip-publish --snapshot
+          if_false: goreleaser release --skip=publish --snapshot
 
       - name: Build
         run: nix develop --impure .#ci -c ${{ steps.build-command.outputs.value }}
