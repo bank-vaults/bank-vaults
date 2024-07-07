@@ -121,7 +121,7 @@ jobs:
           # push: ${{ inputs.publish }}
 
       - name: Sign image with GitHub OIDC Token
-        if: inputs.publish
+        if: ${{ inputs.publish && github.repository_owner == 'bank-vaults' }} # Check if the workflow is called by the same GitHub organization
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
           TAGS: ${{ steps.meta.outputs.tags }}
