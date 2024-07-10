@@ -24,7 +24,7 @@ import (
 	"github.com/bank-vaults/internal/configuration"
 )
 
-var Version = "v1.31.1"
+var Version = "dev"
 
 type arrayFlags []string
 
