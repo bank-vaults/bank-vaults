@@ -8,6 +8,8 @@
   </h1>
 </p>
 
+Bank-Vaults is now a [CNCF Sandbox](https://www.cncf.io/sandbox-projects/) project.
+
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/bank-vaults/bank-vaults)
 <br>
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bank-vaults/bank-vaults/ci.yaml?branch=main&style=flat-square)](https://github.com/bank-vaults/bank-vaults/actions/workflows/ci.yaml?query=workflow%3ACI)
