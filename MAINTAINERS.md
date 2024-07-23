@@ -2,7 +2,7 @@
 
 | Maintainer           | GitHub ID                                         | Affiliation                                 |
 |----------------------|---------------------------------------------------|---------------------------------------------|
-| Mark Sagi-Kazar      | [sagikazarmark](https://github.com/sagikazarmark) | [OpenMeter](https://openmeter.io)          |
+| Mark Sagi-Kazar      | [sagikazarmark](https://github.com/sagikazarmark) | [OpenMeter](https://openmeter.io)           |
 | Andras Jaky          | [akijakya](https://github.com/akijakya)           | [Outshift](https://outshift.com) (by Cisco) |
 | Ramiz Polic          | [ramizpolic](https://github.com/ramizpolic)       | [Outshift](https://outshift.com) (by Cisco) |
 | Bence Csati          | [csatib02](https://github.com/csatib02)           | [Outshift](https://outshift.com) (by Cisco) |
