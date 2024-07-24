@@ -5,7 +5,7 @@ go 1.22.2
 require (
 	cloud.google.com/go/storage v1.43.0
 	emperror.dev/errors v0.8.1
-	github.com/aliyun/alibaba-cloud-sdk-go v1.62.796
+	github.com/aliyun/alibaba-cloud-sdk-go v1.62.797
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
 	github.com/aws/aws-sdk-go v1.55.1
 	github.com/bank-vaults/internal v0.3.1
