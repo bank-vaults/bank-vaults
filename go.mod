@@ -10,13 +10,11 @@ require (
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/bank-vaults/internal v0.3.1
 	github.com/bank-vaults/vault-sdk v0.9.4
-	github.com/cristalhq/jwt/v3 v3.1.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/hcl v1.0.1-vault-5
 	github.com/hashicorp/vault/api v1.14.0
 	github.com/jpillora/backoff v1.0.0
-	github.com/json-iterator/go v1.1.12
 	github.com/miekg/pkcs11 v1.1.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/prometheus/client_golang v1.19.1
@@ -32,6 +30,8 @@ require (
 	k8s.io/client-go v0.30.3
 	sigs.k8s.io/controller-runtime v0.18.4
 )
+
+require github.com/json-iterator/go v1.1.12 // indirect
 
 require (
 	cloud.google.com/go v0.115.0 // indirect

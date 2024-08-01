@@ -21,9 +21,7 @@ import (
 	"strings"
 
 	"emperror.dev/errors"
-	jwt "github.com/cristalhq/jwt/v3"
 	"github.com/hashicorp/vault/api"
-	json "github.com/json-iterator/go"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cast"
 )
@@ -66,22 +64,13 @@ func initAuthConfig(auths []auth) []auth {
 func (v *vault) addAdditionalAuthConfig(authMethod auth) error {
 	switch authMethod.Type {
 	case "kubernetes":
-		config := authMethod.Config
 		if authMethod.Config == nil {
 			authMethod.Config = map[string]interface{}{}
 		}
+		config := authMethod.Config
 
-		// If kubernetes_host is defined we are probably out of cluster, so don't read the default config
 		if _, ok := config["kubernetes_host"]; !ok {
-			defaultConfig, err := v.kubernetesAuthConfigDefault()
-			if err != nil {
-				return errors.Wrap(err, "error getting default kubernetes auth config for vault")
-			}
-			// merge the config blocks
-			for k, v := range config {
-				defaultConfig[k] = v
-			}
-			config = defaultConfig
+			config["kubernetes_host"] = fmt.Sprint("https://", os.Getenv("KUBERNETES_SERVICE_HOST"))
 		}
 		err := v.configureGenericAuthConfig(authMethod.Type, authMethod.Path, config)
 		if err != nil {
@@ -203,35 +192,6 @@ func (v *vault) addAdditionalAuthConfig(authMethod auth) error {
 	}
 
 	return nil
-}
-
-func (v *vault) kubernetesAuthConfigDefault() (map[string]interface{}, error) {
-	kubernetesCACert, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
-	if err != nil {
-		return nil, errors.WrapIf(err, "failed to read ca.crt")
-	}
-	tokenReviewerJWT, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
-	if err != nil {
-		return nil, errors.WrapIf(err, "failed to read serviceaccount token")
-	}
-	token, err := jwt.Parse(tokenReviewerJWT)
-	if err != nil {
-		return nil, errors.WrapIf(err, "failed to parse serviceaccount token")
-	}
-	var claims jwt.StandardClaims
-	err = json.Unmarshal(token.RawClaims(), &claims)
-	if err != nil {
-		return nil, errors.WrapIf(err, "failed to get serviceaccount token claims")
-	}
-
-	config := map[string]interface{}{
-		"kubernetes_host":    fmt.Sprint("https://", os.Getenv("KUBERNETES_SERVICE_HOST")),
-		"kubernetes_ca_cert": string(kubernetesCACert),
-		"token_reviewer_jwt": string(tokenReviewerJWT),
-		"issuer":             claims.Issuer,
-	}
-
-	return config, nil
 }
 
 func (v *vault) configureGithubMappings(path string, mappings map[string]interface{}) error {
