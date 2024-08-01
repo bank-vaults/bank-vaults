@@ -28,7 +28,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var Version = "v1.31.1"
+var Version = "dev"
 
 const (
 	cfgSecretShares    = "secret-shares"
