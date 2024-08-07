@@ -48,28 +48,27 @@ func New(namespace, bucket, prefix string) (kv.Service, error) {
 }
 
 func (oci *ociStorage) Get(key string) ([]byte, error) {
-	ctx := context.Background()
 	n := objectNameWithPrefix(oci.prefix, key)
 	request := objectstorage.GetObjectRequest{
 		NamespaceName: &oci.namespace,
 		BucketName:    &oci.bucket,
 		ObjectName:    &n,
 	}
-	response, err := oci.client.GetObject(ctx, request)
+	response, err := oci.client.GetObject(context.Background(), request)
 	if err != nil {
 		if failure, ok := common.IsServiceError(err); ok {
 			switch os := failure.GetCode(); os {
 			case "ObjectNotFound":
-				return nil, kv.NewNotFoundError("error getting object for key '%s': %s", n, err.Error())
+				return nil, kv.NewNotFoundError("error getting object for key '%s': %s", *request.ObjectName, err.Error())
 
 			default:
-				return nil, errors.Wrapf(err, "error getting object for key '%s'", n)
+				return nil, errors.Wrapf(err, "error getting object for key '%s'", *request.ObjectName)
 			}
 		}
-		return nil, errors.Wrapf(err, "error getting object for key '%s'", n)
+		return nil, errors.Wrapf(err, "error getting object for key '%s'", *request.ObjectName)
 	}
-	r := response.Content
 
+	r := response.Content
 	defer r.Close()
 
 	b, err := io.ReadAll(r)
@@ -81,7 +80,6 @@ func (oci *ociStorage) Get(key string) ([]byte, error) {
 }
 
 func (oci *ociStorage) Set(key string, val []byte) error {
-	ctx := context.Background()
 	n := objectNameWithPrefix(oci.prefix, key)
 	request := objectstorage.PutObjectRequest{
 		NamespaceName: &oci.namespace,
@@ -89,9 +87,9 @@ func (oci *ociStorage) Set(key string, val []byte) error {
 		ObjectName:    &n,
 		PutObjectBody: io.NopCloser(bytes.NewReader(val)),
 	}
-	_, err := oci.client.PutObject(ctx, request)
+	_, err := oci.client.PutObject(context.Background(), request)
 	if err != nil {
-		return errors.Wrapf(err, "error setting object for key '%s'", n)
+		return errors.Wrapf(err, "error setting object for key '%s'", *request.ObjectName)
 	}
 
 	return nil

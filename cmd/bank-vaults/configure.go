@@ -96,7 +96,6 @@ var configureCmd = &cobra.Command{
 		}
 
 		configurations := make(chan *configFile, len(vaultConfigFiles))
-
 		for i, vaultConfigFile := range vaultConfigFiles {
 			vaultConfigFiles[i] = filepath.Clean(vaultConfigFile)
 			configurations <- parseConfiguration(parser, vaultConfigFile)
@@ -123,9 +122,7 @@ var configureCmd = &cobra.Command{
 		}
 
 		for config := range configurations {
-
 			slog.Info(fmt.Sprintf("applying config file: %s", config.Path))
-
 			func() {
 				for {
 					slog.Info("checking if vault is sealed...")
@@ -144,7 +141,6 @@ var configureCmd = &cobra.Command{
 
 						continue
 					}
-
 					slog.Info("vault is unsealed, configuring...")
 
 					if err = v.Configure(config.Data); err != nil {
@@ -228,6 +224,7 @@ func watchConfigurations(parser multiparser.Parser, vaultConfigFiles []string, c
 					configurations <- parseConfiguration(parser, fileName)
 				}
 			}
+
 		case err := <-watcher.Errors:
 			return fmt.Errorf("watcher exited with error: %w", err)
 		}

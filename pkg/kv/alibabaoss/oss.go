@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/http"
 
 	"emperror.dev/errors"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
@@ -67,7 +68,7 @@ func (o *ossStorage) Get(key string) ([]byte, error) {
 	body, err := bucket.GetObject(objectKey)
 	if err != nil {
 		var serviceErr oss.ServiceError
-		if errors.As(err, &serviceErr) && serviceErr.StatusCode == 404 && serviceErr.Code == "NoSuchKey" {
+		if errors.As(err, &serviceErr) && serviceErr.StatusCode == http.StatusNotFound && serviceErr.Code == "NoSuchKey" {
 			return nil, kv.NewNotFoundError("error getting object for key '%s': %s", objectKey, err.Error())
 		}
 

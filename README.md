@@ -64,10 +64,17 @@ Fetch required tools:
 make deps
 ```
 
+Run project dependencies:
+
+```shell
+make up
+```
+
 Run the test suite:
 
 ```shell
 make test
+make test-integration
 ```
 
 Run linters:
@@ -88,10 +95,14 @@ Build artifacts locally:
 make artifacts
 ```
 
-Once you are done, you can clean project dependencies:
+Once you are done either stop or tear down dependencies:
 
 ```shell
-make clean
+make stop
+
+# OR
+
+make down
 ```
 
 ## Credits

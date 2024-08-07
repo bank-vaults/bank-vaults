@@ -149,7 +149,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			return nil, errors.Errorf("you have specified one or more incorrect SSE algorithms: %v", s3SSEAlgos)
 		}
 
-		for i := 0; i < len(s3Buckets); i++ {
+		for i := range len(s3Buckets) {
 			var kmsKeyID string
 			if s3SSEAlgos[i] == awskms.SseKMS {
 				kmsKeyID = kmsKeyIDs[i]
@@ -166,6 +166,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "error creating AWS S3 kv store")
 			}
+
 			if s3SSEAlgos[i] == "" {
 				kmsService, err := awskms.New(s3Service, kmsRegions[i], kmsKeyIDs[i], kmsKeyEncryptionContext)
 				if err != nil {
@@ -281,15 +282,14 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			return nil, errors.Wrap(err, "error creating K8S Secret with kv store")
 		}
 
-		config := hsm.Config{
-			ModulePath: cfg.GetString(cfgHSMModulePath),
-			SlotID:     cfg.GetUint(cfgHSMSlotID),
-			TokenLabel: cfg.GetString(cfgHSMTokenLabel),
-			Pin:        cfg.GetString(cfgHSMPin),
-			KeyLabel:   cfg.GetString(cfgHSMKeyLabel),
-		}
-
-		hsm, err := hsm.New(config, k8s)
+		hsm, err := hsm.New(
+			hsm.Config{
+				ModulePath: cfg.GetString(cfgHSMModulePath),
+				SlotID:     cfg.GetUint(cfgHSMSlotID),
+				TokenLabel: cfg.GetString(cfgHSMTokenLabel),
+				Pin:        cfg.GetString(cfgHSMPin),
+				KeyLabel:   cfg.GetString(cfgHSMKeyLabel),
+			}, k8s)
 		if err != nil {
 			return nil, errors.Wrap(err, "error creating HSM kv store")
 		}
@@ -298,15 +298,13 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 
 	// BANK_VAULTS_HSM_PIN=banzai bank-vaults unseal --init --mode hsm --hsm-slot-id 0 --hsm-module-path /usr/local/lib/opensc-pkcs11.so
 	case cfgModeValueHSM:
-		config := hsm.Config{
+		hsm, err := hsm.New(hsm.Config{
 			ModulePath: cfg.GetString(cfgHSMModulePath),
 			SlotID:     cfg.GetUint(cfgHSMSlotID),
 			TokenLabel: cfg.GetString(cfgHSMTokenLabel),
 			Pin:        cfg.GetString(cfgHSMPin),
 			KeyLabel:   cfg.GetString(cfgHSMKeyLabel),
-		}
-
-		hsm, err := hsm.New(config, nil)
+		}, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "error creating HSM kv store")
 		}

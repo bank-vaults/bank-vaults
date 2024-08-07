@@ -166,8 +166,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	case publicKeyErr != nil && privateKeyErr != nil:
 		log.Info("generating key pair in HSM...")
 
-		request := generateRSAKeyPairRequest(config.KeyLabel)
-		keyPair, err := session.GenerateKeyPair(request)
+		keyPair, err := session.GenerateKeyPair(generateRSAKeyPairRequest(config.KeyLabel))
 		if err != nil {
 			return nil, errors.WrapIf(err, "GenerateKeyPair in HSM failed")
 		}
@@ -297,12 +296,10 @@ type hsmStorage struct {
 }
 
 func (h *hsmStorage) Get(key string) ([]byte, error) {
-	attributes := []*pkcs11.Attribute{
+	object, err := h.session.FindObject([]*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_DATA),
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, key),
-	}
-
-	object, err := h.session.FindObject(attributes)
+	})
 	if err != nil {
 		if err.Error() == noObjectsFoundErrMsg {
 			return nil, kv.NewNotFoundError("object doesn't exist in HSM: %s", key)
@@ -315,13 +312,11 @@ func (h *hsmStorage) Get(key string) ([]byte, error) {
 }
 
 func (h *hsmStorage) Set(key string, value []byte) error {
-	attributes := []*pkcs11.Attribute{
+	_, err := h.session.CreateObject([]*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_DATA),
 		pkcs11.NewAttribute(pkcs11.CKA_VALUE, value),
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, key),
-	}
-
-	_, err := h.session.CreateObject(attributes)
+	})
 
 	return errors.Wrap(err, "failed to write object to HSM")
 }

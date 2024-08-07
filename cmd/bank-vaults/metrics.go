@@ -73,13 +73,6 @@ func (e *prometheusExporter) Describe(ch chan<- *prometheus.Desc) {
 	}
 }
 
-func bToF(b bool) float64 {
-	if b {
-		return 1
-	}
-	return 0
-}
-
 func (e *prometheusExporter) Collect(ch chan<- prometheus.Metric) {
 	if e.Mode == "unseal" {
 		sealed, err := e.Vault.Sealed()
@@ -114,10 +107,15 @@ func (e *prometheusExporter) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (e prometheusExporter) Run() error {
-	metricsPath := "/metrics"
-	metricsAddr := ":9091"
-	slog.Info(fmt.Sprintf("vault metrics exporter enabled: %s%s", metricsAddr, metricsPath))
+	slog.Info(fmt.Sprintf("vault metrics exporter enabled: %s%s", ":9091", "/metrics"))
 	prometheus.MustRegister(&e)
-	http.DefaultServeMux.Handle(metricsPath, promhttp.Handler())
-	return http.ListenAndServe(metricsAddr, http.DefaultServeMux) //nolint:gosec
+	http.DefaultServeMux.Handle("/metrics", promhttp.Handler())
+	return http.ListenAndServe(":9091", http.DefaultServeMux) //nolint:gosec
+}
+
+func bToF(b bool) float64 {
+	if b {
+		return 1
+	}
+	return 0
 }

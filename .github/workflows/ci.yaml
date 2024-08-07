@@ -46,6 +46,39 @@ jobs:
       - name: Build
         run: nix develop --impure .#ci -c make build
 
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Set up Nix
+        uses: cachix/install-nix-action@ba0dd844c9180cbf77aa72a116d6fbc515d0e87b # v27
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up magic Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@b46e247b898aa56e6d2d2e728dc6df6c84fdb738 # v7
+
+      - name: Set up Go cache
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ github.job }}-${{ runner.os }}-go-
+
+      - name: Prepare Nix shell
+        run: nix develop --impure .#ci
+
+      - name: Test
+        run: nix develop --impure .#ci -c make test
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -174,58 +207,6 @@ jobs:
 
       - name: Dependency Review
         uses: actions/dependency-review-action@5a2ce3f5b92ee19cbb1541a4984c76d921601d7c # v4.3.4
-
-  checks:
-    name: Checks
-    runs-on: ubuntu-latest
-
-    services:
-      vault:
-        image: hashicorp/vault:1.14.1
-        env:
-          SKIP_SETCAP: true
-          VAULT_DEV_ROOT_TOKEN_ID: 227e1cce-6bf7-30bb-2d2a-acc854318caf
-        ports:
-          - 8200:8200
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-
-      - name: Set up Nix
-        uses: cachix/install-nix-action@ba0dd844c9180cbf77aa72a116d6fbc515d0e87b # v27
-        with:
-          extra_nix_config: |
-            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up magic Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@b46e247b898aa56e6d2d2e728dc6df6c84fdb738 # v7
-
-      - name: Set up Go cache
-        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ github.job }}-${{ runner.os }}-go-
-
-      - name: Setup test dependencies
-        run: |
-          sudo apt install opensc softhsm
-          sudo mkdir -p /var/lib/softhsm/tokens/
-          sudo softhsm2-util --init-token --free --label bank-vaults --so-pin banzai --pin banzai
-          sudo pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin banzai --token-label bank-vaults --label bank-vaults
-          sudo chown -R runner:docker /etc/softhsm /var/lib/softhsm
-
-      - name: Prepare Nix shell
-        run: nix develop --impure .#ci
-
-      - name: Run verification
-        run: nix develop --impure .#ci -c make check
-        env:
-          VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
 
   e2e:
     name: E2E tests
