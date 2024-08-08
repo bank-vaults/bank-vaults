@@ -111,6 +111,10 @@ LICENSEI_BIN := licensei
 COSIGN_BIN := cosign
 GORELEASER_BIN := goreleaser
 
+# TODO: add support for hadolint and yamllint dependencies
+HADOLINT_BIN := hadolint
+YAMLLINT_BIN := yamllint
+
 # If we have "bin" dir, use those binaries instead
 ifneq ($(wildcard ./bin/.),)
 	GOLANGCI_LINT_BIN := bin/$(GOLANGCI_LINT_BIN)
