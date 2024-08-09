@@ -15,7 +15,6 @@
 // NOTE: This is a development-only command that can only be executed using Makefile.
 
 //go:build gen_docs
-// +build gen_docs
 
 package main
 
