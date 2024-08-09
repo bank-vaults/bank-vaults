@@ -71,7 +71,6 @@ func initSecretsEnginesConfig(configs []secretEngine) []secretEngine {
 
 func (se *secretEngine) getMountConfigInput() (api.MountConfigInput, error) {
 	var mountConfigInput api.MountConfigInput
-
 	if err := mapstructure.Decode(se.Config, &mountConfigInput); err != nil {
 		return mountConfigInput, errors.Wrap(err, "error parsing config for secret engine")
 	}
@@ -235,14 +234,13 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) e
 			for {
 				err = v.cl.Sys().TuneMount(secretEngine.Path, mountConfigInput)
 				if err != nil {
-					d := b.Duration()
-					slog.Info(fmt.Sprintf("error tuning %s: %s, waiting %s before trying again...", secretEngine.Path, err.Error(), d))
+					slog.Info(fmt.Sprintf("error tuning %s: %s, waiting %s before trying again...", secretEngine.Path, err.Error(), b.Duration()))
 
-					if d == b.Max {
+					if b.Duration() == b.Max {
 						// Stop retrying after reaching the max backoff time
 						return errors.Wrapf(err, "error mounting %s into vault after several attempts", secretEngine.Path)
 					}
-					time.Sleep(d)
+					time.Sleep(b.Duration())
 					continue
 				}
 				b.Reset()

@@ -115,13 +115,11 @@ func (v *vault) removeUnmanagedAudits(unmanagedAudits map[string]bool) error {
 
 func (v *vault) configureAuditDevices() error {
 	managedAudits := initAuditConfig(v.externalConfig.Audit)
-	unmanagedAudits := v.getUnmanagedAudits(managedAudits)
-
 	if err := v.addManagedAudits(managedAudits); err != nil {
 		return errors.Wrap(err, "error configuring managed audits")
 	}
 
-	if err := v.removeUnmanagedAudits(unmanagedAudits); err != nil {
+	if err := v.removeUnmanagedAudits(v.getUnmanagedAudits(managedAudits)); err != nil {
 		return errors.Wrap(err, "error while disabling unmanaged auth methods")
 	}
 

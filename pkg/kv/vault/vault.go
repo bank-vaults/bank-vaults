@@ -50,9 +50,8 @@ func New(addr, unsealKeysPath, role, authPath, tokenPath, token string) (kv.Serv
 
 func (v *vaultStorage) Set(key string, val []byte) error {
 	// Done to prevent overwrite in Vault
-	path := fmt.Sprintf("%s/%s", v.path, key)
 	if _, err := v.client.RawClient().Logical().Write(
-		path,
+		fmt.Sprintf("%s/%s", v.path, key),
 		map[string]interface{}{
 			"data": map[string]interface{}{
 				key: val,
@@ -66,8 +65,7 @@ func (v *vaultStorage) Set(key string, val []byte) error {
 }
 
 func (v *vaultStorage) Get(key string) ([]byte, error) {
-	path := fmt.Sprintf("%s/%s", v.path, key)
-	secret, err := v.client.RawClient().Logical().Read(path)
+	secret, err := v.client.RawClient().Logical().Read(fmt.Sprintf("%s/%s", v.path, key))
 	if err != nil {
 		return nil, errors.Wrapf(err, "error getting object for key '%s'", key)
 	}

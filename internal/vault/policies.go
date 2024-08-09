@@ -121,6 +121,7 @@ func (v *vault) configurePolicies() error {
 	if err != nil {
 		return errors.Wrap(err, "error while getting list of auth engines")
 	}
+
 	managedPolicies, err := initPoliciesConfig(v.externalConfig.Policies, auths)
 	if err != nil {
 		return errors.Wrap(err, "error while initializing policies config")

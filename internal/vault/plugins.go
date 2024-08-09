@@ -95,9 +95,7 @@ func (v *vault) getExistingPlugins() (map[string]map[string]bool, error) {
 
 // getUnmanagedPlugins gets unmanaged plugins by comparing what's already in Vault
 // and what's in the externalConfig.
-func getUnmanagedPlugins(
-	existingPlugins map[string]map[string]bool, managedPlugins []plugin,
-) map[string]map[string]bool {
+func getUnmanagedPlugins(existingPlugins map[string]map[string]bool, managedPlugins []plugin) map[string]map[string]bool {
 	for _, managedPlugin := range managedPlugins {
 		delete(existingPlugins[managedPlugin.Type], managedPlugin.Name)
 	}

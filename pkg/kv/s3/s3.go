@@ -55,18 +55,15 @@ func New(region, bucket, prefix, sseAlgo, sseKeyID string) (kv.Service, error) {
 		return nil, errors.New("you need to provide a CMK KeyID when using aws:kms for SSE")
 	}
 
-	sess := session.Must(session.NewSession(aws.NewConfig().WithRegion(region)))
-
-	cl := awss3.New(sess)
+	cl := awss3.New(session.Must(session.NewSession(aws.NewConfig().WithRegion(region))))
 
 	return &s3Storage{cl, bucket, prefix, sseAlgo, sseKeyID}, nil
 }
 
 func (s3 *s3Storage) Set(key string, val []byte) error {
-	n := objectNameWithPrefix(s3.prefix, key)
 	input := awss3.PutObjectInput{
 		Bucket: aws.String(s3.bucket),
-		Key:    aws.String(n),
+		Key:    aws.String(objectNameWithPrefix(s3.prefix, key)),
 		Body:   bytes.NewReader(val),
 	}
 	if s3.sseAlgo != "" {
@@ -77,35 +74,33 @@ func (s3 *s3Storage) Set(key string, val []byte) error {
 	}
 
 	if _, err := s3.client.PutObject(&input); err != nil {
-		return errors.Wrapf(err, "error writing key '%s' to s3 bucket '%s'", n, s3.bucket)
+		return errors.Wrapf(err, "error writing key '%s' to s3 bucket '%s'", aws.StringValue(input.Key), s3.bucket)
 	}
 
 	return nil
 }
 
 func (s3 *s3Storage) Get(key string) ([]byte, error) {
-	n := objectNameWithPrefix(s3.prefix, key)
-
 	input := awss3.GetObjectInput{
 		Bucket: aws.String(s3.bucket),
-		Key:    aws.String(n),
+		Key:    aws.String(objectNameWithPrefix(s3.prefix, key)),
 	}
 
 	r, err := s3.client.GetObject(&input)
 	if err != nil {
 		var aerr awserr.Error
 		if errors.As(err, &aerr) && aerr.Code() == awss3.ErrCodeNoSuchKey {
-			return nil, kv.NewNotFoundError("error getting object for key '%s': %s", n, aerr.Error())
+			return nil, kv.NewNotFoundError("error getting object for key '%s': %s", aws.StringValue(input.Key), aerr.Error())
 		}
 
-		return nil, errors.Wrapf(err, "error getting object for key '%s'", n)
+		return nil, errors.Wrapf(err, "error getting object for key '%s'", aws.StringValue(input.Key))
 	}
 
 	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 
 	if err != nil {
-		return nil, errors.Wrapf(err, "error reading object with key '%s'", n)
+		return nil, errors.Wrapf(err, "error reading object with key '%s'", aws.StringValue(input.Key))
 	}
 
 	return b, nil

@@ -42,13 +42,10 @@ func getOrDefaultSecretData(m interface{}) (map[string]interface{}, error) {
 		return map[string]interface{}{}, err
 	}
 
-	k8sCfg := crconfig.GetConfigOrDie()
-	c, err := crclient.New(k8sCfg, crclient.Options{})
+	c, err := crclient.New(crconfig.GetConfigOrDie(), crclient.Options{})
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
-
-	vaultNamespace := os.Getenv("NAMESPACE")
 
 	secData := map[string]string{}
 	for _, value := range values {
@@ -59,7 +56,7 @@ func getOrDefaultSecretData(m interface{}) (map[string]interface{}, error) {
 
 		secret := &corev1.Secret{}
 		err = c.Get(context.Background(), crclient.ObjectKey{
-			Namespace: vaultNamespace,
+			Namespace: os.Getenv("NAMESPACE"),
 			Name:      keyRef["name"],
 		}, secret)
 		if err != nil {
@@ -127,41 +124,57 @@ func generateCertPayload(data interface{}) (map[string]interface{}, error) {
 func (v *vault) configureStartupSecrets() error {
 	managedStartupSecrets := v.externalConfig.StartupSecrets
 	for _, startupSecret := range managedStartupSecrets {
+		var err error
 		switch startupSecret.Type {
 		case "kv":
-			path, data, err := readStartupSecret(startupSecret, v.externalConfig.Secrets)
-			if err != nil {
-				return errors.Wrap(err, "unable to read 'kv' startup secret")
-			}
-
-			if len(startupSecret.Data.Options) > 0 {
-				data["options"] = startupSecret.Data.Options
-			}
-
-			_, err = v.writeWithWarningCheck(path, data)
-			if err != nil {
-				return errors.Wrapf(err, "error writing data for startup 'kv' secret '%s'", path)
-			}
+			err = v.handleKVSecret(startupSecret)
 
 		case "pki":
-			path, data, err := readStartupSecret(startupSecret, v.externalConfig.Secrets)
-			if err != nil {
-				return errors.Wrap(err, "unable to read 'pki' startup secret")
-			}
-
-			certData, err := generateCertPayload(data["data"])
-			if err != nil {
-				return errors.Wrap(err, "error generating 'pki' startup secret")
-			}
-
-			_, err = v.writeWithWarningCheck(path, certData)
-			if err != nil {
-				return errors.Wrapf(err, "error writing data for startup 'pki' secret '%s'", path)
-			}
+			err = v.handlePKISecret(startupSecret)
 
 		default:
 			return errors.Errorf("'%s' startup secret type is not supported, only 'kv' or 'pki'", startupSecret.Type)
 		}
+		if err != nil {
+			return errors.Wrap(err, "error handling startup secret")
+		}
+	}
+
+	return nil
+}
+
+func (v *vault) handleKVSecret(startupSecret startupSecret) error {
+	path, data, err := readStartupSecret(startupSecret, v.externalConfig.Secrets)
+	if err != nil {
+		return errors.Wrap(err, "unable to read 'kv' startup secret")
+	}
+
+	if len(startupSecret.Data.Options) > 0 {
+		data["options"] = startupSecret.Data.Options
+	}
+
+	_, err = v.writeWithWarningCheck(path, data)
+	if err != nil {
+		return errors.Wrapf(err, "error writing data for startup 'kv' secret '%s'", path)
+	}
+
+	return nil
+}
+
+func (v *vault) handlePKISecret(startupSecret startupSecret) error {
+	path, data, err := readStartupSecret(startupSecret, v.externalConfig.Secrets)
+	if err != nil {
+		return errors.Wrap(err, "unable to read 'pki' startup secret")
+	}
+
+	certData, err := generateCertPayload(data["data"])
+	if err != nil {
+		return errors.Wrap(err, "error generating 'pki' startup secret")
+	}
+
+	_, err = v.writeWithWarningCheck(path, certData)
+	if err != nil {
+		return errors.Wrapf(err, "error writing data for startup 'pki' secret '%s'", path)
 	}
 
 	return nil

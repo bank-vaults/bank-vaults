@@ -15,7 +15,6 @@
 // NOTE: This is a development-only command that can only be executed using Makefile.
 
 //go:build gen_docs
-// +build gen_docs
 
 package main
 
@@ -30,6 +29,12 @@ import (
 	"github.com/spf13/cobra/doc"
 )
 
+const fmTemplate = `---
+title: %s
+generated_file: true
+---
+`
+
 var genDocsCmd = &cobra.Command{
 	Use:    "gen-docs",
 	Hidden: true,
@@ -37,19 +42,12 @@ var genDocsCmd = &cobra.Command{
 	Args:   cobra.ExactArgs(1), // requires path to output dir
 	RunE: func(cmd *cobra.Command, args []string) error {
 		outputDir := args[0] // it is up to the caller to ensure this dir exists
-
 		// _ = doc.GenMarkdown(rootCmd, os.Stdout)
-		const fmTemplate = `---
-title: %s
-generated_file: true
----
-`
 
 		// Customized Hugo output based on https://github.com/spf13/cobra/blob/master/doc/md_docs.md
 		filePrepender := func(filename string) string {
 			name := filepath.Base(filename)
-			base := strings.TrimSuffix(name, path.Ext(name))
-			return fmt.Sprintf(fmTemplate, strings.Replace(base, "_", " ", -1))
+			return fmt.Sprintf(fmTemplate, strings.Replace(strings.TrimSuffix(name, path.Ext(name)), "_", " ", -1))
 		}
 		linkHandler := func(name string) string {
 			return name
@@ -60,8 +58,8 @@ generated_file: true
 		if err != nil {
 			return err
 		}
-
 		slog.Info(fmt.Sprintf("Successfully generated and saved docs to dir=%s", outputDir))
+
 		return nil
 	},
 }
