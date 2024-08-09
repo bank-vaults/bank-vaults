@@ -209,8 +209,8 @@ jobs:
         id: build-command
         with:
           cond: ${{ inputs.release }}
-          if_true: goreleaser release
-          if_false: goreleaser release --skip=publish --snapshot
+          if_true: make release
+          if_false: make binary-snapshot
 
       - name: Build
         run: nix develop --impure .#ci -c ${{ steps.build-command.outputs.value }}

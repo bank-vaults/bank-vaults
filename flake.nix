@@ -40,7 +40,6 @@
               gnumake
 
               golangci-lint
-              goreleaser
 
               yq-go
               jq
@@ -65,10 +64,9 @@
               versions.exec = ''
                 go version
                 golangci-lint version
-                echo controller-gen $(controller-gen --version)
                 kind version
                 kubectl version --client
-                echo kustomize $(kustomize version --short)
+                echo kustomize $(kustomize version)
                 echo helm $(helm version --short)
               '';
             };

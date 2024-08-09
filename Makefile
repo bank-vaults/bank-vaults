@@ -28,6 +28,9 @@ down: ## Destroy development environment
 
 ##@ Build
 
+PACKAGE_NAME          := github.com/bank-vaults/bank-vaults
+GOLANG_CROSS_VERSION  ?= v1.22.4
+
 .PHONY: build
 build: ## Build binary
 	@mkdir -p build
@@ -39,7 +42,25 @@ container-image: ## Build container image
 
 .PHONY: binary-snapshot
 binary-snapshot: ## Build binary snapshot
-	VERSION=v${GORELEASER_VERSION} ${GORELEASER_BIN} release --clean --skip=publish --snapshot
+	@docker run \
+		--rm \
+		-e CGO_ENABLED=1 \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/$(PACKAGE_NAME) \
+		-w /go/src/$(PACKAGE_NAME) \
+		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
+		--clean --skip=publish --snapshot
+
+.PHONY: release
+release: ## Release the project
+	@docker run \
+		--rm \
+		-e CGO_ENABLED=1 \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/$(PACKAGE_NAME) \
+		-w /go/src/$(PACKAGE_NAME) \
+		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
+		release
 
 .PHONY: artifacts
 artifacts: container-image binary-snapshot
@@ -96,20 +117,16 @@ gen-docs: ## Generate CLI documentation
 
 ##@ Dependencies
 
-deps: bin/golangci-lint bin/licensei bin/cosign bin/goreleaser
+deps: bin/golangci-lint bin/licensei
 deps: ## Install dependencies
 
 # Dependency versions
 GOLANGCI_VERSION = 1.59.1
 LICENSEI_VERSION = 0.9.0
-COSIGN_VERSION = 2.2.4
-GORELEASER_VERSION = 2.0.0
 
 # Dependency binaries
 GOLANGCI_LINT_BIN := golangci-lint
 LICENSEI_BIN := licensei
-COSIGN_BIN := cosign
-GORELEASER_BIN := goreleaser
 
 # TODO: add support for hadolint and yamllint dependencies
 HADOLINT_BIN := hadolint
@@ -119,8 +136,6 @@ YAMLLINT_BIN := yamllint
 ifneq ($(wildcard ./bin/.),)
 	GOLANGCI_LINT_BIN := bin/$(GOLANGCI_LINT_BIN)
 	LICENSEI_BIN := bin/$(LICENSEI_BIN)
-	COSIGN_BIN := bin/$(COSIGN_BIN)
-	GORELEASER_BIN := bin/$(GORELEASER_BIN)
 endif
 
 bin/golangci-lint:
@@ -130,25 +145,3 @@ bin/golangci-lint:
 bin/licensei:
 	@mkdir -p bin
 	curl -sfL https://raw.githubusercontent.com/goph/licensei/master/install.sh | bash -s -- v${LICENSEI_VERSION}
-
-bin/cosign:
-	@mkdir -p bin
-	@OS=$$(uname -s); \
-	case $$OS in \
-		"Linux") \
-			curl -sSfL https://github.com/sigstore/cosign/releases/download/v${COSIGN_VERSION}/cosign-linux-amd64 -o bin/cosign; \
-			;; \
-		"Darwin") \
-			curl -sSfL https://github.com/sigstore/cosign/releases/download/v${COSIGN_VERSION}/cosign-darwin-arm64 -o bin/cosign; \
-			;; \
-		*) \
-			echo "Unsupported OS: $$OS"; \
-			exit 1; \
-			;; \
-	esac
-	@chmod +x bin/cosign
-
-bin/goreleaser:
-	@mkdir -p bin
-	curl -sfL https://goreleaser.com/static/run -o bin/goreleaser
-	@chmod +x bin/goreleaser
