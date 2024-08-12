@@ -22,8 +22,6 @@ builds:
       - PKG_CONFIG_PATH=/sysroot/macos/amd64/usr/local/lib/pkgconfig
       - CC=o64-clang
       - CXX=o64-clang++
-    flags:
-      - -mod=readonly
     ldflags:
       - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
 
@@ -40,8 +38,6 @@ builds:
       - PKG_CONFIG_PATH=/sysroot/macos/arm64/usr/local/lib/pkgconfig
       - CC=oa64-clang
       - CXX=oa64-clang++
-    flags:
-      - -mod=readonly
     ldflags:
       - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
 
@@ -56,8 +52,6 @@ builds:
       - CGO_ENABLED=1
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
-    flags:
-      - -mod=readonly
     ldflags:
       - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
 
@@ -72,8 +66,6 @@ builds:
       - CGO_ENABLED=1
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
-    flags:
-      - -mod=readonly
     ldflags:
       - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
 

@@ -44,7 +44,6 @@ container-image: ## Build container image
 binary-snapshot: ## Build binary snapshot
 	@docker run \
 		--rm \
-		-e CGO_ENABLED=1 \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/$(PACKAGE_NAME) \
 		-w /go/src/$(PACKAGE_NAME) \
@@ -55,7 +54,6 @@ binary-snapshot: ## Build binary snapshot
 release: ## Release the project
 	@docker run \
 		--rm \
-		-e CGO_ENABLED=1 \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/$(PACKAGE_NAME) \
 		-w /go/src/$(PACKAGE_NAME) \
