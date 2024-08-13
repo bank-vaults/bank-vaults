@@ -57,7 +57,6 @@
               hadolint
             ] ++ [
               self'.packages.licensei
-              self'.packages.xgo
             ];
 
             scripts = {
@@ -131,22 +130,6 @@
               "-X github.com/hashicorp/vault/sdk/version.Version=${version}"
               "-X github.com/hashicorp/vault/sdk/version.VersionPrerelease="
             ];
-          };
-
-          xgo = pkgs.buildGoModule rec {
-            pname = "xgo";
-            version = "0.32.0";
-
-            src = pkgs.fetchFromGitHub {
-              owner = "crazy-max";
-              repo = "xgo";
-              rev = "v${version}";
-              sha256 = "sha256-eqTutGdGgbQ67mw3LQYoIzEASpvYa8taGL6qEjMDJVc=";
-            };
-
-            vendorHash = null;
-
-            subPackages = [ "." ];
           };
         };
       };
