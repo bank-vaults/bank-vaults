@@ -20,7 +20,7 @@
           default = {
             languages = {
               go.enable = true;
-              go.package = pkgs.go_1_22;
+              go.package = pkgs.go_1_23;
             };
 
             services = {
@@ -39,8 +39,6 @@
             packages = with pkgs; [
               gnumake
 
-              golangci-lint
-
               yq-go
               jq
 
@@ -53,6 +51,7 @@
               kubernetes-helm
               helm-docs
 
+              golangci-lint
               yamllint
               hadolint
             ] ++ [

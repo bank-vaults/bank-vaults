@@ -18,10 +18,6 @@ help: ## Display this help
 up: ## Start development environment
 	docker compose up -d
 
-.PHONY: stop
-stop: ## Stop development environment
-	docker compose stop
-
 .PHONY: down
 down: ## Destroy development environment
 	docker compose down -v
@@ -29,12 +25,16 @@ down: ## Destroy development environment
 ##@ Build
 
 PACKAGE_NAME          := github.com/bank-vaults/bank-vaults
-GOLANG_CROSS_VERSION  ?= v1.22.4
+GORELEASER_CROSS_VERSION  ?= v1.23.0
 
 .PHONY: build
 build: ## Build binary
 	@mkdir -p build
 	go build -race -o build/ ./cmd/bank-vaults
+
+.PHONY: artifacts
+artifacts: container-image binary-snapshot
+artifacts: ## Build artifacts
 
 .PHONY: container-image
 container-image: ## Build container image
@@ -47,7 +47,7 @@ binary-snapshot: ## Build binary snapshot
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/$(PACKAGE_NAME) \
 		-w /go/src/$(PACKAGE_NAME) \
-		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
+		ghcr.io/goreleaser/goreleaser-cross:${GORELEASER_CROSS_VERSION} \
 		--clean --skip=publish --snapshot
 
 .PHONY: release
@@ -57,12 +57,8 @@ release: ## Release the project
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/$(PACKAGE_NAME) \
 		-w /go/src/$(PACKAGE_NAME) \
-		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
+		ghcr.io/goreleaser/goreleaser-cross:${GORELEASER_CROSS_VERSION} \
 		release
-
-.PHONY: artifacts
-artifacts: container-image binary-snapshot
-artifacts: ## Build artifacts
 
 ##@ Checks
 
@@ -87,11 +83,11 @@ lint-go:
 
 .PHONY: lint-docker
 lint-docker:
-	hadolint Dockerfile
+	$(HADOLINT_BIN) Dockerfile
 
 .PHONY: lint-yaml
 lint-yaml:
-	yamllint $(if ${CI},-f github,) --no-warnings .
+	$(YAMLLINT_BIN) $(if ${CI},-f github,) --no-warnings .
 
 .PHONY: fmt
 fmt: ## Format code
@@ -115,11 +111,8 @@ gen-docs: ## Generate CLI documentation
 
 ##@ Dependencies
 
-deps: bin/golangci-lint bin/licensei
-deps: ## Install dependencies
-
 # Dependency versions
-GOLANGCI_VERSION = 1.59.1
+GOLANGCI_LINT_VERSION = 1.60.3
 LICENSEI_VERSION = 0.9.0
 
 # Dependency binaries
@@ -130,6 +123,9 @@ LICENSEI_BIN := licensei
 HADOLINT_BIN := hadolint
 YAMLLINT_BIN := yamllint
 
+deps: bin/golangci-lint bin/licensei
+deps: ## Install dependencies
+
 # If we have "bin" dir, use those binaries instead
 ifneq ($(wildcard ./bin/.),)
 	GOLANGCI_LINT_BIN := bin/$(GOLANGCI_LINT_BIN)
@@ -138,7 +134,7 @@ endif
 
 bin/golangci-lint:
 	@mkdir -p bin
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- v${GOLANGCI_VERSION}
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- v${GOLANGCI_LINT_VERSION}
 
 bin/licensei:
 	@mkdir -p bin

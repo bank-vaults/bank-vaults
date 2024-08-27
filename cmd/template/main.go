@@ -69,7 +69,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		err = os.WriteFile(filename, buffer.Bytes(), 0600)
+		err = os.WriteFile(filename, buffer.Bytes(), 0o600)
 		if err != nil {
 			slog.Error(fmt.Sprintf("error writing template file: %s", err.Error()))
 			os.Exit(1)
@@ -96,7 +96,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			err = os.WriteFile(destination, templatedText.Bytes(), 0600)
+			err = os.WriteFile(destination, templatedText.Bytes(), 0o600)
 			if err != nil {
 				slog.Error(fmt.Sprintf("error writing template file %q: %s", destination, err.Error()))
 				os.Exit(1)

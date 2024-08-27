@@ -213,7 +213,6 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) e
 			slog.Debug(fmt.Sprintf("secret engine input %#v", mountInput))
 			for {
 				err = v.cl.Sys().Mount(secretEngine.Path, &mountInput)
-
 				if err != nil {
 					d := b.Duration()
 					slog.Info(fmt.Sprintf("error mounting %s into vault: %s, waiting %s before trying again...", secretEngine.Path, err.Error(), d))
