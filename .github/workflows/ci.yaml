@@ -87,44 +87,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
-      - name: Set up Go
-        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+      - name: Set up Nix
+        uses: cachix/install-nix-action@ba0dd844c9180cbf77aa72a116d6fbc515d0e87b # v27
         with:
-          go-version: 1.23
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - name: lint
-        uses: golangci/golangci-lint-action@v6.1.0
+      - name: Set up magic Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@b46e247b898aa56e6d2d2e728dc6df6c84fdb738 # v7
+
+      - name: Set up Go cache
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
-          version: latest
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ github.job }}-${{ runner.os }}-go-
 
-      # Enable this once Nix builds golangci-lint with Go 1.23
-      # - name: Checkout repository
-      #   uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: Prepare Nix shell
+        run: nix develop --impure .#ci
 
-      # - name: Set up Nix
-      #   uses: cachix/install-nix-action@ba0dd844c9180cbf77aa72a116d6fbc515d0e87b # v27
-      #   with:
-      #     extra_nix_config: |
-      #       access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-
-      # - name: Set up magic Nix cache
-      #   uses: DeterminateSystems/magic-nix-cache-action@b46e247b898aa56e6d2d2e728dc6df6c84fdb738 # v7
-
-      # - name: Set up Go cache
-      #   uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
-      #   with:
-      #     path: |
-      #       ~/.cache/go-build
-      #       ~/go/pkg/mod
-      #     key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-      #     restore-keys: |
-      #       ${{ github.job }}-${{ runner.os }}-go-
-
-      # - name: Prepare Nix shell
-      #   run: nix develop --impure .#ci
-
-      # - name: Lint
-      #   run: nix develop --impure .#ci -c make lint
+      - name: Lint
+        run: nix develop --impure .#ci -c make lint -j
 
   license-check:
     name: License check

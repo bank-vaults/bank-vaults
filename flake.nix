@@ -51,8 +51,7 @@
               kubernetes-helm
               helm-docs
 
-              # Enable this once Nix builds golangci-lint with Go 1.23
-              # golangci-lint
+              golangci-lint
               yamllint
               hadolint
             ] ++ [

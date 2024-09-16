@@ -112,7 +112,7 @@ gen-docs: ## Generate CLI documentation
 ##@ Dependencies
 
 # Dependency versions
-GOLANGCI_LINT_VERSION = 1.60.3
+GOLANGCI_LINT_VERSION = 1.61.0
 LICENSEI_VERSION = 0.9.0
 
 # Dependency binaries

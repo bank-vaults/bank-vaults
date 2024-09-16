@@ -21,7 +21,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bank-vaults/internal/configuration"
+	"github.com/bank-vaults/vault-sdk/utils/templater"
 )
 
 var Version = "dev"
@@ -59,7 +59,7 @@ func main() {
 
 	leftDelimiter := delimitersArray[0]
 	rightDelimiter := delimitersArray[1]
-	templater := configuration.NewTemplater(leftDelimiter, rightDelimiter)
+	templater := templater.NewTemplater(leftDelimiter, rightDelimiter)
 
 	vaultConfig := os.Getenv("VAULT_LOCAL_CONFIG")
 	if vaultConfig != "" {

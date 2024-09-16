@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bank-vaults/internal/configuration"
+	"github.com/bank-vaults/vault-sdk/utils/templater"
 	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/fsnotify/fsnotify"
 	"github.com/jpillora/backoff"
@@ -240,7 +240,7 @@ func parseConfiguration(parser multiparser.Parser, vaultConfigFile string) *conf
 	}
 
 	// Replace env templating data
-	templater := configuration.NewTemplater(configuration.DefaultLeftDelimiter, configuration.DefaultRightDelimiter)
+	templater := templater.NewTemplater(templater.DefaultLeftDelimiter, templater.DefaultRightDelimiter)
 	buffer, err := templater.EnvTemplate(string(vaultConfig))
 	if err != nil {
 		slog.Error(fmt.Sprintf("error executing vault config template: %s", err.Error()))
