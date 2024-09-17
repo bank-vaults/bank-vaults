@@ -35,7 +35,7 @@ func New(path string) (service kv.Service, err error) {
 }
 
 func (f *file) Set(key string, val []byte) error {
-	return os.WriteFile(path.Join(f.path, key), val, 0600)
+	return os.WriteFile(path.Join(f.path, key), val, 0o600)
 }
 
 func (f *file) Get(key string) ([]byte, error) {

@@ -21,7 +21,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bank-vaults/internal/configuration"
+	"github.com/bank-vaults/vault-sdk/utils/templater"
 )
 
 var Version = "dev"
@@ -59,7 +59,7 @@ func main() {
 
 	leftDelimiter := delimitersArray[0]
 	rightDelimiter := delimitersArray[1]
-	templater := configuration.NewTemplater(leftDelimiter, rightDelimiter)
+	templater := templater.NewTemplater(leftDelimiter, rightDelimiter)
 
 	vaultConfig := os.Getenv("VAULT_LOCAL_CONFIG")
 	if vaultConfig != "" {
@@ -69,7 +69,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		err = os.WriteFile(filename, buffer.Bytes(), 0600)
+		err = os.WriteFile(filename, buffer.Bytes(), 0o600)
 		if err != nil {
 			slog.Error(fmt.Sprintf("error writing template file: %s", err.Error()))
 			os.Exit(1)
@@ -96,7 +96,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			err = os.WriteFile(destination, templatedText.Bytes(), 0600)
+			err = os.WriteFile(destination, templatedText.Bytes(), 0o600)
 			if err != nil {
 				slog.Error(fmt.Sprintf("error writing template file %q: %s", destination, err.Error()))
 				os.Exit(1)

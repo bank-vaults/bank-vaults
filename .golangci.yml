@@ -19,8 +19,18 @@ linters-settings:
 
 linters:
   enable:
+    - bodyclose
+    - errcheck
     - gci
+    - gofmt
+    - gofumpt
     - goimports
+    - gosimple
+    - ineffassign
     - misspell
     - nolintlint
     - revive
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
