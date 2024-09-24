@@ -54,6 +54,7 @@ binary-snapshot: ## Build binary snapshot
 release: ## Release the project
 	@docker run \
 		--rm \
+		--env-file .release-env \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/$(PACKAGE_NAME) \
 		-w /go/src/$(PACKAGE_NAME) \

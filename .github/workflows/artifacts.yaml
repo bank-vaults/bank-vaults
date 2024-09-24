@@ -130,7 +130,7 @@ jobs:
           for tag in ${TAGS}; do
             images+="${tag}@${DIGEST} "
           done
-          
+
           cosign sign --yes ${images}
 
       - name: Set image ref
@@ -213,9 +213,9 @@ jobs:
           if_false: make binary-snapshot
 
       - name: Build
-        run: nix develop --impure .#ci -c ${{ steps.build-command.outputs.value }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} > .release-env
+          nix develop --impure .#ci -c ${{ steps.build-command.outputs.value }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
