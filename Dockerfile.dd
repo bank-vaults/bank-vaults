@@ -6,7 +6,7 @@ ARG BASE_IMAGE
 # See
 # https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
 # for info on BUILDPLATFORM, TARGETOS, TARGETARCH, etc.
-FROM --platform=$BUILDPLATFORM golang:1.22.2 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.23.2 AS builder
 WORKDIR /go/src/github.com/bank-vaults
 ENV CGO_ENABLED=1
 COPY go.* .

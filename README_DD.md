@@ -7,7 +7,7 @@
 PLATFORMS="linux/arm64"
 IMAGE_NAME="vault-banks"
 IMAGE_TAG="test"
-BUILDER_IMAGE="images/mirror/golang:1.22.2"
+BUILDER_IMAGE="images/mirror/golang:1.23.2"
 CONTEXT_DIR="."
 DOCKERFILE_NAME=Dockerfile.dd
 docker buildx build --platform $PLATFORMS --tag registry.ddbuild.io/$IMAGE_NAME:$IMAGE_TAG --build-arg="BUILDER_IMAGE=registry.ddbuild.io/$BUILDER_IMAGE" --build-arg="BASE_IMAGE=registry.ddbuild.io/images/base/gbi-ubuntu_2204:release" -f "$DOCKERFILE_NAME" "$CONTEXT_DIR"
