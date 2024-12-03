@@ -34,6 +34,7 @@ type policy struct {
 func initPoliciesConfig(policiesConfig []policy, mounts map[string]*api.MountOutput) ([]policy, error) {
 	for index, policy := range policiesConfig {
 		for k, v := range mounts {
+			slog.Info(fmt.Sprintf("k = %s, v = %v", k, v))
 			policy.Rules = strings.ReplaceAll(policy.Rules, fmt.Sprintf("__accessor__%s", strings.TrimRight(k, "/")), v.Accessor)
 		}
 		//
