@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bank-vaults/internal/configuration"
+	"github.com/bank-vaults/vault-sdk/utils/templater"
 	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/fsnotify/fsnotify"
 	"github.com/jpillora/backoff"
@@ -50,7 +50,7 @@ var configureCmd = &cobra.Command{
 	Long: `This configuration is an extension to what is available through the Vault configuration:
 			https://www.vaultproject.io/docs/configuration/index.html. With this it is possible to
 			configure secret engines, auth methods, etc...`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		var unsealConfig unsealCfg
 
 		runOnce := c.GetBool(cfgOnce)
@@ -96,7 +96,6 @@ var configureCmd = &cobra.Command{
 		}
 
 		configurations := make(chan *configFile, len(vaultConfigFiles))
-
 		for i, vaultConfigFile := range vaultConfigFiles {
 			vaultConfigFiles[i] = filepath.Clean(vaultConfigFile)
 			configurations <- parseConfiguration(parser, vaultConfigFile)
@@ -123,9 +122,7 @@ var configureCmd = &cobra.Command{
 		}
 
 		for config := range configurations {
-
 			slog.Info(fmt.Sprintf("applying config file: %s", config.Path))
-
 			func() {
 				for {
 					slog.Info("checking if vault is sealed...")
@@ -144,7 +141,6 @@ var configureCmd = &cobra.Command{
 
 						continue
 					}
-
 					slog.Info("vault is unsealed, configuring...")
 
 					if err = v.Configure(config.Data); err != nil {
@@ -228,6 +224,7 @@ func watchConfigurations(parser multiparser.Parser, vaultConfigFiles []string, c
 					configurations <- parseConfiguration(parser, fileName)
 				}
 			}
+
 		case err := <-watcher.Errors:
 			return fmt.Errorf("watcher exited with error: %w", err)
 		}
@@ -243,7 +240,7 @@ func parseConfiguration(parser multiparser.Parser, vaultConfigFile string) *conf
 	}
 
 	// Replace env templating data
-	templater := configuration.NewTemplater(configuration.DefaultLeftDelimiter, configuration.DefaultRightDelimiter)
+	templater := templater.NewTemplater(templater.DefaultLeftDelimiter, templater.DefaultRightDelimiter)
 	buffer, err := templater.EnvTemplate(string(vaultConfig))
 	if err != nil {
 		slog.Error(fmt.Sprintf("error executing vault config template: %s", err.Error()))

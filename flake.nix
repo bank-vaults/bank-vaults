@@ -20,11 +20,14 @@
           default = {
             languages = {
               go.enable = true;
-              go.package = pkgs.go_1_21;
+              go.package = pkgs.go_1_23;
             };
 
             services = {
-              vault.enable = true;
+              vault = {
+                enable = true;
+                package = self'.packages.vault;
+              };
             };
 
             pre-commit.hooks = {
@@ -35,9 +38,6 @@
 
             packages = with pkgs; [
               gnumake
-
-              golangci-lint
-              goreleaser
 
               yq-go
               jq
@@ -51,21 +51,20 @@
               kubernetes-helm
               helm-docs
 
+              golangci-lint
               yamllint
               hadolint
             ] ++ [
               self'.packages.licensei
-              self'.packages.xgo
             ];
 
             scripts = {
               versions.exec = ''
                 go version
                 golangci-lint version
-                echo controller-gen $(controller-gen --version)
                 kind version
                 kubectl version --client
-                echo kustomize $(kustomize version --short)
+                echo kustomize $(kustomize version)
                 echo helm $(helm version --short)
               '';
             };
@@ -94,7 +93,7 @@
               sha256 = "sha256-Pvjmvfk0zkY2uSyLwAtzWNn5hqKImztkf8S6OhX8XoM=";
             };
 
-            vendorSha256 = "sha256-ZIpZ2tPLHwfWiBywN00lPI1R7u7lseENIiybL3+9xG8=";
+            vendorHash = "sha256-ZIpZ2tPLHwfWiBywN00lPI1R7u7lseENIiybL3+9xG8=";
 
             subPackages = [ "cmd/licensei" ];
 
@@ -105,20 +104,31 @@
             ];
           };
 
-          xgo = pkgs.buildGoModule rec {
-            pname = "xgo";
-            version = "0.28.0";
+          vault = pkgs.buildGoModule rec {
+            pname = "vault";
+            version = "1.14.8";
 
             src = pkgs.fetchFromGitHub {
-              owner = "crazy-max";
-              repo = "xgo";
+              owner = "hashicorp";
+              repo = "vault";
               rev = "v${version}";
-              sha256 = "sha256-chkmQF5xSccHuY5yH9oSn243E92EmvKCGQdAEy3eMXw=";
+              sha256 = "sha256-sGCODCBgsxyr96zu9ntPmMM/gHVBBO+oo5+XsdbCK4E=";
             };
 
-            vendorSha256 = null;
+            vendorHash = "sha256-zpHjZjgCgf4b2FAJQ22eVgq0YGoVvxGYJ3h/3ZRiyrQ=";
+
+            proxyVendor = true;
 
             subPackages = [ "." ];
+
+            tags = [ "vault" ];
+            ldflags = [
+              "-s"
+              "-w"
+              "-X github.com/hashicorp/vault/sdk/version.GitCommit=${src.rev}"
+              "-X github.com/hashicorp/vault/sdk/version.Version=${version}"
+              "-X github.com/hashicorp/vault/sdk/version.VersionPrerelease="
+            ];
           };
         };
       };

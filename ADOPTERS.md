@@ -1,6 +1,7 @@
 # Adopters
 
 This is a list of production adopters of Bank-Vaults (in alphabetical order):
+
 - [Aspect](https://www.aspect.com) is using Bank-Vaults to provision and configure Vault for the Aspect Via® Cloud Contact Centre Platform.
 - [Outshift](https://outshift.com) (by Cisco) is using Bank-Vaults to provision and configure Vault on Kubernetes and to inject secrets into applications.
 - [Mintel](https://www.mintel.com) is using Bank-Vaults to provision and configure Vault to provide secrets to applications.

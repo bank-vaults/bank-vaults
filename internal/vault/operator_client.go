@@ -151,14 +151,15 @@ func (v *vault) Sealed() (bool, error) {
 }
 
 func (v *vault) Active() (bool, error) {
-	req := v.cl.NewRequest("GET", "/v1/sys/health")
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	resp, err := v.cl.RawRequestWithContext(ctx, req)
+
+	resp, err := v.cl.Logical().ReadRawWithContext(ctx, "sys/health")
 	if err != nil {
 		return false, errors.Wrap(err, "error checking status")
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode == http.StatusOK {
 		return true, nil
 	}
@@ -191,12 +192,10 @@ func (v *vault) LeaderAddress() (string, error) {
 func (v *vault) Unseal() error {
 	defer runtime.GC()
 	for i := 0; ; i++ {
-		keyID := keyUnsealForID(i)
-
 		slog.Debug("retrieving key from kms service...")
-		k, err := v.keyStore.Get(keyID)
+		k, err := v.keyStore.Get(keyUnsealForID(i))
 		if err != nil {
-			return errors.Wrapf(err, "unable to get key '%s'", keyID)
+			return errors.Wrapf(err, "unable to get key '%s'", keyUnsealForID(i))
 		}
 
 		slog.Debug("sending unseal request to vault...")
@@ -204,7 +203,6 @@ func (v *vault) Unseal() error {
 		if err != nil {
 			return errors.Wrap(err, "fail to send unseal request to vault")
 		}
-
 		slog.Debug(fmt.Sprintf("got unseal response: %+v", *resp))
 
 		if !resp.Sealed {
@@ -235,6 +233,7 @@ func (v *vault) keyStoreSet(key string, val []byte) error {
 	if err == nil {
 		return errors.Errorf("error setting key '%s': it already exists", key)
 	}
+
 	return errors.Wrapf(err, "error setting key '%s'", key)
 }
 
@@ -249,7 +248,6 @@ func (v *vault) Init() error {
 
 		return nil
 	}
-
 	slog.Info("initializing vault")
 
 	// test backend first
@@ -287,7 +285,6 @@ func (v *vault) Init() error {
 	}
 
 	initRequest := api.InitRequest{}
-
 	switch sealResp.RecoverySeal {
 	case true:
 		initRequest.RecoveryShares = v.config.SecretShares
@@ -298,38 +295,31 @@ func (v *vault) Init() error {
 	}
 
 	resp, err := v.cl.Sys().Init(&initRequest)
-
 	if err != nil {
 		return errors.Wrap(err, "error initializing vault")
 	}
 
 	for i, k := range resp.Keys {
-		keyID := keyUnsealForID(i)
-		err := v.keyStoreSet(keyID, []byte(k))
+		err := v.keyStoreSet(keyUnsealForID(i), []byte(k))
 		if err != nil {
-			return errors.Wrapf(err, "error storing unseal key '%s'", keyID)
+			return errors.Wrapf(err, "error storing unseal key '%s'", keyUnsealForID(i))
 		}
-
-		slog.With(slog.String("key", keyID)).Info("unseal key stored in key store")
+		slog.With(slog.String("key", keyUnsealForID(i))).Info("unseal key stored in key store")
 	}
 
 	for i, k := range resp.RecoveryKeys {
-		keyID := keyRecoveryForID(i)
-		err := v.keyStoreSet(keyID, []byte(k))
+		err := v.keyStoreSet(keyRecoveryForID(i), []byte(k))
 		if err != nil {
-			return errors.Wrapf(err, "error storing recovery key '%s'", keyID)
+			return errors.Wrapf(err, "error storing recovery key '%s'", keyRecoveryForID(i))
 		}
-
-		slog.With(slog.String("key", keyID)).Info("recovery key stored in key store")
+		slog.With(slog.String("key", keyRecoveryForID(i))).Info("recovery key stored in key store")
 	}
 
-	rootToken := resp.RootToken
-
 	// this sets up a predefined root token
+	rootToken := resp.RootToken
 	if v.config.InitRootToken != "" {
 		slog.Info("setting up init root token, waiting for vault to be unsealed")
 
-		wait := time.Second * 2
 		for {
 			sealed, err := v.Sealed()
 			if !sealed {
@@ -340,8 +330,7 @@ func (v *vault) Init() error {
 			} else {
 				slog.Info(fmt.Sprintf("vault not reachable: %s", err.Error()))
 			}
-
-			time.Sleep(wait)
+			time.Sleep(time.Second * 2)
 		}
 
 		// use temporary token
@@ -363,7 +352,6 @@ func (v *vault) Init() error {
 		if err != nil {
 			return errors.Wrap(err, "unable to revoke temporary root token")
 		}
-
 		rootToken = v.config.InitRootToken
 	}
 
@@ -461,10 +449,10 @@ func (v *vault) Configure(config map[string]interface{}) error {
 		}
 		v.cl.SetToken(string(rootToken))
 	} else {
-		var OTP string
+		var otp string
 		var nonce string
 		var encodedRootToken string
-		var OTPLength int
+		var otpLength int
 
 		slog.Debug("initiating generate-root token process...")
 
@@ -477,9 +465,9 @@ func (v *vault) Configure(config map[string]interface{}) error {
 		if err != nil {
 			return errors.Wrapf(err, "unable to initiate generate-root token process")
 		}
-		OTP = response.OTP
+		otp = response.OTP
 		nonce = response.Nonce
-		OTPLength = response.OTPLength
+		otpLength = response.OTPLength
 
 		sealResp, err := v.cl.Sys().SealStatus()
 		if err != nil {
@@ -487,7 +475,7 @@ func (v *vault) Configure(config map[string]interface{}) error {
 		}
 
 		// Iterate over existing unseal/recovery keys
-		for i := 0; i < response.Required; i++ {
+		for i := range response.Required {
 			var keyID string
 			if sealResp.RecoverySeal {
 				keyID = keyRecoveryForID(i)
@@ -507,10 +495,10 @@ func (v *vault) Configure(config map[string]interface{}) error {
 
 			if res.Complete {
 				encodedRootToken = res.EncodedRootToken
-				switch OTPLength {
+				switch otpLength {
 				case 0:
 					// Backwards compat
-					tokenBytes, err := XORBase64(encodedRootToken, OTP)
+					tokenBytes, err := XORBase64(encodedRootToken, otp)
 					if err != nil {
 						return errors.Wrapf(err, "error xoring encoded root token")
 					}
@@ -527,7 +515,7 @@ func (v *vault) Configure(config map[string]interface{}) error {
 						return errors.Wrapf(err, "error decoding base64 encoded root token")
 					}
 
-					tokenBytes, err = XORBytes(tokenBytes, []byte(OTP))
+					tokenBytes, err = XORBytes(tokenBytes, []byte(otp))
 					if err != nil {
 						return errors.Wrapf(err, "error xoring encoded root token")
 					}
@@ -540,6 +528,7 @@ func (v *vault) Configure(config map[string]interface{}) error {
 				if err != nil {
 					return errors.Wrapf(err, "unable to cancel generate root token process")
 				}
+
 				return errors.Wrapf(err, "unable to generate root token, all unseal keys were exhausted")
 			}
 		}
@@ -567,6 +556,7 @@ func (v *vault) Configure(config map[string]interface{}) error {
 	if err != nil {
 		return errors.Wrap(err, "error creating externalConfig decoder")
 	}
+
 	if err = decoder.Decode(config); err != nil {
 		return errors.Wrap(err, "error decoding externalConfig")
 	}
@@ -610,11 +600,13 @@ func (v *vault) writeWithWarningCheck(path string, data map[string]interface{}) 
 	if err != nil {
 		return nil, err
 	}
+
 	if sec != nil {
 		for _, warning := range sec.Warnings {
 			slog.Warn(warning)
 		}
 	}
+
 	return sec, nil
 }
 
@@ -640,7 +632,6 @@ func XORBytes(a, b []byte) ([]byte, error) {
 	}
 
 	buf := make([]byte, len(a))
-
 	for i := range a {
 		buf[i] = a[i] ^ b[i]
 	}

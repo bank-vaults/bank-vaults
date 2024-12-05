@@ -9,9 +9,9 @@ contact_links:
     about: Ask and discuss questions with other Bank-Vaults community members
 
   - name: 📚 Documentation
-    url: https://bank-vaults.dev/docs/
+    url: https://bank-vaults.dev/docs
     about: Check the documentation for help
 
   - name: 💬 Slack channel
-    url: https://eti.cisco.com/slack
+    url: https://cloud-native.slack.com/archives/C078PHYK38W/
     about: Please ask and answer questions here

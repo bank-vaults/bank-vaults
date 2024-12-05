@@ -8,6 +8,8 @@
   </h1>
 </p>
 
+Bank-Vaults is now a [CNCF Sandbox](https://www.cncf.io/sandbox-projects/) project.
+
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/bank-vaults/bank-vaults)
 <br>
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bank-vaults/bank-vaults/ci.yaml?branch=main&style=flat-square)](https://github.com/bank-vaults/bank-vaults/actions/workflows/ci.yaml?query=workflow%3ACI)
@@ -22,8 +24,8 @@ Think heavy steel doors, secret unlocking combinations and burly guards with sma
 Bank-Vaults is an umbrella project which provides various tools for Cloud Native secret management, including:
 
 - Bank-Vaults CLI to make configuring Hashicorp Vault easier
-- [Vault operator](https://github.com/bank-vaults/vault-operator/) to make operating Hashicorp Vault on top of Kubernetes easier
-- [Vault secrets webhook](https://github.com/bank-vaults/vault-secrets-webhook) to inject secrets directly into Kubernetes pods
+- [Vault Operator](https://github.com/bank-vaults/vault-operator/) to make operating Hashicorp Vault on top of Kubernetes easier
+- [Secrets Webhook](https://github.com/bank-vaults/secrets-webhook) to inject secrets directly into Kubernetes pods
 - [Vault SDK](https://github.com/bank-vaults/vault-sdk) to make working with Vault easier in Go
 - and others
 
@@ -62,10 +64,17 @@ Fetch required tools:
 make deps
 ```
 
+Run project dependencies:
+
+```shell
+make up
+```
+
 Run the test suite:
 
 ```shell
 make test
+make test-integration
 ```
 
 Run linters:
@@ -86,10 +95,14 @@ Build artifacts locally:
 make artifacts
 ```
 
-Once you are done, you can clean project dependencies:
+Once you are done either stop or tear down dependencies:
 
 ```shell
-make clean
+make stop
+
+# OR
+
+make down
 ```
 
 ## Credits

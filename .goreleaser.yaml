@@ -1,40 +1,91 @@
+version: 2
+
+project_name: bank-vaults
+
 dist: build/dist
 
-# Requirements:
-# - Docker
-# - go install github.com/crazy-max/xgo@latest
+before:
+  hooks:
+    - go mod tidy
+
 builds:
-  # Building of Bank-Vaults is a bit hacky since the pkcs11 package can't be built with simple Go Crosscompiling
-  # so we need to use xgo, but that is not directly supported in GoReleaser, so we do the actual compilation with
-  # xgo in post hooks for all targets.
-  - main: ./cmd/template
-    env:
-      - CGO_ENABLED=0
-    flags:
-      - -trimpath
-    ldflags: "-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}"
+  - id: darwin-amd64
+    main: ./cmd/template
+    binary: bank-vaults
     goos:
-      - linux
       - darwin
     goarch:
       - amd64
+    env:
+      - CGO_ENABLED=1
+      - PKG_CONFIG_SYSROOT_DIR=/sysroot/macos/amd64
+      - PKG_CONFIG_PATH=/sysroot/macos/amd64/usr/local/lib/pkgconfig
+      - CC=o64-clang
+      - CXX=o64-clang++
+    ldflags:
+      - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
+
+  - id: darwin-arm64
+    main: ./cmd/template
+    binary: bank-vaults
+    goos:
+      - darwin
+    goarch:
       - arm64
-    hooks:
-      post:
-        - xgo -targets {{ .Os }}/{{ .Arch }} -dest build/dist -ldflags '-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}' -pkg cmd/bank-vaults .
-        - sudo bash -c "mkdir -p build/dist/bank-vaults_{{ .Os }}_{{ .Arch }}; mv build/dist/github.com/bank-vaults/bank-vaults-{{ .Os }}-{{ .Arch }} build/dist/bank-vaults_{{ .Os }}_{{ .Arch }}/bank-vaults"
+    env:
+      - CGO_ENABLED=1
+      - PKG_CONFIG_SYSROOT_DIR=/sysroot/macos/arm64
+      - PKG_CONFIG_PATH=/sysroot/macos/arm64/usr/local/lib/pkgconfig
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+    ldflags:
+      - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
+
+  - id: linux-amd64
+    main: ./cmd/template
+    binary: bank-vaults
+    goos:
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+    ldflags:
+      - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
+
+  - id: linux-arm64
+    main: ./cmd/template
+    binary: bank-vaults
+    goos:
+      - linux
+    goarch:
+      - arm64
+    env:
+      - CGO_ENABLED=1
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    ldflags:
+      - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
 
 archives:
-  - name_template: "{{ .Binary }}-{{ .Os }}-{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        format: zip
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    files:
+      - README*
+      - LICENSE*
 
 checksum:
-  name_template: "bank-vaults_checksums.txt"
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
 
 changelog:
-  skip: false
+  disable: true
 
 release:
   prerelease: auto

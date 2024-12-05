@@ -49,6 +49,7 @@ func readVaultGroup(group string, client *api.Client) (secret *api.Secret, err e
 		// No Data returned, Group does not exist
 		return nil, nil
 	}
+
 	return secret, nil
 }
 
@@ -61,6 +62,7 @@ func readVaultGroupAlias(id string, client *api.Client) (secret *api.Secret, err
 		// No Data returned, Group does not exist
 		return nil, nil
 	}
+
 	return secret, nil
 }
 
@@ -73,6 +75,7 @@ func getVaultAuthMountAccessor(path string, client *api.Client) (accessor string
 	if mounts[path] == nil {
 		return "", errors.Errorf("auth mount path %s does not exist in vault", path)
 	}
+
 	return mounts[path].Accessor, nil
 }
 
@@ -84,6 +87,7 @@ func getVaultGroupID(group string, client *api.Client) (id string, err error) {
 	if g == nil {
 		return "", errors.Errorf("group %s does not exist", group)
 	}
+
 	return g.Data["id"].(string), nil
 }
 
@@ -95,6 +99,7 @@ func getVaultGroupAliasName(aliasID string, client *api.Client) (id string, err 
 	if alias == nil {
 		return "", errors.Errorf("group alias %s does not exist", aliasID)
 	}
+
 	return alias.Data["name"].(string), nil
 }
 
@@ -106,6 +111,7 @@ func getVaultGroupAliasMount(aliasID string, client *api.Client) (id string, err
 	if alias == nil {
 		return "", errors.Errorf("group alias %s does not exist", aliasID)
 	}
+
 	return alias.Data["mount_accessor"].(string), nil
 }
 

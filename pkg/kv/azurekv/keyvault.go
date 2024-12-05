@@ -65,8 +65,7 @@ func New(name string) (kv.Service, error) {
 	}
 
 	// Establish a connection to the Key Vault client
-	vaultBaseURL := fmt.Sprintf("https://%s.%s", name, "vault.azure.net")
-	client, err := azsecrets.NewClient(vaultBaseURL, cred, nil)
+	client, err := azsecrets.NewClient(fmt.Sprintf("https://%s.%s", name, "vault.azure.net"), cred, nil)
 	if err != nil {
 		log.Fatalf("failed to create Key Vault client: %v", err)
 	}
@@ -92,8 +91,7 @@ func (a *azureKeyVault) Get(key string) ([]byte, error) {
 
 func (a *azureKeyVault) Set(key string, val []byte) error {
 	value := string(val)
-	parameters := azsecrets.SetSecretParameters{Value: &value}
-	_, err := a.client.SetSecret(context.Background(), key, parameters, nil)
+	_, err := a.client.SetSecret(context.Background(), key, azsecrets.SetSecretParameters{Value: &value}, nil)
 	return errors.Wrapf(err, "failed to set key: %s", key)
 }
 
@@ -103,7 +101,6 @@ type AzureAuthCredentials struct {
 
 func (d *AzureAuthCredentials) GetToken(ctx context.Context, options policy.TokenRequestOptions) (azcore.AccessToken, error) {
 	var errorMessages []string
-
 	for name, cred := range d.creds {
 		if cred != nil {
 			token, err := cred.GetToken(ctx, options)
@@ -123,7 +120,6 @@ func (d *AzureAuthCredentials) GetToken(ctx context.Context, options policy.Toke
 func NewAzureAuthCredentials() (*AzureAuthCredentials, error) {
 	var errorMessages []string
 	creds := make(map[string]azcore.TokenCredential)
-
 	defaultCred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		errorMessages = append(errorMessages, "DefaultCredential: "+err.Error())
@@ -177,7 +173,6 @@ func NewFileBasedCredential() (azcore.TokenCredential, error) {
 //nolint:exhaustive
 func decode(b []byte) ([]byte, error) {
 	reader, enc := utfbom.Skip(bytes.NewReader(b))
-
 	switch enc {
 	case utfbom.UTF16LittleEndian:
 		u16 := make([]uint16, (len(b)/2)-1)
@@ -186,6 +181,7 @@ func decode(b []byte) ([]byte, error) {
 			return nil, err
 		}
 		return []byte(string(utf16.Decode(u16))), nil
+
 	case utfbom.UTF16BigEndian:
 		u16 := make([]uint16, (len(b)/2)-1)
 		err := binary.Read(reader, binary.BigEndian, &u16)
@@ -194,5 +190,6 @@ func decode(b []byte) ([]byte, error) {
 		}
 		return []byte(string(utf16.Decode(u16))), nil
 	}
+
 	return io.ReadAll(reader)
 }

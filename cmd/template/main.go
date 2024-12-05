@@ -21,8 +21,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bank-vaults/internal/configuration"
+	"github.com/bank-vaults/vault-sdk/utils/templater"
 )
+
+var Version = "dev"
+
+const delimiterCount = 2
 
 type arrayFlags []string
 
@@ -45,22 +49,19 @@ func main() {
 	flag.StringVar(&delimiters, "delims", "${:}", "delimiters delimited by :")
 	flag.StringVar(&filename, "file", "/vault/config/vault.json", "the destination file templated from VAULT_LOCAL_CONFIG")
 	flag.Var(&templates, "template", "template filename pairs delimited by :")
-
 	flag.Parse()
 
 	delimitersArray := strings.Split(delimiters, ":")
-	if len(delimitersArray) != 2 {
+	if len(delimitersArray) != delimiterCount {
 		slog.Error("delims must be two mnemonics delimited by a :")
 		os.Exit(1)
 	}
 
 	leftDelimiter := delimitersArray[0]
 	rightDelimiter := delimitersArray[1]
-
-	templater := configuration.NewTemplater(leftDelimiter, rightDelimiter)
+	templater := templater.NewTemplater(leftDelimiter, rightDelimiter)
 
 	vaultConfig := os.Getenv("VAULT_LOCAL_CONFIG")
-
 	if vaultConfig != "" {
 		buffer, err := templater.EnvTemplate(vaultConfig)
 		if err != nil {
@@ -68,7 +69,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		err = os.WriteFile(filename, buffer.Bytes(), 0600)
+		err = os.WriteFile(filename, buffer.Bytes(), 0o600)
 		if err != nil {
 			slog.Error(fmt.Sprintf("error writing template file: %s", err.Error()))
 			os.Exit(1)
@@ -76,14 +77,13 @@ func main() {
 	} else {
 		for _, t := range templates {
 			templateArray := strings.Split(t, ":")
-			if len(templateArray) != 2 {
+			if len(templateArray) != delimiterCount {
 				slog.Error("template must be two filenames delimited by a :")
 				os.Exit(1)
 			}
 
 			source := templateArray[0]
 			destination := templateArray[1]
-
 			templateText, err := os.ReadFile(source)
 			if err != nil {
 				slog.Error(fmt.Sprintf("error reading template file: %s", err.Error()))
@@ -96,7 +96,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			err = os.WriteFile(destination, templatedText.Bytes(), 0600)
+			err = os.WriteFile(destination, templatedText.Bytes(), 0o600)
 			if err != nil {
 				slog.Error(fmt.Sprintf("error writing template file %q: %s", destination, err.Error()))
 				os.Exit(1)

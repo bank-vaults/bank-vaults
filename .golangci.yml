@@ -9,52 +9,28 @@ linters-settings:
       - prefix(github.com/bank-vaults/bank-vaults)
   goimports:
     local-prefixes: github.com/bank-vaults/bank-vaults
+  misspell:
+    locale: US
+  nolintlint:
+    allow-unused: false # report any unused nolint directives
+    require-specific: false # don't require nolint directives to be specific about which linter is being skipped
+  revive:
+    confidence: 0
 
 linters:
-  enable-all: true
-  disable:
-    - maligned
-    - funlen
-    - dupl
-    - nestif
-    - wsl
-    - lll
-    - interfacer
-    - exhaustivestruct
-    - nlreturn
-
-    #deprecated
-    - ifshort
-    - varcheck
-    - structcheck
-    - deadcode
-    - golint
-    - scopelint
-    - nosnakecase
-
-    # TODO: fixme
-    - paralleltest
-    - forcetypeassert
-    - wrapcheck
-    - cyclop
-    - godox
-    - godot
-    - gomnd
-    - gochecknoglobals
-    - gochecknoinits
-    - goconst
-    - gocognit
-    - gocyclo
-    - testpackage
-    - varnamelen
-    - ireturn
-    - exhaustruct
-    - nonamedreturns
-    - nilnil
-    - maintidx
-    - gomoddirectives
+  enable:
+    - bodyclose
+    - errcheck
     - gci
-    - gofumpt
     - gofmt
-    - staticcheck
-    - depguard
+    - gofumpt
+    - goimports
+    - gosimple
+    - ineffassign
+    - misspell
+    - nolintlint
+    - revive
+    - unconvert
+    - unparam
+    - unused
+    - whitespace

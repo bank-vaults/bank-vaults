@@ -46,7 +46,6 @@ type k8sStorage struct {
 func New(namespace, secret string, labels map[string]string) (kv.Service, error) {
 	kubeconfig := os.Getenv(clientcmd.RecommendedConfigPathEnvVar)
 	var config *rest.Config
-
 	var err error
 	if kubeconfig != "" {
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
@@ -87,7 +86,7 @@ func (k *k8sStorage) Set(key string, val []byte) error {
 
 	switch {
 	case k8serrors.IsNotFound(err):
-		secret := &v1.Secret{
+		secret = &v1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: k.namespace,
 				Name:      k.secret,
@@ -108,7 +107,6 @@ func (k *k8sStorage) Set(key string, val []byte) error {
 	default:
 		return errors.Wrapf(err, "error checking if '%s' secret exists", k.secret)
 	}
-
 	if err != nil {
 		return errors.Wrapf(err, "error writing secret key '%s' into secret '%s'", key, k.secret)
 	}
@@ -126,10 +124,9 @@ func (k *k8sStorage) Get(key string) ([]byte, error) {
 		return nil, errors.Wrapf(err, "error getting secret for key '%s'", key)
 	}
 
-	val := secret.Data[key]
-	if val == nil {
+	if secret.Data[key] == nil {
 		return nil, kv.NewNotFoundError("key '%s' is not present in secret: %s", key, secret.GetName())
 	}
 
-	return val, nil
+	return secret.Data[key], nil
 }

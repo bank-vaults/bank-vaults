@@ -28,7 +28,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var c = viper.New()
+var Version = "dev"
 
 const (
 	cfgSecretShares    = "secret-shares"
@@ -41,6 +41,7 @@ const (
 	cfgModeValueGoogleCloudKMSGCS = "google-cloud-kms-gcs"
 	cfgModeValueAzureKeyVault     = "azure-key-vault"
 	cfgModeValueAlibabaKMSOSS     = "alibaba-kms-oss"
+	cfgModeValueOCI               = "oci"
 	cfgModeValueVault             = "vault"
 	cfgModeValueK8S               = "k8s"
 	cfgModeValueHSMK8S            = "hsm-k8s"
@@ -75,6 +76,14 @@ const (
 )
 
 const cfgAzureKeyVaultName = "azure-key-vault-name"
+
+const (
+	cfgOciKeyOCID               = "oci-key-ocid"
+	cfgOciCryptographicEndpoint = "oci-cryptographic-endpoint"
+	cfgOciBucketNamespace       = "oci-bucket-namespace"
+	cfgOciBucketName            = "oci-bucket-name"
+	cfgOciBucketPrefix          = "oci-bucket-prefix"
+)
 
 const (
 	cfgAlibabaOSSEndpoint     = "alibaba-oss-endpoint"
@@ -115,6 +124,8 @@ const (
 	cfgUnsealPeriod = "unseal-period"
 	cfgOnce         = "once"
 )
+
+var c = viper.New()
 
 var rootCmd = &cobra.Command{
 	Use:   "bank-vaults",
@@ -185,6 +196,7 @@ func init() {
 						'%s' => Azure Key Vault secret;
 						'%s' => Alibaba OSS using Alibaba KMS encryption;
 						'%s' => Remote Vault;
+						'%s' => Oracle KMS;
 						'%s' => Kubernetes Secrets;
 						'%s' => Kubernetes Secrets encrypted with HSM;
 						'%s' => HSM object on device, using HSM encryption;
@@ -195,6 +207,7 @@ func init() {
 			cfgModeValueAzureKeyVault,
 			cfgModeValueAlibabaKMSOSS,
 			cfgModeValueVault,
+			cfgModeValueOCI,
 			cfgModeValueK8S,
 			cfgModeValueHSMK8S,
 			cfgModeValueHSM,
@@ -230,6 +243,13 @@ func init() {
 
 	// Azure Key Vault flags
 	configStringVar(rootCmd, cfgAzureKeyVaultName, "", "The name of the Azure Key Vault to encrypt and store values in")
+
+	// OCI Key flags
+	configStringVar(rootCmd, cfgOciKeyOCID, "", "The Oracle key OCID to use")
+	configStringVar(rootCmd, cfgOciCryptographicEndpoint, "", "The cryptographic endpoint associated with the Oracle key")
+	configStringVar(rootCmd, cfgOciBucketName, "", "The Oracle bucket to use")
+	configStringVar(rootCmd, cfgOciBucketNamespace, "", "The namespace associated with the Oracle bucket")
+	configStringVar(rootCmd, cfgOciBucketPrefix, "", "The prefix to use for the Oracle bucket")
 
 	// Alibaba Access Key flags
 	configStringVar(rootCmd, cfgAlibabaAccessKeyID, "", "The Alibaba AccessKeyID to use")

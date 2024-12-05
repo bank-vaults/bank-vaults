@@ -4,3 +4,5 @@ extends: default
 
 rules:
   line-length: disable
+  document-start: disable
+  comments: disable
