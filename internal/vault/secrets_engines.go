@@ -45,6 +45,12 @@ var secretEnginesWithoutNameConfig = map[string]bool{
 	"kv":       true,
 }
 
+// This object is used to easily find fields in secret engines that contain potentially templated expressions
+type secretEngineTemplatedConfig struct {
+	AllowedDomains []string               `mapstructure:"allowed_domains"`
+	Other          map[string]interface{} `mapstructure:",remain"`
+}
+
 type secretEngine struct {
 	Path          string                 `mapstructure:"path"`
 	Type          string                 `mapstructure:"type"`
@@ -55,6 +61,16 @@ type secretEngine struct {
 	PluginName    string                 `mapstructure:"plugin_name"`
 	Local         bool                   `mapstructure:"local"`
 	SealWrap      bool                   `mapstructure:"seal_wrap"`
+}
+
+func replaceAccessor(input string, mounts map[string]*api.MountOutput) string {
+	for k, v := range mounts {
+		if strings.Contains(input, fmt.Sprintf("__accessor__%s", strings.TrimRight(k, "/"))) {
+			slog.Info(fmt.Sprintf("__accessor__ field replaced in string %s by accessor %s", input, v.Accessor))
+			return strings.ReplaceAll(input, fmt.Sprintf("__accessor__%s", strings.TrimRight(k, "/")), v.Accessor)
+		}
+	}
+	return input
 }
 
 func initSecretsEnginesConfig(configs []secretEngine) []secretEngine {
@@ -178,7 +194,7 @@ func configNeedsNoName(secretEngineType string, configOption string) bool {
 	return false
 }
 
-func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) error {
+func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine, mounts map[string]*api.MountOutput) error {
 	b := &backoff.Backoff{
 		Min:    500 * time.Millisecond,
 		Max:    60 * time.Second,
@@ -253,10 +269,28 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine) e
 			if err != nil {
 				return errors.Wrap(err, "error converting config data for secret engine")
 			}
-			for _, subConfigData := range configData {
-				subConfigData, err := cast.ToStringMapE(subConfigData)
-				if err != nil {
-					return errors.Wrap(err, "error converting sub config data for secret engine")
+			for _, subConfigDataRaw := range configData {
+				var subConfigData map[string]interface{}
+
+				// If subConfigDataRaw has fields that are supported for templated policies,
+				// it will be cast successfully into secretEngineTemplatedConfig
+				var pkiRole secretEngineTemplatedConfig
+				err := mapstructure.Decode(subConfigDataRaw, &pkiRole)
+				if err == nil {
+					templatedDomains := []string{}
+					for _, domain := range pkiRole.AllowedDomains {
+						templatedDomains = append(templatedDomains, replaceAccessor(domain, mounts))
+					}
+					pkiRole.AllowedDomains = templatedDomains
+					subConfigData = pkiRole.Other
+					subConfigData["allowed_domains"] = pkiRole.AllowedDomains
+				} else {
+					// If the object could not be cast into a secretEngineTemplatedConfig,
+					// subConfigData will just be initialized from the subConfigDataRaw
+					subConfigData, err = cast.ToStringMapE(subConfigDataRaw)
+					if err != nil {
+						return errors.Wrap(err, "error converting sub config data for secret engine")
+					}
 				}
 
 				name, ok := subConfigData["name"]
@@ -389,10 +423,14 @@ func (v *vault) removeUnmanagedSecretsEngines(unmanagedSecretsEngines map[string
 }
 
 func (v *vault) configureSecretsEngines() error {
+	auths, err := v.cl.Sys().ListAuth()
+	if err != nil {
+		return errors.Wrap(err, "error while getting list of auth engines for secret engine configuration")
+	}
 	managedSecretsEngines := initSecretsEnginesConfig(v.externalConfig.Secrets)
 	unmanagedSecretsEngines := v.getUnmanagedSecretsEngines(managedSecretsEngines)
 
-	if err := v.addManagedSecretsEngines(managedSecretsEngines); err != nil {
+	if err := v.addManagedSecretsEngines(managedSecretsEngines, auths); err != nil {
 		return errors.Wrap(err, "error adding secrets engines")
 	}
 
