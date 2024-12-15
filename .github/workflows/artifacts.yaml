@@ -127,11 +127,24 @@ jobs:
           TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           images=""
-          for tag in ${TAGS}; do
+          for tag in ${TAGS[@]}; do
             images+="${tag}@${DIGEST} "
           done
 
-          cosign sign --yes ${images}
+          cosign sign --yes --rekor-url "https://rekor.sigstore.dev/" ${images}
+
+      - name: Verify signed image with cosign
+        if: ${{ inputs.publish && github.repository_owner == 'bank-vaults' }} # Check if the workflow is called by the same GitHub organization
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          for tag in ${TAGS[@]}; do
+            cosign verify "${tag}@${DIGEST}" \
+              --rekor-url "https://rekor.sigstore.dev/" \
+              --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/artifacts.yaml@${{ github.ref }}" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" | jq
+          done
 
       - name: Set image ref
         id: image-ref
