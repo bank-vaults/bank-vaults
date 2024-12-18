@@ -155,7 +155,7 @@ jobs:
         if: inputs.publish
 
       - name: Upload image as artifact
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: "[${{ github.job }}] OCI tarball"
           path: image.tar
@@ -171,7 +171,7 @@ jobs:
         run: skopeo --override-os linux --override-arch amd64 --insecure-policy copy --additional-tag ${{ steps.image-name.outputs.value }}:${{ steps.meta.outputs.version }} oci:image docker-archive:docker.tar
 
       - name: Upload image as artifact
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: "[${{ github.job }}] Docker tarball"
           path: docker.tar
@@ -185,7 +185,7 @@ jobs:
           output: trivy-results.sarif
 
       - name: Upload Trivy scan results as artifact
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: "[${{ github.job }}] Trivy scan results"
           path: trivy-results.sarif
@@ -231,7 +231,7 @@ jobs:
           nix develop --impure .#ci -c ${{ steps.build-command.outputs.value }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: "[${{ github.job }}] Goreleaser output"
           path: |
