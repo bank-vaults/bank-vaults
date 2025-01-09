@@ -3,7 +3,7 @@ module github.com/bank-vaults/bank-vaults
 go 1.23.1
 
 require (
-	cloud.google.com/go/storage v1.49.0
+	cloud.google.com/go/storage v1.50.0
 	emperror.dev/errors v0.8.1
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.0
