@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/storage v1.50.0
 	emperror.dev/errors v0.8.1
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.0
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.0
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.1
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.3.0
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.83
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
