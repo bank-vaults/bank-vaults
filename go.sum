@@ -38,10 +38,10 @@ github.com/Azure/azure-sdk-for-go/sdk/internal v1.10.0 h1:ywEEhmNahHBihViHepv3xP
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.10.0/go.mod h1:iZDifYGJTIgIIkYRNWPENUnqx6bJ2xnSDFI2tjwZNuY=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage v1.6.0 h1:PiSrjRPpkQNjrM8H0WwKMnZUdu1RGMtd/LdGKUrOo+c=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage v1.6.0/go.mod h1:oDrbWx4ewMylP7xHivfgixbfGBT6APAwsSoHRKotnIc=
-github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.3.0 h1:WLUIpeyv04H0RCcQHaA4TNoyrQ39Ox7V+re+iaqzTe0=
-github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.3.0/go.mod h1:hd8hTTIY3VmUVPRHNH7GVCHO3SHgXkJKZHReby/bnUQ=
-github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.1.0 h1:eXnN9kaS8TiDwXjoie3hMRLuwdUBUMW9KRgOqB3mCaw=
-github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.1.0/go.mod h1:XIpam8wumeZ5rVMuhdDQLMfIPDf1WO3IzrCRO3e3e3o=
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.3.1 h1:mrkDCdkMsD4l9wjFGhofFHFrV43Y3c53RSLKOCJ5+Ow=
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.3.1/go.mod h1:hPv41DbqMmnxcGralanA/kVlfdH5jv3T4LxGku2E1BY=
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.1.1 h1:bFWuoEKg+gImo7pvkiQEFAc8ocibADgXeiLAxWhWmkI=
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.1.1/go.mod h1:Vih/3yc6yac2JzU4hzpaDupBJP0Flaia9rXXrU8xyww=
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.5.0 h1:mlmW46Q0B79I+Aj4azKC6xDMFN9a9SyZWESlGWYXbFs=
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.5.0/go.mod h1:PXe2h+LKcWTX9afWdZoHyODqR4fBa5boUM/8uJfZ0Jo=
 github.com/Azure/go-autorest v14.2.0+incompatible h1:V5VMDjClD3GiElqLWO7mz2MxNAK/vTfRHdAubSIPRgs=
