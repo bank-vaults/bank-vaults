@@ -8,7 +8,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.2
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.3.1
-	github.com/aliyun/alibaba-cloud-sdk-go v1.63.89
+	github.com/aliyun/alibaba-cloud-sdk-go v1.63.92
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/bank-vaults/vault-sdk v0.10.2
