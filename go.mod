@@ -21,7 +21,7 @@ require (
 	github.com/miekg/pkcs11 v1.1.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/oracle/oci-go-sdk/v65 v65.84.0
-	github.com/prometheus/client_golang v1.21.0
+	github.com/prometheus/client_golang v1.21.1
 	github.com/ramizpolic/multiparser v1.0.1
 	github.com/spf13/cast v1.7.1
 	github.com/spf13/cobra v1.9.1
