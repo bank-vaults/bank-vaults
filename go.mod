@@ -20,7 +20,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/miekg/pkcs11 v1.1.1
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/oracle/oci-go-sdk/v65 v65.87.0
+	github.com/oracle/oci-go-sdk/v65 v65.88.0
 	github.com/prometheus/client_golang v1.21.1
 	github.com/ramizpolic/multiparser v1.0.1
 	github.com/spf13/cast v1.7.1
