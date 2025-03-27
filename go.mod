@@ -1,6 +1,7 @@
 module github.com/bank-vaults/bank-vaults
 
 go 1.23.1
+toolchain go1.24.1
 
 require (
 	cloud.google.com/go/storage v1.51.0
@@ -8,7 +9,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.2
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.3.1
-	github.com/aliyun/alibaba-cloud-sdk-go v1.63.101
+	github.com/aliyun/alibaba-cloud-sdk-go v1.63.102
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/bank-vaults/vault-sdk v0.10.2
