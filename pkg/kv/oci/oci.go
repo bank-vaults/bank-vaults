@@ -69,7 +69,11 @@ func (oci *ociStorage) Get(key string) ([]byte, error) {
 	}
 
 	r := response.Content
-	defer r.Close()
+	defer func() {
+		if err := r.Close(); err != nil {
+			slog.Error(fmt.Sprintf("error closing response body: %s", err.Error()))
+		}
+	}()
 
 	b, err := io.ReadAll(r)
 	if err != nil {

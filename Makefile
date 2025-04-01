@@ -80,7 +80,7 @@ lint: ## Run linters
 
 .PHONY: lint-go
 lint-go:
-	$(GOLANGCI_LINT_BIN) run $(if ${CI},--out-format colored-line-number,)
+	$(GOLANGCI_LINT_BIN) run
 
 .PHONY: lint-docker
 lint-docker:

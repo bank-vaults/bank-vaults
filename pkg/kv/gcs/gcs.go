@@ -44,7 +44,11 @@ func New(bucket, prefix string) (kv.Service, error) {
 func (g *gcsStorage) Set(key string, val []byte) error {
 	n := objectNameWithPrefix(g.prefix, key)
 	w := g.cl.Bucket(g.bucket).Object(n).NewWriter(context.Background())
-	defer w.Close()
+	defer func() {
+		if err := w.Close(); err != nil {
+			print(err)
+		}
+	}()
 
 	if _, err := w.Write(val); err != nil {
 		return errors.Wrapf(err, "error writing key '%s' to gcs bucket '%s'", n, g.bucket)
@@ -63,7 +67,11 @@ func (g *gcsStorage) Get(key string) ([]byte, error) {
 
 		return nil, errors.Wrapf(err, "error getting object for key '%s'", n)
 	}
-	defer r.Close()
+	defer func() {
+		if err := r.Close(); err != nil {
+			print(err)
+		}
+	}()
 
 	b, err := io.ReadAll(r)
 	if err != nil {

@@ -43,60 +43,64 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Set up Nix
-        uses: cachix/install-nix-action@3715ab1a11cac9e991980d7b4a28d80c7ebdd8f9 # v27
-        with:
-          extra_nix_config: |
-            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+      - name: Install Dependencies
+        run: |
+          wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt update && sudo apt install vault
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
 
-      - name: Build bank-vaults
-        run: nix develop --impure .#ci -c make build
+      - name: Build Bank-vaults
+        run: |
+          make build
+          echo "${{ github.workspace }}/build" >> $GITHUB_PATH
 
       - name: Run bank-vaults
         run: |
-          touch "${BANK_VAULTS_CONFIG_FILE}"
-          nix develop --impure .#ci -c build/bank-vaults configure \
+          touch "${{ env.BANK_VAULTS_CONFIG_FILE }}"
+          bank-vaults configure \
             --mode dev \
-            --vault-config-file "${BANK_VAULTS_CONFIG_FILE}" \
-            &> "${BANK_VAULTS_LOG_FILE}" & disown
+            --vault-config-file "${{ env.BANK_VAULTS_CONFIG_FILE }}" \
+            &> "${{ env.BANK_VAULTS_LOG_FILE }}" & disown
 
       - name: Test group - Audit
         if: always()
-        run: nix develop --impure .#ci -c bash e2e/validate-config-crud/test.sh "audit"
+        run: bash e2e/validate-config-crud/test.sh "audit"
 
       - name: Test group - Auth
         if: always()
-        run: nix develop --impure .#ci -c bash e2e/validate-config-crud/test.sh "auth"
+        run: bash e2e/validate-config-crud/test.sh "auth"
 
       - name: Test group - Groups
         if: always()
-        run: nix develop --impure .#ci -c bash e2e/validate-config-crud/test.sh "groups"
+        run: bash e2e/validate-config-crud/test.sh "groups"
 
       - name: Test group - Group-Aliases
         if: always()
-        run: nix develop --impure .#ci -c bash e2e/validate-config-crud/test.sh "group-aliases"
+        run: bash e2e/validate-config-crud/test.sh "group-aliases"
 
       - name: Test group - Policies
         if: always()
-        run: nix develop --impure .#ci -c bash e2e/validate-config-crud/test.sh "policies"
+        run: bash e2e/validate-config-crud/test.sh "policies"
 
       - name: Test group - StartupSecrets
         if: always()
-        run: nix develop --impure .#ci -c bash e2e/validate-config-crud/test.sh "startupSecrets"
+        run: bash e2e/validate-config-crud/test.sh "startupSecrets"
 
       - name: Test group - Secrets
         if: always()
-        run: nix develop --impure .#ci -c bash e2e/validate-config-crud/test.sh "secrets"
+        run: bash e2e/validate-config-crud/test.sh "secrets"
 
       - name: Print logs
         if: always()
         run: |
           echo -e "\nVaults logs ..."
-          docker logs vault &> "${VAULT_LOG_FILE}"
-          cat "${VAULT_LOG_FILE}"
+          docker logs vault &> "${{ env.VAULT_LOG_FILE }}"
+          cat "${{ env.VAULT_LOG_FILE }}"
 
           echo -e "\nBank-Vaults logs ..."
-          cat "${BANK_VAULTS_LOG_FILE}"
+          cat "${{ env.BANK_VAULTS_LOG_FILE }}"
 
       - name: Store log files
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

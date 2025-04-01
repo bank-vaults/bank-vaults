@@ -335,7 +335,11 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine, m
 						req := v.cl.NewRequest("GET", fmt.Sprintf("/v1/%s/ca", secretEngine.Path))
 						resp, err := v.cl.RawRequestWithContext(context.Background(), req) //nolint
 						if resp != nil {
-							defer resp.Body.Close()
+							defer func() {
+								if err := resp.Body.Close(); err != nil {
+									slog.Error(fmt.Sprintf("error closing response body: %s", err.Error()))
+								}
+							}()
 						}
 						if err != nil {
 							return errors.Wrapf(err, "failed to check pki CA")

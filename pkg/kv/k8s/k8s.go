@@ -95,7 +95,7 @@ func (k *k8sStorage) Set(key string, val []byte) error {
 			Data: map[string][]byte{key: val},
 		}
 		if k.ownerReference != nil {
-			secret.ObjectMeta.SetOwnerReferences([]metav1.OwnerReference{*k.ownerReference})
+			secret.SetOwnerReferences([]metav1.OwnerReference{*k.ownerReference})
 		}
 		_, err = k.client.CoreV1().Secrets(k.namespace).Create(context.Background(), secret, metav1.CreateOptions{})
 	case err == nil:

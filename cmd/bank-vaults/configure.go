@@ -183,7 +183,11 @@ func watchConfigurations(parser multiparser.Parser, vaultConfigFiles []string, c
 	if err != nil {
 		return fmt.Errorf("cannot create watcher: %w", err)
 	}
-	defer watcher.Close()
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			slog.Error(fmt.Sprintf("error closing watcher: %s", err.Error()))
+		}
+	}()
 
 	// Map used to match on kubernetes ..data to files inside of directory
 	configFileDirs := make(map[string][]string)

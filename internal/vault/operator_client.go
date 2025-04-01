@@ -158,7 +158,11 @@ func (v *vault) Active() (bool, error) {
 	if err != nil {
 		return false, errors.Wrap(err, "error checking status")
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Error(fmt.Sprintf("error closing response body: %s", err.Error()))
+		}
+	}()
 
 	if resp.StatusCode == http.StatusOK {
 		return true, nil
