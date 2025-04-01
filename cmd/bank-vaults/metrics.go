@@ -63,18 +63,20 @@ type prometheusExporter struct {
 }
 
 func (e *prometheusExporter) Describe(ch chan<- *prometheus.Desc) {
-	if e.Mode == "unseal" {
+	switch e.Mode {
+	case "unseal":
 		ch <- initializedDesc
 		ch <- sealedDesc
 		ch <- leaderDesc
-	} else if e.Mode == "configure" {
+	case "configure":
 		ch <- successfulConfigurationsDesc
 		ch <- failedConfigurationsDesc
 	}
 }
 
 func (e *prometheusExporter) Collect(ch chan<- prometheus.Metric) {
-	if e.Mode == "unseal" {
+	switch e.Mode {
+	case "unseal":
 		sealed, err := e.Vault.Sealed()
 		if err != nil {
 			slog.Error(fmt.Sprintf("error checking if vault is sealed: %s", err.Error()))
@@ -96,7 +98,7 @@ func (e *prometheusExporter) Collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(
 			leaderDesc, prometheus.GaugeValue, bToF(leader),
 		)
-	} else if e.Mode == "configure" {
+	case "configure":
 		ch <- prometheus.MustNewConstMetric(
 			successfulConfigurationsDesc, prometheus.GaugeValue, successfulConfigurationsCount,
 		)

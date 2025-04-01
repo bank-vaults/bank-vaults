@@ -97,7 +97,11 @@ func (s3 *s3Storage) Get(key string) ([]byte, error) {
 	}
 
 	b, err := io.ReadAll(r.Body)
-	defer r.Body.Close()
+	defer func() {
+		if err := r.Body.Close(); err != nil {
+			print(err)
+		}
+	}()
 
 	if err != nil {
 		return nil, errors.Wrapf(err, "error reading object with key '%s'", aws.StringValue(input.Key))

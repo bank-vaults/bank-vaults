@@ -1,31 +1,34 @@
+version: "2"
 run:
   timeout: 10m
 
-linters-settings:
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/bank-vaults/bank-vaults)
-  goimports:
-    local-prefixes: github.com/bank-vaults/bank-vaults
-  misspell:
-    locale: US
-  nolintlint:
-    allow-unused: false # report any unused nolint directives
-    require-specific: false # don't require nolint directives to be specific about which linter is being skipped
-  revive:
-    confidence: 0
+formatters:
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/bank-vaults/bank-vaults)
+    goimports:
+      local-prefixes:
+        - github.com/bank-vaults/bank-vaults
+    gofmt:
+      simplify: true
+    gofumpt:
+      extra-rules: false
 
 linters:
+  settings:
+    misspell:
+      locale: US
+    nolintlint:
+      allow-unused: false # report any unused nolint directives
+      require-specific: false # don't require nolint directives to be specific about which linter is being skipped
+    revive:
+      confidence: 0.1
   enable:
     - bodyclose
     - errcheck
-    - gci
-    - gofmt
-    - gofumpt
-    - goimports
-    - gosimple
     - ineffassign
     - misspell
     - nolintlint

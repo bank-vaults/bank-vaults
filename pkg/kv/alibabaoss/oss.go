@@ -76,7 +76,11 @@ func (o *ossStorage) Get(key string) ([]byte, error) {
 	}
 
 	b, err := io.ReadAll(body)
-	defer body.Close()
+	defer func() {
+		if err := body.Close(); err != nil {
+			print(err)
+		}
+	}()
 
 	if err != nil {
 		return nil, errors.Wrapf(err, "error reading object with key '%s'", objectKey)
