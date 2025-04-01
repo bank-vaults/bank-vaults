@@ -1,7 +1,6 @@
 module github.com/bank-vaults/bank-vaults
 
 go 1.24.1
-
 require (
 	cloud.google.com/go/storage v1.51.0
 	emperror.dev/errors v0.8.1
@@ -20,7 +19,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/miekg/pkcs11 v1.1.1
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/oracle/oci-go-sdk/v65 v65.88.0
+	github.com/oracle/oci-go-sdk/v65 v65.88.1
 	github.com/prometheus/client_golang v1.21.1
 	github.com/ramizpolic/multiparser v1.0.1
 	github.com/spf13/cast v1.7.1
@@ -159,6 +158,7 @@ require (
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
+	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/detectors/gcp v1.34.0 // indirect
