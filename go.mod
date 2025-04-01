@@ -1,7 +1,6 @@
 module github.com/bank-vaults/bank-vaults
 
-go 1.23.1
-toolchain go1.24.1
+go 1.24.1
 
 require (
 	cloud.google.com/go/storage v1.51.0
