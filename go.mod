@@ -1,6 +1,7 @@
 module github.com/bank-vaults/bank-vaults
 
 go 1.24.1
+
 require (
 	cloud.google.com/go/storage v1.51.0
 	emperror.dev/errors v0.8.1
@@ -12,7 +13,7 @@ require (
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/bank-vaults/vault-sdk v0.10.2
 	github.com/dimchansky/utfbom v1.1.1
-	github.com/fsnotify/fsnotify v1.8.0
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/hcl v1.0.1-vault-7
 	github.com/hashicorp/vault/api v1.16.0
