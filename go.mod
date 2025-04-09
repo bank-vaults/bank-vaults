@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/storage v1.51.0
 	emperror.dev/errors v0.8.1
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.18.0
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.2
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.9.0
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.3.1
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.104
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
@@ -46,7 +46,7 @@ require (
 	cloud.google.com/go/longrunning v0.6.5 // indirect
 	cloud.google.com/go/monitoring v1.24.0 // indirect
 	dario.cat/mergo v1.0.1 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.1.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.5.0 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
