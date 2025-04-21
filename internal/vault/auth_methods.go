@@ -450,7 +450,7 @@ func (v *vault) addManagedAuthMethods(managedAuths []auth) error {
 						return errors.Wrap(err, "error configuring plugin identity integration")
 					}
 				default:
-					return errors.Wrap(err, "Unmanaged configuration option")
+					continue
 				}
 			}
 		}

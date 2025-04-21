@@ -1,0 +1,24 @@
+# Let's build this image on top of GBI, to follow Datadog's best practices,
+# which explains why the latest FROM points to a GBI.
+# Moreover, as we don't need to interface woth smart cards or HSM, I removed the installation of related packages.
+
+ARG BASE_IMAGE
+# See
+# https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
+# for info on BUILDPLATFORM, TARGETOS, TARGETARCH, etc.
+FROM --platform=$BUILDPLATFORM golang:1.23.2 AS builder
+WORKDIR /go/src/github.com/bank-vaults
+ENV CGO_ENABLED=1
+COPY go.* .
+ARG GOPROXY
+RUN go mod download
+COPY . .
+ARG TARGETOS
+ARG TARGETARCH
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /go/src/github.com/bank-vaults ./cmd/bank-vaults/
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /go/src/github.com/template ./cmd/template/
+
+FROM $BASE_IMAGE
+COPY --from=builder /go/src/github.com/bank-vaults/bank-vaults /usr/local/bin
+COPY --from=builder /go/src/github.com/template /bin/template
+ENTRYPOINT ["bank-vaults"]
