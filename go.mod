@@ -10,7 +10,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.3.1
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.106
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
-	github.com/aws/aws-sdk-go v1.55.6
+	github.com/aws/aws-sdk-go v1.55.7
 	github.com/bank-vaults/vault-sdk v0.10.2
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/fsnotify/fsnotify v1.9.0
