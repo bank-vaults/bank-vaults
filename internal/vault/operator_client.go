@@ -373,19 +373,39 @@ func (v *vault) Init() error {
 
 // RaftInitialized in our case Vault is initialized when root key is stored in the Cloud KMS
 func (v *vault) RaftInitialized() (bool, error) {
-	rootToken, err := v.keyStore.Get(keyRootToken)
-	if err != nil {
-		if isNotFoundError(err) {
-			return false, nil
+	// backward compatibility, use root token exsitence to determine if Vault is initialized
+	if v.config.StoreRootToken {
+		rootToken, err := v.keyStore.Get(keyRootToken)
+		if err != nil {
+			if isNotFoundError(err) {
+				return false, nil
+			}
+
+			return false, errors.Wrapf(err, "unable to get key '%s'", keyRootToken)
 		}
 
-		return false, errors.Wrapf(err, "unable to get key '%s'", keyRootToken)
+		if len(rootToken) > 0 {
+			return true, nil
+		}
 	}
-
-	if len(rootToken) > 0 {
-		return true, nil
+	// If root token is not stored in the key store (a valid option), use leader address to determine if Vault is already initialized
+	leaderAPIAddr, err := v.LeaderAddress()
+	if err != nil {
+		return false, errors.Wrap(err, "error getting leader address")
 	}
+	// raft storage mode
+	if leaderAPIAddr != "" {
+		initialized, err := v.cl.Sys().InitStatus()
+		if err != nil {
+			return false, errors.Wrap(err, "error testing if vault is initialized")
+		}
 
+		if initialized {
+			slog.Info("vault is already initialized, skipping raft join")
+
+			return true, nil
+		}
+	}
 	return false, nil
 }
 
