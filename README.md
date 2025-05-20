@@ -33,17 +33,16 @@ Bank-Vaults is an umbrella project which provides various tools for Cloud Native
 
 Some of the usage patterns are highlighted through these blog posts:
 
-- [Authentication and authorization of Pipeline users with OAuth2 and Vault](https://banzaicloud.com/blog/oauth2-vault/)
-- [Dynamic credentials with Vault using Kubernetes Service Accounts](https://banzaicloud.com/blog/vault-dynamic-secrets/)
-- [Dynamic SSH with Vault and Pipeline](https://banzaicloud.com/blog/vault-dynamic-ssh/)
-- [Secure Kubernetes Deployments with Vault and Pipeline](https://banzaicloud.com/blog/hashicorp-guest-post/)
-- [Vault Operator](https://banzaicloud.com/blog/vault-operator/)
-- [Vault unseal flow with KMS](https://banzaicloud.com/blog/vault-unsealing/)
-- [Monitoring Vault on Kubernetes using Cloud Native technologies](https://banzaicloud.com/blog/monitoring-vault-grafana/)
-- [Inject secrets directly into pods from Vault](https://banzaicloud.com/blog/inject-secrets-into-pods-vault-revisited/)
-- [Backing up Vault with Velero](https://banzaicloud.com/blog/vault-backup-velero/)
-- [Vault replication across multiple datacenters on Kubernetes](https://banzaicloud.com/blog/vault-multi-datacenter/)
-- [More blog posts about Bank-Vaults](https://banzaicloud.com/tags/bank-vaults/)
+- [Authentication and authorization of Pipeline users with OAuth2 and Vault](https://outshift.cisco.com/blog/oauth2-vault/)
+- [Dynamic credentials with Vault using Kubernetes Service Accounts](https://outshift.cisco.com/blog/vault-dynamic-secrets/)
+- [Dynamic SSH with Vault and Pipeline](https://outshift.cisco.com/blog/vault-dynamic-ssh/)
+- [Secure Kubernetes Deployments with Vault and Pipeline](https://outshift.cisco.com/blog/hashicorp-guest-post/)
+- [Vault Operator](https://outshift.cisco.com/blog/vault-operator/)
+- [Vault unseal flow with KMS](https://outshift.cisco.com/blog/vault-unsealing/)
+- [Monitoring Vault on Kubernetes using Cloud Native technologies](https://web.archive.org/web/20231014000501/https://banzaicloud.com/blog/monitoring-vault-grafana/)
+- [Inject secrets directly into pods from Vault](https://outshift.cisco.com/blog/inject-secrets-into-pods-vault-revisited/)
+- [Backing up Vault with Velero](https://outshift.cisco.com/blog/vault-backup-velero/)
+- [Vault replication across multiple datacenters on Kubernetes](https://outshift.cisco.com/blog/vault-multi-datacenter/)
 - [Bank Vaults Configuration Helm Chart](https://github.com/rljohnsn/bank-vault-config/tree/main)
 
 ## Documentation
