@@ -372,21 +372,34 @@ func (v *vault) Init() error {
 }
 
 // RaftInitialized in our case Vault is initialized when root key is stored in the Cloud KMS
+// or when just unseal keys are stored in the Cloud KMS
 func (v *vault) RaftInitialized() (bool, error) {
-	rootToken, err := v.keyStore.Get(keyRootToken)
-	if err != nil {
-		if isNotFoundError(err) {
-			return false, nil
+	if v.config.StoreRootToken {
+		rootToken, err := v.keyStore.Get(keyRootToken)
+		if err != nil {
+			if isNotFoundError(err) {
+				return false, nil
+			}
+
+			return false, errors.Wrapf(err, "unable to get key '%s'", keyRootToken)
 		}
 
-		return false, errors.Wrapf(err, "unable to get key '%s'", keyRootToken)
-	}
-
-	if len(rootToken) > 0 {
+		if len(rootToken) > 0 {
+			return true, nil
+		}
+		return false, nil
+	} else {
+		for i := 0; i < v.config.SecretShares; i++ {
+			unsealKey, err := v.keyStore.Get(keyUnsealForID(i))
+			if err != nil {
+				return false, errors.Wrapf(err, "unable to get key '%s'", keyUnsealForID(i))
+			}
+			if len(unsealKey) == 0 {
+				return false, errors.Wrapf(err, "empty file for key '%s'", keyUnsealForID(i))
+			}
+		}
 		return true, nil
 	}
-
-	return false, nil
 }
 
 // RaftJoin joins Vault raft cluster if is not initialized already
