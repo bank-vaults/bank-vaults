@@ -392,6 +392,10 @@ func (v *vault) RaftInitialized() (bool, error) {
 		for i := 0; i < v.config.SecretShares; i++ {
 			unsealKey, err := v.keyStore.Get(keyUnsealForID(i))
 			if err != nil {
+				// It's ok if there are no keys  
+				if isNotFoundError(err) {
+					return false, nil
+				}
 				return false, errors.Wrapf(err, "unable to get key '%s'", keyUnsealForID(i))
 			}
 			if len(unsealKey) == 0 {
