@@ -375,12 +375,14 @@ func (v *vault) configureGenericAuthRoles(method, path, roleSubPath string, role
 }
 
 func (v *vault) addManagedAuthMethods(managedAuths []auth) error {
+	slog.Info("about to add managed auth methods")
 	existingAuths, err := v.getExistingAuthMethods()
 	if err != nil {
 		return errors.Wrapf(err, "unable to list existing auth methods")
 	}
 
 	for _, authMethod := range managedAuths {
+		slog.Info(fmt.Sprintf("checking auth method %s (%s)", authMethod.Path, authMethod.Type))
 		description := fmt.Sprintf("%s backend", authMethod.Type)
 
 		// get auth mount options
@@ -509,6 +511,7 @@ func (v *vault) removeUnmanagedAuthMethods(unmanagedAuths map[string]*api.MountO
 }
 
 func (v *vault) configureAuthMethods() error {
+	slog.Info("configuring auth methods")
 	managedAuths := initAuthConfig(v.externalConfig.Auth)
 	unmanagedAuths := v.getUnmanagedAuthMethods(managedAuths)
 
