@@ -15,13 +15,14 @@
 package awskms
 
 import (
+	"context"
 	"strings"
 
 	"emperror.dev/errors"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/kms"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/bank-vaults/bank-vaults/pkg/kv"
 )
 
@@ -33,40 +34,48 @@ const (
 )
 
 type awsKMS struct {
+	ctx        context.Context
 	store      kv.Service
-	kmsService *kms.KMS
+	kmsService *kms.Client
 
 	kmsID             string
-	encryptionContext map[string]*string
+	encryptionContext map[string]string
 }
 
 var _ kv.Service = &awsKMS{}
 
-// NewWithSession creates a new kv.Service encrypted by AWS KMS with and existing AWS Session
-func NewWithSession(sess *session.Session, store kv.Service, kmsID string, encryptionContext map[string]string) (kv.Service, error) {
+// NewWithConfig creates a new kv.Service encrypted by AWS KMS with and existing AWS Session
+func NewWithConfig(ctx context.Context, config aws.Config, store kv.Service, kmsID string, encryptionContext map[string]string) (kv.Service, error) {
 	if kmsID == "" {
 		return nil, errors.Errorf("invalid kmsID specified: '%s'", kmsID)
 	}
 
 	return &awsKMS{
+		ctx:               ctx,
 		store:             store,
-		kmsService:        kms.New(sess),
+		kmsService:        kms.NewFromConfig(config),
 		kmsID:             kmsID,
-		encryptionContext: aws.StringMap(encryptionContext),
+		encryptionContext: encryptionContext,
 	}, nil
 }
 
 // New creates a new kv.Service encrypted by AWS KMS
 func New(store kv.Service, region string, kmsID string, encryptionContext map[string]string) (kv.Service, error) {
-	return NewWithSession(session.Must(session.NewSession(aws.NewConfig().WithRegion(region))), store, kmsID, encryptionContext)
+	ctx := context.Background()
+	config, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
+	if err != nil {
+		return nil, errors.WrapIf(err, "failed to load AWS config")
+	}
+
+	return NewWithConfig(ctx, config, store, kmsID, encryptionContext)
 }
 
 func (a *awsKMS) decrypt(cipherText []byte) ([]byte, error) {
-	out, err := a.kmsService.Decrypt(&kms.DecryptInput{
+	out, err := a.kmsService.Decrypt(a.ctx, &kms.DecryptInput{
 		KeyId:             aws.String(a.kmsID),
 		CiphertextBlob:    cipherText,
 		EncryptionContext: a.encryptionContext,
-		GrantTokens:       []*string{},
+		GrantTokens:       []string{},
 	})
 	if err != nil {
 		return nil, errors.WrapIf(err, "failed to decrypt with KMS client")
@@ -85,11 +94,11 @@ func (a *awsKMS) Get(key string) ([]byte, error) {
 }
 
 func (a *awsKMS) encrypt(plainText []byte) ([]byte, error) {
-	out, err := a.kmsService.Encrypt(&kms.EncryptInput{
+	out, err := a.kmsService.Encrypt(a.ctx, &kms.EncryptInput{
 		KeyId:             aws.String(a.kmsID),
 		Plaintext:         plainText,
 		EncryptionContext: a.encryptionContext,
-		GrantTokens:       []*string{},
+		GrantTokens:       []string{},
 	})
 	if err != nil {
 		return nil, errors.WrapIf(err, "failed to encrypt with KMS client")

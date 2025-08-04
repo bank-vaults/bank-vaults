@@ -16,21 +16,23 @@ package s3
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 
 	"emperror.dev/errors"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-	awss3 "github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
 	"github.com/bank-vaults/bank-vaults/pkg/kv"
 	"github.com/bank-vaults/bank-vaults/pkg/kv/awskms"
 )
 
 type s3Storage struct {
-	client   *awss3.S3
+	ctx      context.Context
+	client   *s3.Client
 	bucket   string
 	prefix   string
 	sseAlgo  string
@@ -55,47 +57,51 @@ func New(region, bucket, prefix, sseAlgo, sseKeyID string) (kv.Service, error) {
 		return nil, errors.New("you need to provide a CMK KeyID when using aws:kms for SSE")
 	}
 
-	cl := awss3.New(session.Must(session.NewSession(aws.NewConfig().WithRegion(region))))
+	ctx := context.Background()
+	config, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
+	if err != nil {
+		return nil, errors.WrapIf(err, "failed to load AWS config")
+	}
 
-	return &s3Storage{cl, bucket, prefix, sseAlgo, sseKeyID}, nil
+	return &s3Storage{ctx, s3.NewFromConfig(config), bucket, prefix, sseAlgo, sseKeyID}, nil
 }
 
-func (s3 *s3Storage) Set(key string, val []byte) error {
-	input := awss3.PutObjectInput{
-		Bucket: aws.String(s3.bucket),
-		Key:    aws.String(objectNameWithPrefix(s3.prefix, key)),
+func (s3Storage *s3Storage) Set(key string, val []byte) error {
+	input := s3.PutObjectInput{
+		Bucket: aws.String(s3Storage.bucket),
+		Key:    aws.String(objectNameWithPrefix(s3Storage.prefix, key)),
 		Body:   bytes.NewReader(val),
 	}
-	if s3.sseAlgo != "" {
-		input.ServerSideEncryption = &s3.sseAlgo
-		if s3.sseAlgo == awskms.SseKMS {
-			input.SSEKMSKeyId = &s3.sseKeyID
+	if s3Storage.sseAlgo != "" {
+		input.ServerSideEncryption = s3types.ServerSideEncryption(s3Storage.sseAlgo)
+		if s3Storage.sseAlgo == awskms.SseKMS {
+			input.SSEKMSKeyId = &s3Storage.sseKeyID
 		}
 	}
 
-	if _, err := s3.client.PutObject(&input); err != nil {
-		return errors.Wrapf(err, "error writing key '%s' to s3 bucket '%s'", aws.StringValue(input.Key), s3.bucket)
+	if _, err := s3Storage.client.PutObject(s3Storage.ctx, &input); err != nil {
+		return errors.Wrapf(err, "error writing key '%s' to s3 bucket '%s'", aws.ToString(input.Key), s3Storage.bucket)
 	}
 
 	return nil
 }
 
-func (s3 *s3Storage) Get(key string) ([]byte, error) {
-	input := awss3.GetObjectInput{
-		Bucket: aws.String(s3.bucket),
-		Key:    aws.String(objectNameWithPrefix(s3.prefix, key)),
+func (s3Storage *s3Storage) Get(key string) ([]byte, error) {
+	input := s3.GetObjectInput{
+		Bucket: aws.String(s3Storage.bucket),
+		Key:    aws.String(objectNameWithPrefix(s3Storage.prefix, key)),
 	}
 
-	r, err := s3.client.GetObject(&input)
+	r, err := s3Storage.client.GetObject(s3Storage.ctx, &input)
 	if err != nil {
-		var aerr awserr.Error
-		if errors.As(err, &aerr) && aerr.Code() == awss3.ErrCodeNoSuchKey {
-			return nil, kv.NewNotFoundError("error getting object for key '%s': %s", aws.StringValue(input.Key), aerr.Error())
+		const ErrCodeNoSuchKey = "NoSuchKey"
+		var noSuchKeyError s3types.NoSuchKey
+		if errors.As(err, &noSuchKeyError) && noSuchKeyError.ErrorCode() == ErrCodeNoSuchKey {
+			return nil, kv.NewNotFoundError("error getting object for key '%s': %s", aws.ToString(input.Key), noSuchKeyError.Error())
 		}
 
-		return nil, errors.Wrapf(err, "error getting object for key '%s'", aws.StringValue(input.Key))
+		return nil, errors.Wrapf(err, "error getting object for key '%s'", aws.ToString(input.Key))
 	}
-
 	b, err := io.ReadAll(r.Body)
 	defer func() {
 		if err := r.Body.Close(); err != nil {
@@ -104,7 +110,7 @@ func (s3 *s3Storage) Get(key string) ([]byte, error) {
 	}()
 
 	if err != nil {
-		return nil, errors.Wrapf(err, "error reading object with key '%s'", aws.StringValue(input.Key))
+		return nil, errors.Wrapf(err, "error reading object with key '%s'", aws.ToString(input.Key))
 	}
 
 	return b, nil
