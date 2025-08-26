@@ -29,7 +29,7 @@ require (
 	github.com/spf13/cast v1.9.2
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	golang.org/x/oauth2 v0.30.0
 	google.golang.org/api v0.248.0
 	k8s.io/api v0.33.4
