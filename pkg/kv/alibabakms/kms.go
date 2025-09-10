@@ -15,6 +15,8 @@
 package alibabakms
 
 import (
+	"context"
+
 	"emperror.dev/errors"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/kms"
@@ -54,8 +56,8 @@ func (a *alibabaKMS) decrypt(cipherText []byte) ([]byte, error) {
 	return []byte(response.Plaintext), nil
 }
 
-func (a *alibabaKMS) Get(key string) ([]byte, error) {
-	cipherText, err := a.store.Get(key)
+func (a *alibabaKMS) Get(ctx context.Context, key string) ([]byte, error) {
+	cipherText, err := a.store.Get(ctx, key)
 	if err != nil {
 		return nil, errors.WrapIf(err, "failed to get first with KMS client")
 	}
@@ -75,11 +77,11 @@ func (a *alibabaKMS) encrypt(plainText []byte) ([]byte, error) {
 	return []byte(response.CiphertextBlob), nil
 }
 
-func (a *alibabaKMS) Set(key string, val []byte) error {
+func (a *alibabaKMS) Set(ctx context.Context, key string, val []byte) error {
 	cipherText, err := a.encrypt(val)
 	if err != nil {
 		return err
 	}
 
-	return a.store.Set(key, cipherText)
+	return a.store.Set(ctx, key, cipherText)
 }

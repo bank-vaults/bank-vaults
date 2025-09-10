@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -52,7 +53,8 @@ var configureCmd = &cobra.Command{
 			configure secret engines, auth methods, etc...`,
 	Run: func(_ *cobra.Command, _ []string) {
 		var unsealConfig unsealCfg
-
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 		runOnce := c.GetBool(cfgOnce)
 		errorFatal := c.GetBool(cfgFatal)
 		unsealConfig.unsealPeriod = c.GetDuration(cfgUnsealPeriod)
@@ -143,7 +145,7 @@ var configureCmd = &cobra.Command{
 					}
 					slog.Info("vault is unsealed, configuring...")
 
-					if err = v.Configure(config.Data); err != nil {
+					if err = v.Configure(ctx,config.Data); err != nil {
 						slog.Error(fmt.Sprintf("error configuring vault: %s", err.Error()))
 						if errorFatal {
 							os.Exit(1)

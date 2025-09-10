@@ -15,6 +15,7 @@
 package multi
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -32,10 +33,10 @@ func New(services []kv.Service) kv.Service {
 	return &multi{services: services}
 }
 
-func (f *multi) Set(key string, val []byte) error {
+func (f *multi) Set(ctx context.Context, key string, val []byte) error {
 	slog.Info(fmt.Sprintf("setting key %q in all %d key/value Services", key, len(f.services)))
 	for _, service := range f.services {
-		err := service.Set(key, val)
+		err := service.Set(ctx, key, val)
 		if err != nil {
 			return err //nolint:wrapcheck
 		}
@@ -44,11 +45,11 @@ func (f *multi) Set(key string, val []byte) error {
 	return nil
 }
 
-func (f *multi) Get(key string) ([]byte, error) {
+func (f *multi) Get(ctx context.Context, key string) ([]byte, error) {
 	multiErr := errors.NewPlain("Can't find key in any of the backends")
 
 	for _, service := range f.services {
-		val, err := service.Get(key)
+		val, err := service.Get(ctx, key)
 		if err != nil {
 			// Not found error means that they given object is not present, that is a hard error.
 			if kv.IsNotFoundError(err) {

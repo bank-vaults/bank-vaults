@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -94,11 +95,12 @@ from one of the following:
 				os.Exit(1)
 			}
 		}()
-
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 		if unsealConfig.proceedInit && unsealConfig.raft {
 			slog.Info("joining leader vault...")
 
-			initialized, err := v.RaftInitialized()
+			initialized, err := v.RaftInitialized(ctx)
 			if err != nil {
 				sealed, sErr := v.Sealed()
 				if sErr != nil || sealed {
@@ -111,7 +113,7 @@ from one of the following:
 			// If this is the first instance we have to init it, this happens once in the clusters lifetime
 			if !initialized && !unsealConfig.raftSecondary {
 				slog.Info("initializing vault...")
-				if err := v.Init(); err != nil {
+				if err := v.Init(ctx); err != nil {
 					slog.Error(fmt.Sprintf("error initializing vault: %s", err.Error()))
 					os.Exit(1)
 				}
@@ -124,7 +126,7 @@ from one of the following:
 			}
 		} else if unsealConfig.proceedInit {
 			slog.Info("initializing vault...")
-			if err := v.Init(); err != nil {
+			if err := v.Init(ctx); err != nil {
 				slog.Error(fmt.Sprintf("error initializing vault: %s", err.Error()))
 				os.Exit(1)
 			}
@@ -147,6 +149,8 @@ from one of the following:
 }
 
 func unseal(unsealConfig unsealCfg, v internalVault.Vault) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	slog.Debug("checking if vault is sealed...")
 	sealed, err := v.Sealed()
 	if err != nil {
@@ -164,7 +168,7 @@ func unseal(unsealConfig unsealCfg, v internalVault.Vault) {
 
 	slog.Info("vault is sealed, unsealing")
 
-	if err = v.Unseal(); err != nil {
+	if err = v.Unseal(ctx); err != nil {
 		slog.Error(fmt.Sprintf("error unsealing vault: %s", err.Error()))
 		exitIfNecessary(unsealConfig, 1)
 		return

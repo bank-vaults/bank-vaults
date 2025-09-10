@@ -81,8 +81,8 @@ func New(namespace, secret string, labels map[string]string) (kv.Service, error)
 	}, nil
 }
 
-func (k *k8sStorage) Set(key string, val []byte) error {
-	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(context.Background(), k.secret, metav1.GetOptions{})
+func (k *k8sStorage) Set(ctx context.Context, key string, val []byte) error {
+	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(ctx, k.secret, metav1.GetOptions{})
 
 	switch {
 	case k8serrors.IsNotFound(err):
@@ -114,8 +114,8 @@ func (k *k8sStorage) Set(key string, val []byte) error {
 	return nil
 }
 
-func (k *k8sStorage) Get(key string) ([]byte, error) {
-	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(context.Background(), k.secret, metav1.GetOptions{})
+func (k *k8sStorage) Get(ctx context.Context, key string) ([]byte, error) {
+	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(ctx, k.secret, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, kv.NewNotFoundError("error getting secret for key '%s': %s", key, err.Error())

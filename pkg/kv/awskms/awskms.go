@@ -84,8 +84,8 @@ func (a *awsKMS) decrypt(cipherText []byte) ([]byte, error) {
 	return []byte(strings.TrimSpace(string(out.Plaintext))), nil
 }
 
-func (a *awsKMS) Get(key string) ([]byte, error) {
-	cipherText, err := a.store.Get(key)
+func (a *awsKMS) Get(ctx context.Context, key string) ([]byte, error) {
+	cipherText, err := a.store.Get(ctx, key)
 	if err != nil {
 		return nil, errors.WrapIf(err, "failed to get data for KMS client")
 	}
@@ -107,11 +107,11 @@ func (a *awsKMS) encrypt(plainText []byte) ([]byte, error) {
 	return out.CiphertextBlob, nil
 }
 
-func (a *awsKMS) Set(key string, val []byte) error {
+func (a *awsKMS) Set(ctx context.Context, key string, val []byte) error {
 	cipherText, err := a.encrypt(val)
 	if err != nil {
 		return err
 	}
 
-	return a.store.Set(key, cipherText)
+	return a.store.Set(ctx, key, cipherText)
 }

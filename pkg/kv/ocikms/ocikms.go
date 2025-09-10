@@ -87,8 +87,8 @@ func (oci *ociKms) decrypt(b []byte) ([]byte, error) {
 	return decodedBytes, nil
 }
 
-func (oci *ociKms) Get(key string) ([]byte, error) {
-	cipherText, err := oci.store.Get(key)
+func (oci *ociKms) Get(ctx context.Context, key string) ([]byte, error) {
+	cipherText, err := oci.store.Get(ctx, key)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting data")
 	}
@@ -96,11 +96,11 @@ func (oci *ociKms) Get(key string) ([]byte, error) {
 	return oci.decrypt(cipherText)
 }
 
-func (oci *ociKms) Set(key string, val []byte) error {
+func (oci *ociKms) Set(ctx context.Context, key string, val []byte) error {
 	cipherText, err := oci.encrypt(val)
 	if err != nil {
 		return errors.Wrap(err, "error setting data")
 	}
 
-	return oci.store.Set(key, cipherText)
+	return oci.store.Set(ctx, key, cipherText)
 }

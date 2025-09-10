@@ -15,6 +15,7 @@
 package kv
 
 import (
+	"context"
 	"fmt"
 
 	"emperror.dev/errors"
@@ -50,6 +51,6 @@ func IsNotFoundError(err error) bool {
 // Service defines a basic key-value store. Implementations of this interface
 // may or may not guarantee consistency or security properties.
 type Service interface {
-	Set(key string, value []byte) error
-	Get(key string) ([]byte, error)
+	Set(ctx context.Context, key string, value []byte) error
+	Get(ctx context.Context, key string) ([]byte, error)
 }

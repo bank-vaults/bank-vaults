@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -40,6 +41,8 @@ storing the keys in the given backend.
 
 It will not unseal the Vault instance after initializing.`,
 	Run: func(_ *cobra.Command, _ []string) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 		store, err := kvStoreForConfig(c)
 		if err != nil {
 			slog.Error(fmt.Sprintf("error creating kv store: %s", err.Error()))
@@ -58,7 +61,7 @@ It will not unseal the Vault instance after initializing.`,
 			os.Exit(1)
 		}
 
-		if err = v.Init(); err != nil {
+		if err = v.Init(ctx); err != nil {
 			slog.Error(fmt.Sprintf("error initializing vault: %s", err.Error()))
 			os.Exit(1)
 		}

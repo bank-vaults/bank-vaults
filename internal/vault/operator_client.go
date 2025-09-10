@@ -42,20 +42,19 @@ const (
 // Vault is an interface that can be used to attempt to perform actions against
 // a Vault server.
 type Vault interface {
-	Init() error
-	RaftInitialized() (bool, error)
+	Init(ctx context.Context) error
+	RaftInitialized(ctx context.Context) (bool, error)
 	RaftJoin(leaderAddress string) error
 	Sealed() (bool, error)
 	Active() (bool, error)
-	Unseal() error
+	Unseal(ctx context.Context) error
 	Leader() (bool, error)
 	LeaderAddress() (string, error)
-	Configure(config map[string]interface{}) error
+	Configure(ctx context.Context, config map[string]interface{}) error
 }
-
 type KVService interface {
-	Set(key string, value []byte) error
-	Get(key string) ([]byte, error)
+	Set(ctx context.Context, key string, value []byte) error
+	Get(ctx context.Context, key string) ([]byte, error)
 }
 
 // Config holds the configuration of the Vault initialization
@@ -103,15 +102,15 @@ type kvTester struct {
 	Service KVService
 }
 
-func (t kvTester) Test(key string) error {
-	_, err := t.Service.Get(key)
+func (t kvTester) Test(ctx context.Context, key string) error {
+	_, err := t.Service.Get(ctx, key)
 	if err != nil {
 		if !isNotFoundError(err) {
 			return err //nolint:wrapcheck
 		}
 	}
 
-	return t.Service.Set(key, []byte(key))
+	return t.Service.Set(ctx, key, []byte(key))
 }
 
 var _ Vault = &vault{}
@@ -193,11 +192,11 @@ func (v *vault) LeaderAddress() (string, error) {
 // and sending unseal requests to vault. It will return an error if retrieving
 // a key fails, or if the unseal progress is reset to 0 (indicating that a key)
 // was invalid.
-func (v *vault) Unseal() error {
+func (v *vault) Unseal(ctx context.Context) error {
 	defer runtime.GC()
 	for i := 0; ; i++ {
 		slog.Debug("retrieving key from kms service...")
-		k, err := v.keyStore.Get(keyUnsealForID(i))
+		k, err := v.keyStore.Get(ctx, keyUnsealForID(i))
 		if err != nil {
 			return errors.Wrapf(err, "unable to get key '%s'", keyUnsealForID(i))
 		}
@@ -220,8 +219,8 @@ func (v *vault) Unseal() error {
 	}
 }
 
-func (v *vault) keyStoreNotFound(key string) (bool, error) {
-	_, err := v.keyStore.Get(key)
+func (v *vault) keyStoreNotFound(ctx context.Context, key string) (bool, error) {
+	_, err := v.keyStore.Get(ctx, key)
 	if isNotFoundError(err) {
 		return true, nil
 	}
@@ -229,10 +228,10 @@ func (v *vault) keyStoreNotFound(key string) (bool, error) {
 	return false, err //nolint:wrapcheck
 }
 
-func (v *vault) keyStoreSet(key string, val []byte) error {
-	notFound, err := v.keyStoreNotFound(key)
+func (v *vault) keyStoreSet(ctx context.Context, key string, val []byte) error {
+	notFound, err := v.keyStoreNotFound(ctx, key)
 	if notFound {
-		return v.keyStore.Set(key, val)
+		return v.keyStore.Set(ctx, key, val)
 	}
 	if err == nil {
 		return errors.Errorf("error setting key '%s': it already exists", key)
@@ -242,7 +241,7 @@ func (v *vault) keyStoreSet(key string, val []byte) error {
 }
 
 // Init initializes Vault if is not initialized already
-func (v *vault) Init() error {
+func (v *vault) Init(ctx context.Context) error {
 	initialized, err := v.cl.Sys().InitStatus()
 	if err != nil {
 		return errors.Wrap(err, "error testing if vault is initialized")
@@ -257,7 +256,7 @@ func (v *vault) Init() error {
 	// test backend first
 	if v.config.PreFlightChecks {
 		tester := kvTester{Service: v.keyStore}
-		err = tester.Test(keyTestField)
+		err = tester.Test(ctx, keyTestField)
 		if err != nil {
 			return errors.Wrap(err, "error testing keystore before init")
 		}
@@ -275,7 +274,7 @@ func (v *vault) Init() error {
 
 	// test every key
 	for _, key := range keys {
-		notFound, err := v.keyStoreNotFound(key)
+		notFound, err := v.keyStoreNotFound(ctx, key)
 		if notFound && err != nil {
 			return errors.Wrapf(err, "error before init: checking key '%s' failed", key)
 		} else if !notFound && err == nil {
@@ -304,7 +303,7 @@ func (v *vault) Init() error {
 	}
 
 	for i, k := range resp.Keys {
-		err := v.keyStoreSet(keyUnsealForID(i), []byte(k))
+		err := v.keyStoreSet(ctx, keyUnsealForID(i), []byte(k))
 		if err != nil {
 			return errors.Wrapf(err, "error storing unseal key '%s'", keyUnsealForID(i))
 		}
@@ -312,7 +311,7 @@ func (v *vault) Init() error {
 	}
 
 	for i, k := range resp.RecoveryKeys {
-		err := v.keyStoreSet(keyRecoveryForID(i), []byte(k))
+		err := v.keyStoreSet(ctx, keyRecoveryForID(i), []byte(k))
 		if err != nil {
 			return errors.Wrapf(err, "error storing recovery key '%s'", keyRecoveryForID(i))
 		}
@@ -360,7 +359,7 @@ func (v *vault) Init() error {
 	}
 
 	if v.config.StoreRootToken {
-		if err = v.keyStoreSet(keyRootToken, []byte(resp.RootToken)); err != nil {
+		if err = v.keyStoreSet(ctx, keyRootToken, []byte(resp.RootToken)); err != nil {
 			return errors.Wrapf(err, "error storing root token '%s' in key'%s'", rootToken, keyRootToken)
 		}
 		slog.With(slog.String("key", keyRootToken)).Info("root token stored in key store")
@@ -373,9 +372,9 @@ func (v *vault) Init() error {
 
 // RaftInitialized in our case Vault is initialized when root key is stored in the Cloud KMS
 // or when just unseal keys are stored in the Cloud KMS
-func (v *vault) RaftInitialized() (bool, error) {
+func (v *vault) RaftInitialized(ctx context.Context) (bool, error) {
 	if v.config.StoreRootToken {
-		rootToken, err := v.keyStore.Get(keyRootToken)
+		rootToken, err := v.keyStore.Get(ctx, keyRootToken)
 		if err != nil {
 			if isNotFoundError(err) {
 				return false, nil
@@ -390,9 +389,9 @@ func (v *vault) RaftInitialized() (bool, error) {
 		return false, nil
 	} else {
 		for i := 0; i < v.config.SecretShares; i++ {
-			unsealKey, err := v.keyStore.Get(keyUnsealForID(i))
+			unsealKey, err := v.keyStore.Get(ctx, keyUnsealForID(i))
 			if err != nil {
-				// It's ok if there are no keys  
+				// It's ok if there are no keys
 				if isNotFoundError(err) {
 					return false, nil
 				}
@@ -458,13 +457,13 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 	return errors.New("vault hasn't joined raft cluster")
 }
 
-func (v *vault) Configure(config map[string]interface{}) error {
+func (v *vault) Configure(ctx context.Context, config map[string]interface{}) error {
 	var rootToken []byte
 
 	slog.Debug("retrieving key from kms service...")
 
 	if v.config.StoreRootToken {
-		rootToken, err := v.keyStore.Get(keyRootToken)
+		rootToken, err := v.keyStore.Get(ctx, keyRootToken)
 		if err != nil {
 			return errors.Wrapf(err, "unable to get key '%s'", keyRootToken)
 		}
@@ -505,7 +504,7 @@ func (v *vault) Configure(config map[string]interface{}) error {
 			}
 
 			slog.Debug("retrieving key from kms service...")
-			k, err := v.keyStore.Get(keyID)
+			k, err := v.keyStore.Get(ctx, keyID)
 			if err != nil {
 				return errors.Wrapf(err, "unable to get key '%s'", keyID)
 			}

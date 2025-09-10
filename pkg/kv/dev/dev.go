@@ -15,6 +15,7 @@
 package dev
 
 import (
+	"context"
 	"os"
 
 	"emperror.dev/errors"
@@ -41,11 +42,11 @@ func New() (service kv.Service, err error) {
 	return
 }
 
-func (d *dev) Set(_ string, _ []byte) error {
+func (d *dev) Set(ctx context.Context, _ string, _ []byte) error {
 	return nil
 }
 
-func (d *dev) Get(key string) ([]byte, error) {
+func (d *dev) Get(ctx context.Context, key string) ([]byte, error) {
 	if key == "vault-root" {
 		return d.rootToken, nil
 	}

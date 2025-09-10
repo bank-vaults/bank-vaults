@@ -15,6 +15,7 @@
 package hsm
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -234,8 +235,8 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 	}, nil
 }
 
-func (h *hsmCrypto) Get(key string) ([]byte, error) {
-	ciphertext, err := h.storage.Get(key)
+func (h *hsmCrypto) Get(ctx context.Context, key string) ([]byte, error) {
+	ciphertext, err := h.storage.Get(ctx, key)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get data from storage")
 	}
@@ -248,13 +249,13 @@ func (h *hsmCrypto) Get(key string) ([]byte, error) {
 	return plaintext, nil
 }
 
-func (h *hsmCrypto) Set(key string, value []byte) error {
+func (h *hsmCrypto) Set(ctx context.Context, key string, value []byte) error {
 	ciphertext, err := h.encrypt(value)
 	if err != nil {
 		return errors.WrapIf(err, "can't encrypt data with HSM")
 	}
 
-	return h.storage.Set(key, ciphertext)
+	return h.storage.Set(ctx, key, ciphertext)
 }
 
 /*
@@ -295,7 +296,7 @@ type hsmStorage struct {
 	session p11.Session
 }
 
-func (h *hsmStorage) Get(key string) ([]byte, error) {
+func (h *hsmStorage) Get(ctx context.Context, key string) ([]byte, error) {
 	object, err := h.session.FindObject([]*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_DATA),
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, key),
@@ -311,7 +312,7 @@ func (h *hsmStorage) Get(key string) ([]byte, error) {
 	return object.Value()
 }
 
-func (h *hsmStorage) Set(key string, value []byte) error {
+func (h *hsmStorage) Set(ctx context.Context, key string, value []byte) error {
 	_, err := h.session.CreateObject([]*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_DATA),
 		pkcs11.NewAttribute(pkcs11.CKA_VALUE, value),

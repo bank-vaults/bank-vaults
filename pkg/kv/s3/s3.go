@@ -66,7 +66,7 @@ func New(region, bucket, prefix, sseAlgo, sseKeyID string) (kv.Service, error) {
 	return &s3Storage{ctx, s3.NewFromConfig(config), bucket, prefix, sseAlgo, sseKeyID}, nil
 }
 
-func (s3Storage *s3Storage) Set(key string, val []byte) error {
+func (s3Storage *s3Storage) Set(ctx context.Context, key string, val []byte) error {
 	input := s3.PutObjectInput{
 		Bucket: aws.String(s3Storage.bucket),
 		Key:    aws.String(objectNameWithPrefix(s3Storage.prefix, key)),
@@ -86,7 +86,7 @@ func (s3Storage *s3Storage) Set(key string, val []byte) error {
 	return nil
 }
 
-func (s3Storage *s3Storage) Get(key string) ([]byte, error) {
+func (s3Storage *s3Storage) Get(ctx context.Context, key string) ([]byte, error) {
 	input := s3.GetObjectInput{
 		Bucket: aws.String(s3Storage.bucket),
 		Key:    aws.String(objectNameWithPrefix(s3Storage.prefix, key)),

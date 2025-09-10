@@ -79,8 +79,8 @@ func (g *googleKms) decrypt(s []byte) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(resp.Plaintext)
 }
 
-func (g *googleKms) Get(key string) ([]byte, error) {
-	cipherText, err := g.store.Get(key)
+func (g *googleKms) Get(ctx context.Context, key string) ([]byte, error) {
+	cipherText, err := g.store.Get(ctx, key)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting data")
 	}
@@ -88,11 +88,11 @@ func (g *googleKms) Get(key string) ([]byte, error) {
 	return g.decrypt(cipherText)
 }
 
-func (g *googleKms) Set(key string, val []byte) error {
+func (g *googleKms) Set(ctx context.Context, key string, val []byte) error {
 	cipherText, err := g.encrypt(val)
 	if err != nil {
 		return errors.Wrap(err, "error setting data")
 	}
 
-	return g.store.Set(key, cipherText)
+	return g.store.Set(ctx, key, cipherText)
 }
