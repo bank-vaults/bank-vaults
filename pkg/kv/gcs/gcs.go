@@ -32,8 +32,8 @@ type gcsStorage struct {
 }
 
 // New creates a new kv.Service backed by Google GCS
-func New(bucket, prefix string) (kv.Service, error) {
-	cl, err := storage.NewClient(context.Background())
+func New(ctx context.Context, bucket, prefix string) (kv.Service, error) {
+	cl, err := storage.NewClient(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating gcs client")
 	}

@@ -63,12 +63,12 @@ func TestIntegrationHSM(t *testing.T) {
 		t.Fatal("new failed", err)
 	}
 
-	err = hsmService.Set("my-secret-data", []byte("hello world"))
+	err = hsmService.Set(context.TODO(), "my-secret-data", []byte("hello world"))
 	if err != nil {
 		t.Fatal("set failed", err)
 	}
 
-	data, err := hsmService.Get("my-secret-data")
+	data, err := hsmService.Get(context.TODO(), "my-secret-data")
 	if err != nil {
 		t.Fatal("get failed", err)
 	}

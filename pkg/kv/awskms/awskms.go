@@ -60,8 +60,7 @@ func NewWithConfig(ctx context.Context, config aws.Config, store kv.Service, kms
 }
 
 // New creates a new kv.Service encrypted by AWS KMS
-func New(store kv.Service, region string, kmsID string, encryptionContext map[string]string) (kv.Service, error) {
-	ctx := context.Background()
+func New(ctx context.Context, store kv.Service, region string, kmsID string, encryptionContext map[string]string) (kv.Service, error) {
 	config, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
 		return nil, errors.WrapIf(err, "failed to load AWS config")

@@ -40,7 +40,7 @@ type s3Storage struct {
 }
 
 // New creates a new kv.Service backed by AWS S3
-func New(region, bucket, prefix, sseAlgo, sseKeyID string) (kv.Service, error) {
+func New(ctx context.Context, region, bucket, prefix, sseAlgo, sseKeyID string) (kv.Service, error) {
 	if region == "" {
 		return nil, errors.New("region must be specified")
 	}
@@ -57,7 +57,6 @@ func New(region, bucket, prefix, sseAlgo, sseKeyID string) (kv.Service, error) {
 		return nil, errors.New("you need to provide a CMK KeyID when using aws:kms for SSE")
 	}
 
-	ctx := context.Background()
 	config, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
 		return nil, errors.WrapIf(err, "failed to load AWS config")

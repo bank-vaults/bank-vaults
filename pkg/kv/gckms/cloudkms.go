@@ -39,13 +39,13 @@ type googleKms struct {
 var _ kv.Service = &googleKms{}
 
 // New creates a new kv.Service encrypted by Google KMS
-func New(store kv.Service, project, location, keyring, cryptoKey string) (kv.Service, error) {
-	client, err := google.DefaultClient(context.Background(), cloudkms.CloudPlatformScope)
+func New(ctx context.Context, store kv.Service, project, location, keyring, cryptoKey string) (kv.Service, error) {
+	client, err := google.DefaultClient(ctx, cloudkms.CloudPlatformScope)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating google client")
 	}
 
-	kmsService, err := cloudkms.NewService(context.Background(), option.WithHTTPClient(client))
+	kmsService, err := cloudkms.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating google kms service client")
 	}
