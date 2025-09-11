@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -143,7 +144,7 @@ func execute() {
 		os.Exit(0)
 	}()
 
-	if err := rootCmd.Execute(); err != nil {
+	if err := rootCmd.ExecuteContext(context.Background()); err != nil {
 		slog.Error(fmt.Sprintf("error executing command: %s", err.Error()))
 		os.Exit(1)
 	}

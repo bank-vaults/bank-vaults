@@ -17,6 +17,7 @@
 package hsm
 
 import (
+	"context"
 	"runtime"
 	"testing"
 
@@ -28,7 +29,7 @@ type inMemoryStorage struct {
 	data map[string][]byte
 }
 
-func (s *inMemoryStorage) Get(key string) ([]byte, error) {
+func (s *inMemoryStorage) Get(_ context.Context, key string) ([]byte, error) {
 	if data, ok := s.data[key]; !ok {
 		return nil, kv.NewNotFoundError("key not found")
 	} else {
@@ -36,7 +37,7 @@ func (s *inMemoryStorage) Get(key string) ([]byte, error) {
 	}
 }
 
-func (s *inMemoryStorage) Set(key string, data []byte) error {
+func (s *inMemoryStorage) Set(_ context.Context, key string, data []byte) error {
 	s.data[key] = data
 	return nil
 }
@@ -58,17 +59,16 @@ func TestIntegrationHSM(t *testing.T) {
 		TokenLabel: "bank-vaults",
 		KeyLabel:   "bank-vaults",
 	}, &storage)
-
 	if err != nil {
 		t.Fatal("new failed", err)
 	}
 
-	err = hsmService.Set("my-secret-data", []byte("hello world"))
+	err = hsmService.Set(context.TODO(), "my-secret-data", []byte("hello world"))
 	if err != nil {
 		t.Fatal("set failed", err)
 	}
 
-	data, err := hsmService.Get("my-secret-data")
+	data, err := hsmService.Get(context.TODO(), "my-secret-data")
 	if err != nil {
 		t.Fatal("get failed", err)
 	}

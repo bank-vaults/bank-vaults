@@ -194,7 +194,7 @@ func configNeedsNoName(secretEngineType string, configOption string) bool {
 	return false
 }
 
-func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine, mounts map[string]*api.MountOutput) error {
+func (v *vault) addManagedSecretsEngines(ctx context.Context, managedSecretsEngines []secretEngine, mounts map[string]*api.MountOutput) error {
 	b := &backoff.Backoff{
 		Min:    500 * time.Millisecond,
 		Max:    60 * time.Second,
@@ -333,7 +333,7 @@ func (v *vault) addManagedSecretsEngines(managedSecretsEngines []secretEngine, m
 					secretExists := false
 					if configOption == "root/generate" { // the pki generate call is a different beast
 						req := v.cl.NewRequest("GET", fmt.Sprintf("/v1/%s/ca", secretEngine.Path))
-						resp, err := v.cl.RawRequestWithContext(context.Background(), req) //nolint
+						resp, err := v.cl.RawRequestWithContext(ctx, req) //nolint
 						if resp != nil {
 							defer func() {
 								if err := resp.Body.Close(); err != nil {
@@ -426,7 +426,7 @@ func (v *vault) removeUnmanagedSecretsEngines(unmanagedSecretsEngines map[string
 	return nil
 }
 
-func (v *vault) configureSecretsEngines() error {
+func (v *vault) configureSecretsEngines(ctx context.Context) error {
 	auths, err := v.cl.Sys().ListAuth()
 	if err != nil {
 		return errors.Wrap(err, "error while getting list of auth engines for secret engine configuration")
@@ -434,7 +434,7 @@ func (v *vault) configureSecretsEngines() error {
 	managedSecretsEngines := initSecretsEnginesConfig(v.externalConfig.Secrets)
 	unmanagedSecretsEngines := v.getUnmanagedSecretsEngines(managedSecretsEngines)
 
-	if err := v.addManagedSecretsEngines(managedSecretsEngines, auths); err != nil {
+	if err := v.addManagedSecretsEngines(ctx, managedSecretsEngines, auths); err != nil {
 		return errors.Wrap(err, "error adding secrets engines")
 	}
 

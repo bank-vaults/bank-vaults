@@ -75,8 +75,8 @@ func New(name string) (kv.Service, error) {
 	}, nil
 }
 
-func (a *azureKeyVault) Get(key string) ([]byte, error) {
-	bundle, err := a.client.GetSecret(context.Background(), key, "", nil)
+func (a *azureKeyVault) Get(ctx context.Context, key string) ([]byte, error) {
+	bundle, err := a.client.GetSecret(ctx, key, "", nil)
 	if err != nil {
 		var aerr *azcore.ResponseError
 		if errors.As(err, &aerr) && aerr.StatusCode == http.StatusNotFound {
@@ -89,9 +89,9 @@ func (a *azureKeyVault) Get(key string) ([]byte, error) {
 	return []byte(*bundle.Value), nil
 }
 
-func (a *azureKeyVault) Set(key string, val []byte) error {
+func (a *azureKeyVault) Set(ctx context.Context, key string, val []byte) error {
 	value := string(val)
-	_, err := a.client.SetSecret(context.Background(), key, azsecrets.SetSecretParameters{Value: &value}, nil)
+	_, err := a.client.SetSecret(ctx, key, azsecrets.SetSecretParameters{Value: &value}, nil)
 	return errors.Wrapf(err, "failed to set key: %s", key)
 }
 

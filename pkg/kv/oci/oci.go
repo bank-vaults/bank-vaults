@@ -47,14 +47,14 @@ func New(namespace, bucket, prefix string) (kv.Service, error) {
 	return &ociStorage{client: &client, namespace: namespace, bucket: bucket, prefix: prefix}, nil
 }
 
-func (oci *ociStorage) Get(key string) ([]byte, error) {
+func (oci *ociStorage) Get(ctx context.Context, key string) ([]byte, error) {
 	n := objectNameWithPrefix(oci.prefix, key)
 	request := objectstorage.GetObjectRequest{
 		NamespaceName: &oci.namespace,
 		BucketName:    &oci.bucket,
 		ObjectName:    &n,
 	}
-	response, err := oci.client.GetObject(context.Background(), request)
+	response, err := oci.client.GetObject(ctx, request)
 	if err != nil {
 		if failure, ok := common.IsServiceError(err); ok {
 			switch os := failure.GetCode(); os {
@@ -83,7 +83,7 @@ func (oci *ociStorage) Get(key string) ([]byte, error) {
 	return b, nil
 }
 
-func (oci *ociStorage) Set(key string, val []byte) error {
+func (oci *ociStorage) Set(ctx context.Context, key string, val []byte) error {
 	n := objectNameWithPrefix(oci.prefix, key)
 	request := objectstorage.PutObjectRequest{
 		NamespaceName: &oci.namespace,
@@ -91,7 +91,7 @@ func (oci *ociStorage) Set(key string, val []byte) error {
 		ObjectName:    &n,
 		PutObjectBody: io.NopCloser(bytes.NewReader(val)),
 	}
-	_, err := oci.client.PutObject(context.Background(), request)
+	_, err := oci.client.PutObject(ctx, request)
 	if err != nil {
 		return errors.Wrapf(err, "error setting object for key '%s'", *request.ObjectName)
 	}

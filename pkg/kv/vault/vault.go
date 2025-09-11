@@ -15,6 +15,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 
@@ -48,9 +49,9 @@ func New(addr, unsealKeysPath, role, authPath, tokenPath, token string) (kv.Serv
 	}, nil
 }
 
-func (v *vaultStorage) Set(key string, val []byte) error {
+func (v *vaultStorage) Set(ctx context.Context, key string, val []byte) error {
 	// Done to prevent overwrite in Vault
-	if _, err := v.client.RawClient().Logical().Write(
+	if _, err := v.client.RawClient().Logical().WriteWithContext(ctx,
 		fmt.Sprintf("%s/%s", v.path, key),
 		map[string]interface{}{
 			"data": map[string]interface{}{
@@ -64,8 +65,8 @@ func (v *vaultStorage) Set(key string, val []byte) error {
 	return nil
 }
 
-func (v *vaultStorage) Get(key string) ([]byte, error) {
-	secret, err := v.client.RawClient().Logical().Read(fmt.Sprintf("%s/%s", v.path, key))
+func (v *vaultStorage) Get(ctx context.Context, key string) ([]byte, error) {
+	secret, err := v.client.RawClient().Logical().ReadWithContext(ctx, fmt.Sprintf("%s/%s", v.path, key))
 	if err != nil {
 		return nil, errors.Wrapf(err, "error getting object for key '%s'", key)
 	}

@@ -15,6 +15,7 @@
 package file
 
 import (
+	"context"
 	"os"
 	"path"
 
@@ -34,11 +35,11 @@ func New(path string) (service kv.Service, err error) {
 	return
 }
 
-func (f *file) Set(key string, val []byte) error {
+func (f *file) Set(_ context.Context, key string, val []byte) error {
 	return os.WriteFile(path.Join(f.path, key), val, 0o600)
 }
 
-func (f *file) Get(key string) ([]byte, error) {
+func (f *file) Get(_ context.Context, key string) ([]byte, error) {
 	val, err := os.ReadFile(path.Join(f.path, key))
 	if os.IsNotExist(err) {
 		return nil, kv.NewNotFoundError("key '%s' is not present in file", key)

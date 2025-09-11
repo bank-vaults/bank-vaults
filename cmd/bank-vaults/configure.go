@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -50,16 +51,17 @@ var configureCmd = &cobra.Command{
 	Long: `This configuration is an extension to what is available through the Vault configuration:
 			https://www.vaultproject.io/docs/configuration/index.html. With this it is possible to
 			configure secret engines, auth methods, etc...`,
-	Run: func(_ *cobra.Command, _ []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		var unsealConfig unsealCfg
-
+		ctx, cancel := context.WithCancel(cmd.Context())
+		defer cancel()
 		runOnce := c.GetBool(cfgOnce)
 		errorFatal := c.GetBool(cfgFatal)
 		unsealConfig.unsealPeriod = c.GetDuration(cfgUnsealPeriod)
 		vaultConfigFiles := c.GetStringSlice(cfgVaultConfigFile)
 		disableMetrics := c.GetBool(cfgDisableMetrics)
 
-		store, err := kvStoreForConfig(c)
+		store, err := kvStoreForConfig(ctx, c)
 		if err != nil {
 			slog.Error(fmt.Sprintf("error creating kv store: %s", err.Error()))
 			os.Exit(1)
@@ -71,7 +73,7 @@ var configureCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		v, err := internalVault.New(store, cl, vaultConfigForConfig(c))
+		v, err := internalVault.New(ctx, store, cl, vaultConfigForConfig(c))
 		if err != nil {
 			slog.Error(fmt.Sprintf("error creating vault helper: %s", err.Error()))
 			os.Exit(1)
@@ -143,7 +145,7 @@ var configureCmd = &cobra.Command{
 					}
 					slog.Info("vault is unsealed, configuring...")
 
-					if err = v.Configure(config.Data); err != nil {
+					if err = v.Configure(ctx, config.Data); err != nil {
 						slog.Error(fmt.Sprintf("error configuring vault: %s", err.Error()))
 						if errorFatal {
 							os.Exit(1)

@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -39,8 +40,10 @@ run "vault init" against the target Vault instance, before encrypting and
 storing the keys in the given backend.
 
 It will not unseal the Vault instance after initializing.`,
-	Run: func(_ *cobra.Command, _ []string) {
-		store, err := kvStoreForConfig(c)
+	Run: func(cmd *cobra.Command, _ []string) {
+		ctx, cancel := context.WithCancel(cmd.Context())
+		defer cancel()
+		store, err := kvStoreForConfig(ctx, c)
 		if err != nil {
 			slog.Error(fmt.Sprintf("error creating kv store: %s", err.Error()))
 			os.Exit(1)
@@ -52,13 +55,13 @@ It will not unseal the Vault instance after initializing.`,
 			os.Exit(1)
 		}
 
-		v, err := internalVault.New(store, cl, vaultConfigForConfig(c))
+		v, err := internalVault.New(ctx, store, cl, vaultConfigForConfig(c))
 		if err != nil {
 			slog.Error(fmt.Sprintf("error creating vault helper: %s", err.Error()))
 			os.Exit(1)
 		}
 
-		if err = v.Init(); err != nil {
+		if err = v.Init(ctx); err != nil {
 			slog.Error(fmt.Sprintf("error initializing vault: %s", err.Error()))
 			os.Exit(1)
 		}

@@ -52,14 +52,14 @@ func New(store kv.Service, keyOCID, endpoint string) (kv.Service, error) {
 	}, nil
 }
 
-func (oci *ociKms) encrypt(b []byte) ([]byte, error) {
+func (oci *ociKms) encrypt(ctx context.Context, b []byte) ([]byte, error) {
 	request := keymanagement.EncryptRequest{
 		EncryptDataDetails: keymanagement.EncryptDataDetails{
 			KeyId:     &oci.keyOCID,
 			Plaintext: common.String(base64.StdEncoding.EncodeToString(b)),
 		},
 	}
-	response, err := oci.svc.Encrypt(context.Background(), request)
+	response, err := oci.svc.Encrypt(ctx, request)
 	if err != nil {
 		return nil, errors.Wrap(err, "error encrypting data with oci")
 	}
@@ -67,14 +67,14 @@ func (oci *ociKms) encrypt(b []byte) ([]byte, error) {
 	return []byte(*response.Ciphertext), nil
 }
 
-func (oci *ociKms) decrypt(b []byte) ([]byte, error) {
+func (oci *ociKms) decrypt(ctx context.Context, b []byte) ([]byte, error) {
 	request := keymanagement.DecryptRequest{
 		DecryptDataDetails: keymanagement.DecryptDataDetails{
 			KeyId:      &oci.keyOCID,
 			Ciphertext: common.String(string(b)),
 		},
 	}
-	response, err := oci.svc.Decrypt(context.Background(), request)
+	response, err := oci.svc.Decrypt(ctx, request)
 	if err != nil {
 		return nil, errors.Wrap(err, "error decrypting data with oci")
 	}
@@ -87,20 +87,20 @@ func (oci *ociKms) decrypt(b []byte) ([]byte, error) {
 	return decodedBytes, nil
 }
 
-func (oci *ociKms) Get(key string) ([]byte, error) {
-	cipherText, err := oci.store.Get(key)
+func (oci *ociKms) Get(ctx context.Context, key string) ([]byte, error) {
+	cipherText, err := oci.store.Get(ctx, key)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting data")
 	}
 
-	return oci.decrypt(cipherText)
+	return oci.decrypt(ctx, cipherText)
 }
 
-func (oci *ociKms) Set(key string, val []byte) error {
-	cipherText, err := oci.encrypt(val)
+func (oci *ociKms) Set(ctx context.Context, key string, val []byte) error {
+	cipherText, err := oci.encrypt(ctx, val)
 	if err != nil {
 		return errors.Wrap(err, "error setting data")
 	}
 
-	return oci.store.Set(key, cipherText)
+	return oci.store.Set(ctx, key, cipherText)
 }

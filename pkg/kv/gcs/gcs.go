@@ -32,8 +32,8 @@ type gcsStorage struct {
 }
 
 // New creates a new kv.Service backed by Google GCS
-func New(bucket, prefix string) (kv.Service, error) {
-	cl, err := storage.NewClient(context.Background())
+func New(ctx context.Context, bucket, prefix string) (kv.Service, error) {
+	cl, err := storage.NewClient(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating gcs client")
 	}
@@ -41,9 +41,9 @@ func New(bucket, prefix string) (kv.Service, error) {
 	return &gcsStorage{cl, bucket, prefix}, nil
 }
 
-func (g *gcsStorage) Set(key string, val []byte) error {
+func (g *gcsStorage) Set(ctx context.Context, key string, val []byte) error {
 	n := objectNameWithPrefix(g.prefix, key)
-	w := g.cl.Bucket(g.bucket).Object(n).NewWriter(context.Background())
+	w := g.cl.Bucket(g.bucket).Object(n).NewWriter(ctx)
 	defer func() {
 		if err := w.Close(); err != nil {
 			print(err)
@@ -57,9 +57,9 @@ func (g *gcsStorage) Set(key string, val []byte) error {
 	return nil
 }
 
-func (g *gcsStorage) Get(key string) ([]byte, error) {
+func (g *gcsStorage) Get(ctx context.Context, key string) ([]byte, error) {
 	n := objectNameWithPrefix(g.prefix, key)
-	r, err := g.cl.Bucket(g.bucket).Object(n).NewReader(context.Background())
+	r, err := g.cl.Bucket(g.bucket).Object(n).NewReader(ctx)
 	if err != nil {
 		if errors.Is(err, storage.ErrObjectNotExist) {
 			return nil, kv.NewNotFoundError("error getting object for key '%s': %s", n, err.Error())

@@ -81,8 +81,8 @@ func New(namespace, secret string, labels map[string]string) (kv.Service, error)
 	}, nil
 }
 
-func (k *k8sStorage) Set(key string, val []byte) error {
-	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(context.Background(), k.secret, metav1.GetOptions{})
+func (k *k8sStorage) Set(ctx context.Context, key string, val []byte) error {
+	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(ctx, k.secret, metav1.GetOptions{})
 
 	switch {
 	case k8serrors.IsNotFound(err):
@@ -97,13 +97,13 @@ func (k *k8sStorage) Set(key string, val []byte) error {
 		if k.ownerReference != nil {
 			secret.SetOwnerReferences([]metav1.OwnerReference{*k.ownerReference})
 		}
-		_, err = k.client.CoreV1().Secrets(k.namespace).Create(context.Background(), secret, metav1.CreateOptions{})
+		_, err = k.client.CoreV1().Secrets(k.namespace).Create(ctx, secret, metav1.CreateOptions{})
 	case err == nil:
 		if secret.Data == nil {
 			secret.Data = map[string][]byte{}
 		}
 		secret.Data[key] = val
-		_, err = k.client.CoreV1().Secrets(k.namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
+		_, err = k.client.CoreV1().Secrets(k.namespace).Update(ctx, secret, metav1.UpdateOptions{})
 	default:
 		return errors.Wrapf(err, "error checking if '%s' secret exists", k.secret)
 	}
@@ -114,8 +114,8 @@ func (k *k8sStorage) Set(key string, val []byte) error {
 	return nil
 }
 
-func (k *k8sStorage) Get(key string) ([]byte, error) {
-	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(context.Background(), k.secret, metav1.GetOptions{})
+func (k *k8sStorage) Get(ctx context.Context, key string) ([]byte, error) {
+	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(ctx, k.secret, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, kv.NewNotFoundError("error getting secret for key '%s': %s", key, err.Error())

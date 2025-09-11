@@ -40,7 +40,7 @@ type s3Storage struct {
 }
 
 // New creates a new kv.Service backed by AWS S3
-func New(region, bucket, prefix, sseAlgo, sseKeyID string) (kv.Service, error) {
+func New(ctx context.Context, region, bucket, prefix, sseAlgo, sseKeyID string) (kv.Service, error) {
 	if region == "" {
 		return nil, errors.New("region must be specified")
 	}
@@ -57,7 +57,6 @@ func New(region, bucket, prefix, sseAlgo, sseKeyID string) (kv.Service, error) {
 		return nil, errors.New("you need to provide a CMK KeyID when using aws:kms for SSE")
 	}
 
-	ctx := context.Background()
 	config, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
 		return nil, errors.WrapIf(err, "failed to load AWS config")
@@ -66,7 +65,7 @@ func New(region, bucket, prefix, sseAlgo, sseKeyID string) (kv.Service, error) {
 	return &s3Storage{ctx, s3.NewFromConfig(config), bucket, prefix, sseAlgo, sseKeyID}, nil
 }
 
-func (s3Storage *s3Storage) Set(key string, val []byte) error {
+func (s3Storage *s3Storage) Set(ctx context.Context, key string, val []byte) error {
 	input := s3.PutObjectInput{
 		Bucket: aws.String(s3Storage.bucket),
 		Key:    aws.String(objectNameWithPrefix(s3Storage.prefix, key)),
@@ -79,20 +78,20 @@ func (s3Storage *s3Storage) Set(key string, val []byte) error {
 		}
 	}
 
-	if _, err := s3Storage.client.PutObject(s3Storage.ctx, &input); err != nil {
+	if _, err := s3Storage.client.PutObject(ctx, &input); err != nil {
 		return errors.Wrapf(err, "error writing key '%s' to s3 bucket '%s'", aws.ToString(input.Key), s3Storage.bucket)
 	}
 
 	return nil
 }
 
-func (s3Storage *s3Storage) Get(key string) ([]byte, error) {
+func (s3Storage *s3Storage) Get(ctx context.Context, key string) ([]byte, error) {
 	input := s3.GetObjectInput{
 		Bucket: aws.String(s3Storage.bucket),
 		Key:    aws.String(objectNameWithPrefix(s3Storage.prefix, key)),
 	}
 
-	r, err := s3Storage.client.GetObject(s3Storage.ctx, &input)
+	r, err := s3Storage.client.GetObject(ctx, &input)
 	if err != nil {
 		const ErrCodeNoSuchKey = "NoSuchKey"
 		var noSuchKeyError s3types.NoSuchKey
