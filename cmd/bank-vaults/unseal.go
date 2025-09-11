@@ -97,6 +97,7 @@ from one of the following:
 		}()
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
+
 		if unsealConfig.proceedInit && unsealConfig.raft {
 			slog.Info("joining leader vault...")
 
@@ -135,7 +136,7 @@ from one of the following:
 		raftEstablished := false
 		for {
 			if !unsealConfig.auto {
-				unseal(unsealConfig, v)
+				unseal(ctx, unsealConfig, v)
 			}
 
 			if unsealConfig.raftHAStorage && !raftEstablished {
@@ -148,9 +149,7 @@ from one of the following:
 	},
 }
 
-func unseal(unsealConfig unsealCfg, v internalVault.Vault) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func unseal(ctx context.Context, unsealConfig unsealCfg, v internalVault.Vault) {
 	slog.Debug("checking if vault is sealed...")
 	sealed, err := v.Sealed()
 	if err != nil {

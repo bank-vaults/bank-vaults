@@ -47,7 +47,7 @@ func New(namespace, bucket, prefix string) (kv.Service, error) {
 	return &ociStorage{client: &client, namespace: namespace, bucket: bucket, prefix: prefix}, nil
 }
 
-func (oci *ociStorage) Get(ctx context.Context, key string) ([]byte, error) {
+func (oci *ociStorage) Get(_ context.Context, key string) ([]byte, error) {
 	n := objectNameWithPrefix(oci.prefix, key)
 	request := objectstorage.GetObjectRequest{
 		NamespaceName: &oci.namespace,
@@ -83,7 +83,7 @@ func (oci *ociStorage) Get(ctx context.Context, key string) ([]byte, error) {
 	return b, nil
 }
 
-func (oci *ociStorage) Set(ctx context.Context, key string, val []byte) error {
+func (oci *ociStorage) Set(_ context.Context, key string, val []byte) error {
 	n := objectNameWithPrefix(oci.prefix, key)
 	request := objectstorage.PutObjectRequest{
 		NamespaceName: &oci.namespace,

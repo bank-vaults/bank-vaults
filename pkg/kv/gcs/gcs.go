@@ -41,7 +41,7 @@ func New(bucket, prefix string) (kv.Service, error) {
 	return &gcsStorage{cl, bucket, prefix}, nil
 }
 
-func (g *gcsStorage) Set(ctx context.Context, key string, val []byte) error {
+func (g *gcsStorage) Set(_ context.Context, key string, val []byte) error {
 	n := objectNameWithPrefix(g.prefix, key)
 	w := g.cl.Bucket(g.bucket).Object(n).NewWriter(context.Background())
 	defer func() {
@@ -57,7 +57,7 @@ func (g *gcsStorage) Set(ctx context.Context, key string, val []byte) error {
 	return nil
 }
 
-func (g *gcsStorage) Get(ctx context.Context, key string) ([]byte, error) {
+func (g *gcsStorage) Get(_ context.Context, key string) ([]byte, error) {
 	n := objectNameWithPrefix(g.prefix, key)
 	r, err := g.cl.Bucket(g.bucket).Object(n).NewReader(context.Background())
 	if err != nil {

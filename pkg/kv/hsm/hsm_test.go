@@ -29,7 +29,7 @@ type inMemoryStorage struct {
 	data map[string][]byte
 }
 
-func (s *inMemoryStorage) Get(ctx context.Context, key string) ([]byte, error) {
+func (s *inMemoryStorage) Get(_ context.Context, key string) ([]byte, error) {
 	if data, ok := s.data[key]; !ok {
 		return nil, kv.NewNotFoundError("key not found")
 	} else {
@@ -37,7 +37,7 @@ func (s *inMemoryStorage) Get(ctx context.Context, key string) ([]byte, error) {
 	}
 }
 
-func (s *inMemoryStorage) Set(ctx context.Context, key string, data []byte) error {
+func (s *inMemoryStorage) Set(_ context.Context, key string, data []byte) error {
 	s.data[key] = data
 	return nil
 }

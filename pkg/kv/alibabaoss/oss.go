@@ -43,7 +43,7 @@ func New(endpoint, accessKeyID, accessKeySecret, bucket, prefix string) (kv.Serv
 	return &ossStorage{client, bucket, prefix}, nil
 }
 
-func (o *ossStorage) Set(ctx context.Context, key string, val []byte) error {
+func (o *ossStorage) Set(_ context.Context, key string, val []byte) error {
 	objectKey := objectNameWithPrefix(o.prefix, key)
 
 	bucket, err := o.client.Bucket(o.bucket)
@@ -58,7 +58,7 @@ func (o *ossStorage) Set(ctx context.Context, key string, val []byte) error {
 	return nil
 }
 
-func (o *ossStorage) Get(ctx context.Context, key string) ([]byte, error) {
+func (o *ossStorage) Get(_ context.Context, key string) ([]byte, error) {
 	objectKey := objectNameWithPrefix(o.prefix, key)
 
 	bucket, err := o.client.Bucket(o.bucket)
