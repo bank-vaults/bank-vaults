@@ -296,7 +296,7 @@ type hsmStorage struct {
 	session p11.Session
 }
 
-func (h *hsmStorage) Get(ctx context.Context, key string) ([]byte, error) {
+func (h *hsmStorage) Get(_ context.Context, key string) ([]byte, error) {
 	object, err := h.session.FindObject([]*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_DATA),
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, key),
@@ -312,7 +312,7 @@ func (h *hsmStorage) Get(ctx context.Context, key string) ([]byte, error) {
 	return object.Value()
 }
 
-func (h *hsmStorage) Set(ctx context.Context, key string, value []byte) error {
+func (h *hsmStorage) Set(_ context.Context, key string, value []byte) error {
 	_, err := h.session.CreateObject([]*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_DATA),
 		pkcs11.NewAttribute(pkcs11.CKA_VALUE, value),

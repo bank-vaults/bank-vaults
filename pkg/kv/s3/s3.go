@@ -79,7 +79,7 @@ func (s3Storage *s3Storage) Set(ctx context.Context, key string, val []byte) err
 		}
 	}
 
-	if _, err := s3Storage.client.PutObject(s3Storage.ctx, &input); err != nil {
+	if _, err := s3Storage.client.PutObject(ctx, &input); err != nil {
 		return errors.Wrapf(err, "error writing key '%s' to s3 bucket '%s'", aws.ToString(input.Key), s3Storage.bucket)
 	}
 
@@ -92,7 +92,7 @@ func (s3Storage *s3Storage) Get(ctx context.Context, key string) ([]byte, error)
 		Key:    aws.String(objectNameWithPrefix(s3Storage.prefix, key)),
 	}
 
-	r, err := s3Storage.client.GetObject(s3Storage.ctx, &input)
+	r, err := s3Storage.client.GetObject(ctx, &input)
 	if err != nil {
 		const ErrCodeNoSuchKey = "NoSuchKey"
 		var noSuchKeyError s3types.NoSuchKey
