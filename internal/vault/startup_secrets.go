@@ -36,7 +36,7 @@ type startupSecret struct {
 	} `mapstructure:"data"`
 }
 
-func getOrDefaultSecretData(m interface{}) (map[string]interface{}, error) {
+func getOrDefaultSecretData(ctx context.Context, m interface{}) (map[string]interface{}, error) {
 	values, err := cast.ToSliceE(m)
 	if err != nil {
 		return map[string]interface{}{}, err
@@ -55,7 +55,7 @@ func getOrDefaultSecretData(m interface{}) (map[string]interface{}, error) {
 		}
 
 		secret := &corev1.Secret{}
-		err = c.Get(context.Background(), crclient.ObjectKey{
+		err = c.Get(ctx, crclient.ObjectKey{
 			Namespace: os.Getenv("NAMESPACE"),
 			Name:      keyRef["name"],
 		}, secret)
@@ -79,7 +79,7 @@ func vaultKVVersion(secretPath string, secretEngines []secretEngine) string {
 	return ""
 }
 
-func readStartupSecret(startupSecret startupSecret, secretEngines []secretEngine) (string, map[string]interface{}, error) {
+func readStartupSecret(ctx context.Context, startupSecret startupSecret, secretEngines []secretEngine) (string, map[string]interface{}, error) {
 	if len(startupSecret.Data.Data) > 0 && len(startupSecret.Data.SecretKeyRef) > 0 {
 		return "", nil, errors.New("the startup secret data source should be either 'data' or 'secretKeyRef'." +
 			"They are mutually exclusive and cannot be used together")
@@ -93,7 +93,7 @@ func readStartupSecret(startupSecret startupSecret, secretEngines []secretEngine
 	}
 
 	if len(startupSecret.Data.SecretKeyRef) > 0 {
-		secretData, err := getOrDefaultSecretData(startupSecret.Data.SecretKeyRef)
+		secretData, err := getOrDefaultSecretData(ctx, startupSecret.Data.SecretKeyRef)
 		if err != nil {
 			return "", nil, errors.Wrap(err, "error getting secret data from k8s secret")
 		}
@@ -121,16 +121,16 @@ func generateCertPayload(data interface{}) (map[string]interface{}, error) {
 	return map[string]interface{}{"pem_bundle": strings.Join(pkiSlice, "\n")}, nil
 }
 
-func (v *vault) configureStartupSecrets() error {
+func (v *vault) configureStartupSecrets(ctx context.Context) error {
 	managedStartupSecrets := v.externalConfig.StartupSecrets
 	for _, startupSecret := range managedStartupSecrets {
 		var err error
 		switch startupSecret.Type {
 		case "kv":
-			err = v.handleKVSecret(startupSecret)
+			err = v.handleKVSecret(ctx, startupSecret)
 
 		case "pki":
-			err = v.handlePKISecret(startupSecret)
+			err = v.handlePKISecret(ctx, startupSecret)
 
 		default:
 			return errors.Errorf("'%s' startup secret type is not supported, only 'kv' or 'pki'", startupSecret.Type)
@@ -143,8 +143,8 @@ func (v *vault) configureStartupSecrets() error {
 	return nil
 }
 
-func (v *vault) handleKVSecret(startupSecret startupSecret) error {
-	path, data, err := readStartupSecret(startupSecret, v.externalConfig.Secrets)
+func (v *vault) handleKVSecret(ctx context.Context, startupSecret startupSecret) error {
+	path, data, err := readStartupSecret(ctx, startupSecret, v.externalConfig.Secrets)
 	if err != nil {
 		return errors.Wrap(err, "unable to read 'kv' startup secret")
 	}
@@ -161,8 +161,8 @@ func (v *vault) handleKVSecret(startupSecret startupSecret) error {
 	return nil
 }
 
-func (v *vault) handlePKISecret(startupSecret startupSecret) error {
-	path, data, err := readStartupSecret(startupSecret, v.externalConfig.Secrets)
+func (v *vault) handlePKISecret(ctx context.Context, startupSecret startupSecret) error {
+	path, data, err := readStartupSecret(ctx, startupSecret, v.externalConfig.Secrets)
 	if err != nil {
 		return errors.Wrap(err, "unable to read 'pki' startup secret")
 	}

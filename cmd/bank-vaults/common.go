@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"os"
 
 	"emperror.dev/errors"
@@ -77,10 +78,11 @@ func correctValues(flags, choices []string) bool {
 	return true
 }
 
-func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
+func kvStoreForConfig(ctx context.Context, cfg *viper.Viper) (kv.Service, error) {
 	switch mode := cfg.GetString(cfgMode); mode {
 	case cfgModeValueGoogleCloudKMSGCS:
 		gcs, err := gcs.New(
+			ctx,
 			cfg.GetString(cfgGoogleCloudStorageBucket),
 			cfg.GetString(cfgGoogleCloudStoragePrefix),
 		)
@@ -88,7 +90,8 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			return nil, errors.Wrap(err, "error creating google cloud storage kv store")
 		}
 
-		kms, err := gckms.New(gcs,
+		kms, err := gckms.New(ctx,
+			gcs,
 			cfg.GetString(cfgGoogleCloudKMSProject),
 			cfg.GetString(cfgGoogleCloudKMSLocation),
 			cfg.GetString(cfgGoogleCloudKMSKeyRing),
@@ -157,6 +160,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 				kmsKeyID = ""
 			}
 			s3Service, err := s3.New(
+				ctx,
 				s3Regions[i],
 				s3Buckets[i],
 				s3Prefix,
@@ -168,7 +172,7 @@ func kvStoreForConfig(cfg *viper.Viper) (kv.Service, error) {
 			}
 
 			if s3SSEAlgos[i] == "" {
-				kmsService, err := awskms.New(s3Service, kmsRegions[i], kmsKeyIDs[i], kmsKeyEncryptionContext)
+				kmsService, err := awskms.New(ctx, s3Service, kmsRegions[i], kmsKeyIDs[i], kmsKeyEncryptionContext)
 				if err != nil {
 					return nil, errors.Wrap(err, "error creating AWS KMS kv store")
 				}

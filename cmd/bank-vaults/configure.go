@@ -61,7 +61,7 @@ var configureCmd = &cobra.Command{
 		vaultConfigFiles := c.GetStringSlice(cfgVaultConfigFile)
 		disableMetrics := c.GetBool(cfgDisableMetrics)
 
-		store, err := kvStoreForConfig(c)
+		store, err := kvStoreForConfig(ctx, c)
 		if err != nil {
 			slog.Error(fmt.Sprintf("error creating kv store: %s", err.Error()))
 			os.Exit(1)
@@ -73,7 +73,7 @@ var configureCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		v, err := internalVault.New(store, cl, vaultConfigForConfig(c))
+		v, err := internalVault.New(ctx, store, cl, vaultConfigForConfig(c))
 		if err != nil {
 			slog.Error(fmt.Sprintf("error creating vault helper: %s", err.Error()))
 			os.Exit(1)

@@ -118,6 +118,7 @@ var _ Vault = &vault{}
 // vault is an implementation of the Vault interface that will perform actions
 // against a Vault server, using a provided KMS to retrieve
 type vault struct {
+	ctx            context.Context
 	keyStore       KVService
 	cl             *api.Client
 	config         *Config
@@ -126,12 +127,13 @@ type vault struct {
 }
 
 // New returns a new vault Vault, or an error.
-func New(k KVService, cl *api.Client, config Config) (Vault, error) {
+func New(ctx context.Context, k KVService, cl *api.Client, config Config) (Vault, error) {
 	if config.SecretShares < config.SecretThreshold {
 		return nil, errors.Errorf("the secret threshold can't be bigger than the shares [%d < %d]", config.SecretShares, config.SecretThreshold)
 	}
 
 	return &vault{
+		ctx:            ctx,
 		keyStore:       k,
 		cl:             cl,
 		config:         &config,
@@ -150,7 +152,7 @@ func (v *vault) Sealed() (bool, error) {
 }
 
 func (v *vault) Active() (bool, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
+	ctx, cancelFunc := context.WithCancel(v.ctx)
 	defer cancelFunc()
 
 	resp, err := v.cl.Logical().ReadRawWithContext(ctx, "sys/health")
@@ -604,11 +606,11 @@ func (v *vault) Configure(ctx context.Context, config map[string]interface{}) er
 		return errors.Wrap(err, "error configuring policies for vault")
 	}
 
-	if err = v.configureSecretsEngines(); err != nil {
+	if err = v.configureSecretsEngines(ctx); err != nil {
 		return errors.Wrap(err, "error configuring secret engines for vault")
 	}
 
-	if err = v.configureStartupSecrets(); err != nil {
+	if err = v.configureStartupSecrets(ctx); err != nil {
 		return errors.Wrap(err, "error writing startup secrets to vault")
 	}
 

@@ -43,7 +43,7 @@ It will not unseal the Vault instance after initializing.`,
 	Run: func(cmd *cobra.Command, _ []string) {
 		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()
-		store, err := kvStoreForConfig(c)
+		store, err := kvStoreForConfig(ctx, c)
 		if err != nil {
 			slog.Error(fmt.Sprintf("error creating kv store: %s", err.Error()))
 			os.Exit(1)
@@ -55,7 +55,7 @@ It will not unseal the Vault instance after initializing.`,
 			os.Exit(1)
 		}
 
-		v, err := internalVault.New(store, cl, vaultConfigForConfig(c))
+		v, err := internalVault.New(ctx, store, cl, vaultConfigForConfig(c))
 		if err != nil {
 			slog.Error(fmt.Sprintf("error creating vault helper: %s", err.Error()))
 			os.Exit(1)
