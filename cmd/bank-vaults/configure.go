@@ -51,9 +51,9 @@ var configureCmd = &cobra.Command{
 	Long: `This configuration is an extension to what is available through the Vault configuration:
 			https://www.vaultproject.io/docs/configuration/index.html. With this it is possible to
 			configure secret engines, auth methods, etc...`,
-	Run: func(_ *cobra.Command, _ []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		var unsealConfig unsealCfg
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()
 		runOnce := c.GetBool(cfgOnce)
 		errorFatal := c.GetBool(cfgFatal)
@@ -145,7 +145,7 @@ var configureCmd = &cobra.Command{
 					}
 					slog.Info("vault is unsealed, configuring...")
 
-					if err = v.Configure(ctx,config.Data); err != nil {
+					if err = v.Configure(ctx, config.Data); err != nil {
 						slog.Error(fmt.Sprintf("error configuring vault: %s", err.Error()))
 						if errorFatal {
 							os.Exit(1)

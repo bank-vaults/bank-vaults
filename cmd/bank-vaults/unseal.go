@@ -57,7 +57,9 @@ from one of the following:
 - Azure Key Vault
 - Alibaba KMS (backed by OSS)
 - Kubernetes Secrets (should be used only for development purposes)`,
-	Run: func(_ *cobra.Command, _ []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
+		ctx, cancel := context.WithCancel(cmd.Context())
+		defer cancel()
 		var unsealConfig unsealCfg
 
 		unsealConfig.unsealPeriod = c.GetDuration(cfgUnsealPeriod)
@@ -95,8 +97,6 @@ from one of the following:
 				os.Exit(1)
 			}
 		}()
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
 
 		if unsealConfig.proceedInit && unsealConfig.raft {
 			slog.Info("joining leader vault...")

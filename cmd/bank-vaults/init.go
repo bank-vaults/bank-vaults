@@ -40,8 +40,8 @@ run "vault init" against the target Vault instance, before encrypting and
 storing the keys in the given backend.
 
 It will not unseal the Vault instance after initializing.`,
-	Run: func(_ *cobra.Command, _ []string) {
-		ctx, cancel := context.WithCancel(context.Background())
+	Run: func(cmd *cobra.Command, _ []string) {
+		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()
 		store, err := kvStoreForConfig(c)
 		if err != nil {
