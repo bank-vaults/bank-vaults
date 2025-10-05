@@ -392,8 +392,7 @@ func (v *vault) addManagedAuthMethods(managedAuths []auth) error {
 		// https://www.vaultproject.io/api/system/auth.html
 		var options api.EnableAuthOptions
 		if hasMountOptions {
-			err := mapstructure.Decode(authMethod.Options, &authConfigInput)
-			if err != nil {
+			if err := mapstructure.Decode(authMethod.Options, &authConfigInput); err != nil {
 				return errors.Wrap(err, "error parsing auth method options")
 			}
 
@@ -412,8 +411,7 @@ func (v *vault) addManagedAuthMethods(managedAuths []auth) error {
 		// We have to filter all existing auths, not to re-enable them as that would raise an error
 		if existingAuths[authMethod.Path] == nil {
 			slog.Info(fmt.Sprintf("adding auth method %s (%s)", authMethod.Path, authMethod.Type))
-			err := v.cl.Sys().EnableAuthWithOptions(authMethod.Path, &options)
-			if err != nil {
+			if err := v.cl.Sys().EnableAuthWithOptions(authMethod.Path, &options); err != nil {
 				return errors.Wrapf(err, "error enabling %s auth method in vault", authMethod.Path)
 			}
 		}
@@ -423,14 +421,12 @@ func (v *vault) addManagedAuthMethods(managedAuths []auth) error {
 			slog.Info(fmt.Sprintf("tuning existing auth %s (%s)", authMethod.Path, authMethod.Type))
 			// all auth methods are mounted below auth/
 			tunePath := fmt.Sprintf("auth/%s", authMethod.Path)
-			err := v.cl.Sys().TuneMount(tunePath, authConfigInput)
-			if err != nil {
+			if err := v.cl.Sys().TuneMountAllowNilWithContext(v.ctx, tunePath, convertToTuneMountConfigInput(authConfigInput)); err != nil {
 				return errors.Wrapf(err, "error tuning %s (%s) auth method in vault", authMethod.Path, authMethod.Type)
 			}
 		}
 
-		err := v.addAdditionalAuthConfig(authMethod)
-		if err != nil {
+		if err := v.addAdditionalAuthConfig(authMethod); err != nil {
 			return errors.Wrapf(err, "error while adding auth method config")
 		}
 
@@ -524,4 +520,69 @@ func (v *vault) configureAuthMethods() error {
 	}
 
 	return nil
+}
+
+func convertToTuneMountConfigInput(input api.MountConfigInput) api.TuneMountConfigInput {
+	result := api.TuneMountConfigInput{}
+
+	if input.Options != nil {
+		result.Options = &input.Options
+	}
+	if input.DefaultLeaseTTL != "" {
+		result.DefaultLeaseTTL = &input.DefaultLeaseTTL
+	}
+	if input.Description != nil {
+		result.Description = input.Description
+	}
+	if input.MaxLeaseTTL != "" {
+		result.MaxLeaseTTL = &input.MaxLeaseTTL
+	}
+	if input.ForceNoCache {
+		result.ForceNoCache = &input.ForceNoCache
+	}
+	if len(input.AuditNonHMACRequestKeys) > 0 {
+		result.AuditNonHMACRequestKeys = &input.AuditNonHMACRequestKeys
+	}
+	if len(input.AuditNonHMACResponseKeys) > 0 {
+		result.AuditNonHMACResponseKeys = &input.AuditNonHMACResponseKeys
+	}
+	if input.ListingVisibility != "" {
+		result.ListingVisibility = &input.ListingVisibility
+	}
+	if len(input.PassthroughRequestHeaders) > 0 {
+		result.PassthroughRequestHeaders = &input.PassthroughRequestHeaders
+	}
+	if len(input.AllowedResponseHeaders) > 0 {
+		result.AllowedResponseHeaders = &input.AllowedResponseHeaders
+	}
+	if input.TokenType != "" {
+		result.TokenType = &input.TokenType
+	}
+	if len(input.AllowedManagedKeys) > 0 {
+		result.AllowedManagedKeys = &input.AllowedManagedKeys
+	}
+	if input.PluginVersion != "" {
+		result.PluginVersion = &input.PluginVersion
+	}
+	if input.UserLockoutConfig != nil {
+		tuneUserLockout := api.TuneUserLockoutConfigInput{
+			LockoutThreshold:            &input.UserLockoutConfig.LockoutThreshold,
+			LockoutDuration:             &input.UserLockoutConfig.LockoutDuration,
+			LockoutCounterResetDuration: &input.UserLockoutConfig.LockoutCounterResetDuration,
+			DisableLockout:              input.UserLockoutConfig.DisableLockout,
+		}
+		result.UserLockoutConfig = &tuneUserLockout
+	}
+	if len(input.DelegatedAuthAccessors) > 0 {
+		result.DelegatedAuthAccessors = &input.DelegatedAuthAccessors
+	}
+	if input.IdentityTokenKey != "" {
+		result.IdentityTokenKey = &input.IdentityTokenKey
+	}
+	if input.TrimRequestTrailingSlashes != nil {
+		result.TrimRequestTrailingSlashes = input.TrimRequestTrailingSlashes
+	}
+	// Note: PluginName field is deprecated and will always be blank for newer server responses
+
+	return result
 }

@@ -247,8 +247,7 @@ func (v *vault) addManagedSecretsEngines(ctx context.Context, managedSecretsEngi
 			// If the secret engine is already mounted, only update its config in place.
 			slog.Info(fmt.Sprintf("tuning already existing secret engine %s/", secretEngine.Path))
 			for {
-				err = v.cl.Sys().TuneMount(secretEngine.Path, mountConfigInput)
-				if err != nil {
+				if err = v.cl.Sys().TuneMountAllowNilWithContext(ctx, secretEngine.Path, convertToTuneMountConfigInput(mountConfigInput)); err != nil {
 					slog.Info(fmt.Sprintf("error tuning %s: %s, waiting %s before trying again...", secretEngine.Path, err.Error(), b.Duration()))
 
 					if b.Duration() == b.Max {
