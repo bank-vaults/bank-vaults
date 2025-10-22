@@ -63,7 +63,6 @@ jobs:
 
       - name: Set up Cosign
         uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
-        if: ${{ inputs.publish }}
 
       - name: Set image name
         id: image-name
@@ -121,8 +120,20 @@ jobs:
           outputs: ${{ steps.build-output.outputs.value }}
           # push: ${{ inputs.publish }}
 
+      - name: Create SigningConfig
+        if: ${{ github.repository_owner == 'bank-vaults' }}
+        run: |
+          cosign signing-config create \
+            --fulcio="url=https://fulcio.sigstore.dev,api-version=1,start-time=2024-01-01T00:00:00Z,operator=sigstore.dev" \
+            --rekor="url=https://rekor.sigstore.dev,api-version=1,start-time=2024-01-01T00:00:00Z,operator=sigstore.dev" \
+            --rekor-config="ANY" \
+            --tsa="url=https://timestamp.githubapp.com/api/v1/timestamp,api-version=1,start-time=2024-01-01T00:00:00Z,operator=sigstore.dev" \
+            --tsa-config="EXACT:1" \
+            --out signingconfig.json
+          echo "signingconfig=signingconfig.json" >> $GITHUB_ENV
+
       - name: Sign image with GitHub OIDC Token
-        if: ${{ inputs.publish && github.repository_owner == 'bank-vaults' }} # Check if the workflow is called by the same GitHub organization
+        if: ${{ github.repository_owner == 'bank-vaults' }} # Check if the workflow is called by the same GitHub organization
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
           TAGS: ${{ steps.meta.outputs.tags }}
@@ -132,17 +143,17 @@ jobs:
             images+="${tag}@${DIGEST} "
           done
 
-          cosign sign --yes --rekor-url "https://rekor.sigstore.dev/" ${images}
+          cosign sign --signing-config=${signingconfig} --yes ${images}
 
       - name: Verify signed image with cosign
-        if: ${{ inputs.publish && github.repository_owner == 'bank-vaults' }} # Check if the workflow is called by the same GitHub organization
+        if: ${{ github.repository_owner == 'bank-vaults' }} # Check if the workflow is called by the same GitHub organization
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
           TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           for tag in ${TAGS[@]}; do
             cosign verify "${tag}@${DIGEST}" \
-              --rekor-url "https://rekor.sigstore.dev/" \
+              --signing-config=${signingconfig} \
               --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/artifacts.yaml@${{ github.ref }}" \
               --certificate-oidc-issuer "https://token.actions.githubusercontent.com" | jq
           done
