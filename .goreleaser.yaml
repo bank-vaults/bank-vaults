@@ -9,8 +9,68 @@ before:
     - go mod tidy
 
 builds:
-  - id: darwin-amd64
+  - id: darwin-amd64-template
     main: ./cmd/template
+    binary: template
+    goos:
+      - darwin
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=1
+      - PKG_CONFIG_SYSROOT_DIR=/sysroot/macos/amd64
+      - PKG_CONFIG_PATH=/sysroot/macos/amd64/usr/local/lib/pkgconfig
+      - CC=o64-clang
+      - CXX=o64-clang++
+    ldflags:
+      - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
+
+  - id: darwin-arm64-template
+    main: ./cmd/template
+    binary: template
+    goos:
+      - darwin
+    goarch:
+      - arm64
+    env:
+      - CGO_ENABLED=1
+      - PKG_CONFIG_SYSROOT_DIR=/sysroot/macos/arm64
+      - PKG_CONFIG_PATH=/sysroot/macos/arm64/usr/local/lib/pkgconfig
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+    ldflags:
+      - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
+
+  - id: linux-amd64-template
+    main: ./cmd/template
+    binary: template
+    goos:
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+    ldflags:
+      - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
+
+  - id: linux-arm64-template
+    main: ./cmd/template
+    binary: template
+    goos:
+      - linux
+    goarch:
+      - arm64
+    env:
+      - CGO_ENABLED=1
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    ldflags:
+      - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
+
+  - id: darwin-amd64-bank-vaults
+    main: ./cmd/bank-vaults
     binary: bank-vaults
     goos:
       - darwin
@@ -25,8 +85,8 @@ builds:
     ldflags:
       - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
 
-  - id: darwin-arm64
-    main: ./cmd/template
+  - id: darwin-arm64-bank-vaults
+    main: ./cmd/bank-vaults
     binary: bank-vaults
     goos:
       - darwin
@@ -41,8 +101,8 @@ builds:
     ldflags:
       - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
 
-  - id: linux-amd64
-    main: ./cmd/template
+  - id: linux-amd64-bank-vaults
+    main: ./cmd/bank-vaults
     binary: bank-vaults
     goos:
       - linux
@@ -55,8 +115,8 @@ builds:
     ldflags:
       - -s -w -X main.Version={{.Version}} -X main.commitHash={{.ShortCommit}} -X main.buildDate={{.Date}}
 
-  - id: linux-arm64
-    main: ./cmd/template
+  - id: linux-arm64-bank-vaults
+    main: ./cmd/bank-vaults
     binary: bank-vaults
     goos:
       - linux
