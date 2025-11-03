@@ -209,27 +209,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Set up Nix
-        uses: cachix/install-nix-action@3715ab1a11cac9e991980d7b4a28d80c7ebdd8f9 # v27
-        with:
-          extra_nix_config: |
-            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-
-      - name: Prepare Nix shell
-        run: nix develop --impure .#ci
-
-      - name: Determine build command
-        uses: haya14busa/action-cond@94f77f7a80cd666cb3155084e428254fea4281fd # v1.2.1
-        id: build-command
-        with:
-          cond: ${{ inputs.release }}
-          if_true: make release
-          if_false: make binary-snapshot
-
       - name: Build
         run: |
           echo GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} > .release-env
-          nix develop --impure .#ci -c ${{ steps.build-command.outputs.value }}
+          if [ "${{ inputs.release }}" == "true" ]; then
+            make release
+          else
+            make binary-snapshot
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
