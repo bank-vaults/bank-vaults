@@ -12,7 +12,7 @@ require (
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
 	github.com/aws/aws-sdk-go-v2 v1.39.6
 	github.com/aws/aws-sdk-go-v2/config v1.31.16
-	github.com/aws/aws-sdk-go-v2/service/kms v1.47.0
+	github.com/aws/aws-sdk-go-v2/service/kms v1.47.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.89.2
 	github.com/bank-vaults/vault-sdk v0.11.1
 	github.com/dimchansky/utfbom v1.1.1
