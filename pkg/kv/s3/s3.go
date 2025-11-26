@@ -94,7 +94,7 @@ func (s3Storage *s3Storage) Get(ctx context.Context, key string) ([]byte, error)
 	r, err := s3Storage.client.GetObject(ctx, &input)
 	if err != nil {
 		const ErrCodeNoSuchKey = "NoSuchKey"
-		var noSuchKeyError s3types.NoSuchKey
+		var noSuchKeyError *s3types.NoSuchKey
 		if errors.As(err, &noSuchKeyError) && noSuchKeyError.ErrorCode() == ErrCodeNoSuchKey {
 			return nil, kv.NewNotFoundError("error getting object for key '%s': %s", aws.ToString(input.Key), noSuchKeyError.Error())
 		}
