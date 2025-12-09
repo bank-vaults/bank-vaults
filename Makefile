@@ -25,7 +25,7 @@ down: ## Destroy development environment
 ##@ Build
 
 PACKAGE_NAME          := github.com/bank-vaults/bank-vaults
-GORELEASER_CROSS_VERSION  ?= v1.23.0
+GORELEASER_CROSS_VERSION  ?= v1.26.0
 
 .PHONY: build
 build: ## Build binary
@@ -117,7 +117,7 @@ gen-docs: ## Generate CLI documentation
 ##@ Dependencies
 
 # Dependency versions
-GOLANGCI_LINT_VERSION = 2.0.2
+GOLANGCI_LINT_VERSION = 2.7.2
 LICENSEI_VERSION = 0.9.0
 
 # Dependency binaries
