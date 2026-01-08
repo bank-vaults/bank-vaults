@@ -17,6 +17,7 @@ package vault
 import (
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 
 	"emperror.dev/errors"
@@ -32,23 +33,34 @@ type policy struct {
 }
 
 func initPoliciesConfig(policiesConfig []policy, mounts map[string]*api.MountOutput) ([]policy, error) {
-	for index, policy := range policiesConfig {
-		for k, v := range mounts {
-			policy.Rules = strings.ReplaceAll(policy.Rules, fmt.Sprintf("__accessor__%s", strings.TrimRight(k, "/")), v.Accessor)
+	// Sort mount paths by length (longest first) to avoid substring collisions
+	// e.g., "kubernetes_cluster" should be processed before "kubernetes"
+	mountPaths := make([]string, 0, len(mounts))
+	for k := range mounts {
+		mountPaths = append(mountPaths, k)
+	}
+	sort.Slice(mountPaths, func(i, j int) bool {
+		return len(mountPaths[i]) > len(mountPaths[j])
+	})
+
+	for index := range policiesConfig {
+		for _, k := range mountPaths {
+			v := mounts[k]
+			policiesConfig[index].Rules = strings.ReplaceAll(policiesConfig[index].Rules, fmt.Sprintf("__accessor__%s", strings.TrimRight(k, "/")), v.Accessor)
 		}
 		//
 		// Format HCL polices.
-		rulesFormatted, err := hclPrinter.Format([]byte(policy.Rules))
+		rulesFormatted, err := hclPrinter.Format([]byte(policiesConfig[index].Rules))
 		if err != nil {
 			// Check if rules parse (HCL or JSON).
-			if _, err := hcl.Parse(policy.Rules); err != nil {
-				return nil, errors.Wrapf(err, "error parsing %s policy rules", policy.Name)
+			if _, err := hcl.Parse(policiesConfig[index].Rules); err != nil {
+				return nil, errors.Wrapf(err, "error parsing %s policy rules", policiesConfig[index].Name)
 			}
 
 			// Policies are parsable but couldn't be HCL formatted (most likely JSON).
-			rulesFormatted = []byte(policy.Rules)
+			rulesFormatted = []byte(policiesConfig[index].Rules)
 			slog.Debug(fmt.Sprintf("error HCL-formatting %s policy rules (ignore if rules are JSON-formatted): %s",
-				policy.Name, err.Error()))
+				policiesConfig[index].Name, err.Error()))
 		}
 		policiesConfig[index].RulesFormatted = string(rulesFormatted)
 	}

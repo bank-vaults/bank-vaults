@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -64,7 +65,18 @@ type secretEngine struct {
 }
 
 func replaceAccessor(input string, mounts map[string]*api.MountOutput) string {
-	for k, v := range mounts {
+	// Sort mount paths by length (longest first) to avoid substring collisions
+	// e.g., "kubernetes_cluster" should be processed before "kubernetes"
+	mountPaths := make([]string, 0, len(mounts))
+	for k := range mounts {
+		mountPaths = append(mountPaths, k)
+	}
+	sort.Slice(mountPaths, func(i, j int) bool {
+		return len(mountPaths[i]) > len(mountPaths[j])
+	})
+
+	for _, k := range mountPaths {
+		v := mounts[k]
 		if strings.Contains(input, fmt.Sprintf("__accessor__%s", strings.TrimRight(k, "/"))) {
 			slog.Info(fmt.Sprintf("__accessor__ field replaced in string %s by accessor %s", input, v.Accessor))
 			return strings.ReplaceAll(input, fmt.Sprintf("__accessor__%s", strings.TrimRight(k, "/")), v.Accessor)
