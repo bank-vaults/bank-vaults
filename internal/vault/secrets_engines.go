@@ -18,8 +18,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -66,23 +67,24 @@ type secretEngine struct {
 
 func replaceAccessor(input string, mounts map[string]*api.MountOutput) string {
 	// Sort mount paths by length (longest first) to avoid substring collisions
-	// e.g., "kubernetes_cluster" should be processed before "kubernetes"
-	mountPaths := make([]string, 0, len(mounts))
-	for k := range mounts {
-		mountPaths = append(mountPaths, k)
-	}
-	sort.Slice(mountPaths, func(i, j int) bool {
-		return len(mountPaths[i]) > len(mountPaths[j])
+	// e.g., "__accessor__kubernetes_cluster" should be replaced before "__accessor__kubernetes"
+	mountPaths := slices.Collect(maps.Keys(mounts))
+	slices.SortFunc(mountPaths, func(a, b string) int {
+		return len(b) - len(a)
 	})
 
-	for _, k := range mountPaths {
-		v := mounts[k]
-		if strings.Contains(input, fmt.Sprintf("__accessor__%s", strings.TrimRight(k, "/"))) {
-			slog.Info(fmt.Sprintf("__accessor__ field replaced in string %s by accessor %s", input, v.Accessor))
-			return strings.ReplaceAll(input, fmt.Sprintf("__accessor__%s", strings.TrimRight(k, "/")), v.Accessor)
+	result := input
+	for _, mountPath := range mountPaths {
+		placeholder := fmt.Sprintf("__accessor__%s", strings.TrimSuffix(mountPath, "/"))
+		if strings.Contains(result, placeholder) {
+			slog.Info("replaced __accessor__ placeholder",
+				"placeholder", placeholder,
+				"accessor", mounts[mountPath].Accessor)
+			result = strings.ReplaceAll(result, placeholder, mounts[mountPath].Accessor)
 		}
 	}
-	return input
+
+	return result
 }
 
 func initSecretsEnginesConfig(configs []secretEngine) []secretEngine {

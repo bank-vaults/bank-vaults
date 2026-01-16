@@ -1,4 +1,4 @@
-// Copyright © 2025 Bank-Vaults Maintainers
+// Copyright © 2026 Bank-Vaults Maintainers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

@@ -1,4 +1,4 @@
-// Copyright © 2025 Bank-Vaults Maintainers
+// Copyright © 2026 Bank-Vaults Maintainers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -163,7 +163,7 @@ func TestInitPoliciesConfig_InvalidRules(t *testing.T) {
 				},
 			},
 			mounts:        map[string]*api.MountOutput{},
-			expectedError: "error parsing invalid-policy policy rules",
+			expectedError: "parsing invalid-policy policy rules",
 			description:   "Should return error for invalid HCL syntax",
 		},
 		{
@@ -175,7 +175,7 @@ func TestInitPoliciesConfig_InvalidRules(t *testing.T) {
 				},
 			},
 			mounts:        map[string]*api.MountOutput{},
-			expectedError: "error parsing malformed-policy policy rules",
+			expectedError: "parsing malformed-policy policy rules",
 			description:   "Should return error for completely malformed rules",
 		},
 		{
