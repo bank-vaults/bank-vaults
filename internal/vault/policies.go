@@ -17,6 +17,8 @@ package vault
 import (
 	"fmt"
 	"log/slog"
+	"maps"
+	"slices"
 	"strings"
 
 	"emperror.dev/errors"
@@ -32,25 +34,34 @@ type policy struct {
 }
 
 func initPoliciesConfig(policiesConfig []policy, mounts map[string]*api.MountOutput) ([]policy, error) {
-	for index, policy := range policiesConfig {
-		for k, v := range mounts {
-			policy.Rules = strings.ReplaceAll(policy.Rules, fmt.Sprintf("__accessor__%s", strings.TrimRight(k, "/")), v.Accessor)
-		}
-		//
-		// Format HCL polices.
-		rulesFormatted, err := hclPrinter.Format([]byte(policy.Rules))
-		if err != nil {
-			// Check if rules parse (HCL or JSON).
-			if _, err := hcl.Parse(policy.Rules); err != nil {
-				return nil, errors.Wrapf(err, "error parsing %s policy rules", policy.Name)
-			}
+	// Sort mount paths by length (longest first) to avoid substring collisions
+	// e.g., "kubernetes_cluster" should be processed before "kubernetes"
+	mountPaths := slices.Collect(maps.Keys(mounts))
+	slices.SortFunc(mountPaths, func(a, b string) int {
+		return len(b) - len(a)
+	})
 
-			// Policies are parsable but couldn't be HCL formatted (most likely JSON).
-			rulesFormatted = []byte(policy.Rules)
-			slog.Debug(fmt.Sprintf("error HCL-formatting %s policy rules (ignore if rules are JSON-formatted): %s",
-				policy.Name, err.Error()))
+	for i := range policiesConfig {
+		policy := &policiesConfig[i]
+		
+		// Replace accessor placeholders
+		for _, mountPath := range mountPaths {
+			placeholder := fmt.Sprintf("__accessor__%s", strings.TrimSuffix(mountPath, "/"))
+			policy.Rules = strings.ReplaceAll(policy.Rules, placeholder, mounts[mountPath].Accessor)
 		}
-		policiesConfig[index].RulesFormatted = string(rulesFormatted)
+
+		// Format as HCL, falling back to original if it's valid JSON
+		formatted, err := hclPrinter.Format([]byte(policy.Rules))
+		if err != nil {
+			if _, parseErr := hcl.Parse(policy.Rules); parseErr != nil {
+				return nil, fmt.Errorf("parsing %s policy rules: %w", policy.Name, parseErr)
+			}
+			slog.Debug("could not HCL-format policy rules (may be JSON)", 
+				"policy", policy.Name, 
+				"error", err)
+			formatted = []byte(policy.Rules)
+		}
+		policy.RulesFormatted = string(formatted)
 	}
 
 	return policiesConfig, nil
