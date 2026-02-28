@@ -144,6 +144,54 @@ auth_test () {
   test "$(${get_vault_values_json} | jq -r '."auth_bar/".type')" == "userpass"; test_case_passed
 
   #
+  ## Case 4.
+  echo -e "\nCase 4: Auth roles do not accumulate on config retry (regression test)."
+
+  # 4.1. Apply full auth config including roles (reset to original config)
+  bank_vaults_config_copy "auth"
+  sleep 2
+
+  # 4.2. Count initial roles for each auth method
+  initial_approle1_roles=$(vault list -format=json auth/approle1/role 2>/dev/null | jq -r 'length // 0')
+  initial_approle2_roles=$(vault list -format=json auth/approle2/role 2>/dev/null | jq -r 'length // 0')
+
+  echo "Initial role counts: approle1=${initial_approle1_roles}, approle2=${initial_approle2_roles}"
+
+  # Verify we have the expected initial counts
+  test "${initial_approle1_roles}" == "1"; test_case_passed
+  test "${initial_approle2_roles}" == "1"; test_case_passed
+
+  # 4.3. Simulate retry by touching config file (triggers reconfiguration)
+  bank_vaults_config_touch
+  sleep 2
+
+  # 4.4. Count roles again after "retry"
+  retry_approle1_roles=$(vault list -format=json auth/approle1/role 2>/dev/null | jq -r 'length // 0')
+  retry_approle2_roles=$(vault list -format=json auth/approle2/role 2>/dev/null | jq -r 'length // 0')
+
+  echo "After retry role counts: approle1=${retry_approle1_roles}, approle2=${retry_approle2_roles}"
+
+  # 4.5. Verify role counts have NOT doubled (regression test for ZeroFields bug)
+  test "${retry_approle1_roles}" == "1"; test_case_passed
+  test "${retry_approle2_roles}" == "1"; test_case_passed
+
+  # 4.6. Verify role data integrity: check that both roles still have correct fields
+  approle1_role_data=$(vault read -format=json auth/approle1/role/approle-role-1)
+  approle2_role_data=$(vault read -format=json auth/approle2/role/approle-role-2)
+
+  # Both AppRole roles should have token_policies
+  echo "${approle1_role_data}" | jq -e '.data.token_policies' > /dev/null; test_case_passed
+  echo "${approle2_role_data}" | jq -e '.data.token_policies' > /dev/null; test_case_passed
+
+  # Verify role 1 has correct policy
+  echo "${approle1_role_data}" | jq -e '.data.token_policies[] | select(. == "policy_foo")' > /dev/null; test_case_passed
+
+  # Verify role 2 has correct policy
+  echo "${approle2_role_data}" | jq -e '.data.token_policies[] | select(. == "policy_bar")' > /dev/null; test_case_passed
+
+  echo "[PASSED] Case 4: Roles remain stable across retries with no accumulation or cross-contamination."
+
+  #
   ## Success.
   echo "All auth test cases have been passed."
 }
