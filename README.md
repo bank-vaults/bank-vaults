@@ -15,6 +15,8 @@ Bank-Vaults is now a [CNCF Sandbox](https://www.cncf.io/sandbox-projects/) proje
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bank-vaults/bank-vaults/ci.yaml?branch=main&style=flat-square)](https://github.com/bank-vaults/bank-vaults/actions/workflows/ci.yaml?query=workflow%3ACI)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/bank-vaults/bank-vaults/badge?style=flat-square)](https://api.securityscorecards.dev/projects/github.com/bank-vaults/bank-vaults)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/7871/badge)](https://www.bestpractices.dev/projects/7871)
+[![Kubernetes Health](https://img.releaserun.com/badge/health/kubernetes.svg)](https://releaserun.com/badges/kubernetes/)
+[![Vault Health](https://img.releaserun.com/badge/health/hashicorp-vault.svg)](https://releaserun.com/badges/hashicorp-vault/)
 
 *Bank Vaults is a thick, tricky, shifty right with a fast and intense tube for experienced surfers only, located on Mentawai.
 Think heavy steel doors, secret unlocking combinations and burly guards with smack-down attitude. Watch out for clean-up sets.*
