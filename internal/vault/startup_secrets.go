@@ -83,6 +83,16 @@ func vaultKVVersion(secretPath string, secretEngines []secretEngine) string {
 	return ""
 }
 
+// vaultKVMaxVersions returns the max_versions configured on the secret engine for the given path.
+func vaultKVMaxVersions(secretPath string, secretEngines []secretEngine) *int {
+	for _, v := range secretEngines {
+		if strings.HasPrefix(secretPath, v.Path) && v.Type == "kv" {
+			return v.MaxVersions
+		}
+	}
+	return nil
+}
+
 func readStartupSecret(ctx context.Context, startupSecret startupSecret, secretEngines []secretEngine) (string, map[string]interface{}, error) {
 	if len(startupSecret.Data.Data) > 0 && len(startupSecret.Data.SecretKeyRef) > 0 {
 		return "", nil, errors.New("the startup secret data source should be either 'data' or 'secretKeyRef'." +
@@ -162,13 +172,19 @@ func (v *vault) handleKVSecret(ctx context.Context, startupSecret startupSecret)
 		return errors.Wrapf(err, "error writing data for startup 'kv' secret '%s'", path)
 	}
 
-	// Set max_versions per secret via the metadata endpoint if configured
+	// Resolve max_versions: startup secret overrides secret engine default
+	maxVersions := vaultKVMaxVersions(startupSecret.Path, v.externalConfig.Secrets)
 	if startupSecret.MaxVersions != nil {
+		maxVersions = startupSecret.MaxVersions
+	}
+
+	// Set max_versions per secret via the metadata endpoint if resolved
+	if maxVersions != nil {
 		metadataPath := strings.Replace(path, "/data/", "/metadata/", 1)
 		metadataData := map[string]interface{}{
-			"max_versions": *startupSecret.MaxVersions,
+			"max_versions": *maxVersions,
 		}
-		slog.Info(fmt.Sprintf("setting max_versions=%d for secret %s", *startupSecret.MaxVersions, path))
+		slog.Info(fmt.Sprintf("setting max_versions=%d for secret %s", *maxVersions, path))
 		if _, err := v.writeWithWarningCheck(metadataPath, metadataData); err != nil {
 			return errors.Wrapf(err, "error setting max_versions for secret '%s'", path)
 		}
