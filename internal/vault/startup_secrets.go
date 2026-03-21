@@ -19,6 +19,9 @@ import (
 	"os"
 	"strings"
 
+	"fmt"
+	"log/slog"
+
 	"emperror.dev/errors"
 	"github.com/spf13/cast"
 	corev1 "k8s.io/api/core/v1"
@@ -27,9 +30,10 @@ import (
 )
 
 type startupSecret struct {
-	Type string `mapstructure:"type"`
-	Path string `mapstructure:"path"`
-	Data struct {
+	Type        string `mapstructure:"type"`
+	Path        string `mapstructure:"path"`
+	MaxVersions *int   `mapstructure:"max_versions"`
+	Data        struct {
 		Data         map[string]interface{}   `mapstructure:"data"`
 		Options      map[string]interface{}   `mapstructure:"options,omitempty"`
 		SecretKeyRef []map[string]interface{} `mapstructure:"secretKeyRef"`
@@ -156,6 +160,18 @@ func (v *vault) handleKVSecret(ctx context.Context, startupSecret startupSecret)
 	_, err = v.writeWithWarningCheck(path, data)
 	if err != nil {
 		return errors.Wrapf(err, "error writing data for startup 'kv' secret '%s'", path)
+	}
+
+	// Set max_versions per secret via the metadata endpoint if configured
+	if startupSecret.MaxVersions != nil {
+		metadataPath := strings.Replace(path, "/data/", "/metadata/", 1)
+		metadataData := map[string]interface{}{
+			"max_versions": *startupSecret.MaxVersions,
+		}
+		slog.Info(fmt.Sprintf("setting max_versions=%d for secret %s", *startupSecret.MaxVersions, path))
+		if _, err := v.writeWithWarningCheck(metadataPath, metadataData); err != nil {
+			return errors.Wrapf(err, "error setting max_versions for secret '%s'", path)
+		}
 	}
 
 	return nil
