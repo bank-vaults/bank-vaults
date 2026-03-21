@@ -19,6 +19,9 @@ import (
 	"os"
 	"strings"
 
+	"fmt"
+	"log/slog"
+
 	"emperror.dev/errors"
 	"github.com/spf13/cast"
 	corev1 "k8s.io/api/core/v1"
@@ -27,9 +30,10 @@ import (
 )
 
 type startupSecret struct {
-	Type string `mapstructure:"type"`
-	Path string `mapstructure:"path"`
-	Data struct {
+	Type        string `mapstructure:"type"`
+	Path        string `mapstructure:"path"`
+	MaxVersions *int   `mapstructure:"max_versions"`
+	Data        struct {
 		Data         map[string]interface{}   `mapstructure:"data"`
 		Options      map[string]interface{}   `mapstructure:"options,omitempty"`
 		SecretKeyRef []map[string]interface{} `mapstructure:"secretKeyRef"`
@@ -77,6 +81,16 @@ func vaultKVVersion(secretPath string, secretEngines []secretEngine) string {
 		}
 	}
 	return ""
+}
+
+// vaultKVMaxVersions returns the max_versions configured on the secret engine for the given path.
+func vaultKVMaxVersions(secretPath string, secretEngines []secretEngine) *int {
+	for _, v := range secretEngines {
+		if strings.HasPrefix(secretPath, v.Path) && v.Type == "kv" {
+			return v.MaxVersions
+		}
+	}
+	return nil
 }
 
 func readStartupSecret(ctx context.Context, startupSecret startupSecret, secretEngines []secretEngine) (string, map[string]interface{}, error) {
@@ -156,6 +170,24 @@ func (v *vault) handleKVSecret(ctx context.Context, startupSecret startupSecret)
 	_, err = v.writeWithWarningCheck(path, data)
 	if err != nil {
 		return errors.Wrapf(err, "error writing data for startup 'kv' secret '%s'", path)
+	}
+
+	// Resolve max_versions: startup secret overrides secret engine default
+	maxVersions := vaultKVMaxVersions(startupSecret.Path, v.externalConfig.Secrets)
+	if startupSecret.MaxVersions != nil {
+		maxVersions = startupSecret.MaxVersions
+	}
+
+	// Set max_versions per secret via the metadata endpoint if resolved
+	if maxVersions != nil {
+		metadataPath := strings.Replace(path, "/data/", "/metadata/", 1)
+		metadataData := map[string]interface{}{
+			"max_versions": *maxVersions,
+		}
+		slog.Info(fmt.Sprintf("setting max_versions=%d for secret %s", *maxVersions, path))
+		if _, err := v.writeWithWarningCheck(metadataPath, metadataData); err != nil {
+			return errors.Wrapf(err, "error setting max_versions for secret '%s'", path)
+		}
 	}
 
 	return nil

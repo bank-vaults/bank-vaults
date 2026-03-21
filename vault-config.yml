@@ -334,6 +334,7 @@ audit:
 startupSecrets:
   - type: kv
     path: secret/data/accounts/aws
+    max_versions: 10
     data:
       data:
         AWS_ACCESS_KEY_ID: secretId

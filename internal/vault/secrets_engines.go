@@ -63,6 +63,7 @@ type secretEngine struct {
 	PluginName    string                 `mapstructure:"plugin_name"`
 	Local         bool                   `mapstructure:"local"`
 	SealWrap      bool                   `mapstructure:"seal_wrap"`
+	MaxVersions   *int                   `mapstructure:"max_versions"`
 }
 
 func replaceAccessor(input string, mounts map[string]*api.MountOutput) string {
