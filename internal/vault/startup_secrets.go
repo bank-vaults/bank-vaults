@@ -16,11 +16,10 @@ package vault
 
 import (
 	"context"
-	"os"
-	"strings"
-
 	"fmt"
 	"log/slog"
+	"os"
+	"strings"
 
 	"emperror.dev/errors"
 	"github.com/spf13/cast"
@@ -178,8 +177,15 @@ func (v *vault) handleKVSecret(ctx context.Context, startupSecret startupSecret)
 		maxVersions = startupSecret.MaxVersions
 	}
 
-	// Set max_versions per secret via the metadata endpoint if resolved
+	// Set max_versions per secret via the metadata endpoint (KV v2 only)
 	if maxVersions != nil {
+		kvVersion := vaultKVVersion(startupSecret.Path, v.externalConfig.Secrets)
+		if kvVersion != "2" {
+			return errors.Errorf("max_versions is only supported for KV v2 secrets, but '%s' is KV v%s", path, kvVersion)
+		}
+		if !strings.Contains(path, "/data/") {
+			return errors.Errorf("cannot derive metadata path for '%s': expected path to contain '/data/'", path)
+		}
 		metadataPath := strings.Replace(path, "/data/", "/metadata/", 1)
 		metadataData := map[string]interface{}{
 			"max_versions": *maxVersions,
