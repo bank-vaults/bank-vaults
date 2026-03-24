@@ -34,6 +34,8 @@ func intPtr(i int) *int {
 func TestVaultKVMaxVersions(t *testing.T) {
 	engines := []secretEngine{
 		{Path: "staging/kv", Type: "kv", MaxVersions: intPtr(10)},
+		{Path: "staging/kv/team", Type: "kv", MaxVersions: intPtr(5)},
+		{Path: "secret", Type: "kv", MaxVersions: intPtr(15)},
 		{Path: "prod/kv", Type: "kv"},
 		{Path: "other", Type: "database"},
 	}
@@ -63,6 +65,21 @@ func TestVaultKVMaxVersions(t *testing.T) {
 			path:     "unknown/data/app1",
 			expected: nil,
 		},
+		{
+			name:     "prefix collision: secret should not match secret2",
+			path:     "secret2/data/app1",
+			expected: nil,
+		},
+		{
+			name:     "more specific path matches: staging/kv/team over staging/kv",
+			path:     "staging/kv/team/data/app1",
+			expected: intPtr(5),
+		},
+		{
+			name:     "exact prefix match with trailing slash",
+			path:     "secret/data/app1",
+			expected: intPtr(15),
+		},
 	}
 
 	for _, tt := range tests {
@@ -76,6 +93,8 @@ func TestVaultKVMaxVersions(t *testing.T) {
 func TestVaultKVVersion(t *testing.T) {
 	engines := []secretEngine{
 		{Path: "staging/kv", Type: "kv", Options: map[string]string{"version": "2"}},
+		{Path: "staging/kv/team", Type: "kv", Options: map[string]string{"version": "2"}},
+		{Path: "secret", Type: "kv", Options: map[string]string{"version": "2"}},
 		{Path: "legacy/kv", Type: "kv", Options: map[string]string{"version": "1"}},
 		{Path: "other", Type: "database"},
 	}
@@ -104,6 +123,21 @@ func TestVaultKVVersion(t *testing.T) {
 			name:     "returns empty for unknown path",
 			path:     "unknown/data/app1",
 			expected: "",
+		},
+		{
+			name:     "prefix collision: secret should not match secret2",
+			path:     "secret2/data/app1",
+			expected: "",
+		},
+		{
+			name:     "more specific path matches: staging/kv/team over staging/kv",
+			path:     "staging/kv/team/data/app1",
+			expected: "2",
+		},
+		{
+			name:     "exact prefix match with trailing slash",
+			path:     "secret/data/app1",
+			expected: "2",
 		},
 	}
 
@@ -177,10 +211,12 @@ func TestHandleKVSecret_MaxVersionsOverride(t *testing.T) {
 	}
 
 	tests := []struct {
-		name                string
-		startupSecret       startupSecret
-		expectMetadataWrite bool
-		expectedMaxVersions float64 // JSON numbers decode as float64
+		name                 string
+		startupSecret        startupSecret
+		expectMetadataWrite  bool
+		expectedMetadataPath string
+		expectedDataPath     string
+		expectedMaxVersions  float64 // JSON numbers decode as float64
 	}{
 		{
 			name: "startup secret overrides engine max_versions",
@@ -196,8 +232,10 @@ func TestHandleKVSecret_MaxVersionsOverride(t *testing.T) {
 					Data: map[string]interface{}{"key": "value1"},
 				},
 			},
-			expectMetadataWrite: true,
-			expectedMaxVersions: 20,
+			expectMetadataWrite:  true,
+			expectedMetadataPath: "staging/kv/metadata/app1",
+			expectedDataPath:     "staging/kv/data/app1",
+			expectedMaxVersions:  20,
 		},
 		{
 			name: "uses engine default when startup has no max_versions",
@@ -212,8 +250,10 @@ func TestHandleKVSecret_MaxVersionsOverride(t *testing.T) {
 					Data: map[string]interface{}{"key": "value2"},
 				},
 			},
-			expectMetadataWrite: true,
-			expectedMaxVersions: 10,
+			expectMetadataWrite:  true,
+			expectedMetadataPath: "staging/kv/metadata/app2",
+			expectedDataPath:     "staging/kv/data/app2",
+			expectedMaxVersions:  10,
 		},
 	}
 
@@ -231,12 +271,15 @@ func TestHandleKVSecret_MaxVersionsOverride(t *testing.T) {
 			defer mu.Unlock()
 
 			if tt.expectMetadataWrite {
-				// Expect 2 writes: one for the secret data, one for metadata
-				require.Len(t, *writes, 2, "expected a data write and a metadata write")
+				// Expect 2 writes: metadata first, then data
+				require.Len(t, *writes, 2, "expected a metadata write and a data write")
 
-				metadataWrite := (*writes)[1]
-				assert.Contains(t, metadataWrite.Path, "/metadata/")
+				metadataWrite := (*writes)[0]
+				assert.Equal(t, tt.expectedMetadataPath, metadataWrite.Path)
 				assert.Equal(t, tt.expectedMaxVersions, metadataWrite.Data["max_versions"])
+
+				dataWrite := (*writes)[1]
+				assert.Equal(t, tt.expectedDataPath, dataWrite.Path)
 			}
 		})
 	}
