@@ -33,6 +33,26 @@ auth:
     type: userpass
   # The "path" would be defaulted to "type".
   - type: userpass
+  # Test auth methods with roles for retry state pollution bug
+  # Using approle which requires no external connectivity
+  - type: approle
+    path: approle1
+    roles:
+      - name: approle-role-1
+        token_policies:
+          - policy_foo
+        token_ttl: 1h
+        token_max_ttl: 4h
+        bind_secret_id: true
+  - type: approle
+    path: approle2
+    roles:
+      - name: approle-role-2
+        token_policies:
+          - policy_bar
+        token_ttl: 2h
+        token_max_ttl: 8h
+        bind_secret_id: true
 
 groups:
   - name: group_foo
