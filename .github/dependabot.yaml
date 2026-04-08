@@ -11,11 +11,24 @@ updates:
       time: "16:00"
     open-pull-requests-limit: 10
     groups:
-      k8s:
+      k8s.io:
         patterns:
-          - "k8s.io/api"
-          - "k8s.io/apimachinery"
-          - "k8s.io/client-go"
+          - "k8s.io/*"
+      sigs.k8s.io:
+        patterns:
+          - "sigs.k8s.io/*"
+      github.com/aws/aws-sdk-go-v2:
+        patterns:
+          - "github.com/aws/aws-sdk-go-v2*"
+      cloud.google.com/go:
+        patterns:
+          - "cloud.google.com/go*"
+      github.com/Azure:
+        patterns:
+          - "github.com/Azure/*"
+      github.com/hashicorp:
+        patterns:
+          - "github.com/hashicorp/*"
 
   - package-ecosystem: "docker"
     directory: "/"
@@ -36,3 +49,7 @@ updates:
       day: "sunday"
       time: "16:00"
     open-pull-requests-limit: 10
+    groups:
+      actions:
+        patterns:
+          - "*"
