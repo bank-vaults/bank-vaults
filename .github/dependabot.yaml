@@ -49,7 +49,3 @@ updates:
       day: "sunday"
       time: "16:00"
     open-pull-requests-limit: 10
-    groups:
-      actions:
-        patterns:
-          - "*"
