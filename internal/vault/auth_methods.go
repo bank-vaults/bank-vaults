@@ -17,6 +17,7 @@ package vault
 import (
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"strings"
 
@@ -245,9 +246,26 @@ func (v *vault) configureGithubMappings(path string, mappings map[string]interfa
 	return nil
 }
 
+// configKeyAwsIdentityIntegration is the config key for AWS identity
+const configKeyAwsIdentityIntegration = "aws-identity-integration"
+
+// filterAwsClientConfig returns a copy of config without keys that are
+// handled separately (e.g. aws-identity-integration)
+func filterAwsClientConfig(config map[string]interface{}) map[string]interface{} {
+	filtered := maps.Clone(config)
+	if filtered == nil {
+		filtered = map[string]interface{}{}
+	}
+	delete(filtered, configKeyAwsIdentityIntegration)
+	return filtered
+}
+
 func (v *vault) configureAwsConfig(path string, config map[string]interface{}) error {
 	// https://www.vaultproject.io/api/auth/aws/index.html
-	_, err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config/client", path), config)
+	// Always write the filtered client config, even when it is empty, so the
+	// configurer can clear any previously-set auth/{path}/config/client values
+	// in Vault while still excluding keys handled by other endpoints.
+	_, err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config/client", path), filterAwsClientConfig(config))
 	if err != nil {
 		return errors.Wrap(err, "error putting aws config into vault")
 	}
@@ -445,14 +463,14 @@ func (v *vault) addManagedAuthMethods(managedAuths []auth) error {
 			for configOption, configDataRaw := range authMethod.Config {
 				slog.Debug(fmt.Sprintf("Handling auth method config option: %s", configOption))
 				switch configOption {
-				case "aws-identity-integration":
+				case configKeyAwsIdentityIntegration:
 					configData, err := cast.ToStringMapE(configDataRaw)
 					if err != nil {
 						return errors.Wrap(err, "error converting configDataRaw for aws-identity-integration configuration")
 					}
 					err = v.configureAwsIdentityIntegration(authMethod.Path, configData)
 					if err != nil {
-						return errors.Wrap(err, "error configuring plugin identity integration")
+						return errors.Wrap(err, "error configuring aws identity integration")
 					}
 				default:
 					continue
