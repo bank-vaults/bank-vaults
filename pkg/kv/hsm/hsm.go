@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/x509"
 	"fmt"
 	"log/slog"
@@ -114,7 +115,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 
 	log.Info(fmt.Sprintf("HSM TokenInfo %+v", tokenInfo))
 
-	bestMechanism := pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)
+	bestMechanism := pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_OAEP, pkcs11.NewOAEPParams(pkcs11.CKM_SHA_1, pkcs11.CKG_MGF1_SHA1, pkcs11.CKZ_DATA_SPECIFIED, nil))
 
 	// // TODO find the best mechanism the HSM supports
 	// mechanisms, err := slot.Mechanisms()
@@ -202,7 +203,7 @@ func New(config Config, storage kv.Service) (kv.Service, error) {
 		}
 
 		encrypt = func(plaintext []byte) ([]byte, error) {
-			return rsa.EncryptPKCS1v15(rand.Reader, publicKey, plaintext)
+			return rsa.EncryptOAEP(sha1.New(), rand.Reader, publicKey, plaintext, nil)
 		}
 	} else {
 		encrypt = func(plaintext []byte) ([]byte, error) {
