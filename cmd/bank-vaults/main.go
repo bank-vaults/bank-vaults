@@ -76,7 +76,10 @@ const (
 	cfgAWS3SSEAlgo = "aws-s3-sse-algo"
 )
 
-const cfgAzureKeyVaultName = "azure-key-vault-name"
+const (
+	cfgAzureKeyVaultName   = "azure-key-vault-name"
+	cfgAzureKeyVaultPrefix = "azure-key-vault-prefix"
+)
 
 const (
 	cfgOciKeyOCID               = "oci-key-ocid"
@@ -244,6 +247,7 @@ func init() {
 
 	// Azure Key Vault flags
 	configStringVar(rootCmd, cfgAzureKeyVaultName, "", "The name of the Azure Key Vault to encrypt and store values in")
+	configStringVar(rootCmd, cfgAzureKeyVaultPrefix, "", "The prefix to use for secret names in Azure Key Vault")
 
 	// OCI Key flags
 	configStringVar(rootCmd, cfgOciKeyOCID, "", "The Oracle key OCID to use")

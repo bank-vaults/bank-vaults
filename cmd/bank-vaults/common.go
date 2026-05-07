@@ -185,7 +185,7 @@ func kvStoreForConfig(ctx context.Context, cfg *viper.Viper) (kv.Service, error)
 		return multi.New(services), nil
 
 	case cfgModeValueAzureKeyVault:
-		akv, err := azurekv.New(cfg.GetString(cfgAzureKeyVaultName))
+		akv, err := azurekv.New(cfg.GetString(cfgAzureKeyVaultName), cfg.GetString(cfgAzureKeyVaultPrefix))
 		if err != nil {
 			return nil, errors.Wrap(err, "error creating Azure Key Vault kv store")
 		}

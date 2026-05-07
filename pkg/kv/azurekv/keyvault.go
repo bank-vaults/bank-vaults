@@ -43,6 +43,7 @@ const AzureAuthLocation = "AZURE_AUTH_LOCATION"
 // and decrypts and stores data using Azure Key Vault.
 type azureKeyVault struct {
 	client *azsecrets.Client
+	prefix string
 }
 
 type AuthConfig struct {
@@ -53,8 +54,10 @@ type AuthConfig struct {
 
 var _ kv.Service = &azureKeyVault{}
 
-// New creates a new kv.Service backed by Azure Key Vault
-func New(name string) (kv.Service, error) {
+// New creates a new kv.Service backed by Azure Key Vault.
+// The prefix is prepended to all secret names, allowing multiple
+// clients to share the same Key Vault without collisions.
+func New(name, prefix string) (kv.Service, error) {
 	if name == "" {
 		return nil, errors.Errorf("invalid Key Vault specified: '%s'", name)
 	}
@@ -72,11 +75,12 @@ func New(name string) (kv.Service, error) {
 
 	return &azureKeyVault{
 		client: client,
+		prefix: prefix,
 	}, nil
 }
 
 func (a *azureKeyVault) Get(ctx context.Context, key string) ([]byte, error) {
-	bundle, err := a.client.GetSecret(ctx, key, "", nil)
+	bundle, err := a.client.GetSecret(ctx, a.prefix+key, "", nil)
 	if err != nil {
 		var aerr *azcore.ResponseError
 		if errors.As(err, &aerr) && aerr.StatusCode == http.StatusNotFound {
@@ -91,7 +95,7 @@ func (a *azureKeyVault) Get(ctx context.Context, key string) ([]byte, error) {
 
 func (a *azureKeyVault) Set(ctx context.Context, key string, val []byte) error {
 	value := string(val)
-	_, err := a.client.SetSecret(ctx, key, azsecrets.SetSecretParameters{Value: &value}, nil)
+	_, err := a.client.SetSecret(ctx, a.prefix+key, azsecrets.SetSecretParameters{Value: &value}, nil)
 	return errors.Wrapf(err, "failed to set key: %s", key)
 }
 
