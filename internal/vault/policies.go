@@ -43,7 +43,7 @@ func initPoliciesConfig(policiesConfig []policy, mounts map[string]*api.MountOut
 
 	for i := range policiesConfig {
 		policy := &policiesConfig[i]
-		
+
 		// Replace accessor placeholders
 		for _, mountPath := range mountPaths {
 			placeholder := fmt.Sprintf("__accessor__%s", strings.TrimSuffix(mountPath, "/"))
@@ -56,8 +56,8 @@ func initPoliciesConfig(policiesConfig []policy, mounts map[string]*api.MountOut
 			if _, parseErr := hcl.Parse(policy.Rules); parseErr != nil {
 				return nil, fmt.Errorf("parsing %s policy rules: %w", policy.Name, parseErr)
 			}
-			slog.Debug("could not HCL-format policy rules (may be JSON)", 
-				"policy", policy.Name, 
+			slog.Debug("could not HCL-format policy rules (may be JSON)",
+				"policy", policy.Name,
 				"error", err)
 			formatted = []byte(policy.Rules)
 		}
@@ -95,13 +95,19 @@ func (v *vault) getExistingPolicies() (map[string]bool, error) {
 	return existingPolicies, nil
 }
 
+// builtInPolicies are policies Vault provides out of the box and refuses to
+// delete via the API. Attempting to delete them returns HTTP 400.
+// "default-ceiling" was introduced in Vault 2.0.
+var builtInPolicies = []string{"root", "default", "default-ceiling"}
+
 // getUnmanagedPolicies gets unmanaged policies by comparing what's already in Vault and what's in the externalConfig.
 func (v *vault) getUnmanagedPolicies(managedPolicies []policy) map[string]bool {
 	unmanagedPolicies, _ := v.getExistingPolicies()
 
-	// Vault doesn't allow to remove default or root policies.
-	delete(unmanagedPolicies, "root")
-	delete(unmanagedPolicies, "default")
+	// Vault doesn't allow removing built-in policies.
+	for _, builtIn := range builtInPolicies {
+		delete(unmanagedPolicies, builtIn)
+	}
 
 	// Remove managed polices form the items since the reset will be removed.
 	for _, managedPolicy := range managedPolicies {

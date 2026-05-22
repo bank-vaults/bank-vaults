@@ -174,15 +174,20 @@ func (v *vault) getExistingSecretsEngines() (map[string]bool, error) {
 	return existingSecretsEngines, nil
 }
 
+// builtInSecretsEngines are mounts Vault provides out of the box and refuses
+// to unmount via the API. Attempting to unmount them returns HTTP 400.
+// "agent-registry" was introduced in Vault 2.0.
+var builtInSecretsEngines = []string{"sys", "identity", "cubbyhole", "agent-registry"}
+
 // getUnmanagedSecretsEngines gets unmanaged secrets engines by comparing what's already in Vault
 // and what's in the externalConfig.
 func (v *vault) getUnmanagedSecretsEngines(managedSecretsEngines []secretEngine) map[string]bool {
 	unmanagedSecretsEngines, _ := v.getExistingSecretsEngines()
 
-	// Ignore system mounts.
-	delete(unmanagedSecretsEngines, "sys")
-	delete(unmanagedSecretsEngines, "identity")
-	delete(unmanagedSecretsEngines, "cubbyhole")
+	// Ignore system mounts that Vault refuses to unmount.
+	for _, builtIn := range builtInSecretsEngines {
+		delete(unmanagedSecretsEngines, builtIn)
+	}
 
 	// Remove managed secret engine form the items since the reset will be removed.
 	for _, managedSecretEngine := range managedSecretsEngines {

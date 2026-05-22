@@ -17,7 +17,7 @@ audit:
   - path: audit_bar
     type: file
     options:
-      file_path: /tmp/foo.log
+      file_path: /tmp/bar.log
   # The "path" would be defaulted to "type".
   - type: file
     options:
