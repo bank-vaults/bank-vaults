@@ -45,10 +45,15 @@ func main() {
 	var filename string
 	var delimiters string
 	var templates arrayFlags
+	var fileMode uint
 
 	flag.StringVar(&delimiters, "delims", "${:}", "delimiters delimited by :")
 	flag.StringVar(&filename, "file", "/vault/config/vault.json", "the destination file templated from VAULT_LOCAL_CONFIG")
 	flag.Var(&templates, "template", "template filename pairs delimited by :")
+	// Default is 0o640 so files written here can be read by other containers in the
+	// same pod via a shared fsGroup. Override to 0o600 if running single-container,
+	// or to 0o644 if the consumer runs without a shared group.
+	flag.UintVar(&fileMode, "mode", 0o640, "file mode (octal) for output files")
 	flag.Parse()
 
 	delimitersArray := strings.Split(delimiters, ":")
@@ -56,6 +61,8 @@ func main() {
 		slog.Error("delims must be two mnemonics delimited by a :")
 		os.Exit(1)
 	}
+
+	outMode := os.FileMode(fileMode)
 
 	leftDelimiter := delimitersArray[0]
 	rightDelimiter := delimitersArray[1]
@@ -69,7 +76,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		err = os.WriteFile(filename, buffer.Bytes(), 0o600)
+		err = os.WriteFile(filename, buffer.Bytes(), outMode)
 		if err != nil {
 			slog.Error(fmt.Sprintf("error writing template file: %s", err.Error()))
 			os.Exit(1)
@@ -96,7 +103,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			err = os.WriteFile(destination, templatedText.Bytes(), 0o600)
+			err = os.WriteFile(destination, templatedText.Bytes(), outMode)
 			if err != nil {
 				slog.Error(fmt.Sprintf("error writing template file %q: %s", destination, err.Error()))
 				os.Exit(1)
