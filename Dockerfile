@@ -2,6 +2,8 @@ FROM --platform=$BUILDPLATFORM tonistiigi/xx:1.9.0@sha256:c64defb9ed5a91eacb37f9
 
 FROM --platform=$BUILDPLATFORM golang:1.26-alpine3.22@sha256:727cfc3c40be55cd1bc9a4a059406b28a059857e3be752aa9d09531e12c20c56 AS builder
 
+# xx ships its cross-compilation helpers across the whole filesystem
+# hadolint ignore=DL3067
 COPY --from=xx / /
 
 RUN apk add --update --no-cache ca-certificates make git curl clang lld
