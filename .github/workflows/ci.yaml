@@ -95,7 +95,7 @@ jobs:
         run: make lint-go
 
       - name: Run Hadolint
-        uses: hadolint/hadolint-action@v3.3.0
+        uses: hadolint/hadolint-action@v3.4.0
         with:
           dockerfile: Dockerfile
           config: .hadolint.yaml
