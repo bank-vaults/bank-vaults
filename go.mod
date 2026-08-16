@@ -5,7 +5,7 @@ go 1.26.3
 require (
 	cloud.google.com/go/storage v1.64.0
 	emperror.dev/errors v0.8.1
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.22.0
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.23.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.14.0
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.5.0
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
