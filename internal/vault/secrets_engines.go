@@ -49,8 +49,10 @@ var secretEnginesWithoutNameConfig = map[string]bool{
 
 // This object is used to easily find fields in secret engines that contain potentially templated expressions
 type secretEngineTemplatedConfig struct {
-	AllowedDomains []string               `mapstructure:"allowed_domains"`
-	Other          map[string]interface{} `mapstructure:",remain"`
+	AllowedDomains   []string               `mapstructure:"allowed_domains"`
+	AllowedUriSans   []string               `mapstructure:"allowed_uri_sans"`
+	AllowedOtherSans []string               `mapstructure:"allowed_other_sans"`
+	Other            map[string]interface{} `mapstructure:",remain"`
 }
 
 type secretEngine struct {
@@ -303,6 +305,24 @@ func (v *vault) addManagedSecretsEngines(ctx context.Context, managedSecretsEngi
 					pkiRole.AllowedDomains = templatedDomains
 					subConfigData = pkiRole.Other
 					subConfigData["allowed_domains"] = pkiRole.AllowedDomains
+
+					// Substitute auth mount accessors in URI and other SAN fields, mirroring allowed_domains.
+					// This allows PKI roles to use {{identity.entity.aliases.<accessor>.metadata.*}} templating
+					// in allowed_uri_sans / allowed_other_sans without hardcoding the generated accessor.
+					if len(pkiRole.AllowedUriSans) > 0 {
+						templatedUriSans := []string{}
+						for _, san := range pkiRole.AllowedUriSans {
+							templatedUriSans = append(templatedUriSans, replaceAccessor(san, mounts))
+						}
+						subConfigData["allowed_uri_sans"] = templatedUriSans
+					}
+					if len(pkiRole.AllowedOtherSans) > 0 {
+						templatedOtherSans := []string{}
+						for _, san := range pkiRole.AllowedOtherSans {
+							templatedOtherSans = append(templatedOtherSans, replaceAccessor(san, mounts))
+						}
+						subConfigData["allowed_other_sans"] = templatedOtherSans
+					}
 				} else {
 					// If the object could not be cast into a secretEngineTemplatedConfig,
 					// subConfigData will just be initialized from the subConfigDataRaw
