@@ -459,6 +459,34 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 	return errors.New("vault hasn't joined raft cluster")
 }
 
+// decodeExternalConfig decodes a single configuration file.
+//
+// Every file passed with --vault-config-file is decoded on its own. Seeding the
+// decoder with the previously applied configuration used to make mapstructure
+// merge the two: slices are merged index by index, so `auth[0]` of one file was
+// decoded into `auth[0]` of another, producing entries with the type of one file
+// and the path of the other.
+func decodeExternalConfig(config map[string]interface{}) (*externalConfig, error) {
+	var loadedConfig externalConfig
+
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		// ErrorUnused is used for safety to avoid mistakes like typos in the config keys, which could lead to deletion
+		// in Vault if the purge config is enabled.
+		ErrorUnused:      true,
+		WeaklyTypedInput: true,
+		Result:           &loadedConfig,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating externalConfig decoder")
+	}
+
+	if err := decoder.Decode(config); err != nil {
+		return nil, errors.Wrap(err, "error decoding externalConfig")
+	}
+
+	return &loadedConfig, nil
+}
+
 func (v *vault) Configure(ctx context.Context, config map[string]interface{}) error {
 	var rootToken []byte
 
@@ -561,30 +589,14 @@ func (v *vault) Configure(ctx context.Context, config map[string]interface{}) er
 	defer v.cl.SetToken("")
 	defer func() { rootToken = nil }()
 
-	// Deep copy current vault externalConfig
-	var loadedConfig externalConfig
-	if err := mapstructure.Decode(v.externalConfig, &loadedConfig); err != nil {
-		return errors.Wrap(err, "error while copying externalConfig")
-	}
-
-	// Load and merge config from input
-	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		// ErrorUnused is used for safety to avoid mistakes like typos in the config keys, which could lead to deletion
-		// in Vault if the purge config is enabled.
-		ErrorUnused:      true,
-		WeaklyTypedInput: true,
-		Result:           &loadedConfig,
-	})
+	// Load the configuration of this file
+	loadedConfig, err := decodeExternalConfig(config)
 	if err != nil {
-		return errors.Wrap(err, "error creating externalConfig decoder")
-	}
-
-	if err = decoder.Decode(config); err != nil {
-		return errors.Wrap(err, "error decoding externalConfig")
+		return err
 	}
 
 	// Update vault externalConfig with loaded data
-	v.externalConfig = &loadedConfig
+	v.externalConfig = loadedConfig
 
 	if err = v.configureAuditDevices(); err != nil {
 		return errors.Wrap(err, "error configuring audit devices for vault")
