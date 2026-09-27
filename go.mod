@@ -17,7 +17,7 @@ require (
 	github.com/bank-vaults/vault-sdk v0.12.0
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/hashicorp/go-uuid v1.0.3
+	github.com/hashicorp/go-uuid v1.0.4
 	github.com/hashicorp/hcl v1.0.1-vault-7
 	github.com/hashicorp/vault/api v1.23.0
 	github.com/jpillora/backoff v1.0.0
