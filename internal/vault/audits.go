@@ -99,7 +99,7 @@ func (v *vault) addManagedAudits(managedAudits []audit) error {
 
 // Disables any audit that's not managed if purgeUnmanagedConfig option is enabled, otherwise it leaves them
 func (v *vault) removeUnmanagedAudits(unmanagedAudits map[string]bool) error {
-	if len(unmanagedAudits) == 0 || !v.externalConfig.PurgeUnmanagedConfig.Enabled || v.externalConfig.PurgeUnmanagedConfig.Exclude.Audit {
+	if len(unmanagedAudits) == 0 || !v.managed.PurgeUnmanagedConfig.Enabled || v.managed.PurgeUnmanagedConfig.Exclude.Audit {
 		return nil
 	}
 
@@ -119,7 +119,8 @@ func (v *vault) configureAuditDevices() error {
 		return errors.Wrap(err, "error configuring managed audits")
 	}
 
-	if err := v.removeUnmanagedAudits(v.getUnmanagedAudits(managedAudits)); err != nil {
+	// Keep the audit devices of every loaded config file
+	if err := v.removeUnmanagedAudits(v.getUnmanagedAudits(initAuditConfig(v.managed.Audit))); err != nil {
 		return errors.Wrap(err, "error while disabling unmanaged auth methods")
 	}
 
