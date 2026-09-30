@@ -50,7 +50,8 @@ type Vault interface {
 	Unseal(ctx context.Context) error
 	Leader() (bool, error)
 	LeaderAddress() (string, error)
-	Configure(ctx context.Context, config map[string]interface{}) error
+	LoadConfig(path string, config map[string]interface{}) error
+	Configure(ctx context.Context, path string, config map[string]interface{}) error
 }
 type KVService interface {
 	Set(ctx context.Context, key string, value []byte) error
@@ -124,6 +125,13 @@ type vault struct {
 	config         *Config
 	externalConfig *externalConfig
 	rotateCache    map[string]bool
+
+	// configFiles lists the loaded config files in the order they were loaded,
+	// loadedConfigs holds their latest version (nil when it cannot be decoded).
+	configFiles   []string
+	loadedConfigs map[string]*externalConfig
+	// managed is what every loaded file declares, kept by the purge.
+	managed *externalConfig
 }
 
 // New returns a new vault Vault, or an error.
@@ -139,6 +147,8 @@ func New(ctx context.Context, k KVService, cl *api.Client, config Config) (Vault
 		config:         &config,
 		rotateCache:    map[string]bool{},
 		externalConfig: &externalConfig{},
+		loadedConfigs:  map[string]*externalConfig{},
+		managed:        &externalConfig{},
 	}, nil
 }
 
@@ -487,7 +497,7 @@ func decodeExternalConfig(config map[string]interface{}) (*externalConfig, error
 	return &loadedConfig, nil
 }
 
-func (v *vault) Configure(ctx context.Context, config map[string]interface{}) error {
+func (v *vault) Configure(ctx context.Context, path string, config map[string]interface{}) error {
 	var rootToken []byte
 
 	slog.Debug("retrieving key from kms service...")
@@ -589,14 +599,15 @@ func (v *vault) Configure(ctx context.Context, config map[string]interface{}) er
 	defer v.cl.SetToken("")
 	defer func() { rootToken = nil }()
 
-	// Load the configuration of this file
-	loadedConfig, err := decodeExternalConfig(config)
+	// Load the configuration of this file, it replaces its previous version
+	err := v.LoadConfig(path, config)
 	if err != nil {
 		return err
 	}
 
-	// Update vault externalConfig with loaded data
-	v.externalConfig = loadedConfig
+	// Apply the configuration of this file, and purge what no loaded file declares
+	v.externalConfig = v.loadedConfigs[path]
+	v.managed = v.managedConfig()
 
 	if err = v.configureAuditDevices(); err != nil {
 		return errors.Wrap(err, "error configuring audit devices for vault")

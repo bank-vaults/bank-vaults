@@ -100,7 +100,15 @@ var configureCmd = &cobra.Command{
 		configurations := make(chan *configFile, len(vaultConfigFiles))
 		for i, vaultConfigFile := range vaultConfigFiles {
 			vaultConfigFiles[i] = filepath.Clean(vaultConfigFile)
-			configurations <- parseConfiguration(parser, vaultConfigFile)
+			config := parseConfiguration(parser, vaultConfigFile)
+
+			// Load every file before applying the first one, so that it does not
+			// purge what the following ones declare
+			if err := v.LoadConfig(config.Path, config.Data); err != nil {
+				slog.Error(fmt.Sprintf("error loading vault config file: %s", err.Error()))
+			}
+
+			configurations <- config
 		}
 
 		if !runOnce {
@@ -145,7 +153,7 @@ var configureCmd = &cobra.Command{
 					}
 					slog.Info("vault is unsealed, configuring...")
 
-					if err = v.Configure(ctx, config.Data); err != nil {
+					if err = v.Configure(ctx, config.Path, config.Data); err != nil {
 						slog.Error(fmt.Sprintf("error configuring vault: %s", err.Error()))
 						if errorFatal {
 							os.Exit(1)

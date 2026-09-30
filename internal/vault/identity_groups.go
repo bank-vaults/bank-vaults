@@ -215,7 +215,7 @@ func (v *vault) addManagedGroups(managedGroups []group) error {
 }
 
 func (v *vault) removeUnmanagedGroups(managedGroups []group) error {
-	if !v.externalConfig.PurgeUnmanagedConfig.Enabled || v.externalConfig.PurgeUnmanagedConfig.Exclude.Groups {
+	if !v.managed.PurgeUnmanagedConfig.Enabled || v.managed.PurgeUnmanagedConfig.Exclude.Groups {
 		slog.Debug("purge config is disabled, no unmanaged groups will be removed")
 		return nil
 	}
@@ -316,7 +316,7 @@ func getUnmanagedGroupAliases(existingGroupAliases map[string]string, managedGro
 }
 
 func (v *vault) removeUnmanagedGroupAliases(managedGroupAliases []groupAlias) error {
-	if !v.externalConfig.PurgeUnmanagedConfig.Enabled || v.externalConfig.PurgeUnmanagedConfig.Exclude.GroupAliases {
+	if !v.managed.PurgeUnmanagedConfig.Enabled || v.managed.PurgeUnmanagedConfig.Exclude.GroupAliases {
 		slog.Debug("purge config is disabled, no unmanaged group-alias will be removed")
 		return nil
 	}
@@ -327,8 +327,8 @@ func (v *vault) removeUnmanagedGroupAliases(managedGroupAliases []groupAlias) er
 	}
 	unmanagedGroupAliases := getUnmanagedGroupAliases(existingGroupAliases, managedGroupAliases)
 
-	slog.Info(fmt.Sprintf("removing group-aliases ... %T", unmanagedGroupAliases))
 	for unmanagedGroupAliasName, unmanagedGroupAliasID := range unmanagedGroupAliases {
+		slog.Info(fmt.Sprintf("removing group-alias %s", unmanagedGroupAliasName))
 		_, err := v.cl.Logical().Delete("identity/group-alias/id/" + unmanagedGroupAliasID)
 		if err != nil {
 			return errors.Wrapf(err, "error removing group-alias %s with ID %s from vault",
@@ -354,11 +354,12 @@ func (v *vault) configureIdentityGroups() error {
 		return errors.Wrap(err, "error while adding groups aliases")
 	}
 
-	if err := v.removeUnmanagedGroups(managedGroups); err != nil {
+	// Keep the groups and group aliases of every loaded config file
+	if err := v.removeUnmanagedGroups(v.managed.Groups); err != nil {
 		return errors.Wrap(err, "error while removing groups")
 	}
 
-	if err := v.removeUnmanagedGroupAliases(managedGroupAliases); err != nil {
+	if err := v.removeUnmanagedGroupAliases(v.managed.GroupAliases); err != nil {
 		return errors.Wrap(err, "error while removing group aliases")
 	}
 
