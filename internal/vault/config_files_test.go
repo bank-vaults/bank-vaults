@@ -115,6 +115,15 @@ func policyNames(policies []policy) []string {
 	return names
 }
 
+func secretsEnginePaths(secrets []secretEngine) []string {
+	paths := []string{}
+	for _, s := range initSecretsEnginesConfig(secrets) {
+		paths = append(paths, s.Path)
+	}
+
+	return paths
+}
+
 // Every file passed with --vault-config-file is applied on its own, but the
 // purge must keep what any of them declares: applying the base file must not
 // remove the oidc auth method, and applying the oidc file must not remove the
@@ -227,4 +236,58 @@ auth:
 	assert.Empty(t, managed.Groups, "the group was removed from base.yml")
 	assert.Len(t, managed.GroupAliases, 1, "oidc.yml still declares the group alias")
 	assert.False(t, managed.PurgeUnmanagedConfig.Exclude.Secrets, "the exclusion was removed from base.yml")
+}
+
+// Example of https://github.com/bank-vaults/bank-vaults/issues/3936: a file
+// applied again with an engine inserted in the middle of the secrets list. The
+// inserted engine must not inherit the configuration of the engine previously
+// at its index.
+func TestLoadConfigDoesNotMergeListEntriesOnReload(t *testing.T) {
+	v := newConfigFilesTestVault(t)
+
+	require.NoError(t, v.LoadConfig("vault-config.yml", parseTestConfig(t, `
+secrets:
+  - path: first
+    type: kv
+  - path: pki
+    type: pki
+    configuration:
+      roles:
+        - name: default
+          allowed_domains: example.com
+`)))
+
+	require.NoError(t, v.LoadConfig("vault-config.yml", parseTestConfig(t, `
+secrets:
+  - path: first
+    type: kv
+  - path: database
+    type: database
+    configuration:
+      config:
+        - name: mysql
+          plugin_name: mysql-database-plugin
+  - path: pki
+    type: pki
+    configuration:
+      roles:
+        - name: default
+          allowed_domains: example.com
+`)))
+
+	loaded := v.loadedConfigs["vault-config.yml"]
+	require.NotNil(t, loaded)
+	require.Len(t, loaded.Secrets, 3)
+
+	database := loaded.Secrets[1]
+	assert.Equal(t, "database", database.Path)
+	assert.Contains(t, database.Configuration, "config")
+	assert.NotContains(t, database.Configuration, "roles", "a secrets engine must not inherit the configuration of the engine previously at its index")
+
+	pki := loaded.Secrets[2]
+	assert.Equal(t, "pki", pki.Path)
+	assert.Contains(t, pki.Configuration, "roles")
+	assert.NotContains(t, pki.Configuration, "config")
+
+	assert.Equal(t, []string{"first", "database", "pki"}, secretsEnginePaths(v.managedConfig().Secrets))
 }
