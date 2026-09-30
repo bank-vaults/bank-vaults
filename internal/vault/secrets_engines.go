@@ -430,8 +430,8 @@ func (v *vault) addManagedSecretsEngines(ctx context.Context, managedSecretsEngi
 }
 
 func (v *vault) removeUnmanagedSecretsEngines(unmanagedSecretsEngines map[string]bool) error {
-	if len(unmanagedSecretsEngines) == 0 || !v.externalConfig.PurgeUnmanagedConfig.Enabled ||
-		v.externalConfig.PurgeUnmanagedConfig.Exclude.Secrets {
+	if len(unmanagedSecretsEngines) == 0 || !v.managed.PurgeUnmanagedConfig.Enabled ||
+		v.managed.PurgeUnmanagedConfig.Exclude.Secrets {
 		return nil
 	}
 
@@ -451,7 +451,8 @@ func (v *vault) configureSecretsEngines(ctx context.Context) error {
 		return errors.Wrap(err, "error while getting list of auth engines for secret engine configuration")
 	}
 	managedSecretsEngines := initSecretsEnginesConfig(v.externalConfig.Secrets)
-	unmanagedSecretsEngines := v.getUnmanagedSecretsEngines(managedSecretsEngines)
+	// Keep the secrets engines of every loaded config file
+	unmanagedSecretsEngines := v.getUnmanagedSecretsEngines(initSecretsEnginesConfig(v.managed.Secrets))
 
 	if err := v.addManagedSecretsEngines(ctx, managedSecretsEngines, auths); err != nil {
 		return errors.Wrap(err, "error adding secrets engines")

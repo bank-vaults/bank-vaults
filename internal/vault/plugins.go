@@ -128,7 +128,7 @@ func (v *vault) addManagedPlugins(managedPlugins []plugin) error {
 }
 
 func (v *vault) removeUnmanagedPlugins(managedPlugins []plugin) error {
-	if !v.externalConfig.PurgeUnmanagedConfig.Enabled || v.externalConfig.PurgeUnmanagedConfig.Exclude.Plugins {
+	if !v.managed.PurgeUnmanagedConfig.Enabled || v.managed.PurgeUnmanagedConfig.Exclude.Plugins {
 		slog.Debug("purge config is disabled, no unmanaged plugins will be removed")
 		return nil
 	}
@@ -165,7 +165,8 @@ func (v *vault) configurePlugins() error {
 		return errors.Wrap(err, "error while adding plugins")
 	}
 
-	if err := v.removeUnmanagedPlugins(managedPlugins); err != nil {
+	// Keep the plugins of every loaded config file
+	if err := v.removeUnmanagedPlugins(v.managed.Plugins); err != nil {
 		return errors.Wrap(err, "error while removing plugins")
 	}
 

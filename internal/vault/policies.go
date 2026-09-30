@@ -118,7 +118,7 @@ func (v *vault) getUnmanagedPolicies(managedPolicies []policy) map[string]bool {
 }
 
 func (v *vault) removeUnmanagedPolicies(managedPolicies []policy) error {
-	if !v.externalConfig.PurgeUnmanagedConfig.Enabled || v.externalConfig.PurgeUnmanagedConfig.Exclude.Policies {
+	if !v.managed.PurgeUnmanagedConfig.Enabled || v.managed.PurgeUnmanagedConfig.Exclude.Policies {
 		slog.Debug("purge config is disabled, no unmanaged policies will be removed")
 		return nil
 	}
@@ -148,7 +148,8 @@ func (v *vault) configurePolicies() error {
 		return errors.Wrap(err, "error while adding policies")
 	}
 
-	if err := v.removeUnmanagedPolicies(managedPolicies); err != nil {
+	// Keep the policies of every loaded config file
+	if err := v.removeUnmanagedPolicies(v.managed.Policies); err != nil {
 		return errors.Wrap(err, "error while removing policies")
 	}
 
