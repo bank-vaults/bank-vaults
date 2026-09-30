@@ -327,8 +327,8 @@ func (v *vault) removeUnmanagedGroupAliases(managedGroupAliases []groupAlias) er
 	}
 	unmanagedGroupAliases := getUnmanagedGroupAliases(existingGroupAliases, managedGroupAliases)
 
-	slog.Info(fmt.Sprintf("removing group-aliases ... %T", unmanagedGroupAliases))
 	for unmanagedGroupAliasName, unmanagedGroupAliasID := range unmanagedGroupAliases {
+		slog.Info(fmt.Sprintf("removing group-alias %s", unmanagedGroupAliasName))
 		_, err := v.cl.Logical().Delete("identity/group-alias/id/" + unmanagedGroupAliasID)
 		if err != nil {
 			return errors.Wrapf(err, "error removing group-alias %s with ID %s from vault",
