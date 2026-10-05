@@ -97,19 +97,15 @@ var configureCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		configurations := make(chan *configFile, len(vaultConfigFiles))
+		// Files are sent in batches: every file of a batch is loaded before the
+		// first one is applied, so that it does not purge what the following ones declare
+		configurations := make(chan []*configFile, len(vaultConfigFiles))
+		batch := make([]*configFile, 0, len(vaultConfigFiles))
 		for i, vaultConfigFile := range vaultConfigFiles {
 			vaultConfigFiles[i] = filepath.Clean(vaultConfigFile)
-			config := parseConfiguration(parser, vaultConfigFile)
-
-			// Load every file before applying the first one, so that it does not
-			// purge what the following ones declare
-			if err := v.LoadConfig(config.Path, config.Data); err != nil {
-				slog.Error(fmt.Sprintf("error loading vault config file: %s", err.Error()))
-			}
-
-			configurations <- config
+			batch = append(batch, parseConfiguration(parser, vaultConfigFiles[i]))
 		}
+		configurations <- batch
 
 		if !runOnce {
 			go func() {
@@ -131,64 +127,74 @@ var configureCmd = &cobra.Command{
 			Jitter: false,
 		}
 
-		for config := range configurations {
+		apply := func(config *configFile) {
 			slog.Info(fmt.Sprintf("applying config file: %s", config.Path))
-			func() {
-				for {
-					slog.Info("checking if vault is sealed...")
-					sealed, err := v.Sealed()
-					if err != nil {
-						slog.Error(fmt.Sprintf("error checking if vault is sealed: %s, waiting %s before trying again...", err.Error(), unsealConfig.unsealPeriod))
-						time.Sleep(unsealConfig.unsealPeriod)
+			for {
+				slog.Info("checking if vault is sealed...")
+				sealed, err := v.Sealed()
+				if err != nil {
+					slog.Error(fmt.Sprintf("error checking if vault is sealed: %s, waiting %s before trying again...", err.Error(), unsealConfig.unsealPeriod))
+					time.Sleep(unsealConfig.unsealPeriod)
 
-						continue
+					continue
+				}
+
+				// If vault is sealed, we stop here and wait another unsealPeriod
+				if sealed {
+					slog.Info(fmt.Sprintf("vault is sealed, waiting %s before trying again...", unsealConfig.unsealPeriod))
+					time.Sleep(unsealConfig.unsealPeriod)
+
+					continue
+				}
+				slog.Info("vault is unsealed, configuring...")
+
+				if err = v.Configure(ctx, config.Path, config.Data); err != nil {
+					slog.Error(fmt.Sprintf("error configuring vault: %s", err.Error()))
+					if errorFatal {
+						os.Exit(1)
 					}
 
-					// If vault is sealed, we stop here and wait another unsealPeriod
-					if sealed {
-						slog.Info(fmt.Sprintf("vault is sealed, waiting %s before trying again...", unsealConfig.unsealPeriod))
-						time.Sleep(unsealConfig.unsealPeriod)
-
-						continue
-					}
-					slog.Info("vault is unsealed, configuring...")
-
-					if err = v.Configure(ctx, config.Path, config.Data); err != nil {
-						slog.Error(fmt.Sprintf("error configuring vault: %s", err.Error()))
-						if errorFatal {
-							os.Exit(1)
-						}
-
-						failedConfigurationsCount++
-						// Failed configuration handler - Increase the backoff sleep
-						go handleConfigurationError(parser, config.Path, configurations, b.Duration())
-
-						return
-					}
-
-					// On *any* successful configuration reset the backoff
-					b.Reset()
-					successfulConfigurationsCount++
-					slog.Info("successfully configured vault")
+					failedConfigurationsCount++
+					// Failed configuration handler - Increase the backoff sleep
+					go handleConfigurationError(parser, config.Path, configurations, b.Duration())
 
 					return
 				}
-			}()
+
+				// On *any* successful configuration reset the backoff
+				b.Reset()
+				successfulConfigurationsCount++
+				slog.Info("successfully configured vault")
+
+				return
+			}
+		}
+
+		for batch := range configurations {
+			for _, config := range batch {
+				if err := v.LoadConfig(config.Path, config.Data); err != nil {
+					slog.Error(fmt.Sprintf("error loading vault config file: %s", err.Error()))
+				}
+			}
+
+			for _, config := range batch {
+				apply(config)
+			}
 		}
 	},
 }
 
-func handleConfigurationError(parser multiparser.Parser, vaultConfigFile string, configurations chan<- *configFile, sleepTime time.Duration) {
+func handleConfigurationError(parser multiparser.Parser, vaultConfigFile string, configurations chan<- []*configFile, sleepTime time.Duration) {
 	// This handler will sleep for a exponential backoff amount of time and re-inject the failed configuration into the
 	// configurations channel to be re-applied to vault
 	// Eventually consistent model - all recoverable errors (5xx and configs that depend on other configs) will be eventually fixed
 	// non recoverable errors will be retried and keep failing every MAX BACKOFF seconds, increasing the error counters ont he vault-configurator pod.
 	slog.Info(fmt.Sprintf("Failed applying configuration file: %s , sleeping for %s before trying again", vaultConfigFile, sleepTime))
 	time.Sleep(sleepTime)
-	configurations <- parseConfiguration(parser, vaultConfigFile)
+	configurations <- []*configFile{parseConfiguration(parser, vaultConfigFile)}
 }
 
-func watchConfigurations(parser multiparser.Parser, vaultConfigFiles []string, configurations chan<- *configFile) error {
+func watchConfigurations(parser multiparser.Parser, vaultConfigFiles []string, configurations chan<- []*configFile) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return fmt.Errorf("cannot create watcher: %w", err)
@@ -231,12 +237,15 @@ func watchConfigurations(parser multiparser.Parser, vaultConfigFiles []string, c
 			// For Kubernetes configMaps we need to watch for CREATE on the "..data"
 			if event.Op&fsnotify.Write == fsnotify.Write && stringInSlice(vaultConfigFiles, filepath.Clean(event.Name)) {
 				slog.Info(fmt.Sprintf("file has changed: %s", event.Name))
-				configurations <- parseConfiguration(parser, filepath.Clean(event.Name))
+				configurations <- []*configFile{parseConfiguration(parser, filepath.Clean(event.Name))}
 			} else if event.Op&fsnotify.Create == fsnotify.Create && filepath.Base(event.Name) == "..data" {
+				// Every file of the ConfigMap changes at once, send them as one batch
+				var batch []*configFile
 				for _, fileName := range configFileDirs[filepath.Dir(event.Name)] {
 					slog.Info(fmt.Sprintf("ConfigMap has changed, reparsing: %s", fileName))
-					configurations <- parseConfiguration(parser, fileName)
+					batch = append(batch, parseConfiguration(parser, fileName))
 				}
+				configurations <- batch
 			}
 
 		case err := <-watcher.Errors:
