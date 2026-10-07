@@ -87,12 +87,10 @@ func (k *k8sStorage) Set(ctx context.Context, key string, val []byte) error {
 	switch {
 	case k8serrors.IsNotFound(err):
 		secret = &v1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: k.namespace,
-				Name:      k.secret,
-				Labels:    k.labels,
-			},
-			Data: map[string][]byte{key: val},
+			Namespace: k.namespace,
+			Name:      k.secret,
+			Labels:    k.labels,
+			Data:      map[string][]byte{key: val},
 		}
 		if k.ownerReference != nil {
 			secret.SetOwnerReferences([]metav1.OwnerReference{*k.ownerReference})

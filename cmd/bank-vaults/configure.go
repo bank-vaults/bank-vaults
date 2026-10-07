@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -42,7 +43,7 @@ const (
 
 type configFile struct {
 	Path string
-	Data map[string]interface{}
+	Data map[string]any
 }
 
 var configureCmd = &cobra.Command{
@@ -221,7 +222,7 @@ func watchConfigurations(parser multiparser.Parser, vaultConfigFiles []string, c
 			// we only care about the config file or the ConfigMap directory (if in Kubernetes)
 			// For real Files we only need to watch the WRITE Event # TODO: Sometimes it triggers 2 WRITE when a file is edited and saved
 			// For Kubernetes configMaps we need to watch for CREATE on the "..data"
-			if event.Op&fsnotify.Write == fsnotify.Write && stringInSlice(vaultConfigFiles, filepath.Clean(event.Name)) {
+			if event.Op&fsnotify.Write == fsnotify.Write && slices.Contains(vaultConfigFiles, filepath.Clean(event.Name)) {
 				slog.Info(fmt.Sprintf("file has changed: %s", event.Name))
 				configurations <- parseConfiguration(parser, filepath.Clean(event.Name))
 			} else if event.Op&fsnotify.Create == fsnotify.Create && filepath.Base(event.Name) == "..data" {
@@ -254,7 +255,7 @@ func parseConfiguration(parser multiparser.Parser, vaultConfigFile string) *conf
 	}
 
 	// Load raw data into map
-	var data map[string]interface{}
+	var data map[string]any
 	if err := parser.Parse(buffer.Bytes(), &data); err != nil {
 		slog.Error(fmt.Sprintf("error parsing vault config file: %v", err))
 		os.Exit(1)
@@ -264,15 +265,6 @@ func parseConfiguration(parser multiparser.Parser, vaultConfigFile string) *conf
 		Path: vaultConfigFile,
 		Data: data,
 	}
-}
-
-func stringInSlice(list []string, match string) bool {
-	for _, item := range list {
-		if item == match {
-			return true
-		}
-	}
-	return false
 }
 
 func init() {

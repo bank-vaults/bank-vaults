@@ -33,28 +33,28 @@ type startupSecret struct {
 	Path        string `mapstructure:"path"`
 	MaxVersions *int   `mapstructure:"max_versions"`
 	Data        struct {
-		Data         map[string]interface{}   `mapstructure:"data"`
-		Options      map[string]interface{}   `mapstructure:"options,omitempty"`
-		SecretKeyRef []map[string]interface{} `mapstructure:"secretKeyRef"`
+		Data         map[string]any   `mapstructure:"data"`
+		Options      map[string]any   `mapstructure:"options,omitempty"`
+		SecretKeyRef []map[string]any `mapstructure:"secretKeyRef"`
 	} `mapstructure:"data"`
 }
 
-func getOrDefaultSecretData(ctx context.Context, m interface{}) (map[string]interface{}, error) {
+func getOrDefaultSecretData(ctx context.Context, m any) (map[string]any, error) {
 	values, err := cast.ToSliceE(m)
 	if err != nil {
-		return map[string]interface{}{}, err
+		return map[string]any{}, err
 	}
 
 	c, err := crclient.New(crconfig.GetConfigOrDie(), crclient.Options{})
 	if err != nil {
-		return map[string]interface{}{}, err
+		return map[string]any{}, err
 	}
 
 	secData := map[string]string{}
 	for _, value := range values {
 		keyRef, err := cast.ToStringMapStringE(value)
 		if err != nil {
-			return map[string]interface{}{}, err
+			return map[string]any{}, err
 		}
 
 		secret := &corev1.Secret{}
@@ -63,11 +63,11 @@ func getOrDefaultSecretData(ctx context.Context, m interface{}) (map[string]inte
 			Name:      keyRef["name"],
 		}, secret)
 		if err != nil {
-			return map[string]interface{}{}, err
+			return map[string]any{}, err
 		}
 		secData[keyRef["key"]] = cast.ToString(secret.Data[keyRef["key"]])
 	}
-	data := map[string]interface{}{}
+	data := map[string]any{}
 	data["data"] = secData
 
 	return data, nil
@@ -109,13 +109,13 @@ func vaultKVMaxVersions(secretPath string, secretEngines []secretEngine) *int {
 	return nil
 }
 
-func readStartupSecret(ctx context.Context, startupSecret startupSecret, secretEngines []secretEngine) (string, map[string]interface{}, error) {
+func readStartupSecret(ctx context.Context, startupSecret startupSecret, secretEngines []secretEngine) (string, map[string]any, error) {
 	if len(startupSecret.Data.Data) > 0 && len(startupSecret.Data.SecretKeyRef) > 0 {
 		return "", nil, errors.New("the startup secret data source should be either 'data' or 'secretKeyRef'." +
 			"They are mutually exclusive and cannot be used together")
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"data": startupSecret.Data.Data,
 	}
 	if vaultKVVersion(startupSecret.Path, secretEngines) == "1" {
@@ -133,10 +133,10 @@ func readStartupSecret(ctx context.Context, startupSecret startupSecret, secretE
 	return startupSecret.Path, data, nil
 }
 
-func generateCertPayload(data interface{}) (map[string]interface{}, error) {
+func generateCertPayload(data any) (map[string]any, error) {
 	pkiData, err := cast.ToStringMapStringE(data)
 	if err != nil {
-		return map[string]interface{}{}, errors.Wrap(err, "cast to map[string]string failed")
+		return map[string]any{}, errors.Wrap(err, "cast to map[string]string failed")
 	}
 
 	pkiSlice := []string{}
@@ -145,10 +145,10 @@ func generateCertPayload(data interface{}) (map[string]interface{}, error) {
 	}
 
 	if len(pkiSlice) < 2 {
-		return map[string]interface{}{}, errors.New("missing key or certificate in pki data")
+		return map[string]any{}, errors.New("missing key or certificate in pki data")
 	}
 
-	return map[string]interface{}{"pem_bundle": strings.Join(pkiSlice, "\n")}, nil
+	return map[string]any{"pem_bundle": strings.Join(pkiSlice, "\n")}, nil
 }
 
 func (v *vault) configureStartupSecrets(ctx context.Context) error {
@@ -204,7 +204,7 @@ func (v *vault) handleKVSecret(ctx context.Context, startupSecret startupSecret)
 			return errors.Errorf("cannot derive metadata path for '%s': expected path to contain '/data/'", path)
 		}
 		metadataPath := strings.Replace(path, "/data/", "/metadata/", 1)
-		metadataData := map[string]interface{}{
+		metadataData := map[string]any{
 			"max_versions": *maxVersions,
 		}
 		slog.Info(fmt.Sprintf("setting max_versions=%d for secret %s", *maxVersions, path))

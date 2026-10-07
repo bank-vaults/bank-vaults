@@ -49,21 +49,21 @@ var secretEnginesWithoutNameConfig = map[string]bool{
 
 // This object is used to easily find fields in secret engines that contain potentially templated expressions
 type secretEngineTemplatedConfig struct {
-	AllowedDomains []string               `mapstructure:"allowed_domains"`
-	Other          map[string]interface{} `mapstructure:",remain"`
+	AllowedDomains []string       `mapstructure:"allowed_domains"`
+	Other          map[string]any `mapstructure:",remain"`
 }
 
 type secretEngine struct {
-	Path          string                 `mapstructure:"path"`
-	Type          string                 `mapstructure:"type"`
-	Description   string                 `mapstructure:"description"`
-	Configuration map[string]interface{} `mapstructure:"configuration"`
-	Config        map[string]interface{} `mapstructure:"config"`
-	Options       map[string]string      `mapstructure:"options"`
-	PluginName    string                 `mapstructure:"plugin_name"`
-	Local         bool                   `mapstructure:"local"`
-	SealWrap      bool                   `mapstructure:"seal_wrap"`
-	MaxVersions   *int                   `mapstructure:"max_versions"`
+	Path          string            `mapstructure:"path"`
+	Type          string            `mapstructure:"type"`
+	Description   string            `mapstructure:"description"`
+	Configuration map[string]any    `mapstructure:"configuration"`
+	Config        map[string]any    `mapstructure:"config"`
+	Options       map[string]string `mapstructure:"options"`
+	PluginName    string            `mapstructure:"plugin_name"`
+	Local         bool              `mapstructure:"local"`
+	SealWrap      bool              `mapstructure:"seal_wrap"`
+	MaxVersions   *int              `mapstructure:"max_versions"`
 }
 
 func replaceAccessor(input string, mounts map[string]*api.MountOutput) string {
@@ -289,7 +289,7 @@ func (v *vault) addManagedSecretsEngines(ctx context.Context, managedSecretsEngi
 				return errors.Wrap(err, "error converting config data for secret engine")
 			}
 			for _, subConfigDataRaw := range configData {
-				var subConfigData map[string]interface{}
+				var subConfigData map[string]any
 
 				// If subConfigDataRaw has fields that are supported for templated policies,
 				// it will be cast successfully into secretEngineTemplatedConfig
@@ -321,7 +321,7 @@ func (v *vault) addManagedSecretsEngines(ctx context.Context, managedSecretsEngi
 				// `json: unsupported type: map[interface {}]interface {}`
 				// So check and replace by `map[string]interface{}` before using it.
 				for k, v := range subConfigData {
-					if val, ok := v.(map[interface{}]interface{}); ok {
+					if val, ok := v.(map[any]any); ok {
 						subConfigData[k] = cast.ToStringMap(val)
 					}
 				}

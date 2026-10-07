@@ -28,17 +28,17 @@ import (
 )
 
 type auth struct {
-	Type             string                 `mapstructure:"type"`
-	Path             string                 `mapstructure:"path"`
-	Description      string                 `mapstructure:"description"`
-	UsersOrGroupsKey string                 `mapstructure:"usersOrGroupsKey"`
-	Roles            []interface{}          `mapstructure:"roles"`
-	Users            interface{}            `mapstructure:"users"`
-	Crossaccountrole []interface{}          `mapstructure:"crossaccountrole"`
-	Groups           map[string]interface{} `mapstructure:"groups"`
-	Options          map[string]interface{} `mapstructure:"options"`
-	Map              map[string]interface{} `mapstructure:"map"`
-	Config           map[string]interface{} `mapstructure:"config"`
+	Type             string         `mapstructure:"type"`
+	Path             string         `mapstructure:"path"`
+	Description      string         `mapstructure:"description"`
+	UsersOrGroupsKey string         `mapstructure:"usersOrGroupsKey"`
+	Roles            []any          `mapstructure:"roles"`
+	Users            any            `mapstructure:"users"`
+	Crossaccountrole []any          `mapstructure:"crossaccountrole"`
+	Groups           map[string]any `mapstructure:"groups"`
+	Options          map[string]any `mapstructure:"options"`
+	Map              map[string]any `mapstructure:"map"`
+	Config           map[string]any `mapstructure:"config"`
 }
 
 func initAuthConfig(auths []auth) []auth {
@@ -53,7 +53,7 @@ func initAuthConfig(auths []auth) []auth {
 		// Without this conversion, Vault API will return the following error:
 		// `json: unsupported type: map[interface {}]interface {}`
 		for key, value := range auths[index].Config {
-			if val, ok := value.(map[interface{}]interface{}); ok {
+			if val, ok := value.(map[any]any); ok {
 				auths[index].Config[key] = cast.ToStringMap(val)
 			}
 		}
@@ -66,7 +66,7 @@ func (v *vault) addAdditionalAuthConfig(authMethod auth) error {
 	switch authMethod.Type {
 	case "kubernetes":
 		if authMethod.Config == nil {
-			authMethod.Config = map[string]interface{}{}
+			authMethod.Config = map[string]any{}
 		}
 		config := authMethod.Config
 
@@ -229,7 +229,7 @@ func (v *vault) addAdditionalAuthConfig(authMethod auth) error {
 	return nil
 }
 
-func (v *vault) configureGithubMappings(path string, mappings map[string]interface{}) error {
+func (v *vault) configureGithubMappings(path string, mappings map[string]any) error {
 	for mappingType, mapping := range mappings {
 		mapping, err := cast.ToStringMapStringE(mapping)
 		if err != nil {
@@ -237,7 +237,7 @@ func (v *vault) configureGithubMappings(path string, mappings map[string]interfa
 		}
 
 		for userOrTeam, policy := range mapping {
-			_, err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/map/%s/%s", path, mappingType, userOrTeam), map[string]interface{}{"value": policy})
+			_, err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/map/%s/%s", path, mappingType, userOrTeam), map[string]any{"value": policy})
 			if err != nil {
 				return errors.Wrapf(err, "error putting %s github mapping into vault", mappingType)
 			}
@@ -251,16 +251,16 @@ const configKeyAwsIdentityIntegration = "aws-identity-integration"
 
 // filterAwsClientConfig returns a copy of config without keys that are
 // handled separately (e.g. aws-identity-integration)
-func filterAwsClientConfig(config map[string]interface{}) map[string]interface{} {
+func filterAwsClientConfig(config map[string]any) map[string]any {
 	filtered := maps.Clone(config)
 	if filtered == nil {
-		filtered = map[string]interface{}{}
+		filtered = map[string]any{}
 	}
 	delete(filtered, configKeyAwsIdentityIntegration)
 	return filtered
 }
 
-func (v *vault) configureAwsConfig(path string, config map[string]interface{}) error {
+func (v *vault) configureAwsConfig(path string, config map[string]any) error {
 	// https://www.vaultproject.io/api/auth/aws/index.html
 	// Always write the filtered client config, even when it is empty, so the
 	// configurer can clear any previously-set auth/{path}/config/client values
@@ -273,7 +273,7 @@ func (v *vault) configureAwsConfig(path string, config map[string]interface{}) e
 	return nil
 }
 
-func (v *vault) configureAwsIdentityIntegration(path string, config map[string]interface{}) error {
+func (v *vault) configureAwsIdentityIntegration(path string, config map[string]any) error {
 	// https://developer.hashicorp.com/vault/api-docs/auth/aws#configure-identity-integration
 	_, err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config/identity", path), config)
 	if err != nil {
@@ -283,8 +283,8 @@ func (v *vault) configureAwsIdentityIntegration(path string, config map[string]i
 	return nil
 }
 
-func (v *vault) configureUserpassUsers(path string, users interface{}) error {
-	usersAsserted, _ := users.([]interface{})
+func (v *vault) configureUserpassUsers(path string, users any) error {
+	usersAsserted, _ := users.([]any)
 	for _, userRaw := range usersAsserted {
 		user, err := cast.ToStringMapE(userRaw)
 		if err != nil {
@@ -300,7 +300,7 @@ func (v *vault) configureUserpassUsers(path string, users interface{}) error {
 	return nil
 }
 
-func (v *vault) configureAWSCrossAccountRoles(path string, crossAccountRoles []interface{}) error {
+func (v *vault) configureAWSCrossAccountRoles(path string, crossAccountRoles []any) error {
 	for _, roleInterface := range crossAccountRoles {
 		crossAccountRole, err := cast.ToStringMapE(roleInterface)
 		if err != nil {
@@ -318,7 +318,7 @@ func (v *vault) configureAWSCrossAccountRoles(path string, crossAccountRoles []i
 }
 
 // TODO try to generalize this with configureGenericAuthRoles() fix the type flaw
-func (v *vault) configureJwtRoles(path string, roles []interface{}) error {
+func (v *vault) configureJwtRoles(path string, roles []any) error {
 	for _, roleInterface := range roles {
 		role, err := cast.ToStringMapE(roleInterface)
 		if err != nil {
@@ -344,7 +344,7 @@ func (v *vault) configureJwtRoles(path string, roles []interface{}) error {
 	return nil
 }
 
-func (v *vault) configureGenericUserAndGroupMappings(method, path string, mappingType string, mappings map[string]interface{}) error {
+func (v *vault) configureGenericUserAndGroupMappings(method, path string, mappingType string, mappings map[string]any) error {
 	for userOrGroup, policy := range mappings {
 		mapping, err := cast.ToStringMapE(policy)
 		if err != nil {
@@ -367,7 +367,7 @@ func (v *vault) configureGenericUserAndGroupMappings(method, path string, mappin
 // https://www.vaultproject.io/api/auth/ldap/index.html
 // https://www.vaultproject.io/api/auth/gcp/index.html
 // https://www.vaultproject.io/api/auth/github/index.html
-func (v *vault) configureGenericAuthConfig(method, path string, config map[string]interface{}) error {
+func (v *vault) configureGenericAuthConfig(method, path string, config map[string]any) error {
 	_, err := v.writeWithWarningCheck(fmt.Sprintf("auth/%s/config", path), config)
 	if err != nil {
 		return errors.Wrapf(err, "error putting %s auth config into vault", method)
@@ -383,7 +383,7 @@ func (v *vault) configureGenericAuthConfig(method, path string, config map[strin
 // https://www.vaultproject.io/api/auth/aws/index.html
 // https://www.vaultproject.io/api/auth/approle/index.html
 // https://www.vaultproject.io/api/auth/token/index.html
-func (v *vault) configureGenericAuthRoles(method, path, roleSubPath string, roles []interface{}) error {
+func (v *vault) configureGenericAuthRoles(method, path, roleSubPath string, roles []any) error {
 	for _, roleInterface := range roles {
 		role, err := cast.ToStringMapE(roleInterface)
 		if err != nil {

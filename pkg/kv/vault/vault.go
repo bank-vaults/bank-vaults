@@ -53,8 +53,8 @@ func (v *vaultStorage) Set(ctx context.Context, key string, val []byte) error {
 	// Done to prevent overwrite in Vault
 	if _, err := v.client.RawClient().Logical().WriteWithContext(ctx,
 		fmt.Sprintf("%s/%s", v.path, key),
-		map[string]interface{}{
-			"data": map[string]interface{}{
+		map[string]any{
+			"data": map[string]any{
 				key: val,
 			},
 		},
