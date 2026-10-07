@@ -1,6 +1,6 @@
 module github.com/bank-vaults/bank-vaults
 
-go 1.26.3
+go 1.27.1
 
 require (
 	cloud.google.com/go/storage v1.69.0
