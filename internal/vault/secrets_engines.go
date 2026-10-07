@@ -238,7 +238,7 @@ func (v *vault) addManagedSecretsEngines(ctx context.Context, managedSecretsEngi
 			mountInput := api.MountInput{
 				Type:        secretEngine.Type,
 				Description: secretEngine.Description,
-				PluginName:  secretEngine.PluginName,
+				PluginName:  secretEngine.PluginName, //nolint:staticcheck
 				Config:      mountConfigInput,
 				Options:     mountConfigInput.Options, // options needs to be sent here first time
 				Local:       secretEngine.Local,
