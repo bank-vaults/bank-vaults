@@ -69,9 +69,9 @@ func TestInitAuthConfig(t *testing.T) {
 				{
 					Type: "jwt",
 					Path: "jwt",
-					Config: map[string]interface{}{
+					Config: map[string]any{
 						"oidc_discovery_url": "https://example.com",
-						"provider_config": map[interface{}]interface{}{
+						"provider_config": map[any]any{
 							"provider": "azure",
 						},
 					},
@@ -81,9 +81,9 @@ func TestInitAuthConfig(t *testing.T) {
 				{
 					Type: "jwt",
 					Path: "jwt",
-					Config: map[string]interface{}{
+					Config: map[string]any{
 						"oidc_discovery_url": "https://example.com",
-						"provider_config": map[string]interface{}{
+						"provider_config": map[string]any{
 							"provider": "azure",
 						},
 					},
@@ -108,16 +108,16 @@ func TestInitAuthConfig(t *testing.T) {
 func TestFilterAwsClientConfig(t *testing.T) {
 	tests := []struct {
 		name         string
-		input        map[string]interface{}
+		input        map[string]any
 		expectedKeys []string
 		excludedKeys []string
 	}{
 		{
 			name: "filters out aws-identity-integration",
-			input: map[string]interface{}{
+			input: map[string]any{
 				"access_key": "test-access-key",
 				"secret_key": "test-secret-key",
-				"aws-identity-integration": map[string]interface{}{
+				"aws-identity-integration": map[string]any{
 					"iam_alias": "role_id",
 				},
 			},
@@ -126,7 +126,7 @@ func TestFilterAwsClientConfig(t *testing.T) {
 		},
 		{
 			name: "keeps all standard keys when no special keys present",
-			input: map[string]interface{}{
+			input: map[string]any{
 				"access_key":   "test-access-key",
 				"secret_key":   "test-secret-key",
 				"sts_endpoint": "https://sts.example.com",
@@ -137,7 +137,7 @@ func TestFilterAwsClientConfig(t *testing.T) {
 		},
 		{
 			name:         "handles empty config",
-			input:        map[string]interface{}{},
+			input:        map[string]any{},
 			expectedKeys: []string{},
 			excludedKeys: []string{},
 		},
@@ -154,7 +154,7 @@ func TestFilterAwsClientConfig(t *testing.T) {
 			result := filterAwsClientConfig(tt.input)
 
 			if tt.input == nil {
-				assert.Equal(t, map[string]interface{}{}, result)
+				assert.Equal(t, map[string]any{}, result)
 				return
 			}
 			assert.NotNil(t, result)

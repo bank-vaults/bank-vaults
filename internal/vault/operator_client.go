@@ -50,7 +50,7 @@ type Vault interface {
 	Unseal(ctx context.Context) error
 	Leader() (bool, error)
 	LeaderAddress() (string, error)
-	Configure(ctx context.Context, config map[string]interface{}) error
+	Configure(ctx context.Context, config map[string]any) error
 }
 type KVService interface {
 	Set(ctx context.Context, key string, value []byte) error
@@ -466,7 +466,7 @@ func (v *vault) RaftJoin(leaderAPIAddr string) error {
 // merge the two: slices are merged index by index, so `auth[0]` of one file was
 // decoded into `auth[0]` of another, producing entries with the type of one file
 // and the path of the other.
-func decodeExternalConfig(config map[string]interface{}) (*externalConfig, error) {
+func decodeExternalConfig(config map[string]any) (*externalConfig, error) {
 	var loadedConfig externalConfig
 
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
@@ -487,7 +487,7 @@ func decodeExternalConfig(config map[string]interface{}) (*externalConfig, error
 	return &loadedConfig, nil
 }
 
-func (v *vault) Configure(ctx context.Context, config map[string]interface{}) error {
+func (v *vault) Configure(ctx context.Context, config map[string]any) error {
 	var rootToken []byte
 
 	slog.Debug("retrieving key from kms service...")
@@ -629,7 +629,7 @@ func (v *vault) Configure(ctx context.Context, config map[string]interface{}) er
 	return err
 }
 
-func (v *vault) writeWithWarningCheck(path string, data map[string]interface{}) (*api.Secret, error) {
+func (v *vault) writeWithWarningCheck(path string, data map[string]any) (*api.Secret, error) {
 	sec, err := v.cl.Logical().Write(path, data)
 	if err != nil {
 		return nil, err
