@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
 	"strings"
 
 	"emperror.dev/errors"
@@ -151,6 +152,13 @@ func generateCertPayload(data any) (map[string]any, error) {
 	return map[string]any{"pem_bundle": strings.Join(pkiSlice, "\n")}, nil
 }
 
+// kvEngines returns the secrets engines a startup secret can target: those of
+// its own file first, so they win the ties of matchKVEngine, then those of every
+// loaded file.
+func (v *vault) kvEngines() []secretEngine {
+	return append(slices.Clone(v.externalConfig.Secrets), v.managed.Secrets...)
+}
+
 func (v *vault) configureStartupSecrets(ctx context.Context) error {
 	managedStartupSecrets := v.externalConfig.StartupSecrets
 	for _, startupSecret := range managedStartupSecrets {
@@ -174,7 +182,7 @@ func (v *vault) configureStartupSecrets(ctx context.Context) error {
 }
 
 func (v *vault) handleKVSecret(ctx context.Context, startupSecret startupSecret) error {
-	path, data, err := readStartupSecret(ctx, startupSecret, v.externalConfig.Secrets)
+	path, data, err := readStartupSecret(ctx, startupSecret, v.kvEngines())
 	if err != nil {
 		return errors.Wrap(err, "unable to read 'kv' startup secret")
 	}
@@ -184,7 +192,7 @@ func (v *vault) handleKVSecret(ctx context.Context, startupSecret startupSecret)
 	}
 
 	// Resolve max_versions: startup secret overrides secret engine default
-	maxVersions := vaultKVMaxVersions(startupSecret.Path, v.externalConfig.Secrets)
+	maxVersions := vaultKVMaxVersions(startupSecret.Path, v.kvEngines())
 	if startupSecret.MaxVersions != nil {
 		maxVersions = startupSecret.MaxVersions
 	}
@@ -193,7 +201,7 @@ func (v *vault) handleKVSecret(ctx context.Context, startupSecret startupSecret)
 	// Writing metadata first avoids a partial-success state where data is persisted
 	// but metadata write fails, which could cause repeated reconcile failures.
 	if maxVersions != nil {
-		kvVersion := vaultKVVersion(startupSecret.Path, v.externalConfig.Secrets)
+		kvVersion := vaultKVVersion(startupSecret.Path, v.kvEngines())
 		if kvVersion == "" {
 			return errors.Errorf("max_versions is only supported for KV v2 secrets, but the secret engine configuration for path '%s' is missing or does not specify options.version", path)
 		}
@@ -222,7 +230,7 @@ func (v *vault) handleKVSecret(ctx context.Context, startupSecret startupSecret)
 }
 
 func (v *vault) handlePKISecret(ctx context.Context, startupSecret startupSecret) error {
-	path, data, err := readStartupSecret(ctx, startupSecret, v.externalConfig.Secrets)
+	path, data, err := readStartupSecret(ctx, startupSecret, v.kvEngines())
 	if err != nil {
 		return errors.Wrap(err, "unable to read 'pki' startup secret")
 	}

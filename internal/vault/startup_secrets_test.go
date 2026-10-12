@@ -195,6 +195,7 @@ func newTestVault(t *testing.T, serverURL string, secrets []secretEngine) *vault
 		externalConfig: &externalConfig{
 			Secrets: secrets,
 		},
+		managed: &externalConfig{},
 	}
 }
 
@@ -319,6 +320,43 @@ func TestHandleKVSecret_NoMaxVersions(t *testing.T) {
 
 	// Only 1 write for the secret data, no metadata write
 	assert.Len(t, *writes, 1, "expected only a data write, no metadata write")
+}
+
+// A startup secret can target a secrets engine declared in another config file.
+func TestHandleKVSecret_EngineDeclaredInAnotherFile(t *testing.T) {
+	secret := startupSecret{
+		Type: "kv",
+		Path: "staging/kv/data/app1",
+		Data: struct {
+			Data         map[string]interface{}   `mapstructure:"data"`
+			Options      map[string]interface{}   `mapstructure:"options,omitempty"`
+			SecretKeyRef []map[string]interface{} `mapstructure:"secretKeyRef"`
+		}{
+			Data: map[string]interface{}{"key": "value"},
+		},
+	}
+
+	srv, writes, mu := newFakeVaultServer(t)
+	defer srv.Close()
+
+	v := newTestVault(t, srv.URL, nil)
+	v.managed.Secrets = []secretEngine{
+		{
+			Path:        "staging/kv",
+			Type:        "kv",
+			Options:     map[string]string{"version": "2"},
+			MaxVersions: intPtr(10),
+		},
+	}
+
+	require.NoError(t, v.handleKVSecret(context.Background(), secret))
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	require.Len(t, *writes, 2, "expected a metadata write and a data write")
+	assert.Equal(t, "staging/kv/metadata/app1", (*writes)[0].Path)
+	assert.Equal(t, float64(10), (*writes)[0].Data["max_versions"])
 }
 
 func TestHandleKVSecret_KVv1RejectsMaxVersions(t *testing.T) {
