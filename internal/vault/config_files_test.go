@@ -16,8 +16,13 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"sync"
 	"testing"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/ramizpolic/multiparser"
 	"github.com/ramizpolic/multiparser/parser"
 	"github.com/stretchr/testify/assert"
@@ -304,4 +309,95 @@ secrets:
 	assert.NotContains(t, pki.Configuration, "config")
 
 	assert.Equal(t, []string{"first", "database", "pki"}, secretsEnginePaths(v.managedConfig().Secrets))
+}
+
+type rootTokenStore struct{}
+
+func (rootTokenStore) Set(context.Context, string, []byte) error { return nil }
+
+func (rootTokenStore) Get(context.Context, string) ([]byte, error) { return []byte("root"), nil }
+
+// Applying one file must not purge what another loaded file declares: the oidc
+// auth method, the policy and the secrets engine of other.yml survive applying
+// base.yml, while what no file declares is purged.
+func TestConfigurePurgesOnlyWhatNoFileDeclares(t *testing.T) {
+	data := map[string]interface{}{
+		"/v1/sys/auth": map[string]interface{}{
+			"token/": map[string]interface{}{"type": "token", "accessor": "auth_token_1"},
+			"oidc/":  map[string]interface{}{"type": "oidc", "accessor": "auth_oidc_1"},
+			"stale/": map[string]interface{}{"type": "userpass", "accessor": "auth_userpass_1"},
+		},
+		"/v1/sys/mounts": map[string]interface{}{
+			"sys/":       map[string]interface{}{"type": "system"},
+			"cubbyhole/": map[string]interface{}{"type": "cubbyhole"},
+			"identity/":  map[string]interface{}{"type": "identity"},
+			"app/":       map[string]interface{}{"type": "kv"},
+			"stale/":     map[string]interface{}{"type": "kv"},
+		},
+		"/v1/sys/policies/acl": map[string]interface{}{
+			"keys": []string{"default", "root", "secrets_ro", "oidc_admin", "stale"},
+		},
+		"/v1/sys/audit":           map[string]interface{}{},
+		"/v1/sys/plugins/catalog": map[string]interface{}{},
+	}
+
+	var mu sync.Mutex
+	var deletes []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			mu.Lock()
+			deletes = append(deletes, r.URL.Path)
+			mu.Unlock()
+		}
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		d, ok := data[r.URL.Path]
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"data": d}) //nolint:errcheck
+	}))
+	defer srv.Close()
+
+	cfg := api.DefaultConfig()
+	cfg.Address = srv.URL
+	cl, err := api.NewClient(cfg)
+	require.NoError(t, err)
+
+	vi, err := New(context.Background(), rootTokenStore{}, cl, Config{StoreRootToken: true})
+	require.NoError(t, err)
+	v := vi.(*vault)
+
+	base := parseTestConfig(t, `
+purgeUnmanagedConfig:
+  enabled: true
+policies:
+  - name: secrets_ro
+    rules: path "home/*" { capabilities = ["read"] }
+`)
+	require.NoError(t, v.LoadConfig("base.yml", base))
+	require.NoError(t, v.LoadConfig("other.yml", parseTestConfig(t, `
+auth:
+  - type: oidc
+policies:
+  - name: oidc_admin
+    rules: path "*" { capabilities = ["read"] }
+secrets:
+  - path: app
+    type: kv
+`)))
+
+	require.NoError(t, v.Configure(context.Background(), "base.yml", base))
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.ElementsMatch(t, []string{
+		"/v1/sys/auth/stale",
+		"/v1/sys/mounts/stale",
+		"/v1/sys/policies/acl/stale",
+	}, deletes)
 }
