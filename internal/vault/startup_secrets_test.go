@@ -27,8 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
-
 func TestVaultKVMaxVersions(t *testing.T) {
 	engines := []secretEngine{
 		{Path: "staging/kv", Type: "kv", MaxVersions: new(10)},
@@ -328,11 +326,11 @@ func TestHandleKVSecret_EngineDeclaredInAnotherFile(t *testing.T) {
 		Type: "kv",
 		Path: "staging/kv/data/app1",
 		Data: struct {
-			Data         map[string]interface{}   `mapstructure:"data"`
-			Options      map[string]interface{}   `mapstructure:"options,omitempty"`
-			SecretKeyRef []map[string]interface{} `mapstructure:"secretKeyRef"`
+			Data         map[string]any   `mapstructure:"data"`
+			Options      map[string]any   `mapstructure:"options,omitempty"`
+			SecretKeyRef []map[string]any `mapstructure:"secretKeyRef"`
 		}{
-			Data: map[string]interface{}{"key": "value"},
+			Data: map[string]any{"key": "value"},
 		},
 	}
 

@@ -81,13 +81,13 @@ group-aliases:
     group: "platform:admin"
 `
 
-func parseTestConfig(t *testing.T, content string) map[string]interface{} {
+func parseTestConfig(t *testing.T, content string) map[string]any {
 	t.Helper()
 
 	p, err := multiparser.New(parser.JSON, parser.YAML)
 	require.NoError(t, err)
 
-	var data map[string]interface{}
+	var data map[string]any
 	require.NoError(t, p.Parse([]byte(content), &data))
 
 	return data
@@ -231,24 +231,24 @@ func (rootTokenStore) Get(context.Context, string) ([]byte, error) { return []by
 // auth method, the policy and the secrets engine of other.yml survive applying
 // base.yml, while what no file declares is purged.
 func TestConfigurePurgesOnlyWhatNoFileDeclares(t *testing.T) {
-	data := map[string]interface{}{
-		"/v1/sys/auth": map[string]interface{}{
-			"token/": map[string]interface{}{"type": "token", "accessor": "auth_token_1"},
-			"oidc/":  map[string]interface{}{"type": "oidc", "accessor": "auth_oidc_1"},
-			"stale/": map[string]interface{}{"type": "userpass", "accessor": "auth_userpass_1"},
+	data := map[string]any{
+		"/v1/sys/auth": map[string]any{
+			"token/": map[string]any{"type": "token", "accessor": "auth_token_1"},
+			"oidc/":  map[string]any{"type": "oidc", "accessor": "auth_oidc_1"},
+			"stale/": map[string]any{"type": "userpass", "accessor": "auth_userpass_1"},
 		},
-		"/v1/sys/mounts": map[string]interface{}{
-			"sys/":       map[string]interface{}{"type": "system"},
-			"cubbyhole/": map[string]interface{}{"type": "cubbyhole"},
-			"identity/":  map[string]interface{}{"type": "identity"},
-			"app/":       map[string]interface{}{"type": "kv"},
-			"stale/":     map[string]interface{}{"type": "kv"},
+		"/v1/sys/mounts": map[string]any{
+			"sys/":       map[string]any{"type": "system"},
+			"cubbyhole/": map[string]any{"type": "cubbyhole"},
+			"identity/":  map[string]any{"type": "identity"},
+			"app/":       map[string]any{"type": "kv"},
+			"stale/":     map[string]any{"type": "kv"},
 		},
-		"/v1/sys/policies/acl": map[string]interface{}{
+		"/v1/sys/policies/acl": map[string]any{
 			"keys": []string{"default", "root", "secrets_ro", "oidc_admin", "stale"},
 		},
-		"/v1/sys/audit":           map[string]interface{}{},
-		"/v1/sys/plugins/catalog": map[string]interface{}{},
+		"/v1/sys/audit":           map[string]any{},
+		"/v1/sys/plugins/catalog": map[string]any{},
 	}
 
 	var mu sync.Mutex
@@ -269,7 +269,7 @@ func TestConfigurePurgesOnlyWhatNoFileDeclares(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"data": d}) //nolint:errcheck
+		json.NewEncoder(w).Encode(map[string]any{"data": d}) //nolint:errcheck
 	}))
 	defer srv.Close()
 
