@@ -25,18 +25,17 @@ import (
 // that file, replacing the previous one.
 //
 // Every file is applied on its own, but the purge of unmanaged configuration
-// must keep what any loaded file declares. Loading every file before applying
-// the first one prevents it from purging what the following ones declare.
+// must keep what any loaded file declares. Loading every file of a batch before
+// applying the first one prevents it from purging what the following ones
+// declare. Files reloaded in separate batches (ConfigMaps or Secrets mounted in
+// different directories) are not synchronized: moving a resource from one to
+// the other purges it until the second one is reloaded.
 //
 // A file that cannot be decoded, or that is empty, is kept as invalid: its
 // content is unknown, so the purge is suspended until it is fixed. A file being
 // rewritten in place (O_TRUNC) is read empty before its content lands, and
 // treating it as a valid empty config would purge everything it declares.
 func (v *vault) LoadConfig(path string, config map[string]interface{}) error {
-	if v.loadedConfigs == nil {
-		v.loadedConfigs = map[string]*externalConfig{}
-	}
-
 	if _, ok := v.loadedConfigs[path]; !ok {
 		v.configFiles = append(v.configFiles, path)
 	}
@@ -94,7 +93,6 @@ func (v *vault) managedConfig() *externalConfig {
 		managed.Plugins = append(managed.Plugins, config.Plugins...)
 		managed.Policies = append(managed.Policies, config.Policies...)
 		managed.Secrets = append(managed.Secrets, config.Secrets...)
-		managed.StartupSecrets = append(managed.StartupSecrets, config.StartupSecrets...)
 	}
 
 	return managed

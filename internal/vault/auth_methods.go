@@ -534,7 +534,6 @@ func (v *vault) removeUnmanagedAuthMethods(unmanagedAuths map[string]*api.MountO
 func (v *vault) configureAuthMethods() error {
 	slog.Info("configuring auth methods")
 	managedAuths := initAuthConfig(v.externalConfig.Auth)
-	// Keep the auth methods of every loaded config file
 	unmanagedAuths := v.getUnmanagedAuthMethods(initAuthConfig(v.managed.Auth))
 
 	if err := v.addManagedAuthMethods(managedAuths); err != nil {

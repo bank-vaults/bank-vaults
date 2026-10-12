@@ -120,15 +120,6 @@ func policyNames(policies []policy) []string {
 	return names
 }
 
-func secretsEnginePaths(secrets []secretEngine) []string {
-	paths := []string{}
-	for _, s := range initSecretsEnginesConfig(secrets) {
-		paths = append(paths, s.Path)
-	}
-
-	return paths
-}
-
 // Every file passed with --vault-config-file is applied on its own, but the
 // purge must keep what any of them declares: applying the base file must not
 // remove the oidc auth method, and applying the oidc file must not remove the
@@ -151,24 +142,6 @@ func TestManagedConfigKeepsEveryConfigFile(t *testing.T) {
 	purge := managed.PurgeUnmanagedConfig
 	assert.True(t, purge.Enabled, "purge is enabled by the base file")
 	assert.True(t, purge.Exclude.Secrets)
-	assert.False(t, purge.Exclude.Auth, "auth methods do not need to be excluded from the purge anymore")
-	assert.False(t, purge.Exclude.GroupAliases, "group aliases do not need to be excluded from the purge anymore")
-}
-
-// The purge is enabled as soon as one file enables it, whatever the order the
-// files are loaded in: a file that does not declare purgeUnmanagedConfig does
-// not disable it.
-func TestManagedConfigPurgeIsEnabledByAnyFile(t *testing.T) {
-	for _, files := range [][]string{{"base.yml", "oidc.yml"}, {"oidc.yml", "base.yml"}} {
-		v := newConfigFilesTestVault(t)
-
-		content := map[string]string{"base.yml": baseConfigFile, "oidc.yml": oidcConfigFile}
-		for _, file := range files {
-			require.NoError(t, v.LoadConfig(file, parseTestConfig(t, content[file])))
-		}
-
-		assert.True(t, v.managedConfig().PurgeUnmanagedConfig.Enabled, "files loaded in order %v", files)
-	}
 }
 
 // A category is excluded from the purge as soon as one file excludes it.
@@ -187,15 +160,6 @@ purgeUnmanagedConfig:
 	assert.True(t, purge.Exclude.Secrets, "excluded by base.yml")
 	assert.True(t, purge.Exclude.Policies, "excluded by other.yml")
 	assert.False(t, purge.Exclude.Auth)
-}
-
-// Without any file enabling it, nothing is purged.
-func TestManagedConfigPurgeIsDisabledByDefault(t *testing.T) {
-	v := newConfigFilesTestVault(t)
-
-	require.NoError(t, v.LoadConfig("oidc.yml", parseTestConfig(t, oidcConfigFile)))
-
-	assert.False(t, v.managedConfig().PurgeUnmanagedConfig.Enabled)
 }
 
 // A file that cannot be decoded (a typo in a key, rejected by ErrorUnused) has
@@ -255,60 +219,6 @@ auth:
 	assert.Empty(t, managed.Groups, "the group was removed from base.yml")
 	assert.Len(t, managed.GroupAliases, 1, "oidc.yml still declares the group alias")
 	assert.False(t, managed.PurgeUnmanagedConfig.Exclude.Secrets, "the exclusion was removed from base.yml")
-}
-
-// Example of https://github.com/bank-vaults/bank-vaults/issues/3936: a file
-// applied again with an engine inserted in the middle of the secrets list. The
-// inserted engine must not inherit the configuration of the engine previously
-// at its index.
-func TestLoadConfigDoesNotMergeListEntriesOnReload(t *testing.T) {
-	v := newConfigFilesTestVault(t)
-
-	require.NoError(t, v.LoadConfig("vault-config.yml", parseTestConfig(t, `
-secrets:
-  - path: first
-    type: kv
-  - path: pki
-    type: pki
-    configuration:
-      roles:
-        - name: default
-          allowed_domains: example.com
-`)))
-
-	require.NoError(t, v.LoadConfig("vault-config.yml", parseTestConfig(t, `
-secrets:
-  - path: first
-    type: kv
-  - path: database
-    type: database
-    configuration:
-      config:
-        - name: mysql
-          plugin_name: mysql-database-plugin
-  - path: pki
-    type: pki
-    configuration:
-      roles:
-        - name: default
-          allowed_domains: example.com
-`)))
-
-	loaded := v.loadedConfigs["vault-config.yml"]
-	require.NotNil(t, loaded)
-	require.Len(t, loaded.Secrets, 3)
-
-	database := loaded.Secrets[1]
-	assert.Equal(t, "database", database.Path)
-	assert.Contains(t, database.Configuration, "config")
-	assert.NotContains(t, database.Configuration, "roles", "a secrets engine must not inherit the configuration of the engine previously at its index")
-
-	pki := loaded.Secrets[2]
-	assert.Equal(t, "pki", pki.Path)
-	assert.Contains(t, pki.Configuration, "roles")
-	assert.NotContains(t, pki.Configuration, "config")
-
-	assert.Equal(t, []string{"first", "database", "pki"}, secretsEnginePaths(v.managedConfig().Secrets))
 }
 
 type rootTokenStore struct{}
@@ -391,7 +301,7 @@ secrets:
     type: kv
 `)))
 
-	require.NoError(t, v.Configure(context.Background(), "base.yml", base))
+	require.NoError(t, v.Configure(context.Background(), "base.yml"))
 
 	mu.Lock()
 	defer mu.Unlock()

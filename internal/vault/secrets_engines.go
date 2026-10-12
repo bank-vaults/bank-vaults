@@ -451,7 +451,6 @@ func (v *vault) configureSecretsEngines(ctx context.Context) error {
 		return errors.Wrap(err, "error while getting list of auth engines for secret engine configuration")
 	}
 	managedSecretsEngines := initSecretsEnginesConfig(v.externalConfig.Secrets)
-	// Keep the secrets engines of every loaded config file
 	unmanagedSecretsEngines := v.getUnmanagedSecretsEngines(initSecretsEnginesConfig(v.managed.Secrets))
 
 	if err := v.addManagedSecretsEngines(ctx, managedSecretsEngines, auths); err != nil {

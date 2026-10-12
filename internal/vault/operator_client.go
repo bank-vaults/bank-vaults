@@ -51,7 +51,7 @@ type Vault interface {
 	Leader() (bool, error)
 	LeaderAddress() (string, error)
 	LoadConfig(path string, config map[string]any) error
-	Configure(ctx context.Context, path string, config map[string]any) error
+	Configure(ctx context.Context, path string) error
 }
 type KVService interface {
 	Set(ctx context.Context, key string, value []byte) error
@@ -497,7 +497,14 @@ func decodeExternalConfig(config map[string]any) (*externalConfig, error) {
 	return &loadedConfig, nil
 }
 
-func (v *vault) Configure(ctx context.Context, path string, config map[string]any) error {
+// Configure applies a config file loaded by LoadConfig, and purges what no
+// loaded file declares.
+func (v *vault) Configure(ctx context.Context, path string) error {
+	config := v.loadedConfigs[path]
+	if config == nil {
+		return errors.Errorf("config file %s is not loaded or is invalid", path)
+	}
+
 	var rootToken []byte
 
 	slog.Debug("retrieving key from kms service...")
@@ -599,17 +606,11 @@ func (v *vault) Configure(ctx context.Context, path string, config map[string]an
 	defer v.cl.SetToken("")
 	defer func() { rootToken = nil }()
 
-	// Load the configuration of this file, it replaces its previous version
-	err := v.LoadConfig(path, config)
-	if err != nil {
-		return err
-	}
-
-	// Apply the configuration of this file, and purge what no loaded file declares
-	v.externalConfig = v.loadedConfigs[path]
+	v.externalConfig = config
 	v.managed = v.managedConfig()
 
-	if err = v.configureAuditDevices(); err != nil {
+	err := v.configureAuditDevices()
+	if err != nil {
 		return errors.Wrap(err, "error configuring audit devices for vault")
 	}
 

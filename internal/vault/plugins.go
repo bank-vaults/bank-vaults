@@ -165,7 +165,6 @@ func (v *vault) configurePlugins() error {
 		return errors.Wrap(err, "error while adding plugins")
 	}
 
-	// Keep the plugins of every loaded config file
 	if err := v.removeUnmanagedPlugins(v.managed.Plugins); err != nil {
 		return errors.Wrap(err, "error while removing plugins")
 	}

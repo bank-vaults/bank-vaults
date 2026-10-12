@@ -119,7 +119,6 @@ func (v *vault) configureAuditDevices() error {
 		return errors.Wrap(err, "error configuring managed audits")
 	}
 
-	// Keep the audit devices of every loaded config file
 	if err := v.removeUnmanagedAudits(v.getUnmanagedAudits(initAuditConfig(v.managed.Audit))); err != nil {
 		return errors.Wrap(err, "error while disabling unmanaged auth methods")
 	}

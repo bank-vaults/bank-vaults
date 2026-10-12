@@ -354,7 +354,6 @@ func (v *vault) configureIdentityGroups() error {
 		return errors.Wrap(err, "error while adding groups aliases")
 	}
 
-	// Keep the groups and group aliases of every loaded config file
 	if err := v.removeUnmanagedGroups(v.managed.Groups); err != nil {
 		return errors.Wrap(err, "error while removing groups")
 	}

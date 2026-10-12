@@ -345,7 +345,7 @@ func TestHandleKVSecret_EngineDeclaredInAnotherFile(t *testing.T) {
 			Path:        "staging/kv",
 			Type:        "kv",
 			Options:     map[string]string{"version": "2"},
-			MaxVersions: intPtr(10),
+			MaxVersions: new(10),
 		},
 	}
 

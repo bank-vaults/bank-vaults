@@ -148,7 +148,6 @@ func (v *vault) configurePolicies() error {
 		return errors.Wrap(err, "error while adding policies")
 	}
 
-	// Keep the policies of every loaded config file
 	if err := v.removeUnmanagedPolicies(v.managed.Policies); err != nil {
 		return errors.Wrap(err, "error while removing policies")
 	}
