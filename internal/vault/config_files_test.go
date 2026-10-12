@@ -212,6 +212,20 @@ authh:
 	assert.True(t, v.managedConfig().PurgeUnmanagedConfig.Enabled, "purge must resume once oidc.yml is fixed")
 }
 
+// A file rewritten in place (cat new.yml > file.yml) is read empty before its
+// content lands: it must suspend the purge, not purge everything it declared.
+func TestManagedConfigPurgeIsSuspendedWhileAFileIsEmpty(t *testing.T) {
+	for _, content := range []string{"", "# comment", "null", "---"} {
+		v := newConfigFilesTestVault(t)
+
+		require.NoError(t, v.LoadConfig("base.yml", parseTestConfig(t, baseConfigFile)))
+		require.NoError(t, v.LoadConfig("oidc.yml", parseTestConfig(t, oidcConfigFile)))
+		require.Error(t, v.LoadConfig("oidc.yml", parseTestConfig(t, content)), "content %q", content)
+
+		assert.False(t, v.managedConfig().PurgeUnmanagedConfig.Enabled, "purge must be suspended while oidc.yml is %q", content)
+	}
+}
+
 // A file applied again (daemon mode) replaces its previous version: what it no
 // longer declares is not managed anymore, what the other files declare still is.
 func TestLoadConfigReplacesAReloadedFile(t *testing.T) {
