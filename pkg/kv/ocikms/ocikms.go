@@ -54,10 +54,8 @@ func New(store kv.Service, keyOCID, endpoint string) (kv.Service, error) {
 
 func (oci *ociKms) encrypt(ctx context.Context, b []byte) ([]byte, error) {
 	request := keymanagement.EncryptRequest{
-		EncryptDataDetails: keymanagement.EncryptDataDetails{
-			KeyId:     &oci.keyOCID,
-			Plaintext: common.String(base64.StdEncoding.EncodeToString(b)),
-		},
+		KeyId:     &oci.keyOCID,
+		Plaintext: new(base64.StdEncoding.EncodeToString(b)),
 	}
 	response, err := oci.svc.Encrypt(ctx, request)
 	if err != nil {
@@ -69,10 +67,8 @@ func (oci *ociKms) encrypt(ctx context.Context, b []byte) ([]byte, error) {
 
 func (oci *ociKms) decrypt(ctx context.Context, b []byte) ([]byte, error) {
 	request := keymanagement.DecryptRequest{
-		DecryptDataDetails: keymanagement.DecryptDataDetails{
-			KeyId:      &oci.keyOCID,
-			Ciphertext: common.String(string(b)),
-		},
+		KeyId:      &oci.keyOCID,
+		Ciphertext: new(string(b)),
 	}
 	response, err := oci.svc.Decrypt(ctx, request)
 	if err != nil {

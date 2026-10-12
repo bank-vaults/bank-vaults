@@ -25,10 +25,10 @@ import (
 )
 
 type group struct {
-	Name     string                 `mapstructure:"name"`
-	Type     string                 `mapstructure:"type"`
-	Policies []string               `mapstructure:"policies"`
-	Metadata map[string]interface{} `mapstructure:"metadata"`
+	Name     string         `mapstructure:"name"`
+	Type     string         `mapstructure:"type"`
+	Policies []string       `mapstructure:"policies"`
+	Metadata map[string]any `mapstructure:"metadata"`
 }
 
 type groupAlias struct {
@@ -124,7 +124,7 @@ func findVaultGroupAliasIDFromNameAndMount(name string, accessor string, client 
 		return "", nil
 	}
 
-	for _, alias := range aliases.Data["keys"].([]interface{}) {
+	for _, alias := range aliases.Data["keys"].([]any) {
 		aliasName, err := getVaultGroupAliasName(cast.ToString(alias), client)
 		if err != nil {
 			return "", errors.Wrapf(err, "error fetching name for alias id: %s err", alias)
@@ -189,7 +189,7 @@ func (v *vault) addManagedGroups(managedGroups []group) error {
 			return errors.Errorf("only external groups are supported for now")
 		}
 
-		config := map[string]interface{}{
+		config := map[string]any{
 			"name":     group.Name,
 			"type":     group.Type,
 			"policies": group.Policies,
@@ -254,7 +254,7 @@ func (v *vault) addManagedGroupAliases(managedGroupAliases []groupAlias) error {
 			return errors.Wrapf(err, "error getting canonical_id for group %s", groupAlias.Group)
 		}
 
-		config := map[string]interface{}{
+		config := map[string]any{
 			"name":           groupAlias.Name,
 			"mount_accessor": accessor,
 			"canonical_id":   id,

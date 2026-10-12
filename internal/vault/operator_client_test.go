@@ -26,22 +26,22 @@ import (
 // their `auth` slices index by index: the oidc entry was decoded into the
 // kubernetes entry, and was configured on path "kubernetes".
 func TestDecodeExternalConfigDoesNotMergeFiles(t *testing.T) {
-	kubernetesFile := map[string]interface{}{
-		"auth": []interface{}{
-			map[string]interface{}{
+	kubernetesFile := map[string]any{
+		"auth": []any{
+			map[string]any{
 				"type": "kubernetes",
-				"roles": []interface{}{
-					map[string]interface{}{"name": "eso"},
+				"roles": []any{
+					map[string]any{"name": "eso"},
 				},
 			},
 		},
 	}
 
-	oidcFile := map[string]interface{}{
-		"auth": []interface{}{
-			map[string]interface{}{
+	oidcFile := map[string]any{
+		"auth": []any{
+			map[string]any{
 				"type": "oidc",
-				"config": map[string]interface{}{
+				"config": map[string]any{
 					"oidc_discovery_url": "https://auth.example.com/",
 				},
 			},

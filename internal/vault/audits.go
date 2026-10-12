@@ -25,10 +25,10 @@ import (
 )
 
 type audit struct {
-	Type        string                 `mapstructure:"type"`
-	Path        string                 `mapstructure:"path"`
-	Description string                 `mapstructure:"description"`
-	Options     map[string]interface{} `mapstructure:"options"`
+	Type        string         `mapstructure:"type"`
+	Path        string         `mapstructure:"path"`
+	Description string         `mapstructure:"description"`
+	Options     map[string]any `mapstructure:"options"`
 }
 
 func initAuditConfig(configs []audit) []audit {

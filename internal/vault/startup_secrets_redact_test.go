@@ -31,7 +31,7 @@ func TestGenerateCertPayloadOmitsSecretsFromErrors(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		data      interface{}
+		data      any
 		wantErr   bool
 		forbidden []string
 	}{
@@ -49,7 +49,7 @@ func TestGenerateCertPayloadOmitsSecretsFromErrors(t *testing.T) {
 		},
 		{
 			name: "missing pair keeps PEM out of error",
-			data: map[string]interface{}{
+			data: map[string]any{
 				"certificate": pemCert,
 			},
 			wantErr:   true,
@@ -57,7 +57,7 @@ func TestGenerateCertPayloadOmitsSecretsFromErrors(t *testing.T) {
 		},
 		{
 			name: "valid cert and key",
-			data: map[string]interface{}{
+			data: map[string]any{
 				"certificate": pemCert,
 				"private_key": pemKey,
 			},

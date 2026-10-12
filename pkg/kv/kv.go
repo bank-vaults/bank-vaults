@@ -33,7 +33,7 @@ func (notFoundError) NotFound() bool {
 func (e notFoundError) Error() string { return e.msg }
 
 // NewNotFoundError creates a new NotFoundError
-func NewNotFoundError(msg string, args ...interface{}) error {
+func NewNotFoundError(msg string, args ...any) error {
 	return notFoundError{
 		msg: fmt.Sprintf(msg, args...),
 	}

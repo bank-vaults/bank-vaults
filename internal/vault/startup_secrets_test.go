@@ -27,15 +27,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func intPtr(i int) *int {
-	return &i
-}
+
 
 func TestVaultKVMaxVersions(t *testing.T) {
 	engines := []secretEngine{
-		{Path: "staging/kv", Type: "kv", MaxVersions: intPtr(10)},
-		{Path: "staging/kv/team", Type: "kv", MaxVersions: intPtr(5)},
-		{Path: "secret", Type: "kv", MaxVersions: intPtr(15)},
+		{Path: "staging/kv", Type: "kv", MaxVersions: new(10)},
+		{Path: "staging/kv/team", Type: "kv", MaxVersions: new(5)},
+		{Path: "secret", Type: "kv", MaxVersions: new(15)},
 		{Path: "prod/kv", Type: "kv"},
 		{Path: "other", Type: "database"},
 	}
@@ -48,7 +46,7 @@ func TestVaultKVMaxVersions(t *testing.T) {
 		{
 			name:     "returns max_versions from matching engine",
 			path:     "staging/kv/data/app1",
-			expected: intPtr(10),
+			expected: new(10),
 		},
 		{
 			name:     "returns nil when engine has no max_versions",
@@ -73,12 +71,12 @@ func TestVaultKVMaxVersions(t *testing.T) {
 		{
 			name:     "more specific path matches: staging/kv/team over staging/kv",
 			path:     "staging/kv/team/data/app1",
-			expected: intPtr(5),
+			expected: new(5),
 		},
 		{
 			name:     "exact prefix match with trailing slash",
 			path:     "secret/data/app1",
-			expected: intPtr(15),
+			expected: new(15),
 		},
 	}
 
@@ -152,7 +150,7 @@ func TestVaultKVVersion(t *testing.T) {
 // writeRecord captures a write call to the fake Vault server.
 type writeRecord struct {
 	Path string
-	Data map[string]interface{}
+	Data map[string]any
 }
 
 // newFakeVaultServer returns an httptest.Server that records writes and a slice to inspect them.
@@ -164,7 +162,7 @@ func newFakeVaultServer(t *testing.T) (*httptest.Server, *[]writeRecord, *sync.M
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPut || r.Method == http.MethodPost {
-			var body map[string]interface{}
+			var body map[string]any
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
@@ -178,7 +176,7 @@ func newFakeVaultServer(t *testing.T) (*httptest.Server, *[]writeRecord, *sync.M
 		}
 		// Return a valid empty Vault response
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{}) //nolint:errcheck
+		json.NewEncoder(w).Encode(map[string]any{}) //nolint:errcheck
 	})
 
 	srv := httptest.NewServer(mux)
@@ -206,7 +204,7 @@ func TestHandleKVSecret_MaxVersionsOverride(t *testing.T) {
 			Path:        "staging/kv",
 			Type:        "kv",
 			Options:     map[string]string{"version": "2"},
-			MaxVersions: intPtr(10),
+			MaxVersions: new(10),
 		},
 	}
 
@@ -223,13 +221,13 @@ func TestHandleKVSecret_MaxVersionsOverride(t *testing.T) {
 			startupSecret: startupSecret{
 				Type:        "kv",
 				Path:        "staging/kv/data/app1",
-				MaxVersions: intPtr(20),
+				MaxVersions: new(20),
 				Data: struct {
-					Data         map[string]interface{}   `mapstructure:"data"`
-					Options      map[string]interface{}   `mapstructure:"options,omitempty"`
-					SecretKeyRef []map[string]interface{} `mapstructure:"secretKeyRef"`
+					Data         map[string]any   `mapstructure:"data"`
+					Options      map[string]any   `mapstructure:"options,omitempty"`
+					SecretKeyRef []map[string]any `mapstructure:"secretKeyRef"`
 				}{
-					Data: map[string]interface{}{"key": "value1"},
+					Data: map[string]any{"key": "value1"},
 				},
 			},
 			expectMetadataWrite:  true,
@@ -243,11 +241,11 @@ func TestHandleKVSecret_MaxVersionsOverride(t *testing.T) {
 				Type: "kv",
 				Path: "staging/kv/data/app2",
 				Data: struct {
-					Data         map[string]interface{}   `mapstructure:"data"`
-					Options      map[string]interface{}   `mapstructure:"options,omitempty"`
-					SecretKeyRef []map[string]interface{} `mapstructure:"secretKeyRef"`
+					Data         map[string]any   `mapstructure:"data"`
+					Options      map[string]any   `mapstructure:"options,omitempty"`
+					SecretKeyRef []map[string]any `mapstructure:"secretKeyRef"`
 				}{
-					Data: map[string]interface{}{"key": "value2"},
+					Data: map[string]any{"key": "value2"},
 				},
 			},
 			expectMetadataWrite:  true,
@@ -300,11 +298,11 @@ func TestHandleKVSecret_NoMaxVersions(t *testing.T) {
 		Path: "staging/kv/data/app1",
 		// No MaxVersions set on startup secret
 		Data: struct {
-			Data         map[string]interface{}   `mapstructure:"data"`
-			Options      map[string]interface{}   `mapstructure:"options,omitempty"`
-			SecretKeyRef []map[string]interface{} `mapstructure:"secretKeyRef"`
+			Data         map[string]any   `mapstructure:"data"`
+			Options      map[string]any   `mapstructure:"options,omitempty"`
+			SecretKeyRef []map[string]any `mapstructure:"secretKeyRef"`
 		}{
-			Data: map[string]interface{}{"key": "value"},
+			Data: map[string]any{"key": "value"},
 		},
 	}
 
@@ -335,13 +333,13 @@ func TestHandleKVSecret_KVv1RejectsMaxVersions(t *testing.T) {
 	secret := startupSecret{
 		Type:        "kv",
 		Path:        "legacy/kv/app1",
-		MaxVersions: intPtr(5),
+		MaxVersions: new(5),
 		Data: struct {
-			Data         map[string]interface{}   `mapstructure:"data"`
-			Options      map[string]interface{}   `mapstructure:"options,omitempty"`
-			SecretKeyRef []map[string]interface{} `mapstructure:"secretKeyRef"`
+			Data         map[string]any   `mapstructure:"data"`
+			Options      map[string]any   `mapstructure:"options,omitempty"`
+			SecretKeyRef []map[string]any `mapstructure:"secretKeyRef"`
 		}{
-			Data: map[string]interface{}{"key": "value"},
+			Data: map[string]any{"key": "value"},
 		},
 	}
 
@@ -367,13 +365,13 @@ func TestHandleKVSecret_MissingDataSegmentRejectsMaxVersions(t *testing.T) {
 	secret := startupSecret{
 		Type:        "kv",
 		Path:        "staging/kv/app1", // missing /data/ segment
-		MaxVersions: intPtr(5),
+		MaxVersions: new(5),
 		Data: struct {
-			Data         map[string]interface{}   `mapstructure:"data"`
-			Options      map[string]interface{}   `mapstructure:"options,omitempty"`
-			SecretKeyRef []map[string]interface{} `mapstructure:"secretKeyRef"`
+			Data         map[string]any   `mapstructure:"data"`
+			Options      map[string]any   `mapstructure:"options,omitempty"`
+			SecretKeyRef []map[string]any `mapstructure:"secretKeyRef"`
 		}{
-			Data: map[string]interface{}{"key": "value"},
+			Data: map[string]any{"key": "value"},
 		},
 	}
 
