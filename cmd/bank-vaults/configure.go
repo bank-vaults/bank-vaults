@@ -177,41 +177,50 @@ var configureCmd = &cobra.Command{
 			}
 		}
 
-		for batch := range configurations {
-			// Load the batches already queued too (see vault.LoadConfig)
-		drain:
-			for {
-				select {
-				case more, ok := <-configurations:
-					if !ok {
-						break drain
-					}
-					batch = append(batch, more...)
-				default:
-					break drain
-				}
-			}
-
-			for _, config := range batch {
-				if err := v.LoadConfig(config.Path, config.Data); err != nil {
-					slog.Error(fmt.Sprintf("error loading vault config file: %s", err.Error()))
-				}
-			}
-
-			// Configure applies the latest version of a file, apply it once
-			applied := map[string]bool{}
-			for _, config := range batch {
-				if !applied[config.Path] {
-					applied[config.Path] = true
-					apply(config)
-				}
-			}
-		}
+		processBatches(v, configurations, apply)
 
 		if failed {
 			os.Exit(1)
 		}
 	},
+}
+
+// processBatches loads every file of a batch, with the batches already queued,
+// before applying them: applying a file must not purge what the following
+// ones declare.
+func processBatches(v interface {
+	LoadConfig(string, map[string]any) error
+}, configurations <-chan []*configFile, apply func(*configFile)) {
+	for batch := range configurations {
+		// Load the batches already queued too (see vault.LoadConfig)
+	drain:
+		for {
+			select {
+			case more, ok := <-configurations:
+				if !ok {
+					break drain
+				}
+				batch = append(batch, more...)
+			default:
+				break drain
+			}
+		}
+
+		for _, config := range batch {
+			if err := v.LoadConfig(config.Path, config.Data); err != nil {
+				slog.Error(fmt.Sprintf("error loading vault config file: %s", err.Error()))
+			}
+		}
+
+		// Configure applies the latest version of a file, apply it once
+		applied := map[string]bool{}
+		for _, config := range batch {
+			if !applied[config.Path] {
+				applied[config.Path] = true
+				apply(config)
+			}
+		}
+	}
 }
 
 func handleConfigurationError(parser multiparser.Parser, vaultConfigFile string, configurations chan<- []*configFile, sleepTime time.Duration) {
