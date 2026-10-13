@@ -64,4 +64,30 @@ func TestDecodeExternalConfigDoesNotMergeFiles(t *testing.T) {
 	require.Len(t, kubernetesConfig.Auth, 1)
 	assert.Equal(t, "kubernetes", kubernetesConfig.Auth[0].Type)
 	assert.Equal(t, "kubernetes", kubernetesConfig.Auth[0].Path)
+
+	// Example of #3936: a file applied again with a secrets engine inserted in
+	// the middle of the list must not inherit the configuration of the engine
+	// previously at its index.
+	_, err = decodeExternalConfig(parseTestConfig(t, `
+secrets:
+  - path: pki
+    type: pki
+    configuration:
+      roles:
+        - name: default
+`))
+	require.NoError(t, err)
+
+	reloaded, err := decodeExternalConfig(parseTestConfig(t, `
+secrets:
+  - path: database
+    type: database
+  - path: pki
+    type: pki
+`))
+	require.NoError(t, err)
+
+	require.Len(t, reloaded.Secrets, 2)
+	assert.Equal(t, "database", reloaded.Secrets[0].Path)
+	assert.Empty(t, reloaded.Secrets[0].Configuration, "a secrets engine must not inherit the configuration of the engine previously at its index")
 }
