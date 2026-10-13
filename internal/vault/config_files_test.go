@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"sync"
 	"testing"
 
@@ -162,6 +163,15 @@ purgeUnmanagedConfig:
 	assert.False(t, purge.Exclude.Auth)
 }
 
+// Purging is opt-in: it stays disabled unless a file enables it.
+func TestManagedConfigPurgeIsDisabledByDefault(t *testing.T) {
+	v := newConfigFilesTestVault(t)
+
+	require.NoError(t, v.LoadConfig("oidc.yml", parseTestConfig(t, oidcConfigFile)))
+
+	assert.False(t, v.managedConfig().PurgeUnmanagedConfig.Enabled)
+}
+
 // A file that cannot be decoded (a typo in a key, rejected by ErrorUnused) has
 // no known content: purging anything while it is broken could delete what it
 // declares. The purge is suspended until it is fixed.
@@ -193,6 +203,17 @@ func TestManagedConfigPurgeIsSuspendedWhileAFileIsEmpty(t *testing.T) {
 
 		assert.False(t, v.managedConfig().PurgeUnmanagedConfig.Enabled, "purge must be suspended while oidc.yml is %q", content)
 	}
+}
+
+// An explicit empty object cannot be a partial read: it is a valid config that
+// declares nothing (externalConfig: {} in the Vault CR).
+func TestLoadConfigAcceptsAnEmptyObject(t *testing.T) {
+	v := newConfigFilesTestVault(t)
+
+	require.NoError(t, v.LoadConfig("base.yml", parseTestConfig(t, baseConfigFile)))
+	require.NoError(t, v.LoadConfig("empty.yml", parseTestConfig(t, "{}")))
+
+	assert.True(t, v.managedConfig().PurgeUnmanagedConfig.Enabled)
 }
 
 // A file applied again (daemon mode) replaces its previous version: what it no
@@ -227,10 +248,12 @@ func (rootTokenStore) Set(context.Context, string, []byte) error { return nil }
 
 func (rootTokenStore) Get(context.Context, string) ([]byte, error) { return []byte("root"), nil }
 
-// Applying one file must not purge what another loaded file declares: the oidc
-// auth method, the policy and the secrets engine of other.yml survive applying
-// base.yml, while what no file declares is purged.
-func TestConfigurePurgesOnlyWhatNoFileDeclares(t *testing.T) {
+// newPurgeTestVault returns a vault backed by a fake Vault server holding one
+// managed and one stale resource of every purged category, and the paths the
+// fake received a DELETE for.
+func newPurgeTestVault(t *testing.T) (*vault, func() []string) {
+	t.Helper()
+
 	data := map[string]any{
 		"/v1/sys/auth": map[string]any{
 			"token/": map[string]any{"type": "token", "accessor": "auth_token_1"},
@@ -247,8 +270,24 @@ func TestConfigurePurgesOnlyWhatNoFileDeclares(t *testing.T) {
 		"/v1/sys/policies/acl": map[string]any{
 			"keys": []string{"default", "root", "secrets_ro", "oidc_admin", "stale"},
 		},
-		"/v1/sys/audit":           map[string]any{},
-		"/v1/sys/plugins/catalog": map[string]any{},
+		"/v1/sys/audit": map[string]any{
+			"file/":  map[string]any{"type": "file", "path": "file/"},
+			"stale/": map[string]any{"type": "file", "path": "stale/"},
+		},
+		"/v1/sys/plugins/catalog": map[string]any{
+			"auth": []string{"custom", "stale"},
+		},
+		"/v1/sys/plugins/catalog/auth/custom": map[string]any{"name": "custom", "builtin": false},
+		"/v1/sys/plugins/catalog/auth/stale":  map[string]any{"name": "stale", "builtin": false},
+		"/v1/identity/group/name": map[string]any{
+			"keys": []string{"platform:admin", "stale"},
+		},
+		"/v1/identity/group-alias/id": map[string]any{
+			"key_info": map[string]any{
+				"ga1": map[string]any{"name": "platform:admin"},
+				"ga2": map[string]any{"name": "stale"},
+			},
+		},
 	}
 
 	var mu sync.Mutex
@@ -271,7 +310,7 @@ func TestConfigurePurgesOnlyWhatNoFileDeclares(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{"data": d}) //nolint:errcheck
 	}))
-	defer srv.Close()
+	t.Cleanup(srv.Close)
 
 	cfg := api.DefaultConfig()
 	cfg.Address = srv.URL
@@ -280,17 +319,18 @@ func TestConfigurePurgesOnlyWhatNoFileDeclares(t *testing.T) {
 
 	vi, err := New(context.Background(), rootTokenStore{}, cl, Config{StoreRootToken: true})
 	require.NoError(t, err)
-	v := vi.(*vault)
 
-	base := parseTestConfig(t, `
-purgeUnmanagedConfig:
-  enabled: true
-policies:
-  - name: secrets_ro
-    rules: path "home/*" { capabilities = ["read"] }
-`)
-	require.NoError(t, v.LoadConfig("base.yml", base))
-	require.NoError(t, v.LoadConfig("other.yml", parseTestConfig(t, `
+	return vi.(*vault), func() []string {
+		mu.Lock()
+		defer mu.Unlock()
+
+		return slices.Clone(deletes)
+	}
+}
+
+// otherConfigFile declares one managed resource of every purged category; it is
+// loaded but never applied by the purge tests.
+const otherConfigFile = `
 auth:
   - type: oidc
 policies:
@@ -299,15 +339,102 @@ policies:
 secrets:
   - path: app
     type: kv
+audit:
+  - type: file
+plugins:
+  - plugin_name: custom
+    type: auth
+    command: custom
+    sha256: abc
+groups:
+  - name: platform:admin
+    type: external
+group-aliases:
+  - name: platform:admin
+    mountpath: oidc
+    group: platform:admin
+`
+
+// Applying one file must not purge what another loaded file declares: every
+// resource of other.yml survives applying base.yml, while what no file
+// declares is purged.
+func TestConfigurePurgesOnlyWhatNoFileDeclares(t *testing.T) {
+	v, deletes := newPurgeTestVault(t)
+
+	require.NoError(t, v.LoadConfig("base.yml", parseTestConfig(t, `
+purgeUnmanagedConfig:
+  enabled: true
+policies:
+  - name: secrets_ro
+    rules: path "home/*" { capabilities = ["read"] }
 `)))
+	require.NoError(t, v.LoadConfig("other.yml", parseTestConfig(t, otherConfigFile)))
 
 	require.NoError(t, v.Configure(context.Background(), "base.yml"))
 
-	mu.Lock()
-	defer mu.Unlock()
 	assert.ElementsMatch(t, []string{
 		"/v1/sys/auth/stale",
 		"/v1/sys/mounts/stale",
 		"/v1/sys/policies/acl/stale",
-	}, deletes)
+		"/v1/sys/audit/stale",
+		"/v1/sys/plugins/catalog/auth/stale",
+		"/v1/identity/group/name/stale",
+		"/v1/identity/group-alias/id/ga2",
+	}, deletes())
+}
+
+// The purge settings of a file apply to every file: applying empty.yml, which
+// neither enables the purge nor excludes anything, purges as base.yml says.
+func TestConfigureAppliesThePurgeSettingsOfEveryFile(t *testing.T) {
+	staleDeletes := []string{
+		"/v1/sys/auth/stale",
+		"/v1/sys/mounts/stale",
+		"/v1/sys/policies/acl/stale",
+		"/v1/sys/audit/stale",
+		"/v1/sys/plugins/catalog/auth/stale",
+		"/v1/identity/group/name/stale",
+		"/v1/identity/group-alias/id/ga2",
+	}
+
+	tests := map[string]struct {
+		base    string
+		deletes []string
+	}{
+		"enabled": {
+			base: `
+purgeUnmanagedConfig:
+  enabled: true
+`,
+			// secrets_ro is declared by no file here
+			deletes: append(slices.Clone(staleDeletes), "/v1/sys/policies/acl/secrets_ro"),
+		},
+		"every category excluded": {
+			base: `
+purgeUnmanagedConfig:
+  enabled: true
+  exclude:
+    auth: true
+    secrets: true
+    policies: true
+    audit: true
+    plugins: true
+    groups: true
+    group-aliases: true
+`,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			v, deletes := newPurgeTestVault(t)
+
+			require.NoError(t, v.LoadConfig("base.yml", parseTestConfig(t, test.base)))
+			require.NoError(t, v.LoadConfig("other.yml", parseTestConfig(t, otherConfigFile)))
+			require.NoError(t, v.LoadConfig("empty.yml", parseTestConfig(t, "{}")))
+
+			require.NoError(t, v.Configure(context.Background(), "empty.yml"))
+
+			assert.ElementsMatch(t, test.deletes, deletes())
+		})
+	}
 }

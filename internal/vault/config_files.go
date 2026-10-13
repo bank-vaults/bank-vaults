@@ -34,13 +34,15 @@ import (
 // A file that cannot be decoded, or that is empty, is kept as invalid: its
 // content is unknown, so the purge is suspended until it is fixed. A file being
 // rewritten in place (O_TRUNC) is read empty before its content lands, and
-// treating it as a valid empty config would purge everything it declares.
+// treating it as a valid empty config would purge everything it declares. An
+// explicit empty object ({}) cannot be a partial read: it is a valid config
+// declaring nothing.
 func (v *vault) LoadConfig(path string, config map[string]any) error {
 	if _, ok := v.loadedConfigs[path]; !ok {
 		v.configFiles = append(v.configFiles, path)
 	}
 
-	if len(config) == 0 {
+	if config == nil {
 		v.loadedConfigs[path] = nil
 
 		return errors.Errorf("config file %s is empty", path)

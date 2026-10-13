@@ -127,7 +127,7 @@ type vault struct {
 	rotateCache    map[string]bool
 
 	// configFiles lists the loaded config files in the order they were loaded,
-	// loadedConfigs holds their latest version (nil when it cannot be decoded).
+	// loadedConfigs holds their latest version (nil when invalid or empty).
 	configFiles   []string
 	loadedConfigs map[string]*externalConfig
 	// managed is what every loaded file declares, kept by the purge.

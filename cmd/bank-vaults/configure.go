@@ -98,8 +98,6 @@ var configureCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Files are sent in batches: every file of a batch is loaded before the
-		// first one is applied, so that it does not purge what the following ones declare
 		configurations := make(chan []*configFile, len(vaultConfigFiles))
 		batch := make([]*configFile, 0, len(vaultConfigFiles))
 		for i, vaultConfigFile := range vaultConfigFiles {
@@ -180,8 +178,7 @@ var configureCmd = &cobra.Command{
 		}
 
 		for batch := range configurations {
-			// Load the batches already queued too, a file of one of them may
-			// declare what a file of this batch no longer does
+			// Load the batches already queued too (see vault.LoadConfig)
 		drain:
 			for {
 				select {
