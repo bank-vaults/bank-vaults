@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -118,79 +119,52 @@ var configureCmd = &cobra.Command{
 			close(configurations)
 		}
 
-		// Handle backoff for configuration errors
-		b := &backoff.Backoff{
-			Min:    500 * time.Millisecond,
-			Max:    60 * time.Second,
-			Factor: 2,
-			Jitter: false,
+		opts := applyOptions{
+			unsealPeriod: unsealConfig.unsealPeriod,
+			fatal:        errorFatal,
+			// Handle backoff for configuration errors
+			backoff: &backoff.Backoff{
+				Min:    500 * time.Millisecond,
+				Max:    60 * time.Second,
+				Factor: 2,
+				Jitter: false,
+			},
 		}
-
-		failed := false
-		apply := func(config *configFile) {
-			slog.Info(fmt.Sprintf("applying config file: %s", config.Path))
-			for {
-				slog.Info("checking if vault is sealed...")
-				sealed, err := v.Sealed()
-				if err != nil {
-					slog.Error(fmt.Sprintf("error checking if vault is sealed: %s, waiting %s before trying again...", err.Error(), unsealConfig.unsealPeriod))
-					time.Sleep(unsealConfig.unsealPeriod)
-
-					continue
-				}
-
-				// If vault is sealed, we stop here and wait another unsealPeriod
-				if sealed {
-					slog.Info(fmt.Sprintf("vault is sealed, waiting %s before trying again...", unsealConfig.unsealPeriod))
-					time.Sleep(unsealConfig.unsealPeriod)
-
-					continue
-				}
-				slog.Info("vault is unsealed, configuring...")
-
-				if err = v.Configure(ctx, config.Path); err != nil {
-					slog.Error(fmt.Sprintf("error configuring vault: %s", err.Error()))
-					if errorFatal {
-						os.Exit(1)
-					}
-
-					failedConfigurationsCount++
-					// The channel is closed, there is nothing to retry
-					if runOnce {
-						failed = true
-
-						return
-					}
-
-					// Failed configuration handler - Increase the backoff sleep
-					go handleConfigurationError(parser, config.Path, configurations, b.Duration())
-
-					return
-				}
-
-				// On *any* successful configuration reset the backoff
-				b.Reset()
-				successfulConfigurationsCount++
-				slog.Info("successfully configured vault")
-
-				return
+		// With --once the channel is closed, there is nothing to retry
+		if !runOnce {
+			opts.retry = func(path string, delay time.Duration) {
+				go handleConfigurationError(parser, path, configurations, delay)
 			}
 		}
 
-		processBatches(v, configurations, apply)
-
-		if failed {
+		if err := processBatches(ctx, v, configurations, opts); err != nil {
+			slog.Error(err.Error())
 			os.Exit(1)
 		}
 	},
 }
 
+type configurer interface {
+	LoadConfig(path string, config map[string]any) error
+	Sealed() (bool, error)
+	Configure(ctx context.Context, path string) error
+}
+
+type applyOptions struct {
+	unsealPeriod time.Duration
+	// fatal stops at the first failed file
+	fatal   bool
+	backoff *backoff.Backoff
+	// retry re-queues a failed file after delay; nil with --once, which then
+	// fails once every file is applied
+	retry func(path string, delay time.Duration)
+}
+
 // processBatches loads every file of a batch, with the batches already queued,
 // before applying them: applying a file must not purge what the following
 // ones declare.
-func processBatches(v interface {
-	LoadConfig(string, map[string]any) error
-}, configurations <-chan []*configFile, apply func(*configFile)) {
+func processBatches(ctx context.Context, v configurer, configurations <-chan []*configFile, opts applyOptions) error {
+	failed := false
 	for batch := range configurations {
 		// Load the batches already queued too (see vault.LoadConfig)
 	drain:
@@ -215,11 +189,65 @@ func processBatches(v interface {
 		// Configure applies the latest version of a file, apply it once
 		applied := map[string]bool{}
 		for _, config := range batch {
-			if !applied[config.Path] {
-				applied[config.Path] = true
-				apply(config)
+			if applied[config.Path] {
+				continue
 			}
+			applied[config.Path] = true
+
+			if err := applyConfig(ctx, v, config.Path, opts.unsealPeriod); err != nil {
+				slog.Error(fmt.Sprintf("error configuring vault: %s", err.Error()))
+				failedConfigurationsCount++
+				if opts.fatal {
+					return err
+				}
+				if opts.retry == nil {
+					failed = true
+
+					continue
+				}
+				// Failed configuration handler - Increase the backoff sleep
+				opts.retry(config.Path, opts.backoff.Duration())
+
+				continue
+			}
+
+			// On *any* successful configuration reset the backoff
+			opts.backoff.Reset()
+			successfulConfigurationsCount++
+			slog.Info("successfully configured vault")
 		}
+	}
+
+	if failed {
+		return errors.New("failed to configure vault")
+	}
+
+	return nil
+}
+
+// applyConfig waits for Vault to be unsealed, then configures the file.
+func applyConfig(ctx context.Context, v configurer, path string, unsealPeriod time.Duration) error {
+	slog.Info(fmt.Sprintf("applying config file: %s", path))
+	for {
+		slog.Info("checking if vault is sealed...")
+		sealed, err := v.Sealed()
+		if err != nil {
+			slog.Error(fmt.Sprintf("error checking if vault is sealed: %s, waiting %s before trying again...", err.Error(), unsealPeriod))
+			time.Sleep(unsealPeriod)
+
+			continue
+		}
+
+		// If vault is sealed, we stop here and wait another unsealPeriod
+		if sealed {
+			slog.Info(fmt.Sprintf("vault is sealed, waiting %s before trying again...", unsealPeriod))
+			time.Sleep(unsealPeriod)
+
+			continue
+		}
+		slog.Info("vault is unsealed, configuring...")
+
+		return v.Configure(ctx, path)
 	}
 }
 
