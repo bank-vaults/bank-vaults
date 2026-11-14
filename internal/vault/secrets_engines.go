@@ -445,6 +445,76 @@ func (v *vault) removeUnmanagedSecretsEngines(unmanagedSecretsEngines map[string
 	return nil
 }
 
+// purgeableSecretsEngineConfigOptions are the configuration collections whose
+// entries the purge lists and deletes by name. Other options are left alone,
+// since deleting entries such as transit keys or PKI issuers destroys data.
+var purgeableSecretsEngineConfigOptions = []string{"roles", "static-roles"}
+
+// managedSecretsEngineRoles returns, for every secrets engine path, the names
+// declared under each purgeable configuration option. An option that no config
+// declares for a path isn't returned, so its entries are never purged.
+func managedSecretsEngineRoles(secretsEngines []secretEngine) map[string]map[string]map[string]bool {
+	managed := map[string]map[string]map[string]bool{}
+	for _, secretEngine := range secretsEngines {
+		for _, configOption := range purgeableSecretsEngineConfigOptions {
+			configData, ok := secretEngine.Configuration[configOption]
+			if !ok {
+				continue
+			}
+
+			if managed[secretEngine.Path] == nil {
+				managed[secretEngine.Path] = map[string]map[string]bool{}
+			}
+			if managed[secretEngine.Path][configOption] == nil {
+				managed[secretEngine.Path][configOption] = map[string]bool{}
+			}
+
+			for _, subConfigData := range cast.ToSlice(configData) {
+				if name := cast.ToString(cast.ToStringMap(subConfigData)["name"]); name != "" {
+					managed[secretEngine.Path][configOption][name] = true
+				}
+			}
+		}
+	}
+
+	return managed
+}
+
+// removeUnmanagedSecretsEngineRoles deletes the roles of managed secrets engines
+// that no config declares anymore, if purgeUnmanagedConfig is enabled.
+func (v *vault) removeUnmanagedSecretsEngineRoles() error {
+	if !v.managed.PurgeUnmanagedConfig.Enabled || v.managed.PurgeUnmanagedConfig.Exclude.Secrets {
+		return nil
+	}
+
+	for path, configOptions := range managedSecretsEngineRoles(initSecretsEnginesConfig(v.managed.Secrets)) {
+		for configOption, names := range configOptions {
+			listPath := fmt.Sprintf("%s/%s", path, configOption)
+			secret, err := v.cl.Logical().List(listPath)
+			if err != nil {
+				return errors.Wrapf(err, "error listing %s", listPath)
+			}
+			if secret == nil || secret.Data == nil {
+				continue
+			}
+
+			for _, key := range cast.ToStringSlice(secret.Data["keys"]) {
+				if key == "" || strings.HasSuffix(key, "/") || names[key] {
+					continue
+				}
+
+				rolePath := fmt.Sprintf("%s/%s", listPath, key)
+				slog.Info(fmt.Sprintf("removing unmanaged secret engine config %s", rolePath))
+				if _, err := v.cl.Logical().Delete(rolePath); err != nil {
+					return errors.Wrapf(err, "error removing %s from vault", rolePath)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 func (v *vault) configureSecretsEngines(ctx context.Context) error {
 	auths, err := v.cl.Sys().ListAuth()
 	if err != nil {
@@ -459,6 +529,10 @@ func (v *vault) configureSecretsEngines(ctx context.Context) error {
 
 	if err := v.removeUnmanagedSecretsEngines(unmanagedSecretsEngines); err != nil {
 		return errors.Wrap(err, "error removing secrets engines")
+	}
+
+	if err := v.removeUnmanagedSecretsEngineRoles(); err != nil {
+		return errors.Wrap(err, "error removing unmanaged secrets engine roles")
 	}
 
 	return nil
