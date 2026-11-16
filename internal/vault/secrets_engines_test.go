@@ -304,3 +304,86 @@ secrets:
 	require.NoError(t, v.removeUnmanagedSecretsEngineRoles())
 	assert.Equal(t, []string{"/v1/aws/roles/role-3"}, deletes())
 }
+
+// KV and unknown plugin mounts can hold ordinary data under roles/, so the
+// purge must never touch them.
+func TestRemoveUnmanagedSecretsEngineRolesSkipsUnknownEngineTypes(t *testing.T) {
+	v, deletes := newRolePurgeTestVault(t, map[string][]string{
+		"/v1/secret/roles": {"declared", "user-data"},
+		"/v1/plugin/roles": {"declared", "other"},
+	})
+
+	require.NoError(t, v.LoadConfig("base.yml", parseTestConfig(t, `
+purgeUnmanagedConfig:
+  enabled: true
+secrets:
+  - path: secret
+    type: kv
+    options:
+      version: 1
+    configuration:
+      roles:
+        - name: declared
+          value: foo
+  - path: plugin
+    type: my-custom-plugin
+    configuration:
+      roles:
+        - name: declared
+`)))
+	v.managed = v.managedConfig()
+
+	require.NoError(t, v.removeUnmanagedSecretsEngineRoles())
+	assert.Empty(t, deletes())
+}
+
+// A malformed role collection in any loaded file must fail the purge before
+// anything gets deleted, instead of counting as an empty managed set.
+func TestRemoveUnmanagedSecretsEngineRolesRejectsMalformedRoles(t *testing.T) {
+	tests := map[string]string{
+		"not a list": `
+      roles: role-2
+`,
+		"entry not a map": `
+      roles:
+        - role-2
+`,
+		"missing name": `
+      roles:
+        - credential_type: iam_user
+`,
+		"empty name": `
+      roles:
+        - name: ""
+`,
+	}
+
+	for name, roles := range tests {
+		t.Run(name, func(t *testing.T) {
+			v, deletes := newRolePurgeTestVault(t, map[string][]string{
+				"/v1/aws/roles": {"role-1", "role-2"},
+				"/v1/db/roles":  {"app", "old-app"},
+			})
+
+			require.NoError(t, v.LoadConfig("base.yml", parseTestConfig(t, `
+purgeUnmanagedConfig:
+  enabled: true
+secrets:
+  - path: db
+    type: database
+    configuration:
+      roles:
+        - name: app
+`)))
+			require.NoError(t, v.LoadConfig("other.yml", parseTestConfig(t, `
+secrets:
+  - path: aws
+    type: aws
+    configuration:`+roles)))
+			v.managed = v.managedConfig()
+
+			require.Error(t, v.removeUnmanagedSecretsEngineRoles())
+			assert.Empty(t, deletes())
+		})
+	}
+}

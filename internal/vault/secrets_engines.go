@@ -466,21 +466,52 @@ func (v *vault) removeUnmanagedSecretsEngines(unmanagedSecretsEngines map[string
 	return nil
 }
 
-// purgeableSecretsEngineConfigOptions are the configuration collections whose
-// entries the purge lists and deletes by name. Other options are left alone,
-// since deleting entries such as transit keys or PKI issuers destroys data.
-var purgeableSecretsEngineConfigOptions = []string{"roles", "static-roles"}
+// purgeableSecretsEngineConfigOptions maps the secrets engine types whose
+// configuration collections the purge lists and deletes by name. Other engine
+// types (KV, plugins) and options are left alone, since the generic writer can
+// put ordinary data or keys there and deleting it would destroy data.
+var purgeableSecretsEngineConfigOptions = map[string][]string{
+	"aws":        {"roles"},
+	"azure":      {"roles"},
+	"consul":     {"roles"},
+	"database":   {"roles", "static-roles"},
+	"kubernetes": {"roles"},
+	"pki":        {"roles"},
+	"ssh":        {"roles"},
+}
 
 // managedSecretsEngineRoles returns, for every secrets engine path, the names
 // declared under each purgeable configuration option. An option that no config
-// declares for a path isn't returned, so its entries are never purged.
-func managedSecretsEngineRoles(secretsEngines []secretEngine) map[string]map[string]map[string]bool {
+// declares for a path isn't returned, so its entries are never purged. Any
+// malformed entry fails the whole inventory, so nothing is deleted based on it.
+func managedSecretsEngineRoles(secretsEngines []secretEngine) (map[string]map[string]map[string]bool, error) {
 	managed := map[string]map[string]map[string]bool{}
 	for _, secretEngine := range secretsEngines {
-		for _, configOption := range purgeableSecretsEngineConfigOptions {
+		for _, configOption := range purgeableSecretsEngineConfigOptions[secretEngine.Type] {
 			configData, ok := secretEngine.Configuration[configOption]
 			if !ok {
 				continue
+			}
+
+			entries, err := cast.ToSliceE(configData)
+			if err != nil {
+				return nil, errors.Wrapf(err, "error parsing %s/%s", secretEngine.Path, configOption)
+			}
+
+			names := map[string]bool{}
+			for _, entry := range entries {
+				entryData, err := cast.ToStringMapE(entry)
+				if err != nil {
+					return nil, errors.Wrapf(err, "error parsing %s/%s entry", secretEngine.Path, configOption)
+				}
+				name, err := cast.ToStringE(entryData["name"])
+				if err != nil {
+					return nil, errors.Wrapf(err, "error parsing name of %s/%s entry", secretEngine.Path, configOption)
+				}
+				if name == "" {
+					return nil, errors.Errorf("missing name in %s/%s entry", secretEngine.Path, configOption)
+				}
+				names[name] = true
 			}
 
 			if managed[secretEngine.Path] == nil {
@@ -489,16 +520,11 @@ func managedSecretsEngineRoles(secretsEngines []secretEngine) map[string]map[str
 			if managed[secretEngine.Path][configOption] == nil {
 				managed[secretEngine.Path][configOption] = map[string]bool{}
 			}
-
-			for _, subConfigData := range cast.ToSlice(configData) {
-				if name := cast.ToString(cast.ToStringMap(subConfigData)["name"]); name != "" {
-					managed[secretEngine.Path][configOption][name] = true
-				}
-			}
+			maps.Copy(managed[secretEngine.Path][configOption], names)
 		}
 	}
 
-	return managed
+	return managed, nil
 }
 
 // removeUnmanagedSecretsEngineRoles deletes the roles of managed secrets engines
@@ -508,7 +534,12 @@ func (v *vault) removeUnmanagedSecretsEngineRoles() error {
 		return nil
 	}
 
-	for path, configOptions := range managedSecretsEngineRoles(initSecretsEnginesConfig(v.managed.Secrets)) {
+	managed, err := managedSecretsEngineRoles(initSecretsEnginesConfig(v.managed.Secrets))
+	if err != nil {
+		return err
+	}
+
+	for path, configOptions := range managed {
 		for configOption, names := range configOptions {
 			listPath := fmt.Sprintf("%s/%s", path, configOption)
 			secret, err := v.cl.Logical().List(listPath)
