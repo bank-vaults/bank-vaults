@@ -466,6 +466,107 @@ func (v *vault) removeUnmanagedSecretsEngines(unmanagedSecretsEngines map[string
 	return nil
 }
 
+// purgeableSecretsEngineConfigOptions maps the secrets engine types whose
+// configuration collections the purge lists and deletes by name. Other engine
+// types (KV, plugins) and options are left alone, since the generic writer can
+// put ordinary data or keys there and deleting it would destroy data.
+var purgeableSecretsEngineConfigOptions = map[string][]string{
+	"aws":        {"roles"},
+	"azure":      {"roles"},
+	"consul":     {"roles"},
+	"database":   {"roles", "static-roles"},
+	"kubernetes": {"roles"},
+	"pki":        {"roles"},
+	"ssh":        {"roles"},
+}
+
+// managedSecretsEngineRoles returns, for every secrets engine path, the names
+// declared under each purgeable configuration option. An option that no config
+// declares for a path isn't returned, so its entries are never purged. Any
+// malformed entry fails the whole inventory, so nothing is deleted based on it.
+func managedSecretsEngineRoles(secretsEngines []secretEngine) (map[string]map[string]map[string]bool, error) {
+	managed := map[string]map[string]map[string]bool{}
+	for _, secretEngine := range secretsEngines {
+		for _, configOption := range purgeableSecretsEngineConfigOptions[secretEngine.Type] {
+			configData, ok := secretEngine.Configuration[configOption]
+			if !ok {
+				continue
+			}
+
+			entries, err := cast.ToSliceE(configData)
+			if err != nil {
+				return nil, errors.Wrapf(err, "error parsing %s/%s", secretEngine.Path, configOption)
+			}
+
+			names := map[string]bool{}
+			for _, entry := range entries {
+				entryData, err := cast.ToStringMapE(entry)
+				if err != nil {
+					return nil, errors.Wrapf(err, "error parsing %s/%s entry", secretEngine.Path, configOption)
+				}
+				name, err := cast.ToStringE(entryData["name"])
+				if err != nil {
+					return nil, errors.Wrapf(err, "error parsing name of %s/%s entry", secretEngine.Path, configOption)
+				}
+				if name == "" {
+					return nil, errors.Errorf("missing name in %s/%s entry", secretEngine.Path, configOption)
+				}
+				names[name] = true
+			}
+
+			if managed[secretEngine.Path] == nil {
+				managed[secretEngine.Path] = map[string]map[string]bool{}
+			}
+			if managed[secretEngine.Path][configOption] == nil {
+				managed[secretEngine.Path][configOption] = map[string]bool{}
+			}
+			maps.Copy(managed[secretEngine.Path][configOption], names)
+		}
+	}
+
+	return managed, nil
+}
+
+// removeUnmanagedSecretsEngineRoles deletes the roles of managed secrets engines
+// that no config declares anymore, if purgeUnmanagedConfig is enabled.
+func (v *vault) removeUnmanagedSecretsEngineRoles() error {
+	if !v.managed.PurgeUnmanagedConfig.Enabled || v.managed.PurgeUnmanagedConfig.Exclude.Secrets {
+		return nil
+	}
+
+	managed, err := managedSecretsEngineRoles(initSecretsEnginesConfig(v.managed.Secrets))
+	if err != nil {
+		return err
+	}
+
+	for path, configOptions := range managed {
+		for configOption, names := range configOptions {
+			listPath := fmt.Sprintf("%s/%s", path, configOption)
+			secret, err := v.cl.Logical().List(listPath)
+			if err != nil {
+				return errors.Wrapf(err, "error listing %s", listPath)
+			}
+			if secret == nil || secret.Data == nil {
+				continue
+			}
+
+			for _, key := range cast.ToStringSlice(secret.Data["keys"]) {
+				if key == "" || strings.HasSuffix(key, "/") || names[key] {
+					continue
+				}
+
+				rolePath := fmt.Sprintf("%s/%s", listPath, key)
+				slog.Info(fmt.Sprintf("removing unmanaged secret engine config %s", rolePath))
+				if _, err := v.cl.Logical().Delete(rolePath); err != nil {
+					return errors.Wrapf(err, "error removing %s from vault", rolePath)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 func (v *vault) configureSecretsEngines(ctx context.Context) error {
 	auths, err := v.cl.Sys().ListAuth()
 	if err != nil {
@@ -480,6 +581,10 @@ func (v *vault) configureSecretsEngines(ctx context.Context) error {
 
 	if err := v.removeUnmanagedSecretsEngines(unmanagedSecretsEngines); err != nil {
 		return errors.Wrap(err, "error removing secrets engines")
+	}
+
+	if err := v.removeUnmanagedSecretsEngineRoles(); err != nil {
+		return errors.Wrap(err, "error removing unmanaged secrets engine roles")
 	}
 
 	return nil
