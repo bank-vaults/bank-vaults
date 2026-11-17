@@ -20,7 +20,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.4
 	github.com/hashicorp/hcl v1.0.1-vault-7
 	github.com/hashicorp/vault/api v1.23.0
-	github.com/jpillora/backoff v1.0.0
+	github.com/jpillora/backoff v1.1.0
 	github.com/miekg/pkcs11 v1.1.2
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/oracle/oci-go-sdk/v65 v65.126.2
