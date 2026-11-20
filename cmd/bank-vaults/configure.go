@@ -40,6 +40,7 @@ const (
 	cfgVaultConfigFile = "vault-config-file"
 	cfgFatal           = "fatal"
 	cfgDisableMetrics  = "disable-metrics"
+	cfgMaxFailures     = "max-failures"
 )
 
 type configFile struct {
@@ -122,6 +123,7 @@ var configureCmd = &cobra.Command{
 		opts := applyOptions{
 			unsealPeriod: unsealConfig.unsealPeriod,
 			fatal:        errorFatal,
+			maxFailures:  c.GetInt(cfgMaxFailures),
 			// Handle backoff for configuration errors
 			backoff: &backoff.Backoff{
 				Min:    500 * time.Millisecond,
@@ -153,8 +155,11 @@ type configurer interface {
 type applyOptions struct {
 	unsealPeriod time.Duration
 	// fatal stops at the first failed file
-	fatal   bool
-	backoff *backoff.Backoff
+	fatal bool
+	// maxFailures stops after this many failed applies in a row, with no
+	// successful one in between; 0 keeps retrying forever
+	maxFailures int
+	backoff     *backoff.Backoff
 	// retry re-queues a failed file after delay; nil with --once, which then
 	// fails once every file is applied
 	retry func(path string, delay time.Duration)
@@ -165,6 +170,7 @@ type applyOptions struct {
 // ones declare.
 func processBatches(ctx context.Context, v configurer, configurations <-chan []*configFile, opts applyOptions) error {
 	failed := false
+	consecutiveFailures := 0
 	for batch := range configurations {
 		// Load the batches already queued too (see vault.LoadConfig)
 	drain:
@@ -197,8 +203,12 @@ func processBatches(ctx context.Context, v configurer, configurations <-chan []*
 			if err := applyConfig(ctx, v, config.Path, opts.unsealPeriod); err != nil {
 				slog.Error(fmt.Sprintf("error configuring vault: %s", err.Error()))
 				failedConfigurationsCount++
+				consecutiveFailures++
 				if opts.fatal {
 					return err
+				}
+				if opts.maxFailures > 0 && consecutiveFailures >= opts.maxFailures {
+					return fmt.Errorf("giving up after %d failed attempts in a row to configure vault: %w", consecutiveFailures, err)
 				}
 				if opts.retry == nil {
 					failed = true
@@ -213,6 +223,7 @@ func processBatches(ctx context.Context, v configurer, configurations <-chan []*
 
 			// On *any* successful configuration reset the backoff
 			opts.backoff.Reset()
+			consecutiveFailures = 0
 			successfulConfigurationsCount++
 			slog.Info("successfully configured vault")
 		}
@@ -354,6 +365,7 @@ func init() {
 	configBoolVar(configureCmd, cfgFatal, false, "Make configuration errors fatal to the configurator")
 	configStringSliceVar(configureCmd, cfgVaultConfigFile, []string{internalVault.DefaultConfigFile}, "The filename of the YAML/JSON Vault configuration")
 	configBoolVar(configureCmd, cfgDisableMetrics, false, "Disable configurer metrics")
+	configIntVar(configureCmd, cfgMaxFailures, 0, "Exit with an error after this many failed attempts in a row to apply the configuration, so the failure shows on the pod (0 retries forever)")
 
 	rootCmd.AddCommand(configureCmd)
 }

@@ -165,3 +165,47 @@ func TestProcessBatchesFatalStopsAtFirstFailure(t *testing.T) {
 		"sealed:false", "configure:a.yml",
 	}, v.calls)
 }
+
+// With --max-failures the daemon gives up after that many failed applies in a
+// row, so the failure is visible on the pod.
+func TestProcessBatchesMaxFailuresGivesUp(t *testing.T) {
+	v := &fakeVault{failing: map[string]bool{"a.yml": true}}
+	opts := daemon(v)
+	opts.maxFailures = 3
+	err := runBatches(v, opts,
+		[]*configFile{{Path: "a.yml"}},
+		[]*configFile{{Path: "a.yml"}},
+	)
+	require.NoError(t, err, "two failures stay under the limit")
+
+	v = &fakeVault{failing: map[string]bool{"a.yml": true}}
+	opts = daemon(v)
+	opts.maxFailures = 2
+	configurations := make(chan []*configFile, 2)
+	configurations <- []*configFile{{Path: "a.yml"}}
+	opts.retry = func(path string, _ time.Duration) {
+		configurations <- []*configFile{{Path: path}}
+	}
+	opts.backoff = &backoff.Backoff{Min: time.Millisecond, Max: time.Second, Factor: 2}
+
+	err = processBatches(context.Background(), v, configurations, opts)
+	require.ErrorContains(t, err, "giving up after 2 failed attempts")
+	assert.Equal(t, []string{
+		"load:a.yml", "sealed:false", "configure:a.yml",
+		"load:a.yml", "sealed:false", "configure:a.yml",
+	}, v.calls)
+}
+
+// A successful apply resets the count of failures in a row.
+func TestProcessBatchesMaxFailuresResetsOnSuccess(t *testing.T) {
+	v := &fakeVault{failing: map[string]bool{"a.yml": true}}
+	opts := daemon(v)
+	opts.maxFailures = 2
+	err := runBatches(v, opts,
+		[]*configFile{{Path: "a.yml"}},
+		[]*configFile{{Path: "b.yml"}},
+		[]*configFile{{Path: "a.yml"}},
+	)
+
+	require.NoError(t, err)
+}
