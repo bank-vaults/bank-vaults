@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 
 	"emperror.dev/errors"
 	"golang.org/x/oauth2/google"
@@ -68,24 +69,49 @@ func (g *googleKms) encrypt(s []byte) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(resp.Ciphertext)
 }
 
-func (g *googleKms) decrypt(s []byte) ([]byte, error) {
+// decrypt decrypts s and reports whether the primary key version was used.
+func (g *googleKms) decrypt(s []byte) ([]byte, bool, error) {
 	resp, err := g.svc.Projects.Locations.KeyRings.CryptoKeys.Decrypt(g.keyPath, &cloudkms.DecryptRequest{
 		Ciphertext: base64.StdEncoding.EncodeToString(s),
 	}).Do()
 	if err != nil {
-		return nil, errors.Wrap(err, "error decrypting data")
+		return nil, false, errors.Wrap(err, "error decrypting data")
 	}
 
-	return base64.StdEncoding.DecodeString(resp.Plaintext)
+	plainText, err := base64.StdEncoding.DecodeString(resp.Plaintext)
+	if err != nil {
+		return nil, false, errors.Wrap(err, "error decoding decrypted data")
+	}
+
+	return plainText, resp.UsedPrimary, nil
 }
 
+// Get decrypts the value stored under key. Cloud KMS keeps decrypting with the
+// key version that encrypted the data, so after the key is rotated the value
+// is encrypted again with the new primary version and stored back. Otherwise
+// disabling the old version would make the value unreadable.
 func (g *googleKms) Get(ctx context.Context, key string) ([]byte, error) {
 	cipherText, err := g.store.Get(ctx, key)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting data")
 	}
 
-	return g.decrypt(cipherText)
+	plainText, usedPrimary, err := g.decrypt(cipherText)
+	if err != nil {
+		return nil, err
+	}
+
+	if !usedPrimary {
+		// The value was read fine, so a failed re-encryption shouldn't fail
+		// the Get, it is tried again the next time.
+		if err := g.Set(ctx, key, plainText); err != nil {
+			slog.Warn(fmt.Sprintf("error re-encrypting key %q with the primary key version: %s", key, err))
+		} else {
+			slog.Info(fmt.Sprintf("re-encrypted key %q with the primary key version", key))
+		}
+	}
+
+	return plainText, nil
 }
 
 func (g *googleKms) Set(ctx context.Context, key string, val []byte) error {
